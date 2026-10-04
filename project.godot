@@ -12,7 +12,7 @@ config_version=5
 
 config/name="TowerTS"
 config/description="Jeu 2D de type Tower Defense."
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/ui/title_screen.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
