@@ -42,6 +42,8 @@ func _run() -> void:
 	await _test_pulse_tower()
 	await _test_lives_lost_feedback()
 	await _test_pause_and_game_speed()
+	await _test_fire_rate_independent_of_speed()
+	await _test_wave_bonus_when_waves_overlap()
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
 	await _test_victory_level_02()
@@ -477,10 +479,19 @@ func _test_pause_and_game_speed() -> void:
 	_check(hud.speed_buttons.get_child(2).button_pressed and not hud.speed_buttons.get_child(0).button_pressed,
 		"le bouton x3 est enfoncé")
 	var key := InputEventKey.new()
-	key.keycode = KEY_2
+	key.physical_keycode = KEY_2
 	key.pressed = true
 	hud._unhandled_key_input(key)
 	_check(Engine.time_scale == 2.0, "la touche 2 passe en x2")
+	# En AZERTY, la touche 1 sans Maj donne « & » : c'est sa position qui compte.
+	key.keycode = KEY_AMPERSAND
+	key.physical_keycode = KEY_1
+	hud._unhandled_key_input(key)
+	_check(Engine.time_scale == 1.0, "la touche 1 passe en x1 en AZERTY")
+	key.keycode = KEY_NONE
+	key.physical_keycode = KEY_KP_2
+	hud._unhandled_key_input(key)
+	_check(Engine.time_scale == 2.0, "le 2 du pavé numérique passe en x2")
 
 	level.start_next_wave()
 	for i in 30:
@@ -493,7 +504,7 @@ func _test_pause_and_game_speed() -> void:
 	for i in 10:
 		await process_frame
 	_check(enemy.progress == progress, "les ennemis ne bougent plus pendant la pause")
-	key.keycode = KEY_SPACE
+	key.physical_keycode = KEY_SPACE
 	hud._unhandled_key_input(key)
 	_check(not paused and not hud.pause_overlay.visible, "Espace relance le jeu")
 	await process_frame
@@ -508,6 +519,57 @@ func _test_pause_and_game_speed() -> void:
 	await _free(level)
 	level = await _spawn_level(LEVEL_01)
 	_check(Engine.time_scale == 1.0, "un nouveau niveau repart en x1")
+	await _free(level)
+
+
+## Nombre de coups reçus par un ennemi immobile pendant `game_seconds` secondes de jeu.
+func _count_hits(tower_data: TowerData, speed: float, game_seconds: float) -> int:
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 10000
+	var tower := level.place_tower(Vector2i(2, 4), tower_data)
+	level.upgrade_tower(tower)
+	var target_data: EnemyData = SLIME.duplicate()
+	target_data.max_health = 1e9
+	var enemy := _add_still_enemy(level, target_data, 0, 0.0)
+	enemy.global_position = tower.global_position + Vector2(40, 0)
+	var hits := [0]
+	enemy.damaged.connect(func(_enemy: Enemy, _amount: float) -> void: hits[0] += 1)
+	Engine.time_scale = speed
+	for i in roundi(game_seconds * 60.0 / speed):
+		await process_frame
+	await _free(level)
+	return hits[0]
+
+
+func _test_fire_rate_independent_of_speed() -> void:
+	print("Cadence de tir indépendante de la vitesse de jeu")
+	# Mitrailleuse niveau 2 : 6,5 tirs/s, soit 65 tirs en 10 s (à un tir près : le premier part tout de suite).
+	var expected := roundi(GATLING.get_stats_at_level(2).fire_rate * 10.0)
+	var at_x1 := await _count_hits(GATLING, 1.0, 10.0)
+	var at_x3 := await _count_hits(GATLING, 3.0, 10.0)
+	_check(absi(at_x1 - expected) <= 1, "x1 : %d tirs pour %d attendus" % [at_x1, expected])
+	_check(absi(at_x3 - expected) <= 1, "x3 : %d tirs pour %d attendus" % [at_x3, expected])
+
+
+func _test_wave_bonus_when_waves_overlap() -> void:
+	print("Bonus de vague quand les vagues se chevauchent")
+	var level := await _spawn_level(LEVEL_01)
+	Engine.time_scale = GAME_SPEED
+	level.start_next_wave()
+	while level.spawner.is_spawning:
+		await process_frame
+	# La vague 2 est lancée alors que des ennemis de la vague 1 sont encore en jeu.
+	level.start_next_wave()
+	while level.spawner.is_spawning:
+		await process_frame
+	var gold_before := level.gold
+	var rewards := 0
+	for enemy: Enemy in get_nodes_in_group(Enemy.GROUP):
+		rewards += enemy.data.reward
+		enemy.take_damage(1e9)
+	var bonuses := level.spawner.waves[0].bonus_gold + level.spawner.waves[1].bonus_gold
+	_check(level.gold == gold_before + rewards + bonuses,
+		"les bonus des deux vagues sont versés (%d or attendus, %d reçus)" % [rewards + bonuses, level.gold - gold_before])
 	await _free(level)
 
 

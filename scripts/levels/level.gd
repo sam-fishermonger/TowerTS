@@ -184,9 +184,11 @@ func _alive_enemy_count() -> int:
 func _check_wave_cleared() -> void:
 	if is_over or spawner.is_spawning or _alive_enemy_count() > 0:
 		return
-	if spawner.current_wave >= 0 and _wave_bonus_paid < spawner.current_wave:
-		_wave_bonus_paid = spawner.current_wave
-		gold += spawner.waves[spawner.current_wave].bonus_gold
+	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
+	# bonus en attente sont versés quand la carte est vidée.
+	while _wave_bonus_paid < spawner.current_wave:
+		_wave_bonus_paid += 1
+		gold += spawner.waves[_wave_bonus_paid].bonus_gold
 	if not spawner.has_next_wave():
 		_end_game(true)
 

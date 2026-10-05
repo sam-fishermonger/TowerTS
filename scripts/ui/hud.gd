@@ -65,10 +65,17 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if not key.pressed or key.echo or end_panel.visible:
 		return
-	if key.keycode == KEY_SPACE or key.keycode == KEY_P:
+	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
+	var code := key.physical_keycode
+	var speed_index := -1
+	if code >= KEY_1 and code <= KEY_9:
+		speed_index = code - KEY_1
+	elif code >= KEY_KP_1 and code <= KEY_KP_9:
+		speed_index = code - KEY_KP_1
+	if code == KEY_SPACE or code == KEY_P:
 		pause_toggled.emit()
-	elif key.keycode >= KEY_1 and key.keycode < KEY_1 + speed_buttons.get_child_count():
-		speed_buttons.get_child(key.keycode - KEY_1).pressed.emit()
+	elif speed_index >= 0 and speed_index < speed_buttons.get_child_count():
+		speed_buttons.get_child(speed_index).pressed.emit()
 	else:
 		return
 	get_viewport().set_input_as_handled()
