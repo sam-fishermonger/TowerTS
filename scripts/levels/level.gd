@@ -32,6 +32,8 @@ var lives := 0:
 		_refresh_hud()
 var is_over := false
 ## Mise en pause par le joueur (la fin de partie met aussi l'arbre en pause, sans passer par là).
+## Pendant la pause, le joueur peut construire, améliorer et vendre (le TowerPlacer et le HUD
+## ne sont pas mis en pause), mais pas lancer de vague.
 var is_paused := false
 var game_speed := 1.0
 
@@ -147,6 +149,8 @@ func set_paused(value: bool) -> void:
 	is_paused = value
 	get_tree().paused = value
 	hud.set_paused(value)
+	# Le niveau ne se met plus à jour pendant la pause : on rafraîchit le bouton de vague tout de suite.
+	hud.set_next_wave_available(can_start_next_wave())
 
 
 func set_game_speed(speed: float) -> void:
@@ -160,7 +164,7 @@ func set_game_speed(speed: float) -> void:
 # --- Vagues et ennemis ----------------------------------------------------
 
 func can_start_next_wave() -> bool:
-	return not is_over and not spawner.is_spawning and spawner.has_next_wave()
+	return not is_over and not is_paused and not spawner.is_spawning and spawner.has_next_wave()
 
 
 func start_next_wave() -> void:

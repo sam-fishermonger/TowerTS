@@ -567,6 +567,18 @@ func _test_pause_and_game_speed() -> void:
 	for i in 10:
 		await process_frame
 	_check(enemy.progress == progress, "les ennemis ne bougent plus pendant la pause")
+	_check(hud.next_wave_button.disabled and not level.can_start_next_wave(), "pas de vague lancée pendant la pause")
+	level.gold = 1000
+	level.select_tower(CANNON)
+	await _click(level, level.map.cell_to_world(Vector2i(2, 4)))
+	var paused_tower := level.map.get_occupant(Vector2i(2, 4)) as Tower
+	_check(paused_tower != null, "on peut poser une tour pendant la pause")
+	await _click(level, paused_tower.global_position)
+	_check(hud.tower_details.visible, "on peut ouvrir la fiche d'une tour pendant la pause")
+	hud.tower_details.upgrade_button.pressed.emit()
+	_check(paused_tower.level == 2, "on peut améliorer pendant la pause")
+	hud.tower_details.sell_button.pressed.emit()
+	_check(not paused_tower.is_alive, "on peut vendre pendant la pause")
 	key.physical_keycode = KEY_SPACE
 	hud._unhandled_key_input(key)
 	_check(not paused and not hud.pause_overlay.visible, "Espace relance le jeu")
