@@ -3,6 +3,8 @@ extends Entity
 ## Ennemi qui avance le long d'un chemin (Path2D) jusqu'à la base du joueur.
 
 signal died(enemy: Enemy)
+## Émis à chaque coup reçu, avec les dégâts réellement subis (après armure).
+signal damaged(enemy: Enemy, amount: float)
 signal reached_end(enemy: Enemy)
 
 const GROUP := "enemies"
@@ -70,9 +72,14 @@ func distance_to_end() -> float:
 	return _path_length - progress
 
 
-func take_damage(amount: float) -> void:
-	if is_alive:
-		health.take_damage(amount)
+## Applique un coup et renvoie les dégâts réellement subis.
+func take_damage(amount: float) -> float:
+	if not is_alive:
+		return 0.0
+	var dealt := health.take_damage(amount)
+	if dealt > 0.0:
+		damaged.emit(self, dealt)
+	return dealt
 
 
 ## Ralentit l'ennemi. Le ralentissement le plus fort et la durée la plus longue l'emportent.

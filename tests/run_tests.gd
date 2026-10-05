@@ -38,6 +38,7 @@ func _run() -> void:
 	await _test_level_02_uses_both_paths()
 	await _test_enemy_slow_and_armor()
 	await _test_explosive_projectile()
+	await _test_damage_and_death_feedback()
 	await _test_pulse_tower()
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
@@ -388,6 +389,38 @@ func _test_explosive_projectile() -> void:
 	var all_hit := group.all(func(e: Enemy) -> bool: return e.health.health == SLIME.max_health - MORTAR.damage)
 	_check(all_hit, "l'explosion touche tous les ennemis dans son rayon")
 	_check(far.health.health == SLIME.max_health, "un ennemi hors du rayon n'est pas touché")
+	await _free(level)
+
+
+func _test_damage_and_death_feedback() -> void:
+	print("Dégâts affichés, or gagné et tache au sol")
+	var level := await _spawn_level(LEVEL_02)
+	var shell := _add_still_enemy(level, SHELL, 1, 100.0)
+	level._on_enemy_spawned(shell)
+	_check(is_equal_approx(shell.take_damage(SNIPER.damage), SNIPER.damage - SHELL.armor),
+		"take_damage renvoie les dégâts après armure")
+	var texts := level.effects.get_children().filter(func(n: Node) -> bool: return n is FloatingText)
+	_check(texts.size() == 1 and texts[0].text == str(roundi(SNIPER.damage - SHELL.armor)),
+		"les dégâts réellement subis s'affichent au-dessus de l'ennemi")
+	var gold_before := level.gold
+	var death_position := shell.global_position
+	shell.take_damage(10000.0)
+	_check(level.gold == gold_before + SHELL.reward, "la mort rapporte la prime")
+	var gold_texts := level.effects.get_children().filter(
+		func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % SHELL.reward)
+	_check(gold_texts.size() == 1, "le gain de pièces s'affiche à la mort")
+	_check(level.stains.get_child_count() == 1 and level.stains.get_child(0).global_position == death_position,
+		"une tache reste au sol à l'endroit de la mort")
+	var stain: GroundStain = level.stains.get_child(0)
+	var elapsed := 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(level.effects.get_child_count() == 0, "les textes flottants disparaissent rapidement")
+	_check(is_instance_valid(stain) and stain.get_alpha() < GroundStain.START_ALPHA,
+		"la tache s'estompe lentement")
+	while is_instance_valid(stain) and elapsed < GroundStain.DURATION + 2.0:
+		elapsed += await _step()
+	_check(not is_instance_valid(stain), "la tache finit par disparaître")
 	await _free(level)
 
 
