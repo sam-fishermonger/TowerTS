@@ -24,7 +24,8 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - Les dégâts infligés s'affichent au-dessus des ennemis touchés. Un ennemi détruit affiche l'or gagné et laisse au sol une tache qui s'estompe en 20 secondes.
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** (ou les touches **1, 2, 3**, aussi sur le pavé numérique et en AZERTY) règlent la vitesse du jeu. Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
-- La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Après une victoire, **Niveau suivant** ouvre le niveau 2 ; l'écran titre permet aussi de choisir un niveau.
+- La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
+- La progression est enregistrée : chaque niveau gagné débloque le suivant, et l'écran titre affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche) repart de zéro.
 
 ## Niveaux
 
@@ -32,6 +33,8 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 |---|---|---|---|
 | 1 | Un chemin en zigzag | Canon, Mitrailleuse, Sniper | 5 |
 | 2 | Deux entrées (nord et sud) qui se rejoignent, rochers où l'on ne peut pas construire | + Mortier (explosion de zone), Givre (onde qui ralentit) | 6, avec la Carapace (ennemi blindé : les petits dégâts rebondissent) |
+
+Les niveaux se suivent dans l'ordre de `resources/campaign.tres` : pour ajouter un niveau, il suffit de l'y ajouter.
 
 ## Tests
 

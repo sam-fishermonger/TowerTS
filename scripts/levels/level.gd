@@ -15,8 +15,8 @@ const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 @export var starting_gold := 150
 @export var starting_lives := 20
 @export var tower_types: Array[TowerData] = []
-## Niveau proposé après une victoire (vide = dernier niveau).
-@export_file("*.tscn") var next_level := ""
+## Campagne dont fait partie le niveau : elle donne le niveau suivant.
+@export var campaign: Campaign
 ## Lancer une vague avant d'avoir vidé la carte rapporte cette part de son bonus, en plus.
 @export_range(0.0, 1.0) var early_call_bonus_ratio := 0.5
 ## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
@@ -79,8 +79,18 @@ func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 
 
+## Niveau proposé après une victoire ("" = dernier niveau).
+func get_next_level() -> String:
+	return campaign.get_next(scene_file_path) if campaign else ""
+
+
 func has_next_level() -> bool:
-	return not next_level.is_empty()
+	return not get_next_level().is_empty()
+
+
+## Étoiles méritées si la partie était gagnée maintenant.
+func get_stars() -> int:
+	return Progress.stars_for(lives, starting_lives)
 
 
 # --- Tours ------------------------------------------------------------------
@@ -240,7 +250,9 @@ func _end_game(victory: bool) -> void:
 	is_over = true
 	select_tower(null)
 	inspect_tower(null)
-	hud.show_end_screen(victory, victory and has_next_level())
+	var stars := get_stars() if victory else 0
+	var new_record := victory and Progress.record_victory(scene_file_path, stars)
+	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record)
 	is_paused = false
 	Engine.time_scale = 1.0
 	game_over.emit(victory)
@@ -256,7 +268,7 @@ func _on_restart_requested() -> void:
 
 func _on_next_level_requested() -> void:
 	get_tree().paused = false
-	get_tree().change_scene_to_file(next_level)
+	get_tree().change_scene_to_file(get_next_level())
 
 
 func _on_menu_requested() -> void:

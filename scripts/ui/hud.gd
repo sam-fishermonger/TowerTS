@@ -39,6 +39,7 @@ var _wave_preview_text := ""
 @onready var next_wave_button: Button = %NextWaveButton
 @onready var end_panel: PanelContainer = %EndPanel
 @onready var end_title: Label = %EndTitle
+@onready var end_stars: Label = %EndStars
 @onready var end_message: Label = %EndMessage
 @onready var next_level_button: Button = %NextLevelButton
 ## Fiche affichée au survol d'un bouton de la barre d'achat.
@@ -199,10 +200,16 @@ func play_damage_effect(lives_lost: int) -> void:
 		LIVES_HIT_COLOR, LIVES_COLOR, DAMAGE_FLASH_DURATION)
 
 
-func show_end_screen(victory: bool, can_continue := false) -> void:
+## Écran de fin. Après une victoire, `stars` (1 à 3) s'affiche, avec « Nouveau record »
+## si c'est le meilleur résultat obtenu sur ce niveau.
+func show_end_screen(victory: bool, can_continue := false, stars := 0, new_record := false) -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"
+	end_stars.visible = victory and stars > 0
+	end_stars.text = Progress.star_text(stars)
 	end_message.text = "Toutes les vagues ont été repoussées." if victory \
 		else "Les ennemis ont atteint votre base."
+	if new_record:
+		end_message.text += "\nNouveau record !"
 	next_level_button.visible = can_continue
 	end_panel.visible = true
 	set_paused(false)

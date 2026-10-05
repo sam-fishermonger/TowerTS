@@ -27,7 +27,11 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# Progression à part, vidée à chaque lancement : les tests ne touchent pas à celle du joueur.
+	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_progress.cfg")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
 	await _test_title_screen()
+	await _test_progress()
 	await _test_health_component()
 	await _test_entity_despawn()
 	await _test_tower_placement()
@@ -131,7 +135,40 @@ func _test_title_screen() -> void:
 	await process_frame
 	_check(title.get_node("%PlayButton") is Button, "le bouton Jouer existe")
 	_check(title.get_node("%PlayButton").has_focus(), "le bouton Jouer a le focus")
-	_check(title.get_node("%LevelButtons").get_child_count() == 2, "un bouton par niveau")
+	var buttons: Array[Node] = title.get_node("%LevelButtons").get_children()
+	_check(buttons.size() == title.CAMPAIGN.size(), "un bouton par niveau de la campagne")
+	_check(not buttons[0].disabled and buttons[1].disabled and buttons[1].text.ends_with("Verrouillé"),
+		"au départ, seul le niveau 1 est débloqué")
+	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
+		"pas de progression à reprendre ni à effacer")
+	await _free(title)
+
+
+func _test_progress() -> void:
+	print("Progression et étoiles")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_check(campaign.get_next(LEVEL_01.resource_path) == LEVEL_02.resource_path, "la campagne enchaîne le niveau 1 et le 2")
+	_check(Progress.stars_for(20, 20) == 3 and Progress.stars_for(10, 20) == 2 and Progress.stars_for(9, 20) == 1,
+		"3 étoiles sans perte, 2 avec la moitié des vies, 1 sinon")
+	_check(Progress.get_next_to_play(campaign) == LEVEL_01.resource_path, "Jouer ouvre le niveau 1")
+	_check(Progress.record_victory(LEVEL_01.resource_path, 2), "une première victoire est un record")
+	_check(not Progress.record_victory(LEVEL_01.resource_path, 1), "un moins bon résultat ne remplace pas le record")
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 2, "le meilleur résultat est gardé")
+	_check(Progress.is_unlocked(campaign, 1), "gagner le niveau 1 débloque le niveau 2")
+	_check(Progress.get_next_to_play(campaign) == LEVEL_02.resource_path, "Continuer ouvre le niveau 2")
+	var saved := ConfigFile.new()
+	_check(saved.load(Progress.get_save_path()) == OK and saved.get_value("stars", LEVEL_01.resource_path) == 2,
+		"la progression est enregistrée sur le disque")
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var buttons: Array[Node] = title.get_node("%LevelButtons").get_children()
+	_check(buttons[0].text == "Niveau 1\n★★☆" and not buttons[1].disabled, "l'écran titre montre les étoiles et le niveau débloqué")
+	_check(title.get_node("%PlayButton").text == "Continuer", "le bouton devient Continuer")
+	title.get_node("%ResetDialog").confirmed.emit()
+	await process_frame
+	buttons = title.get_node("%LevelButtons").get_children()
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and buttons[1].disabled, "Effacer la progression reverrouille les niveaux")
 	await _free(title)
 
 
@@ -705,6 +742,9 @@ func _test_victory_level_01() -> void:
 	_check(level.spawner.current_wave == 4, "les 5 vagues ont été jouées")
 	_check(level.gold > gold_before, "les ennemis détruits rapportent de l'or")
 	_check(level.hud.end_title.text == "Victoire !", "écran de victoire affiché")
+	var stars := Progress.stars_for(level.lives, level.starting_lives)
+	_check(level.hud.end_stars.visible and level.hud.end_stars.text == Progress.star_text(stars), "les étoiles s'affichent (%d)" % stars)
+	_check(Progress.get_stars(LEVEL_01.resource_path) == stars, "la victoire est enregistrée")
 	_check(level.hud.next_level_button.visible, "le bouton Niveau suivant est proposé")
 	# Le niveau ajouté à la main n'est pas la scène courante : on le libère avant de changer de scène.
 	level.hud.next_level_button.pressed.emit()

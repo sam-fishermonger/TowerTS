@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="Campaign" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/campaign.gd" id="1_campaign"]
+
+[resource]
+script = ExtResource("1_campaign")
+levels = Array[String](["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn"])
