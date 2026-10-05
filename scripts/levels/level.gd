@@ -38,9 +38,12 @@ var _wave_bonus_paid := -1
 func _ready() -> void:
 	placer.level = self
 	placer.selection_changed.connect(hud.set_selected_tower)
+	placer.inspection_changed.connect(hud.show_tower_details)
 	hud.setup(level_name, tower_types)
 	hud.tower_selected.connect(select_tower)
 	hud.next_wave_requested.connect(start_next_wave)
+	hud.upgrade_requested.connect(upgrade_tower)
+	hud.tower_details_closed.connect(inspect_tower.bind(null))
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
 	hud.menu_requested.connect(_on_menu_requested)
@@ -77,6 +80,24 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	map.occupy(cell, tower)
 	gold -= data.cost
 	return tower
+
+
+func can_upgrade_tower(tower: Tower) -> bool:
+	return is_instance_valid(tower) and not is_over and tower.can_upgrade() \
+		and gold >= tower.get_upgrade_cost()
+
+
+## Améliore la tour si c'est possible et en déduit le prix. Renvoie true si elle a été améliorée.
+func upgrade_tower(tower: Tower) -> bool:
+	if not can_upgrade_tower(tower):
+		return false
+	gold -= tower.get_upgrade_cost()
+	return tower.upgrade()
+
+
+## Ouvre la fiche d'une tour posée (null = la fermer).
+func inspect_tower(tower: Tower) -> void:
+	placer.inspect(tower)
 
 
 # --- Vagues et ennemis ----------------------------------------------------
@@ -123,6 +144,7 @@ func _end_game(victory: bool) -> void:
 		return
 	is_over = true
 	select_tower(null)
+	inspect_tower(null)
 	hud.show_end_screen(victory, victory and has_next_level())
 	game_over.emit(victory)
 	get_tree().paused = true

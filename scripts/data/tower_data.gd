@@ -3,6 +3,8 @@ extends Resource
 ## Statistiques d'un type de tour.
 
 @export var display_name := "Tour"
+## Courte présentation affichée dans la fiche de la tour.
+@export_multiline var description := ""
 @export var cost := 50
 ## Scène de la tour (une scène dont la racine hérite de Tower).
 @export var scene: PackedScene
@@ -26,3 +28,31 @@ extends Resource
 @export_range(0.1, 1.0) var slow_factor := 1.0
 ## Durée du ralentissement, en secondes.
 @export var slow_duration := 0.0
+
+@export_group("Améliorations")
+## Améliorations achetables, dans l'ordre : la tour posée est au niveau 1,
+## chaque amélioration la fait monter d'un niveau.
+@export var upgrades: Array[TowerUpgrade] = []
+
+
+## Niveau maximal d'une tour de ce type.
+func get_max_level() -> int:
+	return upgrades.size() + 1
+
+
+## Prix pour passer du niveau donné au suivant, ou -1 si le niveau est maximal.
+func get_upgrade_cost(level: int) -> int:
+	return upgrades[level - 1].cost if level >= 1 and level < get_max_level() else -1
+
+
+## Copie de ces statistiques avec les améliorations appliquées jusqu'au niveau donné.
+func get_stats_at_level(level: int) -> TowerData:
+	var stats: TowerData = duplicate()
+	for i in clampi(level - 1, 0, upgrades.size()):
+		upgrades[i].apply_to(stats)
+	return stats
+
+
+## Dégâts par seconde sur une cible.
+func get_dps() -> float:
+	return damage * fire_rate

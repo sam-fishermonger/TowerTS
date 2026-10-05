@@ -15,6 +15,8 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 
 - Choisir une tour dans la barre du haut (Canon, Mitrailleuse, Sniper), puis cliquer sur une case libre hors du chemin.
 - **Maj + clic** pour poser plusieurs tours d'affilée, **clic droit** ou **Échap** pour annuler.
+- Survoler une tour de la barre d'achat affiche sa fiche : description, statistiques et prix.
+- Cliquer sur une tour posée ouvre sa fiche, avec le bouton **Améliorer** : chaque tour a 2 améliorations (niveau 3 maximum), dont les gains sont affichés en vert avant l'achat. **✕** ou **Échap** ferme la fiche.
 - **Lancer la vague** envoie la vague suivante. Chaque ennemi détruit rapporte de l'or, et chaque vague nettoyée donne un bonus.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Après une victoire, **Niveau suivant** ouvre le niveau 2 ; l'écran titre permet aussi de choisir un niveau.
 
@@ -71,8 +73,8 @@ scripts/entities/    Classe de base Entity
 scripts/components/  Composants réutilisables (santé, barre de vie)
 scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion)
-scripts/data/        Ressources de données : EnemyData, TowerData, WaveData, SpawnGroup
-resources/           Statistiques des ennemis et des tours (.tres, modifiables dans l'inspecteur)
+scripts/data/        Ressources de données : EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup
+resources/           Statistiques des ennemis et des tours, améliorations comprises (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites
 assets/audio/        Musiques et effets sonores

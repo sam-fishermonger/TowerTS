@@ -6,7 +6,7 @@ extends Tower
 
 func _attack(enemy: Enemy) -> void:
 	var projectile: Projectile = data.projectile_scene.instantiate()
-	projectile.setup(enemy, data)
+	projectile.setup(enemy, stats)
 	_get_container().add_child(projectile)
 	projectile.global_position = global_position + Vector2.from_angle(_aim_angle) * SIZE * 0.5
 

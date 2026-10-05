@@ -16,9 +16,9 @@ func _process(delta: float) -> void:
 
 
 func _attack(_enemy: Enemy) -> void:
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, data.attack_range):
-		enemy.take_damage(data.damage)
-		enemy.apply_slow(data.slow_factor, data.slow_duration)
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
+		enemy.take_damage(stats.damage)
+		enemy.apply_slow(stats.slow_factor, stats.slow_duration)
 	_pulse_time_left = PULSE_DURATION
 
 
@@ -31,4 +31,4 @@ func _draw_body() -> void:
 	draw_circle(Vector2.ZERO, SIZE * 0.12, data.color)
 	if _pulse_time_left > 0.0:
 		var t := 1.0 - _pulse_time_left / PULSE_DURATION
-		draw_arc(Vector2.ZERO, data.attack_range * t, 0.0, TAU, 48, Color(light, 1.0 - t), 3.0)
+		draw_arc(Vector2.ZERO, stats.attack_range * t, 0.0, TAU, 48, Color(light, 1.0 - t), 3.0)
