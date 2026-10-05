@@ -3,10 +3,24 @@
 [ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
 [ext_resource type="PackedScene" path="res://scenes/towers/projectile_tower.tscn" id="2_scene"]
 [ext_resource type="PackedScene" path="res://scenes/projectiles/projectile.tscn" id="3_projectile"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 40
+damage_multiplier = 1.4
+range_multiplier = 1.1
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 70
+damage_multiplier = 1.4
+fire_rate_multiplier = 1.25
 
 [resource]
 script = ExtResource("1_data")
 display_name = "Canon"
+description = "Tour polyvalente et bon marché. Tire des boulets à tête chercheuse sur l'ennemi le plus avancé."
 cost = 50
 scene = ExtResource("2_scene")
 attack_range = 150.0
@@ -15,3 +29,4 @@ fire_rate = 1.0
 color = Color(0.3, 0.55, 0.9, 1)
 projectile_scene = ExtResource("3_projectile")
 projectile_speed = 450.0
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

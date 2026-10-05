@@ -31,6 +31,9 @@ func _run() -> void:
 	await _test_health_component()
 	await _test_entity_despawn()
 	await _test_tower_placement()
+	await _test_tower_upgrade_stats()
+	await _test_tower_upgrade_in_level()
+	await _test_tower_info_panels()
 	await _test_level_02_map()
 	await _test_level_02_uses_both_paths()
 	await _test_enemy_slow_and_armor()
@@ -181,6 +184,129 @@ func _test_tower_placement() -> void:
 	_check(level.hud.tower_buttons.get_child(1).button_pressed, "le bouton de la tour sélectionnée est enfoncé")
 	level.select_tower(null)
 	_check(not level.hud.tower_buttons.get_child(1).button_pressed, "désélection")
+	await _free(level)
+
+
+func _test_tower_upgrade_stats() -> void:
+	print("Améliorations : statistiques")
+	for data: TowerData in [CANNON, GATLING, SNIPER, MORTAR, FROST]:
+		_check(data.get_max_level() == 3 and not data.description.is_empty(),
+			"%s : 2 améliorations et une description" % data.display_name)
+	var base := CANNON.get_stats_at_level(1)
+	_check(base.damage == CANNON.damage and base.attack_range == CANNON.attack_range, "niveau 1 = statistiques de base")
+	var level_2 := CANNON.get_stats_at_level(2)
+	_check(is_equal_approx(level_2.damage, 35.0) and is_equal_approx(level_2.attack_range, 165.0),
+		"niveau 2 : dégâts ×1,4 et portée ×1,1")
+	var level_3 := CANNON.get_stats_at_level(3)
+	_check(is_equal_approx(level_3.damage, 49.0) and is_equal_approx(level_3.fire_rate, 1.25),
+		"niveau 3 : les bonus se cumulent")
+	_check(CANNON.damage == 25.0 and CANNON.attack_range == 150.0, "les données du type de tour ne changent pas")
+	_check(CANNON.get_upgrade_cost(1) == 40 and CANNON.get_upgrade_cost(2) == 70 and CANNON.get_upgrade_cost(3) == -1,
+		"prix des améliorations")
+	var frost_3 := FROST.get_stats_at_level(3)
+	_check(is_equal_approx(frost_3.slow_duration, FROST.slow_duration + 1.0), "le givre ralentit plus longtemps")
+	_check(is_equal_approx(GATLING.get_stats_at_level(1).slow_duration, 0.0), "pas de ralentissement ajouté aux autres tours")
+
+
+func _test_tower_upgrade_in_level() -> void:
+	print("Améliorations : en jeu")
+	var level := await _spawn_level(LEVEL_01)
+	var tower := level.place_tower(Vector2i(2, 4), CANNON)
+	_check(tower.level == 1 and tower.stats.damage == CANNON.damage, "une tour posée est au niveau 1")
+	_check(level.upgrade_tower(tower) and level.gold == 60, "l'amélioration coûte 40 or")
+	_check(tower.level == 2 and is_equal_approx(tower.stats.damage, 35.0), "la tour passe au niveau 2")
+	_check(not level.upgrade_tower(tower) and level.gold == 60 and tower.level == 2,
+		"amélioration refusée sans assez d'or")
+	level.gold = 500
+	_check(level.upgrade_tower(tower) and level.gold == 430 and tower.level == 3, "niveau 3 pour 70 or")
+	_check(not tower.can_upgrade() and not level.upgrade_tower(tower) and level.gold == 430,
+		"impossible de dépasser le niveau maximal")
+	# La tour tire avec ses statistiques améliorées.
+	_add_still_enemy(level, SLIME, 0, 224.0)
+	var projectile: Projectile = null
+	var elapsed := 0.0
+	while projectile == null and elapsed < 5.0:
+		elapsed += await _step()
+		if level.projectiles.get_child_count() > 0:
+			projectile = level.projectiles.get_child(0)
+	_check(projectile != null and is_equal_approx(projectile.damage, tower.stats.damage),
+		"les projectiles infligent les dégâts améliorés")
+	await _free(level)
+
+
+## Envoie un évènement directement au placeur de tours : sans fenêtre, les
+## évènements injectés dans le viewport ne lui parviennent pas.
+func _send_to_placer(level: Level, event: InputEvent) -> void:
+	level.placer._unhandled_input(event)
+	await process_frame
+
+
+func _click(level: Level, screen_position: Vector2) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	event.position = screen_position
+	await _send_to_placer(level, event)
+
+
+func _test_tower_info_panels() -> void:
+	print("Fiches des tours")
+	var level := await _spawn_level(LEVEL_01)
+	var hud := level.hud
+	var button: Button = hud.tower_buttons.get_child(0)
+	button.mouse_entered.emit()
+	await process_frame
+	var shop := hud.shop_info
+	_check(shop.visible and shop.name_label.text == "Canon", "survol d'un bouton d'achat : fiche de la tour")
+	_check(shop.footer_label.text.begins_with("Prix : 50 or"), "la fiche indique le prix")
+	_check(not shop.upgrade_button.visible and not shop.close_button.visible, "pas de boutons sur l'aperçu")
+	_check(shop.stats_grid.get_child_count() == 4 * 3, "4 statistiques pour le canon")
+	_check(shop.position.y >= button.get_global_rect().end.y, "la fiche s'ouvre sous le bouton")
+	button.mouse_exited.emit()
+	_check(not shop.visible, "la fiche se ferme quand la souris quitte le bouton")
+
+	var tower := level.place_tower(Vector2i(2, 4), CANNON)
+	await _click(level, tower.global_position)
+	var details := hud.tower_details
+	_check(level.placer.inspected_tower == tower and tower.show_range, "clic sur une tour posée : elle est inspectée")
+	_check(details.visible and details.tower == tower, "la fiche de la tour posée s'ouvre")
+	_check(details.close_button.visible and details.upgrade_button.visible, "boutons Fermer et Améliorer")
+	_check(details.level_label.text == "Niv. 1 / 3", "le niveau de la tour est affiché")
+	_check(details.upgrade_button.text.ends_with("40 or") and not details.upgrade_button.disabled,
+		"le bouton Améliorer indique son prix")
+	await process_frame
+	var tower_rect := Rect2(tower.global_position - Vector2.ONE * Tower.SIZE / 2.0, Vector2.ONE * Tower.SIZE)
+	_check(not details.get_global_rect().intersects(tower_rect), "la fiche ne cache pas la tour")
+	var bonus_shown := false
+	for label: Label in details.stats_grid.get_children():
+		bonus_shown = bonus_shown or label.text.begins_with("→")
+	_check(bonus_shown, "la fiche montre les gains de la prochaine amélioration")
+
+	details.upgrade_button.pressed.emit()
+	_check(tower.level == 2 and level.gold == 60, "le bouton Améliorer améliore la tour et la fait payer")
+	_check(details.level_label.text == "Niv. 2 / 3", "la fiche se met à jour")
+	_check(details.upgrade_button.disabled, "bouton désactivé sans assez d'or")
+	level.gold = 200
+	_check(not details.upgrade_button.disabled, "bouton réactivé quand l'or suffit")
+	details.upgrade_button.pressed.emit()
+	_check(tower.level == 3 and details.upgrade_button.disabled and details.upgrade_button.text == "Niveau maximal",
+		"niveau maximal")
+
+	details.close_button.pressed.emit()
+	_check(not details.visible and level.placer.inspected_tower == null, "le bouton Fermer ferme la fiche")
+	_check(not tower.show_range, "la portée n'est plus affichée")
+
+	await _click(level, tower.global_position)
+	var escape := InputEventKey.new()
+	escape.keycode = KEY_ESCAPE
+	escape.physical_keycode = KEY_ESCAPE
+	escape.pressed = true
+	await _send_to_placer(level, escape)
+	_check(not details.visible, "Échap ferme la fiche")
+
+	await _click(level, tower.global_position)
+	level.select_tower(GATLING)
+	_check(not details.visible, "choisir une tour à poser ferme la fiche")
 	await _free(level)
 
 
