@@ -45,6 +45,9 @@ Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (P
 | 1 | Un chemin en zigzag | Canon, Mitrailleuse, Sniper | 5 |
 | 2 | Deux entrées (nord et sud) qui se rejoignent, rochers où l'on ne peut pas construire | + Mortier (explosion de zone), Givre (onde qui ralentit) | 6, avec la Carapace (ennemi blindé : les petits dégâts rebondissent) |
 | 3 | Un long chemin en serpentin dans un marais | + Rayon (rayon continu dont les dégâts montent jusqu'à x3 sur la même cible) | 7, avec le Slime géant (se divise en 3 Slimes à sa mort) |
+| 4 | Le carrefour : un chemin qui se recoupe lui-même, deux allées parallèles | Les 6 | 8 |
+| 5 | Le canyon : trois entrées (ouest, sud et nord) qui se rejoignent au centre | Les 6 | 8, réparties sur les trois entrées |
+| 6 | La spirale : le chemin tourne jusqu'à la base, au centre de la carte | Les 6 | 10 |
 
 Les niveaux se suivent dans l'ordre de `resources/campaign.tres` : pour ajouter un niveau, il suffit de l'y ajouter.
 
@@ -77,7 +80,7 @@ Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin 
 └── WaveSpawner              fait apparaître les ennemis sur les chemins de la carte
 ```
 
-`scenes/levels/level.tscn` est la scène de base de tous les niveaux. `level_01.tscn` et `level_02.tscn` en héritent et n'ajoutent que leurs données : chemins, rochers, couleurs, tours disponibles et vagues. Pour créer un niveau 3 : **Scène > Nouvelle scène héritée** depuis `level.tscn`, ajouter un ou plusieurs `Path2D` sous `Map`, puis remplir les vagues du `WaveSpawner`.
+`scenes/levels/level.tscn` est la scène de base de tous les niveaux. Les niveaux (`level_01.tscn` à `level_06.tscn`) en héritent et n'ajoutent que leurs données : chemins, rochers, couleurs, tours disponibles et vagues. La base est dessinée au bout du premier chemin. Pour créer un nouveau niveau : **Scène > Nouvelle scène héritée** depuis `level.tscn`, ajouter un ou plusieurs `Path2D` sous `Map`, puis remplir les vagues du `WaveSpawner`.
 
 Une nouvelle tour se crée sans code si elle réutilise un comportement existant (un `.tres` `TowerData` qui pointe vers `projectile_tower.tscn` ou `pulse_tower.tscn`), ou en sous-classant `Tower` pour un nouveau comportement.
 

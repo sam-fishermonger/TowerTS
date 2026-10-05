@@ -111,9 +111,12 @@ func _draw() -> void:
 	for path in paths:
 		draw_polyline(_local_points(path), path_color, path_width, true)
 	if not paths.is_empty():
-		# Base du joueur au bout du premier chemin.
+		# Base du joueur au bout du premier chemin : sur la dernière case s'il finit
+		# dans la carte, sinon une case avant la sortie de l'écran.
 		var points := _local_points(paths[0])
-		var base := points[points.size() - 1] + Vector2(-64, 0)
+		var base := points[points.size() - 1]
+		if not is_cell_in_grid(world_to_cell(to_global(base))):
+			base -= (base - points[points.size() - 2]).normalized() * cell_size
 		draw_texture_rect(BASE_TEXTURE, Rect2(base - Vector2(32, 48), Vector2(64, 96)), false)
 
 

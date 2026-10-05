@@ -9,6 +9,9 @@ const PERK_TREE_SCREEN := preload("res://scenes/ui/perk_tree_screen.tscn")
 const LEVEL_01 := preload("res://scenes/levels/level_01.tscn")
 const LEVEL_02 := preload("res://scenes/levels/level_02.tscn")
 const LEVEL_03 := preload("res://scenes/levels/level_03.tscn")
+const LEVEL_04 := preload("res://scenes/levels/level_04.tscn")
+const LEVEL_05 := preload("res://scenes/levels/level_05.tscn")
+const LEVEL_06 := preload("res://scenes/levels/level_06.tscn")
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const CANNON := preload("res://resources/towers/cannon.tres")
 const SNIPER := preload("res://resources/towers/sniper.tres")
@@ -66,6 +69,8 @@ func _run() -> void:
 	await _test_splitting_enemy()
 	await _test_beam_tower()
 	await _test_level_03_with_earned_gold()
+	await _test_levels_04_to_06_maps()
+	await _test_levels_04_to_06_with_earned_gold()
 	if _failures == 0:
 		print("TOUS LES TESTS SONT PASSÉS")
 	else:
@@ -128,6 +133,25 @@ func _play_until_over(level: Level, max_game_seconds: float, wait_for_clear := f
 		if not level.spawner.is_spawning and level.spawner.has_next_wave() and (cleared or not wait_for_clear):
 			level.start_next_wave()
 		elapsed += await _step()
+
+
+## Joue une partie sans or bonus, comme un joueur prudent : les `tower_count` premières
+## tours de `build_order` ([case, type] par tour) sont achetées dans l'ordre dès que l'or
+## le permet, et chaque vague n'est lancée qu'une fois la carte vidée. La partie est
+## libérée à la fin ; renvoie { won, lives, bought }.
+func _play_build_order(scene: PackedScene, build_order: Array, tower_count: int,
+		max_game_seconds := 1500.0) -> Dictionary:
+	var level := await _spawn_level(scene)
+	var bought := [0]
+	await _play_until_over(level, max_game_seconds, true, func() -> void:
+		while bought[0] < tower_count and level.gold >= build_order[bought[0]][1].get_cost():
+			var item: Array = build_order[bought[0]]
+			if level.place_tower(item[0], item[1]) == null:
+				_check(false, "achat de la tour %d en %s" % [bought[0] + 1, item[0]])
+			bought[0] += 1)
+	var result := { won = level.is_over and level.lives > 0, lives = level.lives, bought = bought[0] }
+	await _free(level)
+	return result
 
 
 ## Place une tour sur chaque case, en alternant les types. Renvoie le nombre de tours posées.
@@ -930,7 +954,6 @@ func _test_victory_level_02() -> void:
 ## dès que l'or le permet. Vérifie que le niveau est gagnable avec son économie.
 func _test_level_02_with_earned_gold() -> void:
 	print("Niveau 2 : gagnable avec l'or de départ et l'or gagné")
-	var level := await _spawn_level(LEVEL_02)
 	var build_order: Array = [
 		[Vector2i(5, 4), CANNON], [Vector2i(7, 4), CANNON], [Vector2i(9, 4), MORTAR],
 		[Vector2i(7, 6), FROST], [Vector2i(11, 4), SNIPER], [Vector2i(9, 6), CANNON],
@@ -938,15 +961,8 @@ func _test_level_02_with_earned_gold() -> void:
 		[Vector2i(13, 1), FROST], [Vector2i(15, 5), MORTAR], [Vector2i(17, 7), SNIPER],
 		[Vector2i(15, 7), CANNON], [Vector2i(17, 4), MORTAR], [Vector2i(5, 6), SNIPER],
 	]
-	var bought := [0]
-	await _play_until_over(level, 1200.0, true, func() -> void:
-		while bought[0] < build_order.size() and level.gold >= build_order[bought[0]][1].cost:
-			var item: Array = build_order[bought[0]]
-			_check(level.place_tower(item[0], item[1]) != null, "achat de la tour %d" % (bought[0] + 1))
-			bought[0] += 1)
-	_check(level.is_over and level.lives > 0,
-		"la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [level.lives, bought[0]])
-	await _free(level)
+	var result := await _play_build_order(LEVEL_02, build_order, build_order.size(), 1200.0)
+	_check(result.won, "la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [result.lives, result.bought])
 
 
 func _test_level_03_map() -> void:
@@ -955,7 +971,7 @@ func _test_level_03_map() -> void:
 	_check(level.level_name == "Niveau 3" and level.gold == 250 and level.lives == 20, "nom, or et vies de départ")
 	_check(level.spawner.waves.size() == 7, "7 vagues définies")
 	_check(level.tower_types.size() == 6 and level.tower_types.has(BEAM), "6 types de tours, dont le Rayon")
-	_check(not level.has_next_level(), "c'est le dernier niveau")
+	_check(level.get_next_level() == LEVEL_04.resource_path, "le niveau 4 suit")
 	var uses_giant := false
 	for wave in level.spawner.waves:
 		for group in wave.groups:
@@ -1026,26 +1042,94 @@ func _test_beam_tower() -> void:
 ## défense complète, mais perdu avec seulement les 6 premières tours.
 func _test_level_03_with_earned_gold() -> void:
 	print("Niveau 3 : gagnable avec l'or gagné, mais pas avec une petite défense")
-	var build_order: Array = [
+	await _check_build_order_balance(LEVEL_03, [
 		[Vector2i(15, 2), CANNON], [Vector2i(15, 3), CANNON], [Vector2i(14, 2), MORTAR],
 		[Vector2i(4, 5), BEAM], [Vector2i(17, 3), FROST], [Vector2i(5, 5), CANNON],
 		[Vector2i(9, 3), SNIPER], [Vector2i(4, 6), MORTAR], [Vector2i(14, 3), BEAM],
 		[Vector2i(9, 5), GATLING], [Vector2i(2, 5), FROST], [Vector2i(11, 2), SNIPER],
 		[Vector2i(16, 6), MORTAR], [Vector2i(17, 4), BEAM], [Vector2i(2, 6), CANNON],
 		[Vector2i(10, 5), MORTAR], [Vector2i(7, 5), SNIPER], [Vector2i(10, 2), BEAM],
+	])
+
+
+## Équilibrage d'un niveau : perdu avec les 6 premières tours de la liste, gagné
+## avec toute la liste, en n'achetant qu'avec l'or gagné.
+func _check_build_order_balance(scene: PackedScene, build_order: Array) -> void:
+	var small := await _play_build_order(scene, build_order, 6)
+	_check(not small.won and small.lives == 0, "perdu avec 6 tours seulement")
+	var full := await _play_build_order(scene, build_order, build_order.size())
+	_check(full.won, "la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [full.lives, full.bought])
+
+
+func _test_levels_04_to_06_maps() -> void:
+	print("Niveaux 4 à 6 : cartes")
+	var expected := [
+		[LEVEL_04, "Niveau 4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 6", 1, 10, null],
 	]
-	for tower_count in [6, build_order.size()]:
-		var level := await _spawn_level(LEVEL_03)
-		var bought := [0]
-		await _play_until_over(level, 1500.0, true, func() -> void:
-			while bought[0] < tower_count and level.gold >= build_order[bought[0]][1].cost:
-				var item: Array = build_order[bought[0]]
-				if level.place_tower(item[0], item[1]) == null:
-					_check(false, "achat de la tour %d" % (bought[0] + 1))
-				bought[0] += 1)
-		if tower_count < build_order.size():
-			_check(level.is_over and level.lives == 0, "perdu avec %d tours seulement" % tower_count)
-		else:
-			_check(level.is_over and level.lives > 0,
-				"la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [level.lives, bought[0]])
+	for item: Array in expected:
+		var level := await _spawn_level(item[0])
+		var label: String = item[1]
+		_check(level.level_name == label and level.tower_types.size() == 6, "%s : nom et 6 types de tours" % label)
+		_check(level.map.paths.size() == item[2] and level.spawner.waves.size() == item[3],
+			"%s : %d chemin(s) et %d vagues" % [label, item[2], item[3]])
+		_check(level.get_next_level() == (item[4].resource_path if item[4] else ""),
+			"%s : %s" % [label, "le niveau suivant est le bon" if item[4] else "c'est le dernier niveau"])
+		var rocks_off_path := level.map.blocked_cells.all(func(cell: Vector2i) -> bool:
+			return not level.map.is_cell_on_path(cell))
+		_check(rocks_off_path, "%s : les rochers sont hors des chemins" % label)
+		var used_paths := {}
+		for wave in level.spawner.waves:
+			for group in wave.groups:
+				used_paths[group.path_index] = true
+		_check(used_paths.size() == level.map.paths.size(), "%s : les vagues passent par tous les chemins" % label)
+		if item[0] == LEVEL_04:
+			# Le chemin se recoupe : la case du croisement est traversée deux fois.
+			_check(_path_visits(level.map, 0, Vector2i(5, 3)) == 2, "Niveau 4 : le chemin se croise lui-même")
+		elif item[0] == LEVEL_06:
+			var curve := level.map.paths[0].curve
+			var end_cell := level.map.world_to_cell(curve.get_point_position(curve.point_count - 1))
+			_check(level.map.is_cell_in_grid(end_cell), "Niveau 6 : le chemin finit au centre de la carte, en spirale")
 		await _free(level)
+
+
+## Nombre de passages distincts d'un chemin sur une case.
+func _path_visits(map: GameMap, path_index: int, cell: Vector2i) -> int:
+	var path := map.paths[path_index]
+	var visits := 0
+	var inside := false
+	for point in path.curve.get_baked_points():
+		var now_inside := map.world_to_cell(path.to_global(point)) == cell
+		if now_inside and not inside:
+			visits += 1
+		inside = now_inside
+	return visits
+
+
+func _test_levels_04_to_06_with_earned_gold() -> void:
+	print("Niveau 4 : gagnable avec l'or gagné, mais pas avec une petite défense")
+	await _check_build_order_balance(LEVEL_04, [
+		[Vector2i(7, 2), CANNON], [Vector2i(6, 4), CANNON], [Vector2i(8, 2), MORTAR],
+		[Vector2i(4, 2), BEAM], [Vector2i(9, 2), FROST], [Vector2i(4, 6), CANNON],
+		[Vector2i(10, 2), SNIPER], [Vector2i(6, 5), MORTAR], [Vector2i(12, 2), BEAM],
+		[Vector2i(13, 4), GATLING], [Vector2i(6, 6), FROST], [Vector2i(11, 2), SNIPER],
+		[Vector2i(13, 7), MORTAR], [Vector2i(15, 2), BEAM], [Vector2i(6, 7), CANNON],
+		[Vector2i(11, 4), MORTAR], [Vector2i(17, 2), SNIPER], [Vector2i(13, 2), BEAM],
+	])
+	print("Niveau 5 : gagnable avec l'or gagné, mais pas avec une petite défense")
+	await _check_build_order_balance(LEVEL_05, [
+		[Vector2i(8, 4), CANNON], [Vector2i(10, 4), CANNON], [Vector2i(10, 6), MORTAR],
+		[Vector2i(8, 6), BEAM], [Vector2i(12, 4), FROST], [Vector2i(14, 3), CANNON],
+		[Vector2i(12, 3), SNIPER], [Vector2i(16, 4), MORTAR], [Vector2i(7, 4), BEAM],
+		[Vector2i(14, 4), GATLING], [Vector2i(10, 3), FROST], [Vector2i(16, 6), SNIPER],
+		[Vector2i(12, 6), MORTAR], [Vector2i(16, 3), BEAM], [Vector2i(8, 3), CANNON],
+		[Vector2i(10, 7), MORTAR], [Vector2i(18, 6), SNIPER], [Vector2i(14, 6), BEAM],
+	])
+	print("Niveau 6 : gagnable avec l'or gagné, mais pas avec une petite défense")
+	await _check_build_order_balance(LEVEL_06, [
+		[Vector2i(8, 2), CANNON], [Vector2i(9, 4), CANNON], [Vector2i(10, 5), MORTAR],
+		[Vector2i(9, 7), BEAM], [Vector2i(6, 4), FROST], [Vector2i(11, 2), CANNON],
+		[Vector2i(5, 5), SNIPER], [Vector2i(13, 5), MORTAR], [Vector2i(16, 5), BEAM],
+		[Vector2i(11, 7), GATLING], [Vector2i(4, 4), FROST], [Vector2i(14, 2), SNIPER],
+		[Vector2i(6, 7), MORTAR], [Vector2i(3, 4), BEAM], [Vector2i(16, 2), CANNON],
+		[Vector2i(9, 5), MORTAR], [Vector2i(3, 7), SNIPER], [Vector2i(13, 4), BEAM],
+	])
