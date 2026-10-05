@@ -5,6 +5,8 @@ extends HBoxContainer
 
 ## Hauteur des boutons (plus petits dans la barre du jeu que sur l'écran titre).
 @export var button_height := 36.0
+## Faux en jeu : les boutons ne prennent pas le focus, pour qu'Espace reste la touche de pause.
+@export var focusable := true
 
 @onready var music_button: Button = %MusicButton
 @onready var sound_button: Button = %SoundButton
@@ -13,6 +15,8 @@ extends HBoxContainer
 func _ready() -> void:
 	for button in [music_button, sound_button]:
 		button.custom_minimum_size.y = button_height
+		if not focusable:
+			button.focus_mode = Control.FOCUS_NONE
 	music_button.toggled.connect(func(on: bool) -> void:
 		Sound.set_music_enabled(on)
 		refresh())
