@@ -13,11 +13,15 @@ script = ExtResource("1_level")
 [node name="Map" type="Node2D" parent="."]
 script = ExtResource("2_map")
 
+[node name="Stains" type="Node2D" parent="."]
+
 [node name="Enemies" type="Node2D" parent="."]
 
 [node name="Towers" type="Node2D" parent="."]
 
 [node name="Projectiles" type="Node2D" parent="."]
+
+[node name="Effects" type="Node2D" parent="."]
 
 [node name="TowerPlacer" type="Node2D" parent="."]
 script = ExtResource("3_placer")

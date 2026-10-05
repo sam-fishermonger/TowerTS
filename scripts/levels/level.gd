@@ -8,6 +8,9 @@ signal game_over(victory: bool)
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 
 @export var level_name := "Niveau"
+const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
+const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
+
 @export var starting_gold := 150
 @export var starting_lives := 20
 @export var tower_types: Array[TowerData] = []
@@ -27,9 +30,12 @@ var is_over := false
 var _wave_bonus_paid := -1
 
 @onready var map: GameMap = $Map
+@onready var stains: Node2D = $Stains
 @onready var enemies: Node2D = $Enemies
 @onready var towers: Node2D = $Towers
 @onready var projectiles: Node2D = $Projectiles
+## Textes flottants (dégâts, or gagné), dessinés au-dessus des ennemis et des tirs.
+@onready var effects: Node2D = $Effects
 @onready var placer: TowerPlacer = $TowerPlacer
 @onready var spawner: WaveSpawner = $WaveSpawner
 @onready var hud: Hud = $HUD
@@ -108,12 +114,25 @@ func start_next_wave() -> void:
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:
+	enemy.damaged.connect(_on_enemy_damaged)
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
 
 
+func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
+	# Petit décalage pour que les coups rapprochés ne se superposent pas.
+	var offset := Vector2(randf_range(-8.0, 8.0), -enemy.data.radius - 12.0)
+	_show_floating_text(str(roundi(amount)), DAMAGE_TEXT_COLOR, enemy.global_position + offset, 13)
+
+
 func _on_enemy_died(enemy: Enemy) -> void:
 	gold += enemy.data.reward
+	_show_floating_text("+%d" % enemy.data.reward, GOLD_TEXT_COLOR, enemy.global_position, 16)
+	var stain := GroundStain.new()
+	stain.radius = enemy.data.radius
+	stain.color = enemy.data.color
+	stains.add_child(stain)
+	stain.global_position = enemy.global_position
 	_check_wave_cleared()
 
 
@@ -168,6 +187,15 @@ func _on_menu_requested() -> void:
 
 
 # --- Affichage --------------------------------------------------------------
+
+func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int) -> void:
+	var label := FloatingText.new()
+	label.text = text
+	label.color = color
+	label.font_size = font_size
+	label.position = effects.to_local(at)
+	effects.add_child(label)
+
 
 func _refresh_hud() -> void:
 	if not is_node_ready():
