@@ -1,8 +1,8 @@
 class_name Progress
 extends RefCounted
 ## Progression du joueur, enregistrée sur le disque : étoiles obtenues sur chaque
-## niveau (0 = pas encore gagné) et réglages. Un niveau est débloqué quand le
-## précédent de la campagne a été gagné.
+## niveau (0 = pas encore gagné), améliorations permanentes (voir Perks) et
+## réglages. Un niveau est débloqué quand le précédent de la campagne a été gagné.
 
 const DEFAULT_SAVE_PATH := "user://progress.cfg"
 ## Méta du moteur qui remplace le fichier de sauvegarde : les tests l'utilisent pour ne
@@ -56,20 +56,29 @@ static func get_next_to_play(campaign: Campaign) -> String:
 
 
 static func get_setting(key: String, default: Variant) -> Variant:
-	return _load().get_value("settings", key, default)
+	return get_value("settings", key, default)
 
 
 static func set_setting(key: String, value: Variant) -> void:
+	set_value("settings", key, value)
+
+
+static func get_value(section: String, key: String, default: Variant) -> Variant:
+	return _load().get_value(section, key, default)
+
+
+static func set_value(section: String, key: String, value: Variant) -> void:
 	var config := _load()
-	config.set_value("settings", key, value)
+	config.set_value(section, key, value)
 	_save(config)
 
 
-## Efface les étoiles (les réglages sont gardés).
+## Efface les étoiles et les améliorations achetées avec (les réglages sont gardés).
 static func reset_campaign() -> void:
 	var config := _load()
-	if config.has_section("stars"):
-		config.erase_section("stars")
+	for section in ["stars", "perks"]:
+		if config.has_section(section):
+			config.erase_section(section)
 	_save(config)
 
 
@@ -82,6 +91,7 @@ static func _load() -> ConfigFile:
 
 
 static func _save(config: ConfigFile) -> void:
+	Perks.clear_cache()
 	var error := config.save(get_save_path())
 	if error != OK:
 		push_warning("Progression non enregistrée (%s) : %s" % [get_save_path(), error_string(error)])

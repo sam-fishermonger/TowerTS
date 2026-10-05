@@ -9,7 +9,8 @@ extends Entity
 const SIZE := 44.0
 ## Socle de pierre commun, sous la tourelle de chaque type de tour.
 const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/towers/base.svg")
-## Part de ce que la tour a coûté (pose et améliorations) rendue à la vente.
+## Part de ce que la tour a coûté (pose et améliorations) rendue à la vente,
+## sans compter l'arbre des améliorations.
 const SELL_RATIO := 0.7
 
 ## Ennemi visé en priorité parmi ceux à portée.
@@ -73,7 +74,7 @@ func get_upgrade_cost() -> int:
 
 ## Total payé pour la tour : sa pose et les améliorations achetées.
 func get_total_cost() -> int:
-	var total := data.cost
+	var total := data.get_cost()
 	for i in level - 1:
 		total += data.get_upgrade_cost(i + 1)
 	return total
@@ -81,7 +82,7 @@ func get_total_cost() -> int:
 
 ## Or rendu si la tour est vendue.
 func get_sell_value() -> int:
-	return roundi(get_total_cost() * SELL_RATIO)
+	return roundi(get_total_cost() * (SELL_RATIO + Perks.get_bonuses().sell_ratio_bonus))
 
 
 ## false pour les tours qui frappent tout ce qui est à portée (le choix de cible ne sert à rien).

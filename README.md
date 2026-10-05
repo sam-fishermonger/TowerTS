@@ -26,6 +26,7 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** (ou les touches **1, 2, 3**, aussi sur le pavé numérique et en AZERTY) règlent la vitesse du jeu. Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et l'écran titre affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche) repart de zéro.
+- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée). Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte plus d'étoiles que la campagne n'en rapporte : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément sur l'écran titre (le choix est enregistré).
 
@@ -84,7 +85,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 
 ```
 project.godot        Configuration du projet
-scenes/ui/           Écran titre (scène de démarrage) et HUD
+scenes/ui/           Écran titre (scène de démarrage), arbre des améliorations et HUD
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower et PulseTower
@@ -94,7 +95,8 @@ scripts/entities/    Classe de base Entity
 scripts/components/  Composants réutilisables (santé, barre de vie)
 scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
-scripts/data/        Ressources de données : EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup
+scripts/data/        Ressources de données : EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
+scripts/save/        Progression enregistrée (Progress) et améliorations permanentes achetées (Perks)
 resources/           Statistiques des ennemis et des tours, améliorations comprises (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites

@@ -52,16 +52,30 @@ func get_max_level() -> int:
 	return upgrades.size() + 1
 
 
+## Prix de pose, réductions de l'arbre des améliorations (Perks) comprises.
+func get_cost() -> int:
+	return roundi(cost * Perks.get_bonuses().tower_cost_multiplier)
+
+
 ## Prix pour passer du niveau donné au suivant, ou -1 si le niveau est maximal.
 func get_upgrade_cost(level: int) -> int:
-	return upgrades[level - 1].cost if level >= 1 and level < get_max_level() else -1
+	if level < 1 or level >= get_max_level():
+		return -1
+	return roundi(upgrades[level - 1].cost * Perks.get_bonuses().tower_cost_multiplier)
 
 
-## Copie de ces statistiques avec les améliorations appliquées jusqu'au niveau donné.
+## Copie de ces statistiques avec les améliorations appliquées jusqu'au niveau donné,
+## puis les bonus de l'arbre des améliorations (Perks).
 func get_stats_at_level(level: int) -> TowerData:
 	var stats: TowerData = duplicate()
 	for i in clampi(level - 1, 0, upgrades.size()):
 		upgrades[i].apply_to(stats)
+	var bonuses := Perks.get_bonuses()
+	stats.damage *= bonuses.damage_multiplier
+	stats.attack_range *= bonuses.range_multiplier
+	stats.fire_rate *= bonuses.fire_rate_multiplier
+	if stats.slow_factor < 1.0:
+		stats.slow_duration += bonuses.slow_duration_bonus
 	return stats
 
 

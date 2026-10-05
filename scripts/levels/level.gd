@@ -12,6 +12,7 @@ const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
 const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
 const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 
+## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
 @export var starting_gold := 150
 @export var starting_lives := 20
 @export var tower_types: Array[TowerData] = []
@@ -69,6 +70,11 @@ func _ready() -> void:
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
 	spawner.wave_started.connect(func(_index: int) -> void: _refresh_hud())
 	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
+	# Les bonus de l'arbre des améliorations comptent comme des vies de départ : les
+	# étoiles se calculent sur ce total.
+	var bonuses := Perks.get_bonuses()
+	starting_gold += bonuses.starting_gold_bonus
+	starting_lives += bonuses.lives_bonus
 	gold = starting_gold
 	lives = starting_lives
 	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
@@ -101,7 +107,7 @@ func select_tower(data: TowerData) -> void:
 
 
 func can_place_tower(cell: Vector2i, data: TowerData) -> bool:
-	return data != null and not is_over and map.is_cell_buildable(cell) and gold >= data.cost
+	return data != null and not is_over and map.is_cell_buildable(cell) and gold >= data.get_cost()
 
 
 ## Place une tour sur la case si c'est possible. Renvoie la tour, ou null.
@@ -115,7 +121,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	tower.global_position = map.cell_to_world(cell)
 	tower.cell = cell
 	map.occupy(cell, tower)
-	gold -= data.cost
+	gold -= data.get_cost()
 	Sound.play(&"build")
 	return tower
 
@@ -199,7 +205,17 @@ func start_next_wave() -> void:
 func get_early_call_bonus() -> int:
 	if not can_start_next_wave() or _alive_enemy_count() == 0:
 		return 0
-	return roundi(spawner.waves[spawner.current_wave + 1].bonus_gold * early_call_bonus_ratio)
+	return roundi(get_wave_bonus(spawner.current_wave + 1) * early_call_bonus_ratio)
+
+
+## Or versé quand la vague donnée est repoussée, bonus de l'arbre des améliorations compris.
+func get_wave_bonus(index: int) -> int:
+	return roundi(spawner.waves[index].bonus_gold * Perks.get_bonuses().wave_bonus_multiplier)
+
+
+## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations compris.
+func get_enemy_reward(data: EnemyData) -> int:
+	return roundi(data.reward * Perks.get_bonuses().reward_multiplier)
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:
@@ -215,9 +231,10 @@ func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
-	gold += enemy.data.reward
+	var reward := get_enemy_reward(enemy.data)
+	gold += reward
 	Sound.play(&"enemy_death", -3.0)
-	_show_floating_text("+%d" % enemy.data.reward, GOLD_TEXT_COLOR, enemy.global_position, 16)
+	_show_floating_text("+%d" % reward, GOLD_TEXT_COLOR, enemy.global_position, 16)
 	var stain := GroundStain.new()
 	stain.radius = enemy.data.radius
 	stain.color = enemy.data.color
@@ -257,9 +274,13 @@ func _check_wave_cleared() -> void:
 		return
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
+	var lives_per_wave := Perks.get_bonuses().lives_per_wave
 	while _wave_bonus_paid < spawner.current_wave:
 		_wave_bonus_paid += 1
-		gold += spawner.waves[_wave_bonus_paid].bonus_gold
+		gold += get_wave_bonus(_wave_bonus_paid)
+		# Infirmerie : rend des vies perdues, sans dépasser celles du départ.
+		if lives < starting_lives:
+			lives = mini(lives + lives_per_wave, starting_lives)
 	if not spawner.has_next_wave():
 		_end_game(true)
 

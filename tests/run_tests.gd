@@ -5,6 +5,7 @@ extends SceneTree
 ## du même pas, quelle que soit la vitesse de la machine.
 
 const TITLE_SCREEN := preload("res://scenes/ui/title_screen.tscn")
+const PERK_TREE_SCREEN := preload("res://scenes/ui/perk_tree_screen.tscn")
 const LEVEL_01 := preload("res://scenes/levels/level_01.tscn")
 const LEVEL_02 := preload("res://scenes/levels/level_02.tscn")
 const LEVEL_03 := preload("res://scenes/levels/level_03.tscn")
@@ -35,6 +36,8 @@ func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
 	await _test_title_screen()
 	await _test_progress()
+	await _test_perk_tree()
+	await _test_perks_in_level()
 	await _test_sound()
 	await _test_health_component()
 	await _test_entity_despawn()
@@ -178,6 +181,86 @@ func _test_progress() -> void:
 	buttons = title.get_node("%LevelButtons").get_children()
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and buttons[1].disabled, "Effacer la progression reverrouille les niveaux")
 	await _free(title)
+
+
+func _test_perk_tree() -> void:
+	print("Arbre des améliorations")
+	var tree := Perks.TREE
+	var ids := {}
+	var consistent := true
+	for perk in tree.perks:
+		consistent = consistent and not ids.has(perk.id) and perk.cost > 0
+		ids[perk.id] = true
+		for required in perk.requires:
+			consistent = consistent and tree.perks.has(required) and required.row < perk.row
+	_check(consistent, "identifiants uniques, et chaque amélioration demande des améliorations des rangs au-dessus")
+	_check(tree.branch_names.size() == 3, "3 branches : tours, or, vies")
+	var poudre := tree.get_perk("poudre")
+	var longue_vue := tree.get_perk("longue_vue")
+	_check(Perks.get_available_stars() == 0 and not Perks.can_buy(poudre), "sans étoiles, rien à acheter")
+	Progress.record_victory(LEVEL_01.resource_path, 3)
+	Progress.record_victory(LEVEL_02.resource_path, 2)
+	_check(Perks.get_earned_stars() == 5 and Perks.get_available_stars() == 5, "les étoiles des niveaux gagnés sont la monnaie")
+
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	_check(title.get_node("%PerksButton").text.ends_with("★ 5"), "l'écran titre signale les étoiles à dépenser")
+	await _free(title)
+
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(screen.get_button(longue_vue).text.ends_with("Verrouillé"), "Longue-vue est verrouillée tant que Poudre fine n'est pas achetée")
+	screen.get_button(longue_vue).pressed.emit()
+	_check(not Perks.is_owned(longue_vue), "une amélioration verrouillée ne s'achète pas")
+	_check(screen.info_status.text.contains("Poudre fine"), "la fiche dit ce qui manque")
+	screen.get_button(poudre).pressed.emit()
+	_check(Perks.is_owned(poudre) and Perks.get_available_stars() == 4, "acheter Poudre fine coûte 1 étoile")
+	_check(screen.get_button(poudre).text.ends_with("Acquis") and screen.get_button(longue_vue).text.ends_with("★ 1"),
+		"Poudre fine est acquise et débloque Longue-vue")
+	_check(screen.stars_label.text.begins_with("★ 4 à dépenser"), "le compteur d'étoiles se met à jour")
+	_check(not screen.buy(poudre), "une amélioration ne s'achète qu'une fois")
+	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0 * 1.1), "Poudre fine : +10 % de dégâts sur les tours")
+	var artilleur := tree.get_perk("artilleur")
+	Perks.buy(longue_vue)
+	Perks.buy(tree.get_perk("rouages"))
+	_check(Perks.is_unlocked(artilleur) and not Perks.can_buy(artilleur) and Perks.get_available_stars() == 1,
+		"une amélioration trop chère ne s'achète pas")
+	screen.get_node("%RefundButton").pressed.emit()
+	_check(Perks.get_owned_ids().is_empty() and Perks.get_available_stars() == 5, "Réinitialiser l'arbre rend toutes les étoiles")
+	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0), "et retire les bonus")
+	Perks.buy(poudre)
+	Progress.reset_campaign()
+	_check(Perks.get_owned_ids().is_empty(), "Effacer la progression efface aussi les améliorations")
+	await _free(screen)
+
+
+func _test_perks_in_level() -> void:
+	print("Arbre des améliorations : effets en jeu")
+	Progress.record_victory(LEVEL_01.resource_path, 3)
+	Progress.record_victory(LEVEL_02.resource_path, 3)
+	Progress.record_victory(LEVEL_03.resource_path, 3)
+	for id in ["tresor", "architecte", "brocanteur", "remparts", "infirmerie", "pillage"]:
+		_check(Perks.buy(Perks.TREE.get_perk(id)), "achat : %s" % Perks.TREE.get_perk(id).display_name)
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.gold == 200 and level.lives == 25 and level.starting_lives == 25,
+		"Trésor de guerre et Remparts : 200 or et 25 vies au départ")
+	_check(CANNON.get_cost() == 45 and CANNON.get_upgrade_cost(1) == 36, "Architecte : tours et améliorations 10 % moins chères")
+	var tower := level.place_tower(Vector2i(2, 4), CANNON)
+	_check(tower != null and level.gold == 155, "la pose coûte le prix réduit")
+	_check(tower.get_sell_value() == roundi(45 * 0.85), "Brocanteur : la vente rend 85 %")
+	_check(level.get_enemy_reward(SLIME) == roundi(SLIME.reward * 1.2), "Pillage : +20 % d'or par ennemi")
+	level.lives = 20
+	level.spawner.current_wave = 0
+	level._check_wave_cleared()
+	_check(level.lives == 21, "Infirmerie : une vague repoussée rend 1 vie")
+	level.lives = 25
+	level.spawner.current_wave = 1
+	level._check_wave_cleared()
+	_check(level.lives == 25, "sans dépasser les vies de départ")
+	await _free(level)
+	Progress.reset_campaign()
 
 
 func _test_sound() -> void:

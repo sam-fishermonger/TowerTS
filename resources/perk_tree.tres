@@ -1,0 +1,171 @@
+[gd_resource type="Resource" script_class="PerkTree" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/perk_tree.gd" id="1_tree"]
+[ext_resource type="Script" path="res://scripts/data/perk.gd" id="2_perk"]
+
+[sub_resource type="Resource" id="Perk_poudre"]
+script = ExtResource("2_perk")
+id = "poudre"
+display_name = "Poudre fine"
+description = "Toutes les tours font 10 % de dégâts en plus."
+cost = 1
+column = 0.5
+row = 0
+damage_multiplier = 1.1
+
+[sub_resource type="Resource" id="Perk_longue_vue"]
+script = ExtResource("2_perk")
+id = "longue_vue"
+display_name = "Longue-vue"
+description = "Toutes les tours tirent 10 % plus loin."
+cost = 1
+requires = Array[Resource]([SubResource("Perk_poudre")])
+column = 0.0
+row = 1
+range_multiplier = 1.1
+
+[sub_resource type="Resource" id="Perk_givre"]
+script = ExtResource("2_perk")
+id = "givre"
+display_name = "Givre mordant"
+description = "Les ralentissements durent 1 seconde de plus."
+cost = 1
+requires = Array[Resource]([SubResource("Perk_poudre")])
+column = 1.0
+row = 1
+slow_duration_bonus = 1.0
+
+[sub_resource type="Resource" id="Perk_rouages"]
+script = ExtResource("2_perk")
+id = "rouages"
+display_name = "Rouages huilés"
+description = "Toutes les tours tirent 15 % plus vite."
+cost = 2
+requires = Array[Resource]([SubResource("Perk_longue_vue")])
+column = 0.5
+row = 2
+fire_rate_multiplier = 1.15
+
+[sub_resource type="Resource" id="Perk_artilleur"]
+script = ExtResource("2_perk")
+id = "artilleur"
+display_name = "Maître artilleur"
+description = "Toutes les tours font encore 20 % de dégâts en plus."
+cost = 3
+requires = Array[Resource]([SubResource("Perk_rouages")])
+column = 0.5
+row = 3
+damage_multiplier = 1.2
+
+[sub_resource type="Resource" id="Perk_tresor"]
+script = ExtResource("2_perk")
+id = "tresor"
+display_name = "Trésor de guerre"
+description = "Chaque partie commence avec 50 or de plus."
+cost = 1
+column = 2.5
+row = 0
+starting_gold_bonus = 50
+
+[sub_resource type="Resource" id="Perk_pillage"]
+script = ExtResource("2_perk")
+id = "pillage"
+display_name = "Pillage"
+description = "Les ennemis détruits rapportent 20 % d'or en plus."
+cost = 2
+requires = Array[Resource]([SubResource("Perk_tresor")])
+column = 2.0
+row = 1
+reward_multiplier = 1.2
+
+[sub_resource type="Resource" id="Perk_architecte"]
+script = ExtResource("2_perk")
+id = "architecte"
+display_name = "Architecte"
+description = "Les tours et leurs améliorations coûtent 10 % moins cher."
+cost = 1
+requires = Array[Resource]([SubResource("Perk_tresor")])
+column = 3.0
+row = 1
+tower_cost_multiplier = 0.9
+
+[sub_resource type="Resource" id="Perk_tresorier"]
+script = ExtResource("2_perk")
+id = "tresorier"
+display_name = "Trésorier"
+description = "Le bonus de fin de vague est augmenté de 50 %."
+cost = 2
+requires = Array[Resource]([SubResource("Perk_pillage")])
+column = 2.0
+row = 2
+wave_bonus_multiplier = 1.5
+
+[sub_resource type="Resource" id="Perk_brocanteur"]
+script = ExtResource("2_perk")
+id = "brocanteur"
+display_name = "Brocanteur"
+description = "Vendre une tour rend 85 % de son prix au lieu de 70 %."
+cost = 1
+requires = Array[Resource]([SubResource("Perk_architecte")])
+column = 3.0
+row = 2
+sell_ratio_bonus = 0.15
+
+[sub_resource type="Resource" id="Perk_coffres"]
+script = ExtResource("2_perk")
+id = "coffres"
+display_name = "Coffres pleins"
+description = "Chaque partie commence avec encore 100 or de plus."
+cost = 3
+requires = Array[Resource]([SubResource("Perk_tresorier"), SubResource("Perk_brocanteur")])
+column = 2.5
+row = 3
+starting_gold_bonus = 100
+
+[sub_resource type="Resource" id="Perk_remparts"]
+script = ExtResource("2_perk")
+id = "remparts"
+display_name = "Remparts"
+description = "5 vies de plus au début de chaque partie."
+cost = 1
+column = 4.5
+row = 0
+lives_bonus = 5
+
+[sub_resource type="Resource" id="Perk_infirmerie"]
+script = ExtResource("2_perk")
+id = "infirmerie"
+display_name = "Infirmerie"
+description = "Chaque vague repoussée rend 1 vie perdue."
+cost = 2
+requires = Array[Resource]([SubResource("Perk_remparts")])
+column = 4.0
+row = 1
+lives_per_wave = 1
+
+[sub_resource type="Resource" id="Perk_douves"]
+script = ExtResource("2_perk")
+id = "douves"
+display_name = "Douves"
+description = "5 vies de plus au début de chaque partie."
+cost = 2
+requires = Array[Resource]([SubResource("Perk_remparts")])
+column = 5.0
+row = 1
+lives_bonus = 5
+
+[sub_resource type="Resource" id="Perk_citadelle"]
+script = ExtResource("2_perk")
+id = "citadelle"
+display_name = "Citadelle"
+description = "10 vies de plus au début de chaque partie."
+cost = 3
+requires = Array[Resource]([SubResource("Perk_infirmerie"), SubResource("Perk_douves")])
+column = 4.5
+row = 2
+lives_bonus = 10
+
+[resource]
+script = ExtResource("1_tree")
+branch_names = Array[String](["Tours", "Or", "Vies"])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle")])
