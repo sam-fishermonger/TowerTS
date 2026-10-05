@@ -333,7 +333,7 @@ func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int
 func _show_lives_lost(amount: int, at: Vector2) -> void:
 	hud.play_damage_effect(amount)
 	# L'ennemi sort par le bord de l'écran : on ramène le texte dans la zone visible.
-	var area := get_viewport_rect().grow_individual(-24.0, -90.0, -24.0, -24.0)
+	var area := hud.get_play_area().grow(-24.0)
 	var shown_at := at.clamp(area.position, area.end)
 	_show_floating_text("-%d" % amount, LIVES_LOST_TEXT_COLOR, shown_at, 20)
 

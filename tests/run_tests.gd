@@ -276,17 +276,38 @@ func _test_sound() -> void:
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	var music_button: Button = title.get_node("%MusicButton")
+	var music_button: Button = title.get_node("%AudioToggles").music_button
 	music_button.button_pressed = false
 	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")) and music_button.text == "Musique : non",
 		"le bouton Musique coupe la musique")
 	_check(Progress.get_setting("music", true) == false, "le choix est enregistré")
 	music_button.button_pressed = true
 	_check(not AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")), "et la remet")
-	var sound_button: Button = title.get_node("%SoundButton")
+	var sound_button: Button = title.get_node("%AudioToggles").sound_button
 	sound_button.button_pressed = false
 	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "le bouton Sons coupe les effets")
 	sound_button.button_pressed = true
+	await _free(title)
+
+	# Les mêmes réglages en jeu, dans la barre du bas, même pendant la pause.
+	var level := await _spawn_level(LEVEL_01)
+	var toggles := level.hud.audio_toggles
+	_check(toggles.is_visible_in_tree() and toggles.music_button.button_pressed and toggles.sound_button.button_pressed,
+		"en jeu : boutons Musique et Sons, à oui")
+	level.set_paused(true)
+	toggles.music_button.button_pressed = false
+	toggles.sound_button.button_pressed = false
+	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music"))
+		and AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "en jeu et en pause, ils coupent musique et sons")
+	_check(toggles.music_button.text == "Musique : non" and toggles.sound_button.text == "Sons : non",
+		"les boutons affichent l'état")
+	await _free(level)
+	title = TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	_check(not title.get_node("%AudioToggles").music_button.button_pressed, "l'écran titre reprend le réglage choisi en jeu")
+	Sound.set_music_enabled(true)
+	Sound.set_sound_enabled(true)
 	await _free(title)
 
 
@@ -345,6 +366,8 @@ func _test_tower_placement() -> void:
 	level.select_tower(GATLING)
 	_check(level.placer.selected_tower == GATLING, "le placeur garde la tour sélectionnée")
 	_check(level.hud.tower_buttons.get_child(1).button_pressed, "le bouton de la tour sélectionnée est enfoncé")
+	_check(level.hud.tower_buttons.get_child(2).disabled and level.hud.tower_buttons.get_child(2).modulate.a < 1.0,
+		"une tour trop chère est grisée dans la barre d'achat")
 	level.select_tower(null)
 	_check(not level.hud.tower_buttons.get_child(1).button_pressed, "désélection")
 	await _free(level)
@@ -416,6 +439,15 @@ func _test_tower_info_panels() -> void:
 	print("Fiches des tours")
 	var level := await _spawn_level(LEVEL_01)
 	var hud := level.hud
+	var screen := root.get_visible_rect()
+	var slots := hud.tower_buttons.get_children()
+	var first_rect: Rect2 = slots[0].get_global_rect()
+	_check(first_rect.position.x < 32.0 and first_rect.end.y > screen.end.y - 32.0, "barre d'achat en bas à gauche")
+	_check(slots.all(func(slot: TowerShopButton) -> bool: return slot.size == first_rect.size),
+		"toutes les cases ont la même taille (%s)" % first_rect.size)
+	_check(slots[0].find_children("*", "TowerIcon", true, false).size() == 1, "chaque case montre l'image de la tour")
+	_check(first_rect.position.y >= level.map.cell_to_world(Vector2i(0, level.map.rows - 1)).y + level.map.cell_size / 2.0,
+		"la barre ne cache aucune case de la carte")
 	var button: Button = hud.tower_buttons.get_child(0)
 	button.mouse_entered.emit()
 	await process_frame
@@ -425,7 +457,7 @@ func _test_tower_info_panels() -> void:
 	_check(not shop.upgrade_button.is_visible_in_tree() and not shop.sell_button.is_visible_in_tree() \
 		and not shop.target_button.visible and not shop.close_button.visible, "pas de boutons sur l'aperçu")
 	_check(shop.stats_grid.get_child_count() == 4 * 3, "4 statistiques pour le canon")
-	_check(shop.position.y >= button.get_global_rect().end.y, "la fiche s'ouvre sous le bouton")
+	_check(shop.get_global_rect().end.y <= button.get_global_rect().position.y, "la fiche s'ouvre au-dessus du bouton")
 	button.mouse_exited.emit()
 	_check(not shop.visible, "la fiche se ferme quand la souris quitte le bouton")
 

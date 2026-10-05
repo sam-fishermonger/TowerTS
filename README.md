@@ -13,9 +13,9 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 
 ## Comment jouer
 
-- Choisir une tour dans la barre du haut, puis cliquer sur une case libre hors du chemin.
+- Choisir une tour dans la barre d'achat, en bas à gauche (une case par tour : son image, son nom et son prix, grisée quand l'or manque), puis cliquer sur une case libre hors du chemin.
 - **Maj + clic** pour poser plusieurs tours d'affilée, **clic droit** ou **Échap** pour annuler.
-- Survoler une tour de la barre d'achat affiche sa fiche : description, statistiques et prix.
+- Survoler une case de la barre d'achat affiche, juste au-dessus, la fiche de la tour : description, statistiques et prix.
 - Cliquer sur une tour posée ouvre sa fiche, avec le bouton **Améliorer** : chaque tour a 2 améliorations (niveau 3 maximum), dont les gains sont affichés en vert avant l'achat.
 - Dans la même fiche, **Vendre** retire la tour et rend 70 % de ce qu'elle a coûté (améliorations comprises), et le bouton **Cible** choisit l'ennemi visé en priorité : Premier (le plus avancé, par défaut), Dernier, Le plus fort (le plus de vie) ou Le plus proche. Le Givre frappe tout ce qui est à portée et n'a donc pas ce choix.
 - **✕** ou **Échap** ferme la fiche.
@@ -28,7 +28,7 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et l'écran titre affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche) repart de zéro.
 - **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée). Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte plus d'étoiles que la campagne n'en rapporte : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
-- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément sur l'écran titre (le choix est enregistré).
+- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
 
 ## Images
 
