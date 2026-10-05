@@ -21,5 +21,10 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, tower_data.attack_range, Color(tint, 0.1))
 	draw_arc(Vector2.ZERO, tower_data.attack_range, 0.0, TAU, 64, Color(tint, 0.6), 1.5)
 	var half := Tower.SIZE / 2.0
-	draw_rect(Rect2(-half, -half, Tower.SIZE, Tower.SIZE), Color(tower_data.color, 0.6))
-	draw_rect(Rect2(-half, -half, Tower.SIZE, Tower.SIZE), tint, false, 2.0)
+	var rect := Rect2(-half, -half, Tower.SIZE, Tower.SIZE)
+	if tower_data.turret_texture:
+		draw_texture_rect(Tower.BASE_TEXTURE, rect, false, Color(1, 1, 1, 0.65))
+		draw_texture_rect(tower_data.turret_texture, rect.grow(Tower.SIZE * 0.15), false, Color(1, 1, 1, 0.65))
+	else:
+		draw_rect(rect, Color(tower_data.color, 0.6))
+	draw_rect(rect, tint, false, 2.0)

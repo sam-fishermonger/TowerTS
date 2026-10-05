@@ -70,6 +70,7 @@ size_flags_horizontal = 3
 [node name="TowerButtons" type="HBoxContainer" parent="TopBar/Margin/Row"]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="NextWaveButton" type="Button" parent="TopBar/Margin/Row"]
@@ -90,7 +91,37 @@ offset_right = 900.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.5)
 theme_override_font_sizes/font_size = 11
-text = "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails et amélioration  ·  Espace : pause  ·  1, 2, 3 : vitesse"
+text = "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  Espace : pause  ·  1, 2, 3 : vitesse"
+
+[node name="WavePreview" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -420.0
+offset_top = 72.0
+offset_right = -8.0
+offset_bottom = 124.0
+grow_horizontal = 0
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="WavePreview"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="WavePreviewLabel" type="RichTextLabel" parent="WavePreview/Margin"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+text = "Prochaine vague"
+fit_content = true
+autowrap_mode = 0
 
 [node name="SpeedBar" type="PanelContainer" parent="."]
 anchors_preset = 3
@@ -160,6 +191,24 @@ text = "Pause"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="PauseHint" type="Label" parent="PauseOverlay"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = 36.0
+offset_right = 300.0
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 16
+text = "Vous pouvez poser, améliorer et vendre des tours pendant la pause."
+horizontal_alignment = 1
+
 [node name="ShopInfo" parent="." instance=ExtResource("2_info")]
 unique_name_in_owner = true
 
@@ -197,6 +246,14 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 40
 text = "Victoire !"
+horizontal_alignment = 1
+
+[node name="EndStars" type="Label" parent="EndPanel/Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.82, 0.25, 1)
+theme_override_font_sizes/font_size = 40
+text = "★★★"
 horizontal_alignment = 1
 
 [node name="EndMessage" type="Label" parent="EndPanel/Margin/Column"]

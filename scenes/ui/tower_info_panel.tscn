@@ -85,9 +85,33 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Prix : 0 or"
 
-[node name="UpgradeButton" type="Button" parent="Margin/Column"]
+[node name="TargetButton" type="Button" parent="Margin/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+focus_mode = 0
+tooltip_text = "Changer l'ennemi visé en priorité"
+text = "Cible : Premier"
+
+[node name="Actions" type="HBoxContainer" parent="Margin/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeButton" type="Button" parent="Margin/Column/Actions"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.6
 focus_mode = 0
 text = "Améliorer"
+
+[node name="SellButton" type="Button" parent="Margin/Column/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+tooltip_text = "Revendre la tour"
+text = "Vendre"

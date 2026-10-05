@@ -14,6 +14,12 @@ extends Resource
 ## Nombre de tirs par seconde.
 @export var fire_rate := 1.0
 @export var color := Color.STEEL_BLUE
+## Tourelle posée sur le socle (dessin de remplacement en code si vide).
+@export var turret_texture: Texture2D
+## La tourelle pivote vers sa cible (faux pour le Givre, qui frappe tout autour).
+@export var turret_rotates := true
+## Son joué à chaque tir.
+@export var attack_sound: AudioStream
 
 @export_group("Projectile")
 ## Scène du projectile tiré (tours à projectiles seulement).
@@ -28,6 +34,12 @@ extends Resource
 @export_range(0.1, 1.0) var slow_factor := 1.0
 ## Durée du ralentissement, en secondes.
 @export var slow_duration := 0.0
+
+@export_group("Rayon")
+## Multiplicateur de dégâts atteint en restant sur la même cible (1 = pas de montée).
+@export var beam_ramp_max := 1.0
+## Secondes sur la même cible pour atteindre beam_ramp_max.
+@export var beam_ramp_time := 2.0
 
 @export_group("Améliorations")
 ## Améliorations achetables, dans l'ordre : la tour posée est au niveau 1,

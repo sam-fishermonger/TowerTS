@@ -3,9 +3,10 @@ extends PanelContainer
 ## Fiche détaillée d'une tour. Deux usages :
 ## - aperçu d'un type de tour (survol de la barre d'achat) : statistiques et prix ;
 ## - tour posée sur la carte : niveau, gains de la prochaine amélioration,
-##   bouton Améliorer et bouton de fermeture.
+##   choix de la cible, boutons Améliorer, Vendre et fermeture.
 
 signal upgrade_requested(tower: Tower)
+signal sell_requested(tower: Tower)
 signal close_requested
 
 ## Écart entre la fiche et ce qu'elle décrit, et marge avec les bords de l'écran.
@@ -34,7 +35,10 @@ var _beside := false
 @onready var description_label: Label = %DescriptionLabel
 @onready var stats_grid: GridContainer = %StatsGrid
 @onready var footer_label: Label = %FooterLabel
+@onready var target_button: Button = %TargetButton
+@onready var actions: HBoxContainer = %Actions
 @onready var upgrade_button: Button = %UpgradeButton
+@onready var sell_button: Button = %SellButton
 
 
 func _ready() -> void:
@@ -43,6 +47,8 @@ func _ready() -> void:
 	add_theme_stylebox_override("panel", get_theme_stylebox("panel").duplicate())
 	close_button.pressed.connect(close_requested.emit)
 	upgrade_button.pressed.connect(func() -> void: upgrade_requested.emit(tower))
+	sell_button.pressed.connect(func() -> void: sell_requested.emit(tower))
+	target_button.pressed.connect(_on_target_button_pressed)
 	resized.connect(_reposition)
 
 
@@ -93,6 +99,11 @@ func _on_tower_upgraded(_tower: Tower) -> void:
 	_refresh()
 
 
+func _on_target_button_pressed() -> void:
+	tower.cycle_target_mode()
+	_refresh()
+
+
 # --- Contenu ------------------------------------------------------------------
 
 func _refresh() -> void:
@@ -119,8 +130,11 @@ func _refresh() -> void:
 		level_label.text = "Niv. %d / %d" % [level, data.get_max_level()]
 		level_label.visible = true
 		footer_label.visible = false
-		upgrade_button.visible = true
+		actions.visible = true
 		_refresh_upgrade_button()
+		sell_button.text = "Vendre  ·  %d or" % tower.get_sell_value()
+		target_button.visible = tower.uses_target_mode()
+		target_button.text = "Cible : %s" % Tower.TARGET_MODE_NAMES[tower.target_mode]
 	else:
 		level_label.visible = false
 		var footer := "Prix : %d or" % data.cost
@@ -130,7 +144,8 @@ func _refresh() -> void:
 		footer_label.add_theme_color_override("font_color",
 			PRICE_COLOR if _gold >= data.cost else TOO_EXPENSIVE_COLOR)
 		footer_label.visible = true
-		upgrade_button.visible = false
+		actions.visible = false
+		target_button.visible = false
 
 	visible = true
 	# La taille dépend du contenu : on la recalcule (aussi à l'image suivante, une fois
@@ -160,6 +175,9 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 		"%s tirs/s" % _format(next.fire_rate, 2) if next else "")
 	_add_stat("Dégâts/s", _format(stats.get_dps()), _format(next.get_dps()) if next else "")
 	_add_stat("Portée", _format(stats.attack_range), _format(next.attack_range) if next else "")
+	if stats.beam_ramp_max > 1.0:
+		_add_stat("Montée", "x%s en %s s" % [_format(stats.beam_ramp_max), _format(stats.beam_ramp_time)],
+			"x%s en %s s" % [_format(next.beam_ramp_max), _format(next.beam_ramp_time)] if next else "")
 	if stats.splash_radius > 0.0:
 		_add_stat("Explosion", _format(stats.splash_radius), _format(next.splash_radius) if next else "")
 	if stats.slow_factor < 1.0:

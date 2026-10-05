@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" path="res://scenes/towers/projectile_tower.tscn" id="2_scene"]
 [ext_resource type="PackedScene" path="res://scenes/projectiles/projectile.tscn" id="3_projectile"]
 [ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/shot_gatling.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/gatling.svg" id="10_turret"]
 
 [sub_resource type="Resource" id="Upgrade_1"]
 script = ExtResource("4_upgrade")
@@ -27,6 +29,8 @@ attack_range = 120.0
 damage = 7.0
 fire_rate = 5.0
 color = Color(0.9, 0.55, 0.2, 1)
+turret_texture = ExtResource("10_turret")
+attack_sound = ExtResource("9_sound")
 projectile_scene = ExtResource("3_projectile")
 projectile_speed = 650.0
 upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

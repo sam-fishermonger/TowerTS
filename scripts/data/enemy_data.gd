@@ -14,3 +14,13 @@ extends Resource
 @export var damage := 1
 @export var color := Color.RED
 @export var radius := 12.0
+## Image de l'ennemi, tournée dans le sens de la marche (dessin de remplacement en code si vide).
+@export var texture: Texture2D
+## Taille de l'image par rapport au rayon (pour les images avec beaucoup de marge).
+@export var sprite_scale := 1.0
+
+@export_group("Division")
+## Ennemi qui apparaît à sa place quand il est détruit (aucun si vide).
+@export var split_into: EnemyData
+## Nombre d'ennemis qui apparaissent à sa mort.
+@export var split_count := 0

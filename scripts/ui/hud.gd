@@ -10,6 +10,8 @@ signal next_level_requested
 signal menu_requested
 ## Émis quand le joueur demande l'amélioration de la tour affichée en détail.
 signal upgrade_requested(tower: Tower)
+## Émis quand le joueur demande la vente de la tour affichée en détail.
+signal sell_requested(tower: Tower)
 ## Émis quand le joueur ferme la fiche de la tour posée.
 signal tower_details_closed
 ## Émis quand le joueur met le jeu en pause ou le relance (bouton ou Espace).
@@ -26,6 +28,8 @@ var _tower_group := ButtonGroup.new()
 var _speed_group := ButtonGroup.new()
 var _gold := 0
 var _damage_tween: Tween
+## Dernier contenu affiché dans l'aperçu de vague, pour ne le refaire que s'il change.
+var _wave_preview_text := ""
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -35,6 +39,7 @@ var _damage_tween: Tween
 @onready var next_wave_button: Button = %NextWaveButton
 @onready var end_panel: PanelContainer = %EndPanel
 @onready var end_title: Label = %EndTitle
+@onready var end_stars: Label = %EndStars
 @onready var end_message: Label = %EndMessage
 @onready var next_level_button: Button = %NextLevelButton
 ## Fiche affichée au survol d'un bouton de la barre d'achat.
@@ -44,6 +49,9 @@ var _damage_tween: Tween
 @onready var pause_button: Button = %PauseButton
 @onready var speed_buttons: HBoxContainer = %SpeedButtons
 @onready var pause_overlay: ColorRect = %PauseOverlay
+## Composition de la prochaine vague et bonus pour la lancer en avance.
+@onready var wave_preview: PanelContainer = %WavePreview
+@onready var wave_preview_label: RichTextLabel = %WavePreviewLabel
 ## Voile rouge affiché quand le joueur perd des vies.
 @onready var damage_flash: ColorRect = %DamageFlash
 
@@ -56,6 +64,7 @@ func _ready() -> void:
 	%NextLevelButton.pressed.connect(next_level_requested.emit)
 	%MenuButton.pressed.connect(menu_requested.emit)
 	tower_details.upgrade_requested.connect(upgrade_requested.emit)
+	tower_details.sell_requested.connect(sell_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
@@ -95,7 +104,10 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 		speed_buttons.add_child(speed_button)
 	for data in tower_types:
 		var button := Button.new()
-		button.text = "%s  %d or" % [data.display_name, data.cost]
+		# Nom et prix sur deux lignes : la barre garde de la place jusqu'à 6 ou 7 tours.
+		button.text = "%s\n%d or" % [data.display_name, data.cost]
+		button.add_theme_font_size_override("font_size", 14)
+		button.custom_minimum_size = Vector2(84, 0)
 		button.toggle_mode = true
 		button.button_group = _tower_group
 		button.focus_mode = Control.FOCUS_NONE
@@ -135,6 +147,31 @@ func set_next_wave_available(available: bool) -> void:
 	next_wave_button.disabled = not available
 
 
+## Affiche la composition de la prochaine vague (null = plus de vague) et, si elle
+## est positive, la prime pour la lancer avant d'avoir vidé la carte.
+func show_next_wave(wave: WaveData, early_bonus := 0) -> void:
+	var text := ""
+	if wave:
+		var counts := {}
+		for group in wave.groups:
+			counts[group.enemy] = counts.get(group.enemy, 0) + group.count
+		var parts: Array[String] = []
+		for enemy: EnemyData in counts:
+			parts.append("[color=#%s]●[/color] %d %s" % [enemy.color.to_html(false), counts[enemy], enemy.display_name])
+		text = "[color=#ffffff99]Prochaine vague :[/color]  " + "   ".join(parts)
+		if early_bonus > 0:
+			text += "\n[color=#ffd54d]Lancer maintenant : +%d or[/color]" % early_bonus
+	if text == _wave_preview_text:
+		return
+	_wave_preview_text = text
+	wave_preview_label.text = text
+	wave_preview.visible = not text.is_empty()
+	next_wave_button.tooltip_text = "Lancer maintenant rapporte %d or" % early_bonus if early_bonus > 0 else ""
+	wave_preview.reset_size()
+	# Le panneau, sous le bouton de vague, reste calé à droite de l'écran.
+	wave_preview.position.x = get_viewport().get_visible_rect().size.x - 8.0 - wave_preview.size.x
+
+
 func set_paused(paused: bool) -> void:
 	pause_button.set_pressed_no_signal(paused)
 	pause_button.text = "Reprendre" if paused else "Pause"
@@ -166,10 +203,16 @@ func play_damage_effect(lives_lost: int) -> void:
 		LIVES_HIT_COLOR, LIVES_COLOR, DAMAGE_FLASH_DURATION)
 
 
-func show_end_screen(victory: bool, can_continue := false) -> void:
+## Écran de fin. Après une victoire, `stars` (1 à 3) s'affiche, avec « Nouveau record »
+## si c'est le meilleur résultat obtenu sur ce niveau.
+func show_end_screen(victory: bool, can_continue := false, stars := 0, new_record := false) -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"
+	end_stars.visible = victory and stars > 0
+	end_stars.text = Progress.star_text(stars)
 	end_message.text = "Toutes les vagues ont été repoussées." if victory \
 		else "Les ennemis ont atteint votre base."
+	if new_record:
+		end_message.text += "\nNouveau record !"
 	next_level_button.visible = can_continue
 	end_panel.visible = true
 	set_paused(false)
@@ -178,6 +221,7 @@ func show_end_screen(victory: bool, can_continue := false) -> void:
 		button.disabled = true
 	shop_info.close()
 	tower_details.close()
+	wave_preview.visible = false
 	if can_continue:
 		next_level_button.grab_focus()
 	else:

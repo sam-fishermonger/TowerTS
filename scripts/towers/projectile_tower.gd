@@ -11,7 +11,6 @@ func _attack(enemy: Enemy) -> void:
 	projectile.global_position = global_position + Vector2.from_angle(_aim_angle) * SIZE * 0.5
 
 
-func _draw_body() -> void:
-	super()
+func _draw_shape() -> void:
 	draw_circle(Vector2.ZERO, SIZE * 0.32, data.color)
 	draw_line(Vector2.ZERO, Vector2.from_angle(_aim_angle) * SIZE * 0.55, data.color.lightened(0.3), 7.0)

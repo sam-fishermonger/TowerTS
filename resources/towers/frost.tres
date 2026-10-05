@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
 [ext_resource type="PackedScene" path="res://scenes/towers/pulse_tower.tscn" id="2_scene"]
 [ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="3_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/pulse_frost.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/frost.svg" id="10_turret"]
 
 [sub_resource type="Resource" id="Upgrade_1"]
 script = ExtResource("3_upgrade")
@@ -27,6 +29,9 @@ attack_range = 110.0
 damage = 4.0
 fire_rate = 0.8
 color = Color(0.45, 0.8, 0.95, 1)
+turret_texture = ExtResource("10_turret")
+turret_rotates = false
+attack_sound = ExtResource("9_sound")
 slow_factor = 0.5
 slow_duration = 1.5
 upgrades = Array[ExtResource("3_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

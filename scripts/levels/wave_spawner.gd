@@ -50,9 +50,17 @@ func _process(delta: float) -> void:
 		wave_spawning_finished.emit(current_wave)
 
 
-func _spawn(group: SpawnGroup) -> void:
+## Fait apparaître un ennemi sur un chemin, à la distance donnée du départ.
+## Sert aussi aux ennemis qui se divisent à leur mort.
+func spawn(data: EnemyData, path: Path2D, progress := 0.0) -> Enemy:
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
-	enemy.data = group.enemy
-	enemy.path = map.get_enemy_path(group.path_index)
+	enemy.data = data
+	enemy.path = path
+	enemy.progress = progress
 	enemy_container.add_child(enemy)
 	enemy_spawned.emit(enemy)
+	return enemy
+
+
+func _spawn(group: SpawnGroup) -> void:
+	spawn(group.enemy, map.get_enemy_path(group.path_index))

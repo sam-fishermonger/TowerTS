@@ -19,6 +19,7 @@ func _impact(_hit: Enemy) -> void:
 	explosion.color = color
 	get_parent().add_child(explosion)
 	explosion.global_position = global_position
+	Sound.play(&"explosion")
 
 
 func _draw() -> void:

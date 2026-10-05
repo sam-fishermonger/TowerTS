@@ -15,8 +15,10 @@ const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 @export var starting_gold := 150
 @export var starting_lives := 20
 @export var tower_types: Array[TowerData] = []
-## Niveau proposé après une victoire (vide = dernier niveau).
-@export_file("*.tscn") var next_level := ""
+## Campagne dont fait partie le niveau : elle donne le niveau suivant.
+@export var campaign: Campaign
+## Lancer une vague avant d'avoir vidé la carte rapporte cette part de son bonus, en plus.
+@export_range(0.0, 1.0) var early_call_bonus_ratio := 0.5
 ## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
 @export var game_speeds: Array[float] = [1.0, 2.0, 3.0]
 
@@ -30,6 +32,8 @@ var lives := 0:
 		_refresh_hud()
 var is_over := false
 ## Mise en pause par le joueur (la fin de partie met aussi l'arbre en pause, sans passer par là).
+## Pendant la pause, le joueur peut construire, améliorer et vendre (le TowerPlacer et le HUD
+## ne sont pas mis en pause), mais pas lancer de vague.
 var is_paused := false
 var game_speed := 1.0
 
@@ -57,6 +61,7 @@ func _ready() -> void:
 	hud.tower_selected.connect(select_tower)
 	hud.next_wave_requested.connect(start_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
+	hud.sell_requested.connect(sell_tower)
 	hud.tower_details_closed.connect(inspect_tower.bind(null))
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
@@ -67,6 +72,7 @@ func _ready() -> void:
 	gold = starting_gold
 	lives = starting_lives
 	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+	Sound.play_music()
 
 
 func _exit_tree() -> void:
@@ -74,8 +80,18 @@ func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 
 
+## Niveau proposé après une victoire ("" = dernier niveau).
+func get_next_level() -> String:
+	return campaign.get_next(scene_file_path) if campaign else ""
+
+
 func has_next_level() -> bool:
-	return not next_level.is_empty()
+	return not get_next_level().is_empty()
+
+
+## Étoiles méritées si la partie était gagnée maintenant.
+func get_stars() -> int:
+	return Progress.stars_for(lives, starting_lives)
 
 
 # --- Tours ------------------------------------------------------------------
@@ -97,8 +113,10 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	tower.projectile_container = projectiles
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
+	tower.cell = cell
 	map.occupy(cell, tower)
 	gold -= data.cost
+	Sound.play(&"build")
 	return tower
 
 
@@ -112,7 +130,24 @@ func upgrade_tower(tower: Tower) -> bool:
 	if not can_upgrade_tower(tower):
 		return false
 	gold -= tower.get_upgrade_cost()
+	Sound.play(&"upgrade")
 	return tower.upgrade()
+
+
+## Vend la tour : elle quitte la carte et rend une partie de son prix.
+## Renvoie l'or rendu (0 si la vente est impossible).
+func sell_tower(tower: Tower) -> int:
+	if not is_instance_valid(tower) or not tower.is_alive or is_over:
+		return 0
+	var value := tower.get_sell_value()
+	if placer.inspected_tower == tower:
+		inspect_tower(null)
+	map.release(tower.cell)
+	_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
+	tower.despawn()
+	gold += value
+	Sound.play(&"sell")
+	return value
 
 
 ## Ouvre la fiche d'une tour posée (null = la fermer).
@@ -128,6 +163,8 @@ func set_paused(value: bool) -> void:
 	is_paused = value
 	get_tree().paused = value
 	hud.set_paused(value)
+	# Le niveau ne se met plus à jour pendant la pause : on rafraîchit le bouton de vague tout de suite.
+	hud.set_next_wave_available(can_start_next_wave())
 
 
 func set_game_speed(speed: float) -> void:
@@ -140,9 +177,29 @@ func set_game_speed(speed: float) -> void:
 
 # --- Vagues et ennemis ----------------------------------------------------
 
+func can_start_next_wave() -> bool:
+	return not is_over and not is_paused and not spawner.is_spawning and spawner.has_next_wave()
+
+
 func start_next_wave() -> void:
-	if not is_over:
-		spawner.start_next_wave()
+	if not can_start_next_wave():
+		return
+	var early_bonus := get_early_call_bonus()
+	spawner.start_next_wave()
+	Sound.play(&"wave_start")
+	if early_bonus > 0:
+		gold += early_bonus
+		Sound.play(&"coins")
+		var button_rect := hud.next_wave_button.get_global_rect()
+		_show_floating_text("+%d" % early_bonus, GOLD_TEXT_COLOR,
+			Vector2(button_rect.get_center().x, button_rect.end.y + 24.0), 18)
+
+
+## Prime pour lancer la prochaine vague alors que des ennemis sont encore en jeu (0 sinon).
+func get_early_call_bonus() -> int:
+	if not can_start_next_wave() or _alive_enemy_count() == 0:
+		return 0
+	return roundi(spawner.waves[spawner.current_wave + 1].bonus_gold * early_call_bonus_ratio)
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:
@@ -159,17 +216,31 @@ func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
 
 func _on_enemy_died(enemy: Enemy) -> void:
 	gold += enemy.data.reward
+	Sound.play(&"enemy_death", -3.0)
 	_show_floating_text("+%d" % enemy.data.reward, GOLD_TEXT_COLOR, enemy.global_position, 16)
 	var stain := GroundStain.new()
 	stain.radius = enemy.data.radius
 	stain.color = enemy.data.color
 	stains.add_child(stain)
 	stain.global_position = enemy.global_position
+	_split(enemy)
 	_check_wave_cleared()
+
+
+## Fait apparaître les ennemis cachés dans un ennemi qui se divise, en file
+## derrière lui sur son chemin.
+func _split(enemy: Enemy) -> void:
+	var data := enemy.data
+	if data.split_into == null:
+		return
+	Sound.play(&"enemy_split")
+	for i in data.split_count:
+		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0))
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
 	lives -= enemy.data.damage
+	Sound.play(&"lives_lost")
 	_show_lives_lost(enemy.data.damage, enemy.global_position)
 	if lives <= 0:
 		_end_game(false)
@@ -199,9 +270,12 @@ func _end_game(victory: bool) -> void:
 	is_over = true
 	select_tower(null)
 	inspect_tower(null)
-	hud.show_end_screen(victory, victory and has_next_level())
+	var stars := get_stars() if victory else 0
+	var new_record := victory and Progress.record_victory(scene_file_path, stars)
+	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record)
 	is_paused = false
 	Engine.time_scale = 1.0
+	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
 
@@ -215,7 +289,7 @@ func _on_restart_requested() -> void:
 
 func _on_next_level_requested() -> void:
 	get_tree().paused = false
-	get_tree().change_scene_to_file(next_level)
+	get_tree().change_scene_to_file(get_next_level())
 
 
 func _on_menu_requested() -> void:
@@ -250,5 +324,8 @@ func _refresh_hud() -> void:
 
 
 func _process(_delta: float) -> void:
-	# Le bouton de vague dépend de l'état du spawner, qui évolue en continu.
-	hud.set_next_wave_available(not is_over and not spawner.is_spawning and spawner.has_next_wave())
+	# Le bouton et l'aperçu de vague dépendent du spawner et des ennemis en jeu, qui évoluent en continu.
+	hud.set_next_wave_available(can_start_next_wave())
+	if not is_over:
+		var next_wave: WaveData = spawner.waves[spawner.current_wave + 1] if spawner.has_next_wave() else null
+		hud.show_next_wave(next_wave, get_early_call_bonus())
