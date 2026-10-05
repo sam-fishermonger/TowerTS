@@ -137,12 +137,12 @@ func _refresh() -> void:
 		target_button.text = "Cible : %s" % Tower.TARGET_MODE_NAMES[tower.target_mode]
 	else:
 		level_label.visible = false
-		var footer := "Prix : %d or" % data.cost
+		var footer := "Prix : %d or" % data.get_cost()
 		if data.upgrades.size() > 0:
 			footer += "   ·   %d amélioration%s" % [data.upgrades.size(), "s" if data.upgrades.size() > 1 else ""]
 		footer_label.text = footer
 		footer_label.add_theme_color_override("font_color",
-			PRICE_COLOR if _gold >= data.cost else TOO_EXPENSIVE_COLOR)
+			PRICE_COLOR if _gold >= data.get_cost() else TOO_EXPENSIVE_COLOR)
 		footer_label.visible = true
 		actions.visible = false
 		target_button.visible = false

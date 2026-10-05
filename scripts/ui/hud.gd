@@ -105,7 +105,7 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	for data in tower_types:
 		var button := Button.new()
 		# Nom et prix sur deux lignes : la barre garde de la place jusqu'à 6 ou 7 tours.
-		button.text = "%s\n%d or" % [data.display_name, data.cost]
+		button.text = "%s\n%d or" % [data.display_name, data.get_cost()]
 		button.add_theme_font_size_override("font_size", 14)
 		button.custom_minimum_size = Vector2(84, 0)
 		button.toggle_mode = true
@@ -231,7 +231,7 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 func _update_tower_buttons() -> void:
 	for button: Button in tower_buttons.get_children():
 		var data: TowerData = button.get_meta("tower_data")
-		button.disabled = data.cost > _gold and not button.button_pressed
+		button.disabled = data.get_cost() > _gold and not button.button_pressed
 
 
 func _on_tower_button_pressed() -> void:

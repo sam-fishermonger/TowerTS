@@ -1,9 +1,13 @@
 extends Control
-## Écran titre : reprend la campagne, permet de choisir un niveau débloqué, ou quitte le jeu.
+## Écran titre : reprend la campagne, ouvre l'arbre des améliorations, permet de choisir
+## un niveau débloqué, ou quitte le jeu.
+
+const PERK_TREE_SCREEN := "res://scenes/ui/perk_tree_screen.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 
 @onready var play_button: Button = %PlayButton
+@onready var perks_button: Button = %PerksButton
 @onready var level_buttons: HBoxContainer = %LevelButtons
 @onready var quit_button: Button = %QuitButton
 @onready var reset_button: Button = %ResetButton
@@ -14,6 +18,7 @@ const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 
 func _ready() -> void:
 	play_button.pressed.connect(func() -> void: open_level(Progress.get_next_to_play(CAMPAIGN)))
+	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	quit_button.pressed.connect(get_tree().quit)
 	# Quitter n'a pas de sens dans un navigateur.
 	quit_button.visible = not OS.has_feature("web")
@@ -52,6 +57,9 @@ func _build_level_buttons() -> void:
 		button.pressed.connect(open_level.bind(path))
 		level_buttons.add_child(button)
 	play_button.text = "Continuer" if any_won else "Jouer"
+	# Les étoiles non dépensées sont signalées sur le bouton de l'arbre.
+	var available := Perks.get_available_stars()
+	perks_button.text = "Améliorations  ·  ★ %d" % available if available > 0 else "Améliorations"
 	reset_button.visible = any_won
 
 
