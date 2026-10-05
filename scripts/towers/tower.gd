@@ -6,6 +6,12 @@ extends Entity
 ## avec les améliorations achetées appliquées.
 
 const SIZE := 44.0
+## Part de ce que la tour a coûté (pose et améliorations) rendue à la vente.
+const SELL_RATIO := 0.7
+
+## Ennemi visé en priorité parmi ceux à portée.
+enum TargetMode { FIRST, LAST, STRONGEST, CLOSEST }
+const TARGET_MODE_NAMES: Array[String] = ["Premier", "Dernier", "Le plus fort", "Le plus proche"]
 
 ## Émis quand la tour monte de niveau.
 signal upgraded(tower: Tower)
@@ -15,6 +21,9 @@ signal upgraded(tower: Tower)
 var level := 1
 ## Statistiques effectives au niveau actuel.
 var stats: TowerData
+## Case de la carte occupée par la tour.
+var cell := Vector2i.ZERO
+var target_mode := TargetMode.FIRST
 
 ## Nœud qui reçoit ce que la tour crée en jeu (projectiles, effets). Par défaut, son parent.
 var projectile_container: Node
@@ -58,6 +67,35 @@ func get_upgrade_cost() -> int:
 	return data.get_upgrade_cost(level)
 
 
+## Total payé pour la tour : sa pose et les améliorations achetées.
+func get_total_cost() -> int:
+	var total := data.cost
+	for i in level - 1:
+		total += data.get_upgrade_cost(i + 1)
+	return total
+
+
+## Or rendu si la tour est vendue.
+func get_sell_value() -> int:
+	return roundi(get_total_cost() * SELL_RATIO)
+
+
+## false pour les tours qui frappent tout ce qui est à portée (le choix de cible ne sert à rien).
+func uses_target_mode() -> bool:
+	return true
+
+
+func set_target_mode(mode: TargetMode) -> void:
+	target_mode = mode
+	# La nouvelle règle s'applique tout de suite, sans attendre la fin de la cible actuelle.
+	_target = null
+
+
+## Passe à la règle de ciblage suivante (dans l'ordre de TargetMode).
+func cycle_target_mode() -> void:
+	set_target_mode(((target_mode + 1) % TargetMode.size()) as TargetMode)
+
+
 ## Passe au niveau suivant (sans payer : c'est le rôle du niveau de jeu).
 ## Renvoie false si la tour est déjà au niveau maximal.
 func upgrade() -> bool:
@@ -70,13 +108,31 @@ func upgrade() -> bool:
 	return true
 
 
-## Ennemi à portée le plus proche de la base, ou null.
+## Ennemi à portée qui correspond le mieux à la règle de ciblage, ou null.
+## La cible est gardée tant qu'elle reste à portée.
 func find_target() -> Enemy:
 	var best: Enemy = null
+	var best_score := -INF
 	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
-		if best == null or enemy.distance_to_end() < best.distance_to_end():
+		var score := _target_score(enemy)
+		if score > best_score:
 			best = enemy
+			best_score = score
 	return best
+
+
+## Plus le score est grand, plus l'ennemi est prioritaire.
+func _target_score(enemy: Enemy) -> float:
+	match target_mode:
+		TargetMode.LAST:
+			return enemy.distance_to_end()
+		TargetMode.STRONGEST:
+			# À vie égale, le plus avancé d'abord.
+			return enemy.health.health * 100000.0 - enemy.distance_to_end()
+		TargetMode.CLOSEST:
+			return -global_position.distance_squared_to(enemy.global_position)
+		_:
+			return -enemy.distance_to_end()
 
 
 ## Attaque la cible. À redéfinir dans les sous-classes.

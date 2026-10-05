@@ -10,6 +10,8 @@ signal next_level_requested
 signal menu_requested
 ## Émis quand le joueur demande l'amélioration de la tour affichée en détail.
 signal upgrade_requested(tower: Tower)
+## Émis quand le joueur demande la vente de la tour affichée en détail.
+signal sell_requested(tower: Tower)
 ## Émis quand le joueur ferme la fiche de la tour posée.
 signal tower_details_closed
 ## Émis quand le joueur met le jeu en pause ou le relance (bouton ou Espace).
@@ -56,6 +58,7 @@ func _ready() -> void:
 	%NextLevelButton.pressed.connect(next_level_requested.emit)
 	%MenuButton.pressed.connect(menu_requested.emit)
 	tower_details.upgrade_requested.connect(upgrade_requested.emit)
+	tower_details.sell_requested.connect(sell_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)

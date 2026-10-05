@@ -90,7 +90,7 @@ offset_right = 900.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.5)
 theme_override_font_sizes/font_size = 11
-text = "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails et amélioration  ·  Espace : pause  ·  1, 2, 3 : vitesse"
+text = "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  Espace : pause  ·  1, 2, 3 : vitesse"
 
 [node name="SpeedBar" type="PanelContainer" parent="."]
 anchors_preset = 3

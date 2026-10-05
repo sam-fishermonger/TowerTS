@@ -57,6 +57,7 @@ func _ready() -> void:
 	hud.tower_selected.connect(select_tower)
 	hud.next_wave_requested.connect(start_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
+	hud.sell_requested.connect(sell_tower)
 	hud.tower_details_closed.connect(inspect_tower.bind(null))
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
@@ -97,6 +98,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	tower.projectile_container = projectiles
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
+	tower.cell = cell
 	map.occupy(cell, tower)
 	gold -= data.cost
 	return tower
@@ -113,6 +115,21 @@ func upgrade_tower(tower: Tower) -> bool:
 		return false
 	gold -= tower.get_upgrade_cost()
 	return tower.upgrade()
+
+
+## Vend la tour : elle quitte la carte et rend une partie de son prix.
+## Renvoie l'or rendu (0 si la vente est impossible).
+func sell_tower(tower: Tower) -> int:
+	if not is_instance_valid(tower) or not tower.is_alive or is_over:
+		return 0
+	var value := tower.get_sell_value()
+	if placer.inspected_tower == tower:
+		inspect_tower(null)
+	map.release(tower.cell)
+	_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
+	tower.despawn()
+	gold += value
+	return value
 
 
 ## Ouvre la fiche d'une tour posée (null = la fermer).

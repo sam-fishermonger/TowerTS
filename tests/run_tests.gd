@@ -34,6 +34,8 @@ func _run() -> void:
 	await _test_tower_upgrade_stats()
 	await _test_tower_upgrade_in_level()
 	await _test_tower_info_panels()
+	await _test_sell_tower()
+	await _test_target_modes()
 	await _test_level_02_map()
 	await _test_level_02_uses_both_paths()
 	await _test_enemy_slow_and_armor()
@@ -264,7 +266,8 @@ func _test_tower_info_panels() -> void:
 	var shop := hud.shop_info
 	_check(shop.visible and shop.name_label.text == "Canon", "survol d'un bouton d'achat : fiche de la tour")
 	_check(shop.footer_label.text.begins_with("Prix : 50 or"), "la fiche indique le prix")
-	_check(not shop.upgrade_button.visible and not shop.close_button.visible, "pas de boutons sur l'aperçu")
+	_check(not shop.upgrade_button.is_visible_in_tree() and not shop.sell_button.is_visible_in_tree() \
+		and not shop.target_button.visible and not shop.close_button.visible, "pas de boutons sur l'aperçu")
 	_check(shop.stats_grid.get_child_count() == 4 * 3, "4 statistiques pour le canon")
 	_check(shop.position.y >= button.get_global_rect().end.y, "la fiche s'ouvre sous le bouton")
 	button.mouse_exited.emit()
@@ -312,6 +315,65 @@ func _test_tower_info_panels() -> void:
 	await _click(level, tower.global_position)
 	level.select_tower(GATLING)
 	_check(not details.visible, "choisir une tour à poser ferme la fiche")
+	await _free(level)
+
+
+func _test_sell_tower() -> void:
+	print("Vente des tours")
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 1000
+	var cell := Vector2i(2, 4)
+	var tower := level.place_tower(cell, CANNON)
+	_check(tower.get_sell_value() == 35, "une tour neuve se revend 70 %% de son prix (35 or)")
+	level.upgrade_tower(tower)
+	_check(tower.get_total_cost() == 90 and tower.get_sell_value() == 63, "les améliorations comptent dans la revente")
+	await _click(level, tower.global_position)
+	var details := level.hud.tower_details
+	_check(details.sell_button.visible and details.sell_button.text.ends_with("63 or"), "le bouton Vendre indique le prix")
+	var gold_before := level.gold
+	details.sell_button.pressed.emit()
+	_check(level.gold == gold_before + 63, "la vente rend l'or")
+	_check(not tower.is_alive and level.map.get_occupant(cell) == null, "la tour quitte la carte")
+	_check(not details.visible and level.placer.inspected_tower == null, "la fiche se ferme")
+	_check(level.map.is_cell_buildable(cell), "la case est de nouveau libre")
+	_check(level.sell_tower(tower) == 0 and level.gold == gold_before + 63, "une tour ne se vend qu'une fois")
+	await process_frame
+	_check(level.place_tower(cell, GATLING) != null, "on peut reconstruire sur la case")
+	await _free(level)
+
+
+func _test_target_modes() -> void:
+	print("Choix de la cible")
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 1000
+	var tower := level.place_tower(Vector2i(2, 4), SNIPER)
+	var tough: EnemyData = SLIME.duplicate()
+	tough.max_health = 500.0
+	# Trois ennemis immobiles à portée : en tête, en queue, et le plus résistant au milieu.
+	var ahead := _add_still_enemy(level, SLIME, 0, 260.0)
+	var strong := _add_still_enemy(level, tough, 0, 200.0)
+	var behind := _add_still_enemy(level, SLIME, 0, 120.0)
+	_check(tower.target_mode == Tower.TargetMode.FIRST and tower.find_target() == ahead,
+		"par défaut, la tour vise l'ennemi le plus avancé")
+	tower.set_target_mode(Tower.TargetMode.LAST)
+	_check(tower.find_target() == behind, "Dernier : l'ennemi le moins avancé")
+	tower.set_target_mode(Tower.TargetMode.STRONGEST)
+	_check(tower.find_target() == strong, "Le plus fort : l'ennemi qui a le plus de vie")
+	tower.set_target_mode(Tower.TargetMode.CLOSEST)
+	var closest: Enemy = [ahead, strong, behind].reduce(func(a: Enemy, b: Enemy) -> Enemy:
+		return a if tower.global_position.distance_to(a.global_position) <= tower.global_position.distance_to(b.global_position) else b)
+	_check(tower.find_target() == closest, "Le plus proche : l'ennemi le plus près de la tour")
+
+	await _click(level, tower.global_position)
+	var details := level.hud.tower_details
+	_check(details.target_button.visible and details.target_button.text == "Cible : Le plus proche",
+		"la fiche affiche la règle de ciblage")
+	details.target_button.pressed.emit()
+	_check(tower.target_mode == Tower.TargetMode.FIRST and details.target_button.text == "Cible : Premier",
+		"le bouton passe à la règle suivante")
+	var frost := level.place_tower(Vector2i(2, 5), FROST)
+	await _click(level, frost.global_position)
+	_check(not details.target_button.visible, "pas de choix de cible pour le Givre, qui frappe tout autour de lui")
 	await _free(level)
 
 

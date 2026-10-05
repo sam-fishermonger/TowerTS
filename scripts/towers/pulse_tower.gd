@@ -15,6 +15,10 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+func uses_target_mode() -> bool:
+	return false
+
+
 func _attack(_enemy: Enemy) -> void:
 	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
 		enemy.take_damage(stats.damage)
