@@ -17,6 +17,8 @@ const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 @export var tower_types: Array[TowerData] = []
 ## Niveau proposé après une victoire (vide = dernier niveau).
 @export_file("*.tscn") var next_level := ""
+## Lancer une vague avant d'avoir vidé la carte rapporte cette part de son bonus, en plus.
+@export_range(0.0, 1.0) var early_call_bonus_ratio := 0.5
 ## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
 @export var game_speeds: Array[float] = [1.0, 2.0, 3.0]
 
@@ -157,9 +159,27 @@ func set_game_speed(speed: float) -> void:
 
 # --- Vagues et ennemis ----------------------------------------------------
 
+func can_start_next_wave() -> bool:
+	return not is_over and not spawner.is_spawning and spawner.has_next_wave()
+
+
 func start_next_wave() -> void:
-	if not is_over:
-		spawner.start_next_wave()
+	if not can_start_next_wave():
+		return
+	var early_bonus := get_early_call_bonus()
+	spawner.start_next_wave()
+	if early_bonus > 0:
+		gold += early_bonus
+		var button_rect := hud.next_wave_button.get_global_rect()
+		_show_floating_text("+%d" % early_bonus, GOLD_TEXT_COLOR,
+			Vector2(button_rect.get_center().x, button_rect.end.y + 24.0), 18)
+
+
+## Prime pour lancer la prochaine vague alors que des ennemis sont encore en jeu (0 sinon).
+func get_early_call_bonus() -> int:
+	if not can_start_next_wave() or _alive_enemy_count() == 0:
+		return 0
+	return roundi(spawner.waves[spawner.current_wave + 1].bonus_gold * early_call_bonus_ratio)
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:
@@ -267,5 +287,8 @@ func _refresh_hud() -> void:
 
 
 func _process(_delta: float) -> void:
-	# Le bouton de vague dépend de l'état du spawner, qui évolue en continu.
-	hud.set_next_wave_available(not is_over and not spawner.is_spawning and spawner.has_next_wave())
+	# Le bouton et l'aperçu de vague dépendent du spawner et des ennemis en jeu, qui évoluent en continu.
+	hud.set_next_wave_available(can_start_next_wave())
+	if not is_over:
+		var next_wave: WaveData = spawner.waves[spawner.current_wave + 1] if spawner.has_next_wave() else null
+		hud.show_next_wave(next_wave, get_early_call_bonus())

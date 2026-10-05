@@ -28,6 +28,8 @@ var _tower_group := ButtonGroup.new()
 var _speed_group := ButtonGroup.new()
 var _gold := 0
 var _damage_tween: Tween
+## Dernier contenu affiché dans l'aperçu de vague, pour ne le refaire que s'il change.
+var _wave_preview_text := ""
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -46,6 +48,9 @@ var _damage_tween: Tween
 @onready var pause_button: Button = %PauseButton
 @onready var speed_buttons: HBoxContainer = %SpeedButtons
 @onready var pause_overlay: ColorRect = %PauseOverlay
+## Composition de la prochaine vague et bonus pour la lancer en avance.
+@onready var wave_preview: PanelContainer = %WavePreview
+@onready var wave_preview_label: RichTextLabel = %WavePreviewLabel
 ## Voile rouge affiché quand le joueur perd des vies.
 @onready var damage_flash: ColorRect = %DamageFlash
 
@@ -138,6 +143,31 @@ func set_next_wave_available(available: bool) -> void:
 	next_wave_button.disabled = not available
 
 
+## Affiche la composition de la prochaine vague (null = plus de vague) et, si elle
+## est positive, la prime pour la lancer avant d'avoir vidé la carte.
+func show_next_wave(wave: WaveData, early_bonus := 0) -> void:
+	var text := ""
+	if wave:
+		var counts := {}
+		for group in wave.groups:
+			counts[group.enemy] = counts.get(group.enemy, 0) + group.count
+		var parts: Array[String] = []
+		for enemy: EnemyData in counts:
+			parts.append("[color=#%s]●[/color] %d %s" % [enemy.color.to_html(false), counts[enemy], enemy.display_name])
+		text = "[color=#ffffff99]Prochaine vague :[/color]  " + "   ".join(parts)
+		if early_bonus > 0:
+			text += "\n[color=#ffd54d]Lancer maintenant : +%d or[/color]" % early_bonus
+	if text == _wave_preview_text:
+		return
+	_wave_preview_text = text
+	wave_preview_label.text = text
+	wave_preview.visible = not text.is_empty()
+	next_wave_button.tooltip_text = "Lancer maintenant rapporte %d or" % early_bonus if early_bonus > 0 else ""
+	wave_preview.reset_size()
+	# Le panneau, sous le bouton de vague, reste calé à droite de l'écran.
+	wave_preview.position.x = get_viewport().get_visible_rect().size.x - 8.0 - wave_preview.size.x
+
+
 func set_paused(paused: bool) -> void:
 	pause_button.set_pressed_no_signal(paused)
 	pause_button.text = "Reprendre" if paused else "Pause"
@@ -181,6 +211,7 @@ func show_end_screen(victory: bool, can_continue := false) -> void:
 		button.disabled = true
 	shop_info.close()
 	tower_details.close()
+	wave_preview.visible = false
 	if can_continue:
 		next_level_button.grab_focus()
 	else:

@@ -92,6 +92,36 @@ theme_override_colors/font_color = Color(1, 1, 1, 0.5)
 theme_override_font_sizes/font_size = 11
 text = "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  Espace : pause  ·  1, 2, 3 : vitesse"
 
+[node name="WavePreview" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -420.0
+offset_top = 72.0
+offset_right = -8.0
+offset_bottom = 124.0
+grow_horizontal = 0
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="WavePreview"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="WavePreviewLabel" type="RichTextLabel" parent="WavePreview/Margin"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 14
+bbcode_enabled = true
+text = "Prochaine vague"
+fit_content = true
+autowrap_mode = 0
+
 [node name="SpeedBar" type="PanelContainer" parent="."]
 anchors_preset = 3
 anchor_left = 1.0

@@ -46,6 +46,7 @@ func _run() -> void:
 	await _test_pause_and_game_speed()
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
+	await _test_wave_preview_and_early_call()
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
 	await _test_victory_level_02()
@@ -632,6 +633,34 @@ func _test_wave_bonus_when_waves_overlap() -> void:
 	var bonuses := level.spawner.waves[0].bonus_gold + level.spawner.waves[1].bonus_gold
 	_check(level.gold == gold_before + rewards + bonuses,
 		"les bonus des deux vagues sont versés (%d or attendus, %d reçus)" % [rewards + bonuses, level.gold - gold_before])
+	await _free(level)
+
+
+func _test_wave_preview_and_early_call() -> void:
+	print("Aperçu de la prochaine vague et prime d'avance")
+	var level := await _spawn_level(LEVEL_02)
+	var hud := level.hud
+	await process_frame
+	_check(hud.wave_preview.visible and hud.wave_preview_label.get_parsed_text().contains("12 Slime"),
+		"l'aperçu annonce la première vague (%s)" % hud.wave_preview_label.get_parsed_text())
+	_check(level.get_early_call_bonus() == 0 and not hud.wave_preview_label.get_parsed_text().contains("maintenant"),
+		"pas de prime quand la carte est vide")
+	level.start_next_wave()
+	await process_frame
+	_check(level.get_early_call_bonus() == 0, "pas de prime tant que la vague apparaît (le bouton est désactivé)")
+	Engine.time_scale = GAME_SPEED
+	while level.spawner.is_spawning:
+		await process_frame
+	await process_frame
+	var bonus := roundi(level.spawner.waves[1].bonus_gold * level.early_call_bonus_ratio)
+	_check(bonus > 0 and level.get_early_call_bonus() == bonus, "prime de %d or si des ennemis sont encore en jeu" % bonus)
+	_check(hud.wave_preview_label.get_parsed_text().contains("Lancer maintenant : +%d or" % bonus),
+		"l'aperçu annonce la prime")
+	var gold_before := level.gold
+	level.start_next_wave()
+	_check(level.gold == gold_before + bonus, "la prime est versée au lancement")
+	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % bonus),
+		"« +%d » s'affiche sous le bouton" % bonus)
 	await _free(level)
 
 
