@@ -69,8 +69,8 @@ func show_tower(placed: Tower, gold: int) -> void:
 	_set_tower(placed)
 	data = placed.data
 	_gold = gold
-	var size := Vector2(Tower.SIZE, Tower.SIZE)
-	_anchor_rect = Rect2(placed.get_global_transform_with_canvas().origin - size / 2.0, size)
+	var tower_size := Vector2.ONE * Tower.SIZE
+	_anchor_rect = Rect2(placed.get_global_transform_with_canvas().origin - tower_size / 2.0, tower_size)
 	_beside = true
 	_refresh()
 

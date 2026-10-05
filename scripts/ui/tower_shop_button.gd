@@ -5,8 +5,6 @@ extends Button
 
 const SLOT_SIZE := Vector2(92, 80)
 const ICON_SIZE := 40.0
-const PRICE_COLOR := Color(1, 0.85, 0.3)
-const TOO_EXPENSIVE_COLOR := Color(1, 0.45, 0.45)
 ## Transparence d'une case dont la tour est trop chère.
 const UNAFFORDABLE_ALPHA := 0.45
 
@@ -40,7 +38,7 @@ func _ready() -> void:
 	column.add_child(icon_view)
 	var name_label := _add_label(column, data.display_name, 13, data.color.lightened(0.35))
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_price_label = _add_label(column, "", 12, PRICE_COLOR)
+	_price_label = _add_label(column, "", 12, TowerInfoPanel.PRICE_COLOR)
 	set_price(data.get_cost(), true)
 
 
@@ -49,7 +47,7 @@ func set_price(cost: int, affordable: bool) -> void:
 	if _price_label == null:
 		return
 	_price_label.text = "%d or" % cost
-	_price_label.add_theme_color_override("font_color", PRICE_COLOR if affordable else TOO_EXPENSIVE_COLOR)
+	_price_label.add_theme_color_override("font_color", TowerInfoPanel.PRICE_COLOR if affordable else TowerInfoPanel.TOO_EXPENSIVE_COLOR)
 	modulate.a = 1.0 if affordable or button_pressed else UNAFFORDABLE_ALPHA
 
 

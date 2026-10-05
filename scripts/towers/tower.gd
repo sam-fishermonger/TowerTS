@@ -9,6 +9,8 @@ extends Entity
 const SIZE := 44.0
 ## Socle de pierre commun, sous la tourelle de chaque type de tour.
 const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/towers/base.svg")
+## Taille de la tourelle par rapport au socle : elle déborde un peu.
+const TURRET_SCALE := 1.3
 ## Part de ce que la tour a coûté (pose et améliorations) rendue à la vente,
 ## sans compter l'arbre des améliorations.
 const SELL_RATIO := 0.7
@@ -167,13 +169,8 @@ func _draw() -> void:
 func _draw_body() -> void:
 	var half := SIZE / 2.0
 	if data.turret_texture:
-		draw_texture_rect(BASE_TEXTURE, Rect2(-half, -half, SIZE, SIZE), false)
 		# La tourelle grossit un peu à chaque amélioration.
-		var turret_size := SIZE * (1.3 + 0.1 * (level - 1))
-		if data.turret_rotates:
-			draw_set_transform(Vector2.ZERO, _aim_angle)
-		draw_texture_rect(data.turret_texture, Rect2(-turret_size / 2.0, -turret_size / 2.0, turret_size, turret_size), false)
-		draw_set_transform(Vector2.ZERO)
+		draw_sprite(self, data, Vector2.ZERO, SIZE, TURRET_SCALE + 0.1 * (level - 1), _aim_angle)
 	else:
 		draw_rect(Rect2(-half, -half, SIZE, SIZE), data.color.darkened(0.35))
 		_draw_shape()
@@ -183,6 +180,20 @@ func _draw_body() -> void:
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -4), center + Vector2(4, 0),
 			center + Vector2(0, 4), center + Vector2(-4, 0)]), Color(1, 0.85, 0.3))
 	_draw_effects()
+
+
+## Dessine le socle et la tourelle d'un type de tour (qui doit avoir une image) sur
+## `canvas`, centrés sur `center` : tour posée, aperçu de pose, barre d'achat.
+## La tourelle est tournée de `aim_angle` (vers le haut par défaut) si elle pivote.
+static func draw_sprite(canvas: CanvasItem, tower_data: TowerData, center: Vector2, base_size: float,
+		turret_scale := TURRET_SCALE, aim_angle := -PI / 2.0, tint := Color.WHITE) -> void:
+	canvas.draw_texture_rect(BASE_TEXTURE, Rect2(center - Vector2.ONE * base_size / 2.0, Vector2.ONE * base_size),
+		false, tint)
+	var turret_size := base_size * turret_scale
+	canvas.draw_set_transform(center, aim_angle if tower_data.turret_rotates else 0.0)
+	canvas.draw_texture_rect(tower_data.turret_texture,
+		Rect2(-Vector2.ONE * turret_size / 2.0, Vector2.ONE * turret_size), false, tint)
+	canvas.draw_set_transform(Vector2.ZERO)
 
 
 ## Tourelle dessinée en code, quand le type de tour n'a pas d'image. À redéfinir.

@@ -74,6 +74,10 @@ Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : 
     └── ExplosiveProjectile  dégâts de zone à l'impact
 
 Composants                   scripts/components/          HealthComponent (vie, armure), HealthBar
+Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin
+├── TowerShop                barre d'achat : une case TowerShopButton (TowerIcon, nom, prix) par tour
+├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
+└── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
 GameMap (Node2D)             scripts/map/game_map.gd      grille, chemins (Path2D enfants), rochers, cases occupées
 Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, navigation
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris
@@ -88,7 +92,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 
 ```
 project.godot        Configuration du projet
-scenes/ui/           Écran titre (scène de démarrage), arbre des améliorations et HUD
+scenes/ui/           Écran titre (scène de démarrage), arbre des améliorations, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower et PulseTower

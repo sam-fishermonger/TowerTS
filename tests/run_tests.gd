@@ -389,11 +389,11 @@ func _test_tower_placement() -> void:
 	_check(level.gold == 100, "un placement refusé ne coûte rien")
 	level.select_tower(GATLING)
 	_check(level.placer.selected_tower == GATLING, "le placeur garde la tour sélectionnée")
-	_check(level.hud.tower_buttons.get_child(1).button_pressed, "le bouton de la tour sélectionnée est enfoncé")
-	_check(level.hud.tower_buttons.get_child(2).disabled and level.hud.tower_buttons.get_child(2).modulate.a < 1.0,
+	_check(level.hud.tower_shop.get_child(1).button_pressed, "le bouton de la tour sélectionnée est enfoncé")
+	_check(level.hud.tower_shop.get_child(2).disabled and level.hud.tower_shop.get_child(2).modulate.a < 1.0,
 		"une tour trop chère est grisée dans la barre d'achat")
 	level.select_tower(null)
-	_check(not level.hud.tower_buttons.get_child(1).button_pressed, "désélection")
+	_check(not level.hud.tower_shop.get_child(1).button_pressed, "désélection")
 	await _free(level)
 
 
@@ -464,7 +464,7 @@ func _test_tower_info_panels() -> void:
 	var level := await _spawn_level(LEVEL_01)
 	var hud := level.hud
 	var screen := root.get_visible_rect()
-	var slots := hud.tower_buttons.get_children()
+	var slots := hud.tower_shop.get_children()
 	var first_rect: Rect2 = slots[0].get_global_rect()
 	_check(first_rect.position.x < 32.0 and first_rect.end.y > screen.end.y - 32.0, "barre d'achat en bas à gauche")
 	_check(slots.all(func(slot: TowerShopButton) -> bool: return slot.size == first_rect.size),
@@ -472,7 +472,7 @@ func _test_tower_info_panels() -> void:
 	_check(slots[0].find_children("*", "TowerIcon", true, false).size() == 1, "chaque case montre l'image de la tour")
 	_check(first_rect.position.y >= level.map.cell_to_world(Vector2i(0, level.map.rows - 1)).y + level.map.cell_size / 2.0,
 		"la barre ne cache aucune case de la carte")
-	var button: Button = hud.tower_buttons.get_child(0)
+	var button: Button = hud.tower_shop.get_child(0)
 	button.mouse_entered.emit()
 	await process_frame
 	var shop := hud.shop_info
