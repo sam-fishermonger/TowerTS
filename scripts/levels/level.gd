@@ -10,12 +10,15 @@ const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 @export var level_name := "Niveau"
 const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
 const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
+const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 
 @export var starting_gold := 150
 @export var starting_lives := 20
 @export var tower_types: Array[TowerData] = []
 ## Niveau proposé après une victoire (vide = dernier niveau).
 @export_file("*.tscn") var next_level := ""
+## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
+@export var game_speeds: Array[float] = [1.0, 2.0, 3.0]
 
 var gold := 0:
 	set(value):
@@ -26,6 +29,9 @@ var lives := 0:
 		lives = maxi(value, 0)
 		_refresh_hud()
 var is_over := false
+## Mise en pause par le joueur (la fin de partie met aussi l'arbre en pause, sans passer par là).
+var is_paused := false
+var game_speed := 1.0
 
 var _wave_bonus_paid := -1
 
@@ -45,7 +51,9 @@ func _ready() -> void:
 	placer.level = self
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
-	hud.setup(level_name, tower_types)
+	hud.setup(level_name, tower_types, game_speeds)
+	hud.pause_toggled.connect(func() -> void: set_paused(not is_paused))
+	hud.game_speed_selected.connect(set_game_speed)
 	hud.tower_selected.connect(select_tower)
 	hud.next_wave_requested.connect(start_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
@@ -58,6 +66,12 @@ func _ready() -> void:
 	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
 	gold = starting_gold
 	lives = starting_lives
+	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+
+
+func _exit_tree() -> void:
+	# La vitesse est globale au moteur : on la remet à x1 en quittant le niveau.
+	Engine.time_scale = 1.0
 
 
 func has_next_level() -> bool:
@@ -106,6 +120,24 @@ func inspect_tower(tower: Tower) -> void:
 	placer.inspect(tower)
 
 
+# --- Pause et vitesse -------------------------------------------------------
+
+func set_paused(value: bool) -> void:
+	if is_over:
+		return
+	is_paused = value
+	get_tree().paused = value
+	hud.set_paused(value)
+
+
+func set_game_speed(speed: float) -> void:
+	if is_over:
+		return
+	game_speed = speed
+	Engine.time_scale = speed
+	hud.set_game_speed(speed)
+
+
 # --- Vagues et ennemis ----------------------------------------------------
 
 func start_next_wave() -> void:
@@ -138,6 +170,7 @@ func _on_enemy_died(enemy: Enemy) -> void:
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
 	lives -= enemy.data.damage
+	_show_lives_lost(enemy.data.damage, enemy.global_position)
 	if lives <= 0:
 		_end_game(false)
 	else:
@@ -165,6 +198,8 @@ func _end_game(victory: bool) -> void:
 	select_tower(null)
 	inspect_tower(null)
 	hud.show_end_screen(victory, victory and has_next_level())
+	is_paused = false
+	Engine.time_scale = 1.0
 	game_over.emit(victory)
 	get_tree().paused = true
 
@@ -195,6 +230,15 @@ func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int
 	label.font_size = font_size
 	label.position = effects.to_local(at)
 	effects.add_child(label)
+
+
+## Signale la perte de vies : effet sur le HUD et « -N » rouge là où l'ennemi est sorti.
+func _show_lives_lost(amount: int, at: Vector2) -> void:
+	hud.play_damage_effect(amount)
+	# L'ennemi sort par le bord de l'écran : on ramène le texte dans la zone visible.
+	var area := get_viewport_rect().grow_individual(-24.0, -90.0, -24.0, -24.0)
+	var shown_at := at.clamp(area.position, area.end)
+	_show_floating_text("-%d" % amount, LIVES_LOST_TEXT_COLOR, shown_at, 20)
 
 
 func _refresh_hud() -> void:

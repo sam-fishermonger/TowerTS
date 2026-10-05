@@ -40,6 +40,8 @@ func _run() -> void:
 	await _test_explosive_projectile()
 	await _test_damage_and_death_feedback()
 	await _test_pulse_tower()
+	await _test_lives_lost_feedback()
+	await _test_pause_and_game_speed()
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
 	await _test_victory_level_02()
@@ -438,6 +440,74 @@ func _test_pulse_tower() -> void:
 	_check(near.is_slowed() and other.is_slowed(), "l'onde ralentit tous les ennemis à portée")
 	_check(near.health.health < SLIME.max_health and other.health.health < SLIME.max_health, "l'onde inflige des dégâts")
 	_check(not far.is_slowed() and far.health.health == SLIME.max_health, "un ennemi hors de portée n'est pas touché")
+	await _free(level)
+
+
+func _test_lives_lost_feedback() -> void:
+	print("Effet de perte de vies")
+	var level := await _spawn_level(LEVEL_01)
+	var enemy := _add_still_enemy(level, SLIME, 0, 0.0)
+	level._on_enemy_spawned(enemy)
+	var material := level.hud.damage_flash.material as ShaderMaterial
+	_check(material.get_shader_parameter("intensity") == 0.0, "pas de voile rouge au départ")
+	enemy.reached_end.emit(enemy)
+	await process_frame
+	_check(level.lives == level.starting_lives - SLIME.damage, "le joueur perd des vies")
+	_check(material.get_shader_parameter("intensity") > 0.3, "un voile rouge apparaît")
+	_check(level.hud.lives_label.scale.x > 1.0, "le compteur de vies grossit")
+	var texts := level.effects.get_children().filter(func(n: Node) -> bool: return n is FloatingText)
+	_check(texts.any(func(t: FloatingText) -> bool: return t.text == "-%d" % SLIME.damage),
+		"« -%d » s'affiche à la sortie" % SLIME.damage)
+	_check(get_root().get_visible_rect().has_point(texts[0].position), "le texte reste dans l'écran")
+	for i in 60:
+		await process_frame
+	_check(is_zero_approx(material.get_shader_parameter("intensity")), "le voile disparaît")
+	_check(level.hud.lives_label.scale.is_equal_approx(Vector2.ONE), "le compteur reprend sa taille")
+	await _free(level)
+
+
+func _test_pause_and_game_speed() -> void:
+	print("Pause et vitesse de jeu")
+	var level := await _spawn_level(LEVEL_01)
+	var hud := level.hud
+	_check(hud.speed_buttons.get_child_count() == 3, "trois vitesses proposées")
+	_check(Engine.time_scale == 1.0 and hud.speed_buttons.get_child(0).button_pressed, "le jeu démarre en x1")
+	hud.speed_buttons.get_child(2).pressed.emit()
+	_check(Engine.time_scale == 3.0 and level.game_speed == 3.0, "le bouton x3 accélère le jeu")
+	_check(hud.speed_buttons.get_child(2).button_pressed and not hud.speed_buttons.get_child(0).button_pressed,
+		"le bouton x3 est enfoncé")
+	var key := InputEventKey.new()
+	key.keycode = KEY_2
+	key.pressed = true
+	hud._unhandled_key_input(key)
+	_check(Engine.time_scale == 2.0, "la touche 2 passe en x2")
+
+	level.start_next_wave()
+	for i in 30:
+		await process_frame
+	var enemy: Enemy = get_nodes_in_group(Enemy.GROUP)[0]
+	hud.pause_button.pressed.emit()
+	_check(paused and level.is_paused and hud.pause_overlay.visible, "le bouton Pause met le jeu en pause")
+	_check(hud.pause_button.text == "Reprendre", "le bouton propose de reprendre")
+	var progress := enemy.progress
+	for i in 10:
+		await process_frame
+	_check(enemy.progress == progress, "les ennemis ne bougent plus pendant la pause")
+	key.keycode = KEY_SPACE
+	hud._unhandled_key_input(key)
+	_check(not paused and not hud.pause_overlay.visible, "Espace relance le jeu")
+	await process_frame
+	_check(enemy.progress > progress, "les ennemis repartent")
+
+	level._end_game(false)
+	_check(Engine.time_scale == 1.0, "la fin de partie remet la vitesse à x1")
+	_check(hud.pause_button.disabled, "pause indisponible après la fin de partie")
+	level.set_paused(false)
+	_check(paused, "la pause de fin de partie ne peut pas être levée")
+	hud.speed_buttons.get_child(2).pressed.emit()
+	await _free(level)
+	level = await _spawn_level(LEVEL_01)
+	_check(Engine.time_scale == 1.0, "un nouveau niveau repart en x1")
 	await _free(level)
 
 

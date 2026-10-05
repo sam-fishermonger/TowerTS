@@ -19,6 +19,8 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - Cliquer sur une tour posée ouvre sa fiche, avec le bouton **Améliorer** : chaque tour a 2 améliorations (niveau 3 maximum), dont les gains sont affichés en vert avant l'achat. **✕** ou **Échap** ferme la fiche.
 - **Lancer la vague** envoie la vague suivante. Chaque ennemi détruit rapporte de l'or, et chaque vague nettoyée donne un bonus.
 - Les dégâts infligés s'affichent au-dessus des ennemis touchés. Un ennemi détruit affiche l'or gagné et laisse au sol une tache qui s'estompe en 20 secondes.
+- Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
+- En bas à droite : **Pause** (ou **Espace**) fige la partie, et **x1 / x2 / x3** (ou les touches **1, 2, 3**) règlent la vitesse du jeu. Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Après une victoire, **Niveau suivant** ouvre le niveau 2 ; l'écran titre permet aussi de choisir un niveau.
 
 ## Niveaux
@@ -73,7 +75,7 @@ scripts/             Scripts GDScript (.gd), même découpage que scenes/, plus 
 scripts/entities/    Classe de base Entity
 scripts/components/  Composants réutilisables (santé, barre de vie)
 scripts/map/         GameMap
-scripts/effects/     Effets visuels (explosion)
+scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
 scripts/data/        Ressources de données : EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup
 resources/           Statistiques des ennemis et des tours, améliorations comprises (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre

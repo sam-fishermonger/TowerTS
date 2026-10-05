@@ -12,9 +12,20 @@ signal menu_requested
 signal upgrade_requested(tower: Tower)
 ## Émis quand le joueur ferme la fiche de la tour posée.
 signal tower_details_closed
+## Émis quand le joueur met le jeu en pause ou le relance (bouton ou Espace).
+signal pause_toggled
+## Émis quand le joueur choisit une vitesse de jeu (bouton ou touches 1, 2, 3).
+signal game_speed_selected(speed: float)
+
+## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
+const DAMAGE_FLASH_DURATION := 0.6
+const LIVES_COLOR := Color(1, 0.5, 0.5)
+const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 
 var _tower_group := ButtonGroup.new()
+var _speed_group := ButtonGroup.new()
 var _gold := 0
+var _damage_tween: Tween
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -30,6 +41,11 @@ var _gold := 0
 @onready var shop_info: TowerInfoPanel = %ShopInfo
 ## Fiche de la tour posée sélectionnée sur la carte.
 @onready var tower_details: TowerInfoPanel = %TowerDetails
+@onready var pause_button: Button = %PauseButton
+@onready var speed_buttons: HBoxContainer = %SpeedButtons
+@onready var pause_overlay: ColorRect = %PauseOverlay
+## Voile rouge affiché quand le joueur perd des vies.
+@onready var damage_flash: ColorRect = %DamageFlash
 
 
 func _ready() -> void:
@@ -41,10 +57,35 @@ func _ready() -> void:
 	%MenuButton.pressed.connect(menu_requested.emit)
 	tower_details.upgrade_requested.connect(upgrade_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
+	pause_button.pressed.connect(pause_toggled.emit)
+	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
 
 
-func setup(level_name: String, tower_types: Array[TowerData]) -> void:
+func _unhandled_key_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if not key.pressed or key.echo or end_panel.visible:
+		return
+	if key.keycode == KEY_SPACE or key.keycode == KEY_P:
+		pause_toggled.emit()
+	elif key.keycode >= KEY_1 and key.keycode < KEY_1 + speed_buttons.get_child_count():
+		speed_buttons.get_child(key.keycode - KEY_1).pressed.emit()
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array[float] = [1.0]) -> void:
 	level_label.text = level_name
+	for speed in game_speeds:
+		var speed_button := Button.new()
+		speed_button.text = "x%s" % str(speed).trim_suffix(".0")
+		speed_button.toggle_mode = true
+		speed_button.button_group = _speed_group
+		speed_button.focus_mode = Control.FOCUS_NONE
+		speed_button.custom_minimum_size = Vector2(36, 0)
+		speed_button.set_meta("speed", speed)
+		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
+		speed_buttons.add_child(speed_button)
 	for data in tower_types:
 		var button := Button.new()
 		button.text = "%s  %d or" % [data.display_name, data.cost]
@@ -87,12 +128,47 @@ func set_next_wave_available(available: bool) -> void:
 	next_wave_button.disabled = not available
 
 
+func set_paused(paused: bool) -> void:
+	pause_button.set_pressed_no_signal(paused)
+	pause_button.text = "Reprendre" if paused else "Pause"
+	pause_overlay.visible = paused
+
+
+func set_game_speed(speed: float) -> void:
+	for button: Button in speed_buttons.get_children():
+		button.set_pressed_no_signal(is_equal_approx(button.get_meta("speed"), speed))
+
+
+## Effet de perte de vies : voile rouge sur l'écran et compteur de vies qui
+## grossit en rouge. Plus la perte est grande, plus l'effet est marqué.
+func play_damage_effect(lives_lost: int) -> void:
+	if _damage_tween:
+		_damage_tween.kill()
+	var strength := clampf(0.55 + 0.15 * lives_lost, 0.0, 1.0)
+	var material := damage_flash.material as ShaderMaterial
+	lives_label.pivot_offset = lives_label.size / 2.0
+	lives_label.scale = Vector2.ONE * 1.35
+	lives_label.add_theme_color_override("font_color", LIVES_HIT_COLOR)
+	# Temps réel : l'effet garde la même durée en x3 et pendant la pause de fin de partie.
+	_damage_tween = create_tween().set_ignore_time_scale().set_parallel()
+	_damage_tween.tween_method(func(value: float) -> void: material.set_shader_parameter("intensity", value),
+		strength, 0.0, DAMAGE_FLASH_DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_damage_tween.tween_property(lives_label, "scale", Vector2.ONE, DAMAGE_FLASH_DURATION) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_damage_tween.tween_method(func(color: Color) -> void: lives_label.add_theme_color_override("font_color", color),
+		LIVES_HIT_COLOR, LIVES_COLOR, DAMAGE_FLASH_DURATION)
+
+
 func show_end_screen(victory: bool, can_continue := false) -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"
 	end_message.text = "Toutes les vagues ont été repoussées." if victory \
 		else "Les ennemis ont atteint votre base."
 	next_level_button.visible = can_continue
 	end_panel.visible = true
+	set_paused(false)
+	pause_button.disabled = true
+	for button: Button in speed_buttons.get_children():
+		button.disabled = true
 	shop_info.close()
 	tower_details.close()
 	if can_continue:
