@@ -27,6 +27,12 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et l'écran titre affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche) repart de zéro.
 
+- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément sur l'écran titre (le choix est enregistré).
+
+## Sons
+
+Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).
+
 ## Niveaux
 
 | Niveau | Carte | Tours | Vagues |

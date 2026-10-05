@@ -54,6 +54,7 @@ func _process(delta: float) -> void:
 	queue_redraw()
 	if _cooldown <= 0.0:
 		_attack(_target)
+		Sound.play_stream(data.attack_sound)
 		# On garde le temps écoulé en trop : la cadence ne dépend ni des FPS ni de la vitesse de jeu.
 		_cooldown += 1.0 / stats.fire_rate
 

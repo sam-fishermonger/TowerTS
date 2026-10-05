@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/towers/projectile_tower.tscn" id="2_scene"]
 [ext_resource type="PackedScene" path="res://scenes/projectiles/projectile.tscn" id="3_projectile"]
 [ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/shot_cannon.ogg" id="9_sound"]
 
 [sub_resource type="Resource" id="Upgrade_1"]
 script = ExtResource("4_upgrade")
@@ -27,6 +28,7 @@ attack_range = 150.0
 damage = 25.0
 fire_rate = 1.0
 color = Color(0.3, 0.55, 0.9, 1)
+attack_sound = ExtResource("9_sound")
 projectile_scene = ExtResource("3_projectile")
 projectile_speed = 450.0
 upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/towers/projectile_tower.tscn" id="2_scene"]
 [ext_resource type="PackedScene" path="res://scenes/projectiles/explosive_projectile.tscn" id="3_projectile"]
 [ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/shot_mortar.ogg" id="9_sound"]
 
 [sub_resource type="Resource" id="Upgrade_1"]
 script = ExtResource("4_upgrade")
@@ -28,6 +29,7 @@ attack_range = 190.0
 damage = 30.0
 fire_rate = 0.6
 color = Color(0.9, 0.42, 0.32, 1)
+attack_sound = ExtResource("9_sound")
 projectile_scene = ExtResource("3_projectile")
 projectile_speed = 300.0
 splash_radius = 64.0

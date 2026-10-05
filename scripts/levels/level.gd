@@ -72,6 +72,7 @@ func _ready() -> void:
 	gold = starting_gold
 	lives = starting_lives
 	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+	Sound.play_music()
 
 
 func _exit_tree() -> void:
@@ -115,6 +116,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	tower.cell = cell
 	map.occupy(cell, tower)
 	gold -= data.cost
+	Sound.play(&"build")
 	return tower
 
 
@@ -128,6 +130,7 @@ func upgrade_tower(tower: Tower) -> bool:
 	if not can_upgrade_tower(tower):
 		return false
 	gold -= tower.get_upgrade_cost()
+	Sound.play(&"upgrade")
 	return tower.upgrade()
 
 
@@ -143,6 +146,7 @@ func sell_tower(tower: Tower) -> int:
 	_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
 	tower.despawn()
 	gold += value
+	Sound.play(&"sell")
 	return value
 
 
@@ -182,8 +186,10 @@ func start_next_wave() -> void:
 		return
 	var early_bonus := get_early_call_bonus()
 	spawner.start_next_wave()
+	Sound.play(&"wave_start")
 	if early_bonus > 0:
 		gold += early_bonus
+		Sound.play(&"coins")
 		var button_rect := hud.next_wave_button.get_global_rect()
 		_show_floating_text("+%d" % early_bonus, GOLD_TEXT_COLOR,
 			Vector2(button_rect.get_center().x, button_rect.end.y + 24.0), 18)
@@ -210,6 +216,7 @@ func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
 
 func _on_enemy_died(enemy: Enemy) -> void:
 	gold += enemy.data.reward
+	Sound.play(&"enemy_death", -3.0)
 	_show_floating_text("+%d" % enemy.data.reward, GOLD_TEXT_COLOR, enemy.global_position, 16)
 	var stain := GroundStain.new()
 	stain.radius = enemy.data.radius
@@ -226,12 +233,14 @@ func _split(enemy: Enemy) -> void:
 	var data := enemy.data
 	if data.split_into == null:
 		return
+	Sound.play(&"enemy_split")
 	for i in data.split_count:
 		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0))
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
 	lives -= enemy.data.damage
+	Sound.play(&"lives_lost")
 	_show_lives_lost(enemy.data.damage, enemy.global_position)
 	if lives <= 0:
 		_end_game(false)
@@ -266,6 +275,7 @@ func _end_game(victory: bool) -> void:
 	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record)
 	is_paused = false
 	Engine.time_scale = 1.0
+	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
 

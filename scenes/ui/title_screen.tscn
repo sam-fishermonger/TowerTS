@@ -67,6 +67,27 @@ layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 12
 
+[node name="AudioButtons" type="HBoxContainer" parent="Center/Menu"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="MusicButton" type="Button" parent="Center/Menu/AudioButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(124, 36)
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Musique : oui"
+
+[node name="SoundButton" type="Button" parent="Center/Menu/AudioButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(124, 36)
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Sons : oui"
+
 [node name="QuitButton" type="Button" parent="Center/Menu"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(260, 56)
@@ -89,7 +110,7 @@ offset_bottom = -12.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.4)
-text = "Prototype v0.1"
+text = "Prototype v0.2"
 horizontal_alignment = 2
 
 [node name="ResetButton" type="Button" parent="."]

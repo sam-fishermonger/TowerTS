@@ -35,6 +35,7 @@ func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
 	await _test_title_screen()
 	await _test_progress()
+	await _test_sound()
 	await _test_health_component()
 	await _test_entity_despawn()
 	await _test_tower_placement()
@@ -176,6 +177,33 @@ func _test_progress() -> void:
 	await process_frame
 	buttons = title.get_node("%LevelButtons").get_children()
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and buttons[1].disabled, "Effacer la progression reverrouille les niveaux")
+	await _free(title)
+
+
+func _test_sound() -> void:
+	print("Sons et musique")
+	var sound := Sound.get_player()
+	_check(sound != null and sound.name == "SoundPlayer", "le nœud des sons est chargé au démarrage")
+	_check(AudioServer.get_bus_index(&"Music") != -1 and AudioServer.get_bus_index(&"Sfx") != -1,
+		"bus Musique et Sons créés")
+	for data: TowerData in [CANNON, GATLING, SNIPER, MORTAR, FROST, BEAM]:
+		_check(data.attack_sound != null, "%s : son de tir défini" % data.display_name)
+	for sound_name: StringName in sound.SOUNDS:
+		_check(sound.SOUNDS[sound_name] is AudioStream, "son « %s » chargé" % sound_name)
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var music_button: Button = title.get_node("%MusicButton")
+	music_button.button_pressed = false
+	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")) and music_button.text == "Musique : non",
+		"le bouton Musique coupe la musique")
+	_check(Progress.get_setting("music", true) == false, "le choix est enregistré")
+	music_button.button_pressed = true
+	_check(not AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")), "et la remet")
+	var sound_button: Button = title.get_node("%SoundButton")
+	sound_button.button_pressed = false
+	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "le bouton Sons coupe les effets")
+	sound_button.button_pressed = true
 	await _free(title)
 
 

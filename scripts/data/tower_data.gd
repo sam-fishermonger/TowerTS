@@ -14,6 +14,8 @@ extends Resource
 ## Nombre de tirs par seconde.
 @export var fire_rate := 1.0
 @export var color := Color.STEEL_BLUE
+## Son joué à chaque tir.
+@export var attack_sound: AudioStream
 
 @export_group("Projectile")
 ## Scène du projectile tiré (tours à projectiles seulement).
