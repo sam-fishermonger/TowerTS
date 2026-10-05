@@ -34,16 +34,19 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_cooldown = maxf(_cooldown - delta, 0.0)
+	_cooldown -= delta
 	if not _is_valid_target(_target):
 		_target = find_target()
 	if _target == null:
+		# Sans cible, la tour reste prête à tirer mais n'accumule pas de tirs d'avance.
+		_cooldown = maxf(_cooldown, 0.0)
 		return
 	_aim_angle = global_position.angle_to_point(_target.global_position)
 	queue_redraw()
 	if _cooldown <= 0.0:
 		_attack(_target)
-		_cooldown = 1.0 / stats.fire_rate
+		# On garde le temps écoulé en trop : la cadence ne dépend ni des FPS ni de la vitesse de jeu.
+		_cooldown += 1.0 / stats.fire_rate
 
 
 func can_upgrade() -> bool:
