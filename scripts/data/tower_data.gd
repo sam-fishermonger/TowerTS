@@ -29,6 +29,12 @@ extends Resource
 ## Durée du ralentissement, en secondes.
 @export var slow_duration := 0.0
 
+@export_group("Rayon")
+## Multiplicateur de dégâts atteint en restant sur la même cible (1 = pas de montée).
+@export var beam_ramp_max := 1.0
+## Secondes sur la même cible pour atteindre beam_ramp_max.
+@export var beam_ramp_time := 2.0
+
 @export_group("Améliorations")
 ## Améliorations achetables, dans l'ordre : la tour posée est au niveau 1,
 ## chaque amélioration la fait monter d'un niveau.

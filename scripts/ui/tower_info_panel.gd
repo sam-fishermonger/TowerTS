@@ -175,6 +175,9 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 		"%s tirs/s" % _format(next.fire_rate, 2) if next else "")
 	_add_stat("Dégâts/s", _format(stats.get_dps()), _format(next.get_dps()) if next else "")
 	_add_stat("Portée", _format(stats.attack_range), _format(next.attack_range) if next else "")
+	if stats.beam_ramp_max > 1.0:
+		_add_stat("Montée", "x%s en %s s" % [_format(stats.beam_ramp_max), _format(stats.beam_ramp_time)],
+			"x%s en %s s" % [_format(next.beam_ramp_max), _format(next.beam_ramp_time)] if next else "")
 	if stats.splash_radius > 0.0:
 		_add_stat("Explosion", _format(stats.splash_radius), _format(next.splash_radius) if next else "")
 	if stats.slow_factor < 1.0:

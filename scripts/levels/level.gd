@@ -216,7 +216,18 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	stain.color = enemy.data.color
 	stains.add_child(stain)
 	stain.global_position = enemy.global_position
+	_split(enemy)
 	_check_wave_cleared()
+
+
+## Fait apparaître les ennemis cachés dans un ennemi qui se divise, en file
+## derrière lui sur son chemin.
+func _split(enemy: Enemy) -> void:
+	var data := enemy.data
+	if data.split_into == null:
+		return
+	for i in data.split_count:
+		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0))
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:

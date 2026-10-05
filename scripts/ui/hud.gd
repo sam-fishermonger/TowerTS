@@ -104,7 +104,10 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 		speed_buttons.add_child(speed_button)
 	for data in tower_types:
 		var button := Button.new()
-		button.text = "%s  %d or" % [data.display_name, data.cost]
+		# Nom et prix sur deux lignes : la barre garde de la place jusqu'à 6 ou 7 tours.
+		button.text = "%s\n%d or" % [data.display_name, data.cost]
+		button.add_theme_font_size_override("font_size", 14)
+		button.custom_minimum_size = Vector2(84, 0)
 		button.toggle_mode = true
 		button.button_group = _tower_group
 		button.focus_mode = Control.FOCUS_NONE

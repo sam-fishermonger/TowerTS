@@ -7,14 +7,17 @@ extends SceneTree
 const TITLE_SCREEN := preload("res://scenes/ui/title_screen.tscn")
 const LEVEL_01 := preload("res://scenes/levels/level_01.tscn")
 const LEVEL_02 := preload("res://scenes/levels/level_02.tscn")
+const LEVEL_03 := preload("res://scenes/levels/level_03.tscn")
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const CANNON := preload("res://resources/towers/cannon.tres")
 const SNIPER := preload("res://resources/towers/sniper.tres")
 const GATLING := preload("res://resources/towers/gatling.tres")
 const MORTAR := preload("res://resources/towers/mortar.tres")
 const FROST := preload("res://resources/towers/frost.tres")
+const BEAM := preload("res://resources/towers/beam.tres")
 const SLIME := preload("res://resources/enemies/slime.tres")
 const SHELL := preload("res://resources/enemies/shell.tres")
+const GIANT_SLIME := preload("res://resources/enemies/giant_slime.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -55,6 +58,10 @@ func _run() -> void:
 	await _test_victory_level_01()
 	await _test_victory_level_02()
 	await _test_level_02_with_earned_gold()
+	await _test_level_03_map()
+	await _test_splitting_enemy()
+	await _test_beam_tower()
+	await _test_level_03_with_earned_gold()
 	if _failures == 0:
 		print("TOUS LES TESTS SONT PASSÉS")
 	else:
@@ -234,7 +241,7 @@ func _test_tower_placement() -> void:
 
 func _test_tower_upgrade_stats() -> void:
 	print("Améliorations : statistiques")
-	for data: TowerData in [CANNON, GATLING, SNIPER, MORTAR, FROST]:
+	for data: TowerData in [CANNON, GATLING, SNIPER, MORTAR, FROST, BEAM]:
 		_check(data.get_max_level() == 3 and not data.description.is_empty(),
 			"%s : 2 améliorations et une description" % data.display_name)
 	var base := CANNON.get_stats_at_level(1)
@@ -422,7 +429,7 @@ func _test_level_02_map() -> void:
 	_check(level.spawner.waves.size() == 6, "6 vagues définies")
 	_check(level.tower_types.size() == 5, "5 types de tours proposés")
 	_check(level.map.paths.size() == 2, "deux chemins")
-	_check(not level.has_next_level(), "c'est le dernier niveau")
+	_check(level.get_next_level() == LEVEL_03.resource_path, "le niveau 3 suit")
 	_check(level.map.is_cell_on_path(Vector2i(2, 1)), "le chemin nord bloque la construction")
 	_check(level.map.is_cell_on_path(Vector2i(1, 9)), "le chemin sud bloque la construction")
 	_check(level.map.is_cell_on_path(Vector2i(16, 6)), "le tronc commun bloque la construction")
@@ -772,7 +779,7 @@ func _test_victory_level_02() -> void:
 	_check(level.is_over and level.lives > 0, "la partie est gagnée (vies restantes : %d)" % level.lives)
 	_check(level.spawner.current_wave == 5, "les 6 vagues ont été jouées")
 	_check(level.hud.end_title.text == "Victoire !", "écran de victoire affiché")
-	_check(not level.hud.next_level_button.visible, "pas de niveau suivant après le dernier niveau")
+	_check(level.hud.next_level_button.visible, "le niveau 3 est proposé ensuite")
 	await _free(level)
 
 
@@ -797,3 +804,105 @@ func _test_level_02_with_earned_gold() -> void:
 	_check(level.is_over and level.lives > 0,
 		"la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [level.lives, bought[0]])
 	await _free(level)
+
+
+func _test_level_03_map() -> void:
+	print("Niveau 3 : carte")
+	var level := await _spawn_level(LEVEL_03)
+	_check(level.level_name == "Niveau 3" and level.gold == 250 and level.lives == 20, "nom, or et vies de départ")
+	_check(level.spawner.waves.size() == 7, "7 vagues définies")
+	_check(level.tower_types.size() == 6 and level.tower_types.has(BEAM), "6 types de tours, dont le Rayon")
+	_check(not level.has_next_level(), "c'est le dernier niveau")
+	var uses_giant := false
+	for wave in level.spawner.waves:
+		for group in wave.groups:
+			uses_giant = uses_giant or group.enemy == GIANT_SLIME
+	_check(uses_giant, "les vagues contiennent des Slimes géants")
+	for cell in level.map.blocked_cells:
+		_check(not level.map.is_cell_on_path(cell), "le rocher %s est hors du chemin" % cell)
+	_check(level.map.is_cell_on_path(Vector2i(10, 1)) and level.map.is_cell_on_path(Vector2i(10, 4))
+		and level.map.is_cell_on_path(Vector2i(10, 7)), "le chemin traverse la carte trois fois")
+	await _free(level)
+
+
+func _test_splitting_enemy() -> void:
+	print("Slime géant : se divise à sa mort")
+	var level := await _spawn_level(LEVEL_03)
+	var giant := level.spawner.spawn(GIANT_SLIME, level.map.get_enemy_path(0), 400.0)
+	var spawned: Array[Enemy] = []
+	level.spawner.enemy_spawned.connect(func(enemy: Enemy) -> void: spawned.append(enemy))
+	var gold_before := level.gold
+	giant.take_damage(1e9)
+	_check(spawned.size() == GIANT_SLIME.split_count and spawned.all(func(e: Enemy) -> bool: return e.data == SLIME),
+		"%d Slimes apparaissent à sa mort" % GIANT_SLIME.split_count)
+	_check(spawned.all(func(e: Enemy) -> bool: return e.progress <= 400.0 and e.progress > 300.0),
+		"ils apparaissent à sa place, en file sur le chemin")
+	_check(level.gold == gold_before + GIANT_SLIME.reward, "le Slime géant rapporte sa prime")
+	for enemy in spawned:
+		enemy.take_damage(1e9)
+	_check(level.gold == gold_before + GIANT_SLIME.reward + SLIME.reward * GIANT_SLIME.split_count,
+		"chaque petit Slime rapporte aussi la sienne")
+	_check(get_nodes_in_group(Enemy.GROUP).is_empty(), "plus aucun ennemi : les petits ne se divisent pas")
+	await _free(level)
+
+
+func _test_beam_tower() -> void:
+	print("Rayon : dégâts qui montent sur la même cible")
+	var level := await _spawn_level(LEVEL_03)
+	level.gold = 1000
+	var tower: BeamTower = level.place_tower(Vector2i(4, 2), BEAM)
+	_check(tower is BeamTower, "le Rayon vient de sa scène")
+	var target_data: EnemyData = SLIME.duplicate()
+	target_data.max_health = 1e9
+	var enemy := _add_still_enemy(level, target_data, 0, 0.0)
+	enemy.global_position = tower.global_position + Vector2(60, 0)
+	var hits: Array[float] = []
+	enemy.damaged.connect(func(_e: Enemy, amount: float) -> void: hits.append(amount))
+	var elapsed := 0.0
+	while elapsed < 3.0:
+		elapsed += await _step()
+	_check(hits.size() > 10, "le rayon frappe en continu (%d coups en 3 s)" % hits.size())
+	_check(is_equal_approx(hits[0], BEAM.damage), "le premier coup fait les dégâts de base")
+	_check(is_equal_approx(hits[hits.size() - 1], BEAM.damage * BEAM.beam_ramp_max),
+		"après %s s, les coups font %s fois plus mal" % [BEAM.beam_ramp_time, BEAM.beam_ramp_max])
+	# Changer de cible fait repartir de zéro.
+	enemy.despawn()
+	var other := _add_still_enemy(level, target_data, 0, 0.0)
+	other.global_position = tower.global_position + Vector2(0, 60)
+	var other_hits: Array[float] = []
+	other.damaged.connect(func(_e: Enemy, amount: float) -> void: other_hits.append(amount))
+	while other_hits.is_empty():
+		await _step()
+	_check(other_hits[0] < BEAM.damage * 1.2, "une nouvelle cible repart des dégâts de base")
+	var shell := _add_still_enemy(level, SHELL, 0, 0.0)
+	_check(is_equal_approx(shell.take_damage(BEAM.damage), 1.0), "l'armure de la Carapace absorbe un coup de base")
+	await _free(level)
+
+
+## Rejoue le niveau 3 sans or bonus, comme pour le niveau 2 : gagnable avec la
+## défense complète, mais perdu avec seulement les 6 premières tours.
+func _test_level_03_with_earned_gold() -> void:
+	print("Niveau 3 : gagnable avec l'or gagné, mais pas avec une petite défense")
+	var build_order: Array = [
+		[Vector2i(15, 2), CANNON], [Vector2i(15, 3), CANNON], [Vector2i(14, 2), MORTAR],
+		[Vector2i(4, 5), BEAM], [Vector2i(17, 3), FROST], [Vector2i(5, 5), CANNON],
+		[Vector2i(9, 3), SNIPER], [Vector2i(4, 6), MORTAR], [Vector2i(14, 3), BEAM],
+		[Vector2i(9, 5), GATLING], [Vector2i(2, 5), FROST], [Vector2i(11, 2), SNIPER],
+		[Vector2i(16, 6), MORTAR], [Vector2i(17, 4), BEAM], [Vector2i(2, 6), CANNON],
+		[Vector2i(10, 5), MORTAR], [Vector2i(7, 5), SNIPER], [Vector2i(10, 2), BEAM],
+	]
+	for tower_count in [6, build_order.size()]:
+		var level := await _spawn_level(LEVEL_03)
+		var bought := [0]
+		await _play_until_over(level, 1500.0, true, func() -> void:
+			while bought[0] < tower_count and level.gold >= build_order[bought[0]][1].cost:
+				var item: Array = build_order[bought[0]]
+				if level.place_tower(item[0], item[1]) == null:
+					_check(false, "achat de la tour %d" % (bought[0] + 1))
+				bought[0] += 1)
+		if tower_count < build_order.size():
+			_check(level.is_over and level.lives == 0, "perdu avec %d tours seulement" % tower_count)
+		else:
+			_check(level.is_over and level.lives > 0,
+				"la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [level.lives, bought[0]])
+		await _free(level)

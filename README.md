@@ -13,7 +13,7 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 
 ## Comment jouer
 
-- Choisir une tour dans la barre du haut (Canon, Mitrailleuse, Sniper), puis cliquer sur une case libre hors du chemin.
+- Choisir une tour dans la barre du haut, puis cliquer sur une case libre hors du chemin.
 - **Maj + clic** pour poser plusieurs tours d'affilée, **clic droit** ou **Échap** pour annuler.
 - Survoler une tour de la barre d'achat affiche sa fiche : description, statistiques et prix.
 - Cliquer sur une tour posée ouvre sa fiche, avec le bouton **Améliorer** : chaque tour a 2 améliorations (niveau 3 maximum), dont les gains sont affichés en vert avant l'achat.
@@ -33,6 +33,7 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 |---|---|---|---|
 | 1 | Un chemin en zigzag | Canon, Mitrailleuse, Sniper | 5 |
 | 2 | Deux entrées (nord et sud) qui se rejoignent, rochers où l'on ne peut pas construire | + Mortier (explosion de zone), Givre (onde qui ralentit) | 6, avec la Carapace (ennemi blindé : les petits dégâts rebondissent) |
+| 3 | Un long chemin en serpentin dans un marais | + Rayon (rayon continu dont les dégâts montent jusqu'à x3 sur la même cible) | 7, avec le Slime géant (se divise en 3 Slimes à sa mort) |
 
 Les niveaux se suivent dans l'ordre de `resources/campaign.tres` : pour ajouter un niveau, il suffit de l'y ajouter.
 
@@ -50,10 +51,11 @@ Les objets de jeu héritent de quelques classes de base, et chaque scène ne con
 
 ```
 Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : is_alive, despawn()
-├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement
+├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement, division à la mort
 ├── Tower                    scripts/towers/tower.gd      ciblage + cadence ; _attack() et _draw_body() à redéfinir
 │   ├── ProjectileTower      tire le projectile défini dans TowerData (Canon, Mitrailleuse, Sniper, Mortier)
-│   └── PulseTower           onde qui frappe et ralentit tout ce qui est à portée (Givre)
+│   ├── PulseTower           onde qui frappe et ralentit tout ce qui est à portée (Givre)
+│   └── BeamTower            rayon continu dont les dégâts montent sur la même cible (Rayon)
 └── Projectile               scripts/projectiles/         tête chercheuse, un seul ennemi touché
     └── ExplosiveProjectile  dégâts de zone à l'impact
 

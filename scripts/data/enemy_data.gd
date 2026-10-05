@@ -14,3 +14,9 @@ extends Resource
 @export var damage := 1
 @export var color := Color.RED
 @export var radius := 12.0
+
+@export_group("Division")
+## Ennemi qui apparaît à sa place quand il est détruit (aucun si vide).
+@export var split_into: EnemyData
+## Nombre d'ennemis qui apparaissent à sa mort.
+@export var split_count := 0

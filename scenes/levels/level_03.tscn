@@ -1,0 +1,204 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/levels/level.tscn" id="1_level"]
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="2_tower_data"]
+[ext_resource type="Resource" path="res://resources/towers/cannon.tres" id="3_cannon"]
+[ext_resource type="Resource" path="res://resources/towers/gatling.tres" id="4_gatling"]
+[ext_resource type="Resource" path="res://resources/towers/sniper.tres" id="5_sniper"]
+[ext_resource type="Resource" path="res://resources/towers/mortar.tres" id="6_mortar"]
+[ext_resource type="Resource" path="res://resources/towers/frost.tres" id="7_frost"]
+[ext_resource type="Resource" path="res://resources/towers/beam.tres" id="8_beam"]
+[ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="9_wave_data"]
+[ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="10_spawn_group"]
+[ext_resource type="Resource" path="res://resources/enemies/slime.tres" id="11_slime"]
+[ext_resource type="Resource" path="res://resources/enemies/runner.tres" id="12_runner"]
+[ext_resource type="Resource" path="res://resources/enemies/tank.tres" id="13_tank"]
+[ext_resource type="Resource" path="res://resources/enemies/shell.tres" id="14_shell"]
+[ext_resource type="Resource" path="res://resources/enemies/giant_slime.tres" id="15_giant"]
+
+[sub_resource type="Curve2D" id="Curve2D_path"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -32, 160, 0, 0, 0, 0, 1056, 160, 0, 0, 0, 0, 1056, 352, 0, 0, 0, 0, 224, 352, 0, 0, 0, 0, 224, 544, 0, 0, 0, 0, 1312, 544),
+"tilts": PackedFloat32Array(0, 0, 0, 0, 0, 0)
+}
+point_count = 6
+
+[sub_resource type="Resource" id="Group_w1_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("11_slime")
+count = 12
+interval = 0.8
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w1_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 4
+interval = 2.5
+start_delay = 5.0
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w1_1"), SubResource("Group_w1_2")])
+bonus_gold = 15
+
+[sub_resource type="Resource" id="Group_w2_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("12_runner")
+count = 16
+interval = 0.5
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w2_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 5
+interval = 2.0
+start_delay = 4.0
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2")])
+bonus_gold = 20
+
+[sub_resource type="Resource" id="Group_w3_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 8
+interval = 1.5
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w3_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("14_shell")
+count = 8
+interval = 1.2
+start_delay = 4.0
+
+[sub_resource type="Resource" id="Wave_3"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2")])
+bonus_gold = 25
+
+[sub_resource type="Resource" id="Group_w4_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("13_tank")
+count = 6
+interval = 1.6
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w4_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("12_runner")
+count = 20
+interval = 0.35
+start_delay = 3.0
+
+[sub_resource type="Resource" id="Group_w4_3"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 6
+interval = 1.5
+start_delay = 8.0
+
+[sub_resource type="Resource" id="Wave_4"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_3")])
+bonus_gold = 30
+
+[sub_resource type="Resource" id="Group_w5_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 12
+interval = 1.0
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w5_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("14_shell")
+count = 12
+interval = 1.0
+start_delay = 3.0
+
+[sub_resource type="Resource" id="Wave_5"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2")])
+bonus_gold = 35
+
+[sub_resource type="Resource" id="Group_w6_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("13_tank")
+count = 10
+interval = 1.2
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w6_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 12
+interval = 1.0
+start_delay = 3.0
+
+[sub_resource type="Resource" id="Group_w6_3"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("11_slime")
+count = 25
+interval = 0.3
+start_delay = 8.0
+
+[sub_resource type="Resource" id="Wave_6"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3")])
+bonus_gold = 40
+
+[sub_resource type="Resource" id="Group_w7_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("14_shell")
+count = 16
+interval = 0.8
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w7_2"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("15_giant")
+count = 16
+interval = 0.8
+start_delay = 4.0
+
+[sub_resource type="Resource" id="Group_w7_3"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("13_tank")
+count = 10
+interval = 1.5
+start_delay = 8.0
+
+[sub_resource type="Resource" id="Group_w7_4"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("12_runner")
+count = 30
+interval = 0.25
+start_delay = 12.0
+
+[sub_resource type="Resource" id="Wave_7"]
+script = ExtResource("9_wave_data")
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_4")])
+bonus_gold = 0
+
+[node name="Level03" instance=ExtResource("1_level")]
+level_name = "Niveau 3"
+starting_gold = 250
+starting_lives = 20
+tower_types = Array[ExtResource("2_tower_data")]([ExtResource("3_cannon"), ExtResource("4_gatling"), ExtResource("5_sniper"), ExtResource("6_mortar"), ExtResource("7_frost"), ExtResource("8_beam")])
+
+[node name="Map" parent="."]
+blocked_cells = Array[Vector2i]([Vector2i(6, 2), Vector2i(7, 3), Vector2i(12, 5), Vector2i(13, 6), Vector2i(18, 3), Vector2i(1, 8), Vector2i(9, 9), Vector2i(17, 0)])
+background_color = Color(0.08, 0.13, 0.13, 1)
+ground_color = Color(0.17, 0.27, 0.25, 1)
+path_color = Color(0.5, 0.44, 0.32, 1)
+rock_color = Color(0.4, 0.45, 0.42, 1)
+
+[node name="SwampPath" type="Path2D" parent="Map"]
+curve = SubResource("Curve2D_path")
+
+[node name="WaveSpawner" parent="."]
+waves = Array[ExtResource("9_wave_data")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5"), SubResource("Wave_6"), SubResource("Wave_7")])

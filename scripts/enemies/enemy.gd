@@ -105,3 +105,8 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, data.radius, color)
 	var outline_width := 4.0 if data.armor > 0.0 else 2.0
 	draw_arc(Vector2.ZERO, data.radius, 0.0, TAU, 24, color.darkened(0.5), outline_width)
+	# Un ennemi qui se divise laisse voir ceux qu'il contient.
+	if data.split_into:
+		for i in data.split_count:
+			var offset := Vector2.from_angle(TAU * i / data.split_count - PI / 2.0) * data.radius * 0.45
+			draw_circle(offset, data.radius * 0.28, data.split_into.color.darkened(0.15))
