@@ -1,9 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/levels/level.gd" id="1_level"]
-[ext_resource type="Script" path="res://scripts/levels/wave_spawner.gd" id="2_spawner"]
-[ext_resource type="Script" path="res://scripts/levels/placement_preview.gd" id="3_preview"]
-[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" path="res://scenes/levels/level.tscn" id="1_level"]
 [ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="5_tower_data"]
 [ext_resource type="Resource" path="res://resources/towers/cannon.tres" id="6_cannon"]
 [ext_resource type="Resource" path="res://resources/towers/gatling.tres" id="7_gatling"]
@@ -116,24 +113,13 @@ script = ExtResource("9_wave_data")
 groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_w5_3")])
 bonus_gold = 0
 
-[node name="Level01" type="Node2D"]
-script = ExtResource("1_level")
+[node name="Level01" instance=ExtResource("1_level")]
 level_name = "Niveau 1"
 tower_types = Array[ExtResource("5_tower_data")]([ExtResource("6_cannon"), ExtResource("7_gatling"), ExtResource("8_sniper")])
+next_level = "res://scenes/levels/level_02.tscn"
 
-[node name="EnemyPath" type="Path2D" parent="."]
+[node name="EnemyPath" type="Path2D" parent="Map"]
 curve = SubResource("Curve2D_path")
 
-[node name="Towers" type="Node2D" parent="."]
-
-[node name="Projectiles" type="Node2D" parent="."]
-
-[node name="PlacementPreview" type="Node2D" parent="."]
-script = ExtResource("3_preview")
-
-[node name="WaveSpawner" type="Node" parent="." node_paths=PackedStringArray("path")]
-script = ExtResource("2_spawner")
-path = NodePath("../EnemyPath")
+[node name="WaveSpawner" parent="."]
 waves = Array[ExtResource("9_wave_data")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5")])
-
-[node name="HUD" parent="." instance=ExtResource("4_hud")]

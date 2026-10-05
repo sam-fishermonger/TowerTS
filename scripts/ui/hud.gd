@@ -6,6 +6,7 @@ extends CanvasLayer
 signal tower_selected(data: TowerData)
 signal next_wave_requested
 signal restart_requested
+signal next_level_requested
 signal menu_requested
 
 var _tower_group := ButtonGroup.new()
@@ -20,6 +21,7 @@ var _gold := 0
 @onready var end_panel: PanelContainer = %EndPanel
 @onready var end_title: Label = %EndTitle
 @onready var end_message: Label = %EndMessage
+@onready var next_level_button: Button = %NextLevelButton
 
 
 func _ready() -> void:
@@ -27,6 +29,7 @@ func _ready() -> void:
 	_tower_group.allow_unpress = true
 	next_wave_button.pressed.connect(next_wave_requested.emit)
 	%RestartButton.pressed.connect(restart_requested.emit)
+	%NextLevelButton.pressed.connect(next_level_requested.emit)
 	%MenuButton.pressed.connect(menu_requested.emit)
 
 
@@ -35,8 +38,7 @@ func setup(level_name: String, tower_types: Array[TowerData]) -> void:
 	for data in tower_types:
 		var button := Button.new()
 		button.text = "%s  %d or" % [data.display_name, data.cost]
-		button.tooltip_text = "Dégâts : %d   Portée : %d   Cadence : %.1f tirs/s" \
-			% [data.damage, data.attack_range, data.fire_rate]
+		button.tooltip_text = _describe_tower(data)
 		button.toggle_mode = true
 		button.button_group = _tower_group
 		button.focus_mode = Control.FOCUS_NONE
@@ -64,12 +66,16 @@ func set_next_wave_available(available: bool) -> void:
 	next_wave_button.disabled = not available
 
 
-func show_end_screen(victory: bool) -> void:
+func show_end_screen(victory: bool, can_continue := false) -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"
 	end_message.text = "Toutes les vagues ont été repoussées." if victory \
 		else "Les ennemis ont atteint votre base."
+	next_level_button.visible = can_continue
 	end_panel.visible = true
-	%RestartButton.grab_focus()
+	if can_continue:
+		next_level_button.grab_focus()
+	else:
+		%RestartButton.grab_focus()
 
 
 func _update_tower_buttons() -> void:
@@ -81,3 +87,14 @@ func _update_tower_buttons() -> void:
 func _on_tower_button_pressed() -> void:
 	var pressed := _tower_group.get_pressed_button()
 	tower_selected.emit(pressed.get_meta("tower_data") if pressed else null)
+
+
+static func _describe_tower(data: TowerData) -> String:
+	var lines := ["Dégâts : %d   Portée : %d   Cadence : %.1f tirs/s" \
+		% [data.damage, data.attack_range, data.fire_rate]]
+	if data.splash_radius > 0.0:
+		lines.append("Explosion : rayon %d" % data.splash_radius)
+	if data.slow_factor < 1.0:
+		lines.append("Ralentit de %d %% pendant %.1f s" \
+			% [roundi((1.0 - data.slow_factor) * 100.0), data.slow_duration])
+	return "\n".join(lines)

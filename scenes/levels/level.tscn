@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/level.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/map/game_map.gd" id="2_map"]
+[ext_resource type="Script" path="res://scripts/levels/tower_placer.gd" id="3_placer"]
+[ext_resource type="Script" path="res://scripts/levels/placement_preview.gd" id="4_preview"]
+[ext_resource type="Script" path="res://scripts/levels/wave_spawner.gd" id="5_spawner"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="6_hud"]
+
+[node name="Level" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="Map" type="Node2D" parent="."]
+script = ExtResource("2_map")
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Towers" type="Node2D" parent="."]
+
+[node name="Projectiles" type="Node2D" parent="."]
+
+[node name="TowerPlacer" type="Node2D" parent="."]
+script = ExtResource("3_placer")
+
+[node name="PlacementPreview" type="Node2D" parent="TowerPlacer"]
+script = ExtResource("4_preview")
+
+[node name="WaveSpawner" type="Node" parent="." node_paths=PackedStringArray("map", "enemy_container")]
+script = ExtResource("5_spawner")
+map = NodePath("../Map")
+enemy_container = NodePath("../Enemies")
+
+[node name="HUD" parent="." instance=ExtResource("6_hud")]
