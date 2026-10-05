@@ -14,6 +14,10 @@ extends Resource
 ## Nombre de tirs par seconde.
 @export var fire_rate := 1.0
 @export var color := Color.STEEL_BLUE
+## Tourelle posée sur le socle (dessin de remplacement en code si vide).
+@export var turret_texture: Texture2D
+## La tourelle pivote vers sa cible (faux pour le Givre, qui frappe tout autour).
+@export var turret_rotates := true
 ## Son joué à chaque tir.
 @export var attack_sound: AudioStream
 

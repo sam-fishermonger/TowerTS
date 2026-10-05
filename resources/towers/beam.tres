@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/towers/beam_tower.tscn" id="2_scene"]
 [ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="3_upgrade"]
 [ext_resource type="AudioStream" path="res://assets/audio/beam_zap.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/beam.svg" id="10_turret"]
 
 [sub_resource type="Resource" id="Upgrade_1"]
 script = ExtResource("3_upgrade")
@@ -26,6 +27,7 @@ attack_range = 140.0
 damage = 6.0
 fire_rate = 6.0
 color = Color(0.95, 0.35, 0.6, 1)
+turret_texture = ExtResource("10_turret")
 attack_sound = ExtResource("9_sound")
 beam_ramp_max = 3.0
 beam_ramp_time = 2.0

@@ -19,6 +19,8 @@ var progress := 0.0
 var _path_length := 0.0
 var _slow_factor := 1.0
 var _slow_time_left := 0.0
+## Direction de la marche (angle), pour orienter l'image.
+var _heading := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -92,7 +94,14 @@ func apply_slow(factor: float, duration: float) -> void:
 
 
 func _update_position() -> void:
-	global_position = path.to_global(path.curve.sample_baked(progress))
+	var point := path.curve.sample_baked(progress)
+	global_position = path.to_global(point)
+	var ahead := path.curve.sample_baked(minf(progress + 4.0, _path_length))
+	if not ahead.is_equal_approx(point):
+		var heading := point.angle_to_point(ahead)
+		if not is_equal_approx(heading, _heading):
+			_heading = heading
+			queue_redraw()
 
 
 func _on_health_depleted() -> void:
@@ -101,6 +110,14 @@ func _on_health_depleted() -> void:
 
 
 func _draw() -> void:
+	if data.texture:
+		# L'image déborde un peu du rayon de collision (ombre, pattes).
+		var size := data.radius * 2.6 * data.sprite_scale
+		draw_set_transform(Vector2.ZERO, _heading)
+		draw_texture_rect(data.texture, Rect2(-size / 2.0, -size / 2.0, size, size), false,
+			Color(0.6, 0.8, 1.0) if is_slowed() else Color.WHITE)
+		draw_set_transform(Vector2.ZERO)
+		return
 	var color := data.color.lerp(Color(0.55, 0.8, 1.0), 0.5) if is_slowed() else data.color
 	draw_circle(Vector2.ZERO, data.radius, color)
 	var outline_width := 4.0 if data.armor > 0.0 else 2.0

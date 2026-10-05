@@ -1,11 +1,14 @@
 class_name Tower
 extends Entity
 ## Base des tours : choisit une cible à portée et attaque selon sa cadence.
-## Les sous-classes définissent l'attaque (_attack) et l'apparence (_draw_body).
+## Les sous-classes définissent l'attaque (_attack), leurs effets (_draw_effects)
+## et une apparence de remplacement si le type de tour n'a pas d'image (_draw_shape).
 ## Les statistiques en jeu sont celles de `stats` : celles du type de tour (`data`)
 ## avec les améliorations achetées appliquées.
 
 const SIZE := 44.0
+## Socle de pierre commun, sous la tourelle de chaque type de tour.
+const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/towers/base.svg")
 ## Part de ce que la tour a coûté (pose et améliorations) rendue à la vente.
 const SELL_RATIO := 0.7
 
@@ -158,12 +161,34 @@ func _draw() -> void:
 	_draw_body()
 
 
-## Socle carré commun à toutes les tours.
+## Socle et tourelle (images de TowerData, ou formes de remplacement), puis
+## les effets propres au type de tour.
 func _draw_body() -> void:
 	var half := SIZE / 2.0
-	draw_rect(Rect2(-half, -half, SIZE, SIZE), data.color.darkened(0.35))
+	if data.turret_texture:
+		draw_texture_rect(BASE_TEXTURE, Rect2(-half, -half, SIZE, SIZE), false)
+		# La tourelle grossit un peu à chaque amélioration.
+		var turret_size := SIZE * (1.3 + 0.1 * (level - 1))
+		if data.turret_rotates:
+			draw_set_transform(Vector2.ZERO, _aim_angle)
+		draw_texture_rect(data.turret_texture, Rect2(-turret_size / 2.0, -turret_size / 2.0, turret_size, turret_size), false)
+		draw_set_transform(Vector2.ZERO)
+	else:
+		draw_rect(Rect2(-half, -half, SIZE, SIZE), data.color.darkened(0.35))
+		_draw_shape()
 	# Un losange par amélioration achetée, en bas du socle.
 	for i in level - 1:
 		var center := Vector2(-half + 7.0 + i * 10.0, half - 7.0)
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -4), center + Vector2(4, 0),
 			center + Vector2(0, 4), center + Vector2(-4, 0)]), Color(1, 0.85, 0.3))
+	_draw_effects()
+
+
+## Tourelle dessinée en code, quand le type de tour n'a pas d'image. À redéfinir.
+func _draw_shape() -> void:
+	pass
+
+
+## Effets dessinés par-dessus la tour (onde, rayon...). À redéfinir.
+func _draw_effects() -> void:
+	pass

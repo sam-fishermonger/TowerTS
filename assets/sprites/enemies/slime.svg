@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Slime : goutte verte avec des yeux, vue de dessus (regarde vers la droite). -->
+  <ellipse cx="32" cy="35" rx="27" ry="24" fill="#000" opacity="0.25"/>
+  <path d="M6 34 C6 16 20 6 34 6 C50 6 60 18 59 33 C58 50 46 58 32 58 C16 58 6 50 6 34 Z" fill="#2f7a24"/>
+  <path d="M9 34 C9 18 21 9 34 9 C48 9 56 19 56 33 C55 47 45 55 32 55 C18 55 9 48 9 34 Z" fill="#74d957"/>
+  <ellipse cx="24" cy="20" rx="9" ry="5" fill="#c8f7b4" opacity="0.7" transform="rotate(-25 24 20)"/>
+  <ellipse cx="42" cy="24" rx="6" ry="7" fill="#fff"/>
+  <ellipse cx="42" cy="40" rx="6" ry="7" fill="#fff"/>
+  <circle cx="45" cy="25" r="3.2" fill="#1b2a14"/>
+  <circle cx="45" cy="41" r="3.2" fill="#1b2a14"/>
+</svg>

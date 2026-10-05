@@ -39,14 +39,20 @@ func _attack(enemy: Enemy) -> void:
 	enemy.take_damage(stats.damage * get_ramp_multiplier())
 
 
-func _draw_body() -> void:
-	super()
-	var heat := inverse_lerp(1.0, maxf(stats.beam_ramp_max, 1.001), get_ramp_multiplier())
-	var core := data.color.lerp(Color.WHITE, 0.3 + 0.5 * heat)
+## Chaleur du rayon, de 0 (vient d'accrocher sa cible) à 1 (dégâts au maximum).
+func _get_heat() -> float:
+	return inverse_lerp(1.0, maxf(stats.beam_ramp_max, 1.001), get_ramp_multiplier())
+
+
+func _draw_shape() -> void:
 	# Cristal en losange au centre du socle.
 	var r := SIZE * 0.32
 	draw_colored_polygon(PackedVector2Array([Vector2(0, -r), Vector2(r * 0.7, 0), Vector2(0, r), Vector2(-r * 0.7, 0)]), data.color)
-	draw_circle(Vector2.ZERO, SIZE * 0.1, core)
+
+
+func _draw_effects() -> void:
+	var heat := _get_heat()
+	var core := data.color.lerp(Color.WHITE, 0.3 + 0.5 * heat)
 	if is_instance_valid(_target) and _target.is_alive:
 		var end := to_local(_target.global_position)
 		var width := 2.0 + 4.0 * heat

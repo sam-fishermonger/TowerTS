@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Givre : cristal de glace en étoile (ne tourne pas). -->
+  <g stroke="#1d5670" stroke-width="7" stroke-linecap="round">
+    <path d="M32 12v40M14.7 22l34.6 20M14.7 42l34.6-20"/>
+  </g>
+  <g stroke="#8fe0ff" stroke-width="4" stroke-linecap="round">
+    <path d="M32 12v40M14.7 22l34.6 20M14.7 42l34.6-20"/>
+  </g>
+  <g stroke="#d8f6ff" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <path d="M27 15l5 5 5-5M27 49l5-5 5 5M15 28l7 0-3-6M49 36l-7 0 3 6M15 36l7 0-3 6M49 28l-7 0 3-6"/>
+  </g>
+  <circle cx="32" cy="32" r="8" fill="#1d5670"/>
+  <circle cx="32" cy="32" r="6" fill="#bff0ff"/>
+  <circle cx="30" cy="30" r="2" fill="#fff"/>
+</svg>

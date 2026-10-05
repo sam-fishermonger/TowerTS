@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Rocher : à teinter avec la couleur rock_color de la carte (dessiné en gris clair). -->
+  <ellipse cx="34" cy="40" rx="24" ry="16" fill="#000" opacity="0.25"/>
+  <path d="M8 38 L14 22 L26 14 L40 15 L52 24 L56 38 L48 48 L30 52 L14 48 Z" fill="#9a9a9a"/>
+  <path d="M14 22 L26 14 L40 15 L52 24 L44 30 L28 28 Z" fill="#e2e2e2"/>
+  <path d="M8 38 L14 22 L28 28 L24 46 L14 48 Z" fill="#bdbdbd"/>
+  <path d="M28 28 L44 30 L52 24 L56 38 L48 48 L30 52 L24 46 Z" fill="#8a8a8a"/>
+  <path d="M8 38 L14 22 L26 14 L40 15 L52 24 L56 38 L48 48 L30 52 L14 48 Z" fill="none" stroke="#4a4a4a" stroke-width="2"/>
+</svg>

@@ -18,6 +18,10 @@ extends Node2D
 @export var path_color := Color(0.72, 0.6, 0.42)
 @export var rock_color := Color(0.42, 0.42, 0.45)
 
+const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/map/base.svg")
+## Image de rocher en gris clair, teintée avec rock_color.
+const ROCK_TEXTURE: Texture2D = preload("res://assets/sprites/map/rock.svg")
+
 ## Chemins des ennemis, dans l'ordre des nœuds enfants.
 var paths: Array[Path2D] = []
 
@@ -110,14 +114,13 @@ func _draw() -> void:
 		# Base du joueur au bout du premier chemin.
 		var points := _local_points(paths[0])
 		var base := points[points.size() - 1] + Vector2(-64, 0)
-		draw_rect(Rect2(base - Vector2(24, 32), Vector2(48, 64)), Color(0.35, 0.5, 0.85))
+		draw_texture_rect(BASE_TEXTURE, Rect2(base - Vector2(32, 48), Vector2(64, 96)), false)
 
 
 func _draw_rock(center: Vector2) -> void:
-	var r := cell_size * 0.36
-	draw_circle(center + Vector2(-r * 0.3, r * 0.2), r * 0.75, rock_color.darkened(0.2))
-	draw_circle(center + Vector2(r * 0.25, -r * 0.1), r * 0.8, rock_color)
-	draw_circle(center + Vector2(r * 0.1, -r * 0.35), r * 0.3, rock_color.lightened(0.25))
+	var size := cell_size * 0.9
+	draw_texture_rect(ROCK_TEXTURE, Rect2(center - Vector2.ONE * size / 2.0, Vector2.ONE * size), false,
+		rock_color.lightened(0.45))
 
 
 func _local_points(path: Path2D) -> PackedVector2Array:
