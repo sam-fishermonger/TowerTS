@@ -1,13 +1,17 @@
 [gd_resource type="Resource" script_class="TowerData" format=3]
 
 [ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/projectile_tower.tscn" id="2_scene"]
+[ext_resource type="PackedScene" path="res://scenes/projectiles/projectile.tscn" id="3_projectile"]
 
 [resource]
 script = ExtResource("1_data")
 display_name = "Canon"
 cost = 50
+scene = ExtResource("2_scene")
 attack_range = 150.0
 damage = 25.0
 fire_rate = 1.0
-projectile_speed = 450.0
 color = Color(0.3, 0.55, 0.9, 1)
+projectile_scene = ExtResource("3_projectile")
+projectile_speed = 450.0

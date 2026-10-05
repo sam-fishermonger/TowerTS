@@ -7,7 +7,7 @@ var is_valid := false
 
 
 func show_at(world_position: Vector2, data: TowerData, valid: bool) -> void:
-	position = world_position
+	global_position = world_position
 	tower_data = data
 	is_valid = valid
 	visible = true
