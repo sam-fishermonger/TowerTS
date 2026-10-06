@@ -52,6 +52,8 @@ const CHEVALIER := preload("res://resources/enemies/undead/chevalier.tres")
 const SQUELETTE := preload("res://resources/enemies/undead/squelette.tres")
 const LICHE := preload("res://resources/enemies/undead/liche.tres")
 const CONQUEST_01 := preload("res://scenes/levels/conquest_01.tscn")
+const TUTORIAL := preload("res://scenes/levels/tutorial.tscn")
+const FREEZE_POWER := preload("res://resources/powers/freeze.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -133,6 +135,7 @@ func _run() -> void:
 	await _test_level_editor()
 	await _test_conquest()
 	await _test_conquest_victory()
+	await _test_tutorial()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -3387,6 +3390,103 @@ func _test_conquest() -> void:
 	_check(level.spawner.current_wave == 0 and conquest.wave_countdown < 0.0
 		and level.hud.next_wave_button.text == "Lancer la vague", "la vague part seule à la fin du compte à rebours")
 	await _free(level)
+
+
+## Tutoriel : la toute première partie de la campagne, ses étapes qui avancent avec ce que
+## fait le joueur, et sa victoire qui ouvre le niveau 1-1.
+func _test_tutorial() -> void:
+	print("Tutoriel")
+	Progress.set_setting(Tutorial.DONE_SETTING, false)
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var any_stars := Perks.get_earned_stars() > 0
+	_check(title.get_node("%TutorialButton").text.begins_with("Tutoriel"), "le bouton Tutoriel existe")
+	_check(title.get_campaign_start() == (Progress.get_next_to_play(Perks.CAMPAIGN) if any_stars
+		else Tutorial.LEVEL_PATH), "Campagne commence par le tutoriel s'il n'y a encore rien de gagné")
+	await _free(title)
+	var level := await _spawn_level(TUTORIAL)
+	var tutorial := level.tutorial
+	_check(tutorial != null and tutorial.bubble.visible and tutorial.current == 0, "la bulle du tutoriel s'ouvre")
+	_check(level.tower_types.size() == 3 and not level.is_choosing_towers and level.powers.is_empty()
+		and level.difficulty == Difficulty.MOYEN and not level.counts_achievements(),
+		"trois tours, pas de choix des tours, pas d'arbre, en Moyen et sans succès")
+	tutorial.next_step()
+	_check(tutorial.current == 1, "Suivant passe à l'étape suivante")
+	level.select_tower(CANNON)
+	await process_frame
+	_check(tutorial.current == 2, "choisir le Canon passe à sa pose")
+	level.select_tower(null)
+	await process_frame
+	_check(tutorial.current == 1, "le reposer revient au choix du Canon")
+	level.place_tower(Tutorial.CANNON_CELL, CANNON)
+	await process_frame
+	_check(tutorial.current == 3, "le Canon posé, la bulle montre la barre du haut")
+	tutorial.next_step()
+	await process_frame
+	_check(tutorial.current == 4, "puis le bouton de vague")
+	level.start_next_wave()
+	await process_frame
+	_check(tutorial.current == 5, "la vague lancée, la bulle parle de l'or")
+	var elapsed := 0.0
+	while level.get_waves_cleared() < 1 and elapsed < 120.0:
+		elapsed += await _step()
+	await process_frame
+	_check(tutorial.current == 6 and level.lives == level.starting_lives, "la vague 1 repoussée, place aux intérêts (étape %d, %d vies)" % [tutorial.current, level.lives])
+	tutorial.next_step()
+	await process_frame
+	level.inspect_tower(level.get_towers()[0])
+	await process_frame
+	_check(tutorial.current == 8, "la fiche ouverte, la bulle propose l'amélioration")
+	level.upgrade_tower(level.get_towers()[0])
+	await process_frame
+	_check(tutorial.current == 9, "puis la cible et la vente")
+	tutorial.next_step()
+	level.inspect_tower(null)
+	await process_frame
+	_check(tutorial.current == 10, "puis les volants")
+	_check(level.place_tower(Tutorial.GATLING_CELL, GATLING) != null, "assez d'or pour la Mitrailleuse (%d)" % level.gold)
+	level.start_next_wave()
+	await process_frame
+	_check(tutorial.current == 12, "la vague 2 lancée, la bulle montre la pause et la vitesse")
+	elapsed = 0.0
+	while level.get_waves_cleared() < 2 and elapsed < 120.0:
+		elapsed += await _step()
+	await process_frame
+	_check(tutorial.current == 13, "puis les furtifs (%d vies)" % level.lives)
+	_check(level.place_tower(Tutorial.SNIPER_CELL, SNIPER) != null, "assez d'or pour le Sniper (%d)" % level.gold)
+	level.start_next_wave()
+	elapsed = 0.0
+	while level.get_waves_cleared() < 3 and elapsed < 120.0:
+		elapsed += await _step()
+	await process_frame
+	_check(tutorial.current == 16 and level.powers.has(FREEZE_POWER), "avant la dernière vague, le Gel est prêté (%d vies, %d or)" % [level.lives, level.gold])
+	# Comme le conseille la bulle, l'or restant passe en améliorations.
+	for tower in level.get_towers():
+		level.upgrade_tower(tower)
+	level.start_next_wave()
+	await process_frame
+	_check(tutorial.current == 17, "la vague lancée, la bulle demande le Gel")
+	elapsed = 0.0
+	while get_nodes_in_group(Enemy.GROUP).size() < 6 and elapsed < 30.0:
+		elapsed += await _step()
+	level.select_power(FREEZE_POWER)
+	await process_frame
+	_check(tutorial.current == 18, "le Gel lancé, il ne reste qu'à tenir")
+	await _play_until_over(level, 300.0)
+	_check(level.is_over and level.lives > 0, "le tutoriel suivi à la lettre se gagne (%d vies)" % level.lives)
+	_check(Tutorial.is_done() and not tutorial.bubble.visible, "le tutoriel gagné est noté comme fini")
+	_check(level.get_next_level() == Perks.CAMPAIGN.levels[0] and level.hud.next_level_button.visible
+		and level.hud.next_level_button.text == "Commencer la campagne", "il ouvre le niveau 1-1")
+	_check(Progress.get_total_stars(TUTORIAL.resource_path) == 0, "il ne rapporte pas d'étoiles")
+	await _free(level)
+	_check(not Engine.has_meta(Perks.DISABLED_META), "l'arbre compte de nouveau après le tutoriel")
+	title = TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	_check(title.get_campaign_start() != Tutorial.LEVEL_PATH and title.get_node("%TutorialButton").text == "Tutoriel",
+		"une fois fini, le tutoriel n'est plus imposé ni conseillé")
+	await _free(title)
 
 
 func _test_conquest_victory() -> void:

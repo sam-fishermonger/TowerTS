@@ -1,6 +1,6 @@
 extends Control
-## Écran titre. « Jouer » ouvre le choix du mode : reprendre la campagne, la sélection des
-## mondes et des niveaux, le défi du jour, le mode Conquête ou l'éditeur de niveau. Le menu
+## Écran titre. « Jouer » ouvre le choix du mode : reprendre la campagne (la toute première
+## fois, elle commence par le tutoriel), le tutoriel, la sélection des mondes et des niveaux, le défi du jour, le mode Conquête ou l'éditeur de niveau. Le menu
 ## principal ouvre aussi l'arbre des améliorations, le lexique (tours, monstres, mondes), les succès ou les options, ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
 ## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
@@ -38,6 +38,7 @@ var _konami_label: Label
 
 @onready var play_button: Button = %PlayButton
 @onready var campaign_button: Button = %CampaignButton
+@onready var tutorial_button: Button = %TutorialButton
 @onready var back_button: Button = %BackButton
 @onready var subtitle: Label = %Subtitle
 @onready var perks_button: Button = %PerksButton
@@ -62,7 +63,8 @@ var _konami_label: Label
 func _ready() -> void:
 	play_button.pressed.connect(show_play_menu.bind(true))
 	back_button.pressed.connect(show_play_menu.bind(false))
-	campaign_button.pressed.connect(func() -> void: open_level(Progress.get_next_to_play(CAMPAIGN)))
+	campaign_button.pressed.connect(func() -> void: open_level(get_campaign_start()))
+	tutorial_button.pressed.connect(func() -> void: open_level(Tutorial.LEVEL_PATH))
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
@@ -81,7 +83,7 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, campaign_button, worlds_button, daily_button, conquest_button, editor_button,
+	for button in [play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, editor_button,
 			back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
@@ -94,7 +96,7 @@ func get_main_buttons() -> Array[Button]:
 
 
 func get_play_buttons() -> Array[Button]:
-	return [campaign_button, worlds_button, daily_button, conquest_button, editor_button, back_button]
+	return [campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, editor_button, back_button]
 
 
 func is_play_menu_open() -> bool:
@@ -203,6 +205,14 @@ func open_options() -> OptionsMenu:
 	return options
 
 
+## Niveau ouvert par Campagne (ou Continuer) : le tutoriel pour une toute première partie
+## (rien de gagné, tutoriel ni fini ni passé), sinon le prochain niveau à jouer.
+func get_campaign_start() -> String:
+	if Perks.get_earned_stars() == 0 and not Tutorial.is_done():
+		return Tutorial.LEVEL_PATH
+	return Progress.get_next_to_play(CAMPAIGN)
+
+
 func open_level(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
@@ -223,6 +233,8 @@ func _refresh() -> void:
 	if endless_available > 0:
 		perks_button.text += "  ·  ∞ %d" % endless_available
 	reset_button.visible = any_won
+	# Tant qu'il n'est ni fini ni passé, le tutoriel est conseillé.
+	tutorial_button.text = tr("Tutoriel") if Tutorial.is_done() else tr("Tutoriel  ·  conseillé")
 	# Le meilleur score du défi du jour, s'il a déjà été joué aujourd'hui.
 	var daily_score := Progress.get_daily_score(DailyChallenge.today().date_key)
 	daily_button.text = "Défi du jour  ·  %d" % daily_score if daily_score >= 0 else "Défi du jour"
