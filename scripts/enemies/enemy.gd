@@ -65,6 +65,11 @@ var _dot_color := Color.ORANGE
 ## Secondes pendant lesquelles l'ennemi ne peut ni être soigné ni soigner.
 var _heal_block_left := 0.0
 var _knockback_cooldown := 0.0
+## Tour qui porte le coup en cours (identifiant d'instance, 0 = aucune) : lue par le niveau
+## quand l'ennemi émet `damaged` ou `died`, pour les statistiques de fin de niveau.
+var damage_source_id := 0
+## Tour qui a posé la brûlure ou le poison en cours.
+var _dot_source_id := 0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -163,9 +168,12 @@ func hit(amount: float, stats: TowerData) -> float:
 		health.jam_shield(stats.shield_jam_duration)
 	if stats.heal_block_duration > 0.0:
 		block_healing(stats.heal_block_duration)
+	damage_source_id = stats.source_tower_id
 	var dealt := take_damage(amount, stats.armor_piercing, stats.shield_damage_multiplier)
+	damage_source_id = 0
 	apply_slow(stats.slow_factor, stats.slow_duration)
-	apply_dot(stats.dot_damage, stats.dot_duration, stats.color)
+	if apply_dot(stats.dot_damage, stats.dot_duration, stats.color):
+		_dot_source_id = stats.source_tower_id
 	if stats.knockback > 0.0:
 		push_back(stats.knockback)
 	return dealt
@@ -195,9 +203,10 @@ func apply_slow(factor: float, duration: float) -> void:
 
 ## Brûlure ou poison : `damage_per_second` pendant `duration`, en ignorant l'armure.
 ## Le plus fort et le plus long l'emportent, comme pour le ralentissement.
-func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE) -> void:
+## Renvoie true si l'effet a été posé.
+func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE) -> bool:
 	if not is_alive or damage_per_second <= 0.0 or duration <= 0.0:
-		return
+		return false
 	if _dot_left <= 0.0:
 		_dot_damage = damage_per_second
 		_dot_tick_left = DOT_TICK
@@ -206,6 +215,7 @@ func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE)
 	_dot_left = maxf(_dot_left, duration)
 	_dot_color = color
 	queue_redraw()
+	return true
 
 
 func is_burning() -> bool:
@@ -217,7 +227,9 @@ func _update_dot(delta: float) -> void:
 	_dot_tick_left -= delta
 	if _dot_tick_left <= 0.0:
 		_dot_tick_left += DOT_TICK
+		damage_source_id = _dot_source_id
 		take_damage(_dot_damage * DOT_TICK, true)
+		damage_source_id = 0
 	if _dot_left <= 0.0:
 		_dot_damage = 0.0
 		queue_redraw()
