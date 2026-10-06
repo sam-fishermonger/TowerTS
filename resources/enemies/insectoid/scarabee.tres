@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Scarabée"
+description = "Carapace épaisse : les petits dégâts (Mitrailleuse) rebondissent presque tous."
 max_health = 110.0
 armor = 6.0
 speed = 60.0

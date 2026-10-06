@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Garde"
+description = "Bouclier anti-émeute : une armure solide contre les petits coups."
 max_health = 130.0
 armor = 5.0
 speed = 55.0

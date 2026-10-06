@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Sentinelle"
+description = "Robot de garde protégé par un bouclier d'énergie qui se recharge."
 max_health = 70.0
 armor = 2.0
 speed = 65.0

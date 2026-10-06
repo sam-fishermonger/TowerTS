@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Drone"
+description = "Petit drone volant très rapide, mais fragile."
 max_health = 40.0
 speed = 140.0
 reward = 6

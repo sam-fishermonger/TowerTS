@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="2_summon"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/insectoid/reine.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Reine de la Ruche"
+description = "La mère de toute la Ruche, gonflée d'œufs : elle pond des Larves en marchant. Il faut l'abattre avant qu'elle n'atteigne la base."
+max_health = 4000.0
+armor = 2.0
+speed = 26.0
+reward = 150
+damage = 10
+color = Color(0.75, 0.4, 0.85, 1)
+radius = 30.0
+texture = ExtResource("9_texture")
+summon_enemy = ExtResource("2_summon")
+summon_count = 3
+summon_interval = 5.0
+is_boss = true

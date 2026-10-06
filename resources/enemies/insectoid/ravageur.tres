@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Ravageur"
+description = "Gros xénomorphe lent et coriace, qui coûte 3 vies s'il passe."
 max_health = 250.0
 speed = 45.0
 reward = 20

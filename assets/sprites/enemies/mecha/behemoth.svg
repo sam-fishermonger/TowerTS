@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Béhémoth : forteresse mécanique à chenilles, réacteur au cœur et triple canon, orientée vers la droite. -->
+  <ellipse cx="32" cy="34" rx="30" ry="29" fill="#000" opacity="0.2"/>
+  <rect x="2" y="2" width="50" height="12" rx="5" fill="#1c1c22"/>
+  <rect x="2" y="50" width="50" height="12" rx="5" fill="#1c1c22"/>
+  <g stroke="#4a4a55" stroke-width="2"><path d="M8 4 V12M16 4 V12M24 4 V12M32 4 V12M40 4 V12M8 52 V60M16 52 V60M24 52 V60M32 52 V60M40 52 V60"/></g>
+  <rect x="5" y="11" width="44" height="42" rx="10" fill="#1c1c22"/>
+  <rect x="7" y="13" width="40" height="38" rx="8" fill="#7a6a5a"/>
+  <path d="M11 19 L43 19M11 45 L43 45" stroke="#4e4338" stroke-width="2.5"/>
+  <rect x="44" y="22" width="18" height="4" rx="1.5" fill="#1c1c22"/>
+  <rect x="44" y="30" width="19" height="4" rx="1.5" fill="#1c1c22"/>
+  <rect x="44" y="38" width="18" height="4" rx="1.5" fill="#1c1c22"/>
+  <circle cx="27" cy="32" r="11" fill="#1c1c22"/>
+  <circle cx="27" cy="32" r="8.5" fill="#ff8a1f"/>
+  <circle cx="27" cy="32" r="4.5" fill="#ffe08a"/>
+  <rect x="10" y="15" width="16" height="4" rx="2" fill="#d8c8b4" opacity="0.5"/>
+</svg>

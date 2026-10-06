@@ -9,6 +9,8 @@ extends Resource
 @export var color := Color.WHITE
 ## Monstres du biome, montrés sur la carte du monde.
 @export var enemies: Array[EnemyData] = []
+## Boss du biome, au bout de certains niveaux (lexique et sélection des mondes).
+@export var bosses: Array[EnemyData] = []
 @export_file("*.tscn") var levels: Array[String] = []
 ## Tuiles du biome (sol, détails, obstacles), posées sur les cartes de ses niveaux
 ## (voir GameMap.tileset).

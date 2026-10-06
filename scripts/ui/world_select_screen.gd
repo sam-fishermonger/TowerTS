@@ -6,6 +6,8 @@ extends Control
 ## 3 étoiles s'y joue sans fin, et y gagne des étoiles infinies (records et étoiles en bleu).
 ## En bas, le choix de la difficulté (Difficulty) : les boutons des niveaux montrent les
 ## étoiles obtenues dans celle-ci, et les cartes celles de toutes les difficultés.
+## Survoler un niveau (ou lui donner le focus) ouvre sa fenêtre de détail : ses vagues,
+## avec leurs monstres, élites et boss, dans la difficulté choisie.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
@@ -19,6 +21,11 @@ var endless_mode := false
 ## Bouton de chaque niveau, par chemin de scène.
 var _level_buttons := {}
 var _difficulty_group := ButtonGroup.new()
+## Fenêtre de détail du niveau survolé.
+var level_details: DetailPopup
+## Texte de la fenêtre de détail de chaque niveau, par « chemin|difficulté|infini » :
+## chaque niveau n'est ouvert qu'une fois pour lire ses vagues.
+var _details_cache := {}
 
 @onready var worlds_box: HBoxContainer = %Worlds
 @onready var back_button: Button = %BackButton
@@ -32,6 +39,8 @@ var _difficulty_group := ButtonGroup.new()
 
 func _ready() -> void:
 	back_button.pressed.connect(go_back)
+	level_details = DetailPopup.new(470.0)
+	add_child(level_details)
 	_build_difficulty_buttons()
 	mode_button.toggled.connect(set_endless_mode)
 	set_endless_mode(false)
@@ -200,6 +209,10 @@ func _make_card(world_index: int) -> Control:
 				button.tooltip_text = _level_tooltip(path)
 		_level_buttons[path] = button
 		button.pressed.connect(open_level.bind(path))
+		button.mouse_entered.connect(show_level_details.bind(path))
+		button.focus_entered.connect(show_level_details.bind(path))
+		button.mouse_exited.connect(level_details.close)
+		button.focus_exited.connect(level_details.close)
 		grid.add_child(button)
 	column.add_child(grid)
 
@@ -233,6 +246,46 @@ func _setup_endless_button(button: Button, path: String, number: String) -> void
 	button.tooltip_text = "Record : %d vague%s" % [record, "s" if record > 1 else ""] if record > 0 else "Pas encore joué"
 	for color_name in [&"font_color", &"font_hover_color", &"font_focus_color", &"font_pressed_color"]:
 		button.add_theme_color_override(color_name, ENDLESS_COLOR)
+
+
+## Fenêtre de détail d'un niveau, à côté de son bouton : une ligne par vague.
+func show_level_details(path: String) -> void:
+	var button := get_level_button(path)
+	if not button:
+		return
+	var world := CAMPAIGN.world_index_of(path)
+	level_details.show_text(get_level_details(path), button.get_global_rect(), CAMPAIGN.worlds[world].color)
+
+
+## Texte de la fenêtre de détail d'un niveau : nom, difficulté, or et vies de départ,
+## puis la composition de chaque vague (élites et boss signalés).
+func get_level_details(path: String) -> String:
+	var difficulty := Difficulty.DEFAULT if endless_mode else Difficulty.get_current()
+	var key := "%s|%d|%s" % [path, difficulty, endless_mode]
+	if _details_cache.has(key):
+		return _details_cache[key]
+	var level: Level = load(path).instantiate()
+	var spawner: WaveSpawner = level.get_node("WaveSpawner")
+	if difficulty != Difficulty.MOYEN:
+		spawner.apply_difficulty(difficulty)
+	var world := CAMPAIGN.world_index_of(path)
+	var number := "%d-%d" % [world + 1, CAMPAIGN.worlds[world].levels.find(path) + 1]
+	var bonuses := Perks.get_bonuses()
+	var lines: Array[String] = []
+	lines.append("[b]%s[/b]   [color=#%s]%s[/color]" % [level.level_name if level.level_name.contains(number)
+		else "%s  ·  %s" % [number, level.level_name], Difficulty.COLORS[difficulty].to_html(false),
+		"Mode infini" if endless_mode else Difficulty.NAMES[difficulty]])
+	lines.append("[color=%s]%d vagues  ·  Or de départ : %d  ·  Vies : %d[/color]" % [EnemyInfo.MUTED,
+		spawner.get_wave_count(), level.starting_gold + bonuses.starting_gold_bonus,
+		level.starting_lives + bonuses.lives_bonus])
+	for i in spawner.get_wave_count():
+		lines.append("[color=%s]V%d[/color]  %s" % [EnemyInfo.MUTED, i + 1, EnemyInfo.wave_line(spawner.waves[i], 18)])
+	if endless_mode:
+		lines.append("[color=%s]Puis les %d dernières vagues en boucle, de plus en plus dures.[/color]"
+			% [EnemyInfo.MUTED, WaveSpawner.ENDLESS_CYCLE])
+	level.free()
+	_details_cache[key] = "\n".join(lines)
+	return _details_cache[key]
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

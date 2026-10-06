@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Titan"
+description = "Robot de combat énorme : blindage et bouclier d'énergie. 5 vies s'il passe."
 max_health = 420.0
 armor = 5.0
 speed = 32.0

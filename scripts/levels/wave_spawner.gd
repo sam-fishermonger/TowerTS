@@ -1,7 +1,8 @@
 class_name WaveSpawner
 extends Node
 ## Fait apparaître les ennemis de chaque vague sur les chemins de la carte, selon les WaveData,
-## changés par la difficulté du niveau (voir apply_difficulty()).
+## changés par la difficulté du niveau (voir apply_difficulty()). Un groupe peut être
+## d'élites (SpawnGroup.elite), et une vague peut avoir son boss (EnemyData.is_boss).
 ## Chaque ennemi marche un peu sur le côté du chemin, tiré au hasard, pour que les vagues
 ## ne forment pas une seule file. En mode infini, des vagues de plus en plus dures
 ## suivent celles du niveau, sans fin.
@@ -101,7 +102,7 @@ func start_next_wave() -> void:
 	for group in wave.groups:
 		for i in group.count:
 			_queue.append({"time": group.start_delay + i * group.interval, "group": group,
-				"health": wave.health_multiplier})
+				"health": wave.health_multiplier * group.health_multiplier})
 	_queue.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.time < b.time)
 	is_spawning = true
 	wave_started.emit(current_wave)
@@ -113,7 +114,7 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 	while not _queue.is_empty() and _queue[0].time <= _elapsed:
 		var entry: Dictionary = _queue.pop_front()
-		spawn(entry.group.enemy, map.get_enemy_path(entry.group.path_index), 0.0, entry.health)
+		spawn(entry.group.get_enemy(), map.get_enemy_path(entry.group.path_index), 0.0, entry.health)
 	if _queue.is_empty():
 		is_spawning = false
 		wave_spawning_finished.emit(current_wave)
@@ -156,8 +157,11 @@ func _make_endless_wave(index: int) -> WaveData:
 
 ## Copie d'un groupe avec plus (ou moins) d'ennemis, au moins un. Le groupe dure à peu
 ## près aussi longtemps : les ennemis en plus se resserrent, ceux en moins s'espacent.
+## Un groupe de boss garde son nombre : la difficulté ne change que leur vie.
 func _scale_group(group: SpawnGroup, count_multiplier: float) -> SpawnGroup:
 	var copy: SpawnGroup = group.duplicate()
+	if group.enemy.is_boss:
+		return copy
 	copy.count = ceili(group.count * count_multiplier) if count_multiplier > 1.0 \
 		else maxi(roundi(group.count * count_multiplier), 1)
 	copy.interval = maxf(group.interval * group.count / copy.count, minf(group.interval, ENDLESS_MIN_INTERVAL))

@@ -75,9 +75,18 @@ count = 21
 interval = 0.4
 start_delay = 5.0
 
+[sub_resource type="Resource" id="Group_w3_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_giant")
+count = 1
+interval = 2.0
+start_delay = 7.2
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_elite")])
 bonus_gold = 25
 
 [sub_resource type="Resource" id="Group_w4_1"]
@@ -132,9 +141,18 @@ count = 25
 interval = 1.0
 start_delay = 3.0
 
+[sub_resource type="Resource" id="Group_w6_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_shell")
+count = 1
+interval = 2.0
+start_delay = 13.5
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_6"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_elite")])
 bonus_gold = 40
 
 [sub_resource type="Resource" id="Group_w7_1"]
@@ -184,9 +202,18 @@ count = 34
 interval = 0.8
 start_delay = 10.0
 
+[sub_resource type="Resource" id="Group_w8_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_tank")
+count = 1
+interval = 2.0
+start_delay = 18.2
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_8"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3"), SubResource("Group_w8_elite")])
 bonus_gold = 0
 
 [node name="Level04" instance=ExtResource("1_level")]

@@ -16,6 +16,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/medecin.tres" id="e_medecin"]
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/soldat.tres" id="e_soldat"]
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/transport.tres" id="e_transport"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/general.tres" id="99_boss"]
 
 [sub_resource type="Curve2D" id="Curve2D_Path0"]
 _data = {
@@ -93,9 +94,18 @@ count = 3
 interval = 2.0
 start_delay = 8.0
 
+[sub_resource type="Resource" id="Group_w3_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_transport")
+count = 1
+interval = 2.0
+start_delay = 7.0
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_3"), SubResource("Group_w3_elite")])
 bonus_gold = 25
 
 [sub_resource type="Resource" id="Group_w4_1"]
@@ -184,9 +194,18 @@ interval = 2.0
 start_delay = 8.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w6_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_medecin")
+count = 1
+interval = 2.0
+start_delay = 14.5
+path_index = 1
+elite = true
+
 [sub_resource type="Resource" id="Wave_6"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3"), SubResource("Group_w6_elite")])
 bonus_gold = 40
 
 [sub_resource type="Resource" id="Group_w7_1"]
@@ -282,9 +301,18 @@ interval = 2.0
 start_delay = 12.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w9_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_colosse")
+count = 1
+interval = 2.0
+start_delay = 21.0
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_9"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3"), SubResource("Group_w9_4")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3"), SubResource("Group_w9_4"), SubResource("Group_w9_elite")])
 bonus_gold = 55
 
 [sub_resource type="Resource" id="Group_w10_1"]
@@ -325,9 +353,18 @@ interval = 2.0
 start_delay = 16.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w10_boss"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("99_boss")
+count = 1
+interval = 1.0
+start_delay = 27.6
+path_index = 0
+health_multiplier = 1.5
+
 [sub_resource type="Resource" id="Wave_10"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w10_1"), SubResource("Group_w10_2"), SubResource("Group_w10_3"), SubResource("Group_w10_4"), SubResource("Group_w10_5")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w10_1"), SubResource("Group_w10_2"), SubResource("Group_w10_3"), SubResource("Group_w10_4"), SubResource("Group_w10_5"), SubResource("Group_w10_boss")])
 bonus_gold = 0
 
 [node name="Humanoid06" instance=ExtResource("1_level")]

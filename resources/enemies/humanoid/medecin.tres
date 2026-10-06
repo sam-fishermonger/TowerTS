@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Médecin"
+description = "Soigne régulièrement les ennemis blessés autour de lui : à abattre en premier."
 max_health = 90.0
 speed = 60.0
 reward = 15

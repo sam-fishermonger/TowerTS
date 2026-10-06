@@ -44,7 +44,9 @@ Le dossier `build/` est ignoré par git.
 - Dans la même fiche, **Vendre** retire la tour et rend 70 % de ce qu'elle a coûté (améliorations comprises), et le bouton **Cible** choisit l'ennemi visé en priorité : Premier (le plus avancé, par défaut), Dernier, Le plus fort (le plus de vie) ou Le plus proche. Le Givre frappe tout ce qui est à portée et n'a donc pas ce choix.
 - **✕** ou **Échap** ferme la fiche.
 - **Lancer la vague** envoie la vague suivante. Chaque ennemi détruit rapporte de l'or, et chaque vague nettoyée donne un bonus. Les ennemis ne marchent pas tous en file au milieu du chemin : chacun tire au hasard sa place sur sa largeur (le tirage dépend du niveau, il est le même à chaque partie).
-- Sous le bouton, un encadré annonce la composition de la prochaine vague. La lancer alors que des ennemis sont encore en jeu rapporte une prime : la moitié de son bonus, versée tout de suite (réglable dans la propriété `early_call_bonus_ratio` du niveau).
+- Sous le bouton, un encadré annonce la composition de la prochaine vague (élites et boss signalés). Le survoler ouvre sa fenêtre de détail : chaque sorte de monstre avec son nombre, sa vie (difficulté comprise), son armure, son bouclier, sa vitesse, l'or qu'il rapporte, les vies qu'il retire et ses capacités, plus le bonus de la vague.
+- Survoler un monstre sur la carte ouvre sa fiche, qui le suit : nom, rang, vie et bouclier restants, statistiques et capacités.
+- Lancer la vague alors que des ennemis sont encore en jeu rapporte une prime : la moitié de son bonus, versée tout de suite (réglable dans la propriété `early_call_bonus_ratio` du niveau).
 - Les dégâts infligés s'affichent au-dessus des ennemis touchés. Un ennemi détruit affiche l'or gagné et laisse au sol une tache qui s'estompe en 20 secondes.
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** règlent la vitesse du jeu (**V** passe à la vitesse suivante). Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
@@ -60,6 +62,18 @@ Le dossier `build/` est ignoré par git.
 
   Chaque groupe d'une vague garde à peu près sa durée : les monstres en plus se resserrent, ceux en moins s'espacent. Le mode infini et la partie de l'écran titre se jouent toujours en Moyen. Les réglages sont dans `scripts/data/difficulty.gd`.
 - **Tours par niveau** : on ne peut prendre qu'un nombre limité de tours différentes dans un niveau, selon la difficulté : **9** en Facile, **8** en Moyen, **6** en Difficile et **5** en Cauchemar (le mode infini, joué en Moyen, en prend 8). Quand le niveau et l'arbre des améliorations en proposent plus, le niveau s'ouvre sur **Choisir les tours** : une case par tour (sa fiche s'affiche au survol), on en coche jusqu'à la limite, puis **Jouer**. Le dernier choix est coché d'avance au niveau suivant (et en recommençant). Les limites sont dans `TOWER_LIMITS` (`scripts/data/difficulty.gd`).
+- **Élites** : chaque niveau a 2 ou 3 monstres élites (aura dorée, « élite » dans leur nom) : vie et bouclier x3, 25 % plus gros, 4 fois plus d'or, 2 vies de plus s'ils passent. Les monstres qu'ils libèrent ou appellent restent normaux.
+- **Boss** : un par monde, à la dernière vague des niveaux 3 et 6 (plus coriace au 6). Une aura rouge l'entoure et sa vie s'affiche en haut de la carte tant qu'il est en jeu. La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois (en mode infini, il revient avec sa vague, toutes les 3 vagues). Chacun appelle des renforts en marchant :
+
+  | Monde | Boss | Vie | Capacités |
+  |---|---|---|---|
+  | La Ruche | **Reine de la Ruche** | 4000 (x1,4 au 1-3, x1,5 au 1-6) | Pond 3 Larves toutes les 5 s. |
+  | La Fonderie | **Béhémoth** | 3500, bouclier 900, armure 6 (x1,7 au 2-6) | Lâche 2 Drones toutes les 6 s. |
+  | La Cité | **Le Général** | 4200, armure 4 (x1,5 au 3-6) | Soigne de 30 points les ennemis autour de lui toutes les 3 s, appelle 3 Soldats toutes les 6 s. |
+
+  Un boss coûte 10 vies s'il atteint la base et rapporte 150 à 170 or. Les élites se règlent dans `scripts/data/enemy_data.gd` (`ELITE_*`) ; un groupe de vague devient élite avec sa case `elite` (`SpawnGroup`), qui a aussi son propre multiplicateur de vie (`health_multiplier`). Un ennemi est un boss avec `is_boss`, et appelle des renforts avec le groupe **Renforts** de sa ressource.
+- **Lexique** (écran titre) : la fiche de chaque tour (statistiques, améliorations, comment la débloquer, spécialisation), de chaque monstre (statistiques, capacités, version élite), des élites et des boss, et de chaque monde (monstres, boss, tours du monde, étoiles). Il lit les ressources du jeu : une tour ajoutée dans `resources/towers/` ou un monstre ajouté à un monde y apparaît tout seul.
+- Dans la sélection des mondes, survoler un niveau (ou lui donner le focus au clavier) ouvre sa fenêtre de détail : or et vies de départ, et le contenu de chaque vague dans la difficulté choisie, élites et boss compris.
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
 - **Mode infini** : un niveau gagné avec 3 étoiles (dans n'importe quelle difficulté) s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (90 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
@@ -118,7 +132,7 @@ Chaque monde a ses monstres, rangés dans `resources/enemies/<biome>/` avec leur
 | 2. La Fonderie (mecha) | Drone (rapide), Sentinelle, Chenillard (très blindé), Porte-drones (libère 3 Drones), Titan (énorme) | **Bouclier d'énergie** (Sentinelle, Titan) : il encaisse les coups en premier, sans armure, et se recharge après 2 secondes sans être touché. Une barre bleue s'affiche au-dessus de la barre de vie. |
 | 3. La Cité (humanoïdes) | Soldat, Éclaireur (rapide), Garde (bouclier anti-émeute : armure), Médecin, Transport de troupes (libère 4 Soldats), Colosse (énorme) | **Soin** (Médecin) : il rend régulièrement des points de vie aux ennemis blessés autour de lui (onde et « +N » verts). Mieux vaut l'abattre en premier. |
 
-Le bouclier et le soin se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier** et **Soin**) : n'importe quel ennemi peut en avoir.
+Le bouclier, le soin et les renforts se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier**, **Soin** et **Renforts**) : n'importe quel ennemi peut en avoir. Sa `description` est celle du lexique.
 
 ### Tours des mondes
 
@@ -200,11 +214,14 @@ Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : 
     └── CloudProjectile      laisse un nuage (GasCloud) qui applique les effets de la tour (Pesticide, Lacrymogène)
 
 Composants                   scripts/components/          HealthComponent (vie, armure, bouclier), HealthBar
-Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin
+Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin, fenêtres de détail (vague, monstre)
 ├── TowerShop                barre d'achat : une case TowerShopButton (TowerIcon, nom, prix) par tour
 ├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
 ├── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
-└── TowerPicker              choix des tours au lancement du niveau (limite de la difficulté)
+├── TowerPicker              choix des tours au lancement du niveau (limite de la difficulté)
+└── BossBar                  vie du boss en jeu, en haut de la carte
+DetailPopup (PanelContainer) scripts/ui/detail_popup.gd   fenêtre de détail au survol (texte BBCode, reste dans l'écran)
+EnemyInfo                    scripts/ui/enemy_info.gd     textes qui décrivent un ennemi ou une vague (lexique, fenêtres de détail)
 GameMap (Node2D)             scripts/map/game_map.gd      grille, chemins (Path2D enfants), rochers, cases occupées
 Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, navigation
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris
@@ -221,7 +238,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 ```
 project.godot        Configuration du projet
 export_presets.cfg   Réglages d'export (Windows, Linux, Web)
-scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, HUD, fiches et boutons du son
+scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower, PulseTower, BeamTower, FlameTower et RailTower

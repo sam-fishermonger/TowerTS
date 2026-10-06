@@ -1,12 +1,13 @@
 extends Control
 ## Écran titre : reprend la campagne, ouvre la sélection des mondes et des niveaux,
-## ouvre l'arbre des améliorations, ou quitte le jeu. Derrière le menu, une partie se
+## l'arbre des améliorations ou le lexique (tours, monstres, mondes), ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
 ## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
 ## améliorations et spécialisations.
 
 const PERK_TREE_SCREEN := "res://scenes/ui/perk_tree_screen.tscn"
 const WORLD_SELECT_SCREEN := "res://scenes/ui/world_select_screen.tscn"
+const LEXICON_SCREEN := "res://scenes/ui/lexicon_screen.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## Agrandissement d'un bouton survolé ou qui a le focus.
@@ -32,6 +33,7 @@ var _konami_label: Label
 @onready var play_button: Button = %PlayButton
 @onready var perks_button: Button = %PerksButton
 @onready var worlds_button: Button = %WorldsButton
+@onready var lexicon_button: Button = %LexiconButton
 @onready var quit_button: Button = %QuitButton
 @onready var reset_button: Button = %ResetButton
 @onready var reset_dialog: ConfirmationDialog = %ResetDialog
@@ -47,6 +49,7 @@ func _ready() -> void:
 	play_button.pressed.connect(func() -> void: open_level(Progress.get_next_to_play(CAMPAIGN)))
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
+	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	quit_button.pressed.connect(get_tree().quit)
 	# Quitter n'a pas de sens dans un navigateur.
 	quit_button.visible = not OS.has_feature("web")
@@ -57,7 +60,7 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, worlds_button, perks_button, quit_button]:
+	for button in [play_button, worlds_button, perks_button, lexicon_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
 	play_button.grab_focus()

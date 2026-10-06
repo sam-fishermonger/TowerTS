@@ -15,6 +15,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/mecha/porte_drones.tres" id="e_porte_drones"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/sentinelle.tres" id="e_sentinelle"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/titan.tres" id="e_titan"]
+[ext_resource type="Resource" path="res://resources/enemies/mecha/behemoth.tres" id="99_boss"]
 
 [sub_resource type="Curve2D" id="Curve2D_Path0"]
 _data = {
@@ -85,9 +86,18 @@ interval = 0.35
 start_delay = 4.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w3_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_porte_drones")
+count = 1
+interval = 2.0
+start_delay = 3.2
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_elite")])
 bonus_gold = 25
 
 [sub_resource type="Resource" id="Group_w4_1"]
@@ -152,9 +162,18 @@ count = 8
 interval = 1.0
 start_delay = 4.0
 
+[sub_resource type="Resource" id="Group_w6_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chenillard")
+count = 1
+interval = 2.0
+start_delay = 5.5
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_6"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_elite")])
 bonus_gold = 40
 
 [sub_resource type="Resource" id="Group_w7_1"]
@@ -226,9 +245,18 @@ count = 24
 interval = 0.35
 start_delay = 8.0
 
+[sub_resource type="Resource" id="Group_w9_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_titan")
+count = 1
+interval = 2.0
+start_delay = 8.0
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_9"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3"), SubResource("Group_w9_elite")])
 bonus_gold = 55
 
 [sub_resource type="Resource" id="Group_w10_1"]
@@ -261,9 +289,18 @@ count = 27
 interval = 0.35
 start_delay = 12.0
 
+[sub_resource type="Resource" id="Group_w10_boss"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("99_boss")
+count = 1
+interval = 1.0
+start_delay = 12.7
+path_index = 0
+health_multiplier = 1.7
+
 [sub_resource type="Resource" id="Wave_10"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w10_1"), SubResource("Group_w10_2"), SubResource("Group_w10_3"), SubResource("Group_w10_4")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w10_1"), SubResource("Group_w10_2"), SubResource("Group_w10_3"), SubResource("Group_w10_4"), SubResource("Group_w10_boss")])
 bonus_gold = 0
 
 [node name="Mecha06" instance=ExtResource("1_level")]
