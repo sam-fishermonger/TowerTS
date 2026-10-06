@@ -2,21 +2,33 @@ extends Control
 ## Sélection du monde et du niveau (depuis l'écran titre) : une carte par monde de la
 ## campagne, avec son biome, ses monstres, ses étoiles et un bouton par niveau. Un monde
 ## se débloque en gagnant le dernier niveau du monde précédent.
+## Le bouton Mode infini fait passer les cartes au mode infini : chaque niveau gagné avec
+## 3 étoiles s'y joue sans fin, et y gagne des étoiles infinies (records et étoiles en bleu).
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 const LOCKED_ALPHA := 0.45
+const STARS_COLOR := Color(0.95, 0.85, 0.45)
+const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
+
+## Cartes du mode infini plutôt que de la campagne.
+var endless_mode := false
 
 ## Bouton de chaque niveau, par chemin de scène.
 var _level_buttons := {}
 
 @onready var worlds_box: HBoxContainer = %Worlds
 @onready var back_button: Button = %BackButton
+@onready var mode_button: Button = %ModeButton
+@onready var title_label: Label = %Title
+## Règles du mode affiché, en bas de l'écran.
+@onready var mode_hint: Label = %ModeHint
 
 
 func _ready() -> void:
 	back_button.pressed.connect(go_back)
-	_build_cards()
+	mode_button.toggled.connect(set_endless_mode)
+	set_endless_mode(false)
 	Sound.play_music()
 	var next := get_level_button(Progress.get_next_to_play(CAMPAIGN))
 	(next if next else back_button).grab_focus()
@@ -33,7 +45,26 @@ func go_back() -> void:
 
 
 func open_level(path: String) -> void:
-	get_tree().change_scene_to_file(path)
+	Level.open(get_tree(), path, endless_mode)
+
+
+## Affiche les cartes du mode infini (true) ou de la campagne (false).
+func set_endless_mode(value: bool) -> void:
+	endless_mode = value
+	mode_button.set_pressed_no_signal(value)
+	title_label.text = "Mode infini" if value else "Choisir un monde"
+	title_label.add_theme_color_override(&"font_color", ENDLESS_COLOR if value else STARS_COLOR)
+	if value:
+		mode_hint.text = ("Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d "
+			+ "vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les "
+			+ "spécialisations des tours, dans Améliorations.") % [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
+	else:
+		mode_hint.text = "Gagner un niveau avec 3 étoiles ouvre son mode infini."
+	for card in worlds_box.get_children():
+		worlds_box.remove_child(card)
+		card.queue_free()
+	_level_buttons.clear()
+	_build_cards()
 
 
 ## Carte d'un monde (dans l'ordre de la campagne).
@@ -96,8 +127,12 @@ func _make_card(world_index: int) -> Control:
 		bestiary.add_child(icon)
 	column.add_child(bestiary)
 
-	var max_stars := world.levels.size() * 3
-	var stars := _label("★ %d / %d" % [Progress.get_world_stars(world), max_stars], 20, Color(0.95, 0.85, 0.45))
+	var stars: Label
+	if endless_mode:
+		stars = _label("∞  ★ %d / %d" % [Progress.get_world_endless_stars(world),
+			world.levels.size() * Progress.ENDLESS_MAX_STARS], 20, ENDLESS_COLOR)
+	else:
+		stars = _label("★ %d / %d" % [Progress.get_world_stars(world), world.levels.size() * 3], 20, STARS_COLOR)
 	stars.name = "Stars"
 	column.add_child(stars)
 
@@ -111,9 +146,12 @@ func _make_card(world_index: int) -> Control:
 		var path := world.levels[i]
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(104, 60)
-		button.disabled = not Progress.is_unlocked(CAMPAIGN, first + i)
-		button.text = "%d-%d\n%s" % [world_index + 1, i + 1,
-			"Verrouillé" if button.disabled else Progress.star_text(Progress.get_stars(path))]
+		if endless_mode:
+			_setup_endless_button(button, path, "%d-%d" % [world_index + 1, i + 1])
+		else:
+			button.disabled = not Progress.is_unlocked(CAMPAIGN, first + i)
+			button.text = "%d-%d\n%s" % [world_index + 1, i + 1,
+				"Verrouillé" if button.disabled else Progress.star_text(Progress.get_stars(path))]
 		_level_buttons[path] = button
 		button.pressed.connect(open_level.bind(path))
 		grid.add_child(button)
@@ -126,6 +164,21 @@ func _make_card(world_index: int) -> Control:
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		column.add_child(hint)
 	return card
+
+
+## Bouton d'un niveau en mode infini : ouvert avec 3 étoiles sur le niveau, il montre
+## les étoiles infinies obtenues et, en bulle d'aide, le record de vagues.
+func _setup_endless_button(button: Button, path: String, number: String) -> void:
+	button.disabled = not Progress.is_endless_unlocked(path)
+	if button.disabled:
+		button.text = "%s\nVerrouillé" % number
+		button.tooltip_text = "Gagner ce niveau avec 3 étoiles pour ouvrir son mode infini."
+		return
+	button.text = "%s  ∞\n%s" % [number, Progress.star_text(Progress.get_endless_stars(path), Progress.ENDLESS_MAX_STARS)]
+	var record := Progress.get_endless_waves(path)
+	button.tooltip_text = "Record : %d vague%s" % [record, "s" if record > 1 else ""] if record > 0 else "Pas encore joué"
+	for color_name in [&"font_color", &"font_hover_color", &"font_focus_color", &"font_pressed_color"]:
+		button.add_theme_color_override(color_name, ENDLESS_COLOR)
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

@@ -18,6 +18,9 @@ const HEAL_PULSE_DURATION := 0.5
 const DOT_TICK := 0.5
 const HEAL_BLOCK_COLOR := Color(0.9, 0.25, 0.3)
 const JAMMED_SHIELD_COLOR := Color(0.6, 0.6, 0.7)
+## Distance, avant et après l'ennemi sur le chemin, qui donne le sens de la marche pour
+## son décalage sur le côté : les virages sont arrondis au lieu de faire un saut.
+const TURN_SMOOTHING := 16.0
 
 @export var data: EnemyData
 
@@ -25,6 +28,12 @@ const JAMMED_SHIELD_COLOR := Color(0.6, 0.6, 0.7)
 var path: Path2D
 ## Distance parcourue sur le chemin, en pixels.
 var progress := 0.0
+## Décalage sur le côté du chemin, en pixels (positif : à droite de la marche). Le
+## WaveSpawner le tire au hasard, pour que les ennemis ne marchent pas tous en file.
+var lateral_offset := 0.0
+## Multiplicateur de la vie et du bouclier (vagues du mode infini). À définir avant
+## d'ajouter l'ennemi à l'arbre.
+var health_multiplier := 1.0
 
 var _path_length := 0.0
 var _slow_factor := 1.0
@@ -57,7 +66,8 @@ static func get_alive_in_radius(tree: SceneTree, center: Vector2, radius: float)
 
 func _ready() -> void:
 	add_to_group(GROUP)
-	health.setup(data.max_health, data.armor, data.max_shield, data.shield_regen)
+	health.setup(data.max_health * health_multiplier, data.armor, data.max_shield * health_multiplier,
+		data.shield_regen)
 	health.depleted.connect(_on_health_depleted)
 	if data.max_shield > 0.0:
 		health.shield_changed.connect(func(_shield: float, _max: float) -> void: queue_redraw())
@@ -210,7 +220,12 @@ func _update_healing(delta: float) -> void:
 
 func _update_position() -> void:
 	var point := path.curve.sample_baked(progress)
-	global_position = path.to_global(point)
+	var offset := Vector2.ZERO
+	if lateral_offset != 0.0:
+		var behind := path.curve.sample_baked(maxf(progress - TURN_SMOOTHING, 0.0))
+		var further := path.curve.sample_baked(minf(progress + TURN_SMOOTHING, _path_length))
+		offset = (further - behind).normalized().orthogonal() * lateral_offset
+	global_position = path.to_global(point + offset)
 	var ahead := path.curve.sample_baked(minf(progress + 4.0, _path_length))
 	if not ahead.is_equal_approx(point):
 		var heading := point.angle_to_point(ahead)

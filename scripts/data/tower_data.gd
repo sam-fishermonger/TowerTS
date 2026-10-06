@@ -92,7 +92,8 @@ func get_upgrade_cost(level: int) -> int:
 
 
 ## Copie de ces statistiques avec les améliorations appliquées jusqu'au niveau donné,
-## puis les bonus de l'arbre des améliorations (Perks).
+## puis les bonus de l'arbre des améliorations (Perks) et les spécialisations achetées
+## pour cette tour.
 func get_stats_at_level(level: int) -> TowerData:
 	var stats: TowerData = duplicate()
 	for i in clampi(level - 1, 0, upgrades.size()):
@@ -100,7 +101,14 @@ func get_stats_at_level(level: int) -> TowerData:
 	var bonuses := Perks.get_bonuses()
 	stats.scale_stats(bonuses.damage_multiplier, bonuses.range_multiplier, bonuses.fire_rate_multiplier,
 		bonuses.slow_duration_bonus)
+	for specialization in get_specializations():
+		specialization.apply_specialization(stats)
 	return stats
+
+
+## Spécialisations achetées pour cette tour dans l'arbre des améliorations (Perk).
+func get_specializations() -> Array[Perk]:
+	return Perks.get_specializations(resource_path)
 
 
 ## Bonus communs aux améliorations et à l'arbre des améliorations (modifiés sur place) :

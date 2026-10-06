@@ -2,8 +2,10 @@ extends Control
 ## Arbre des améliorations permanentes (depuis l'écran titre) : chaque branche est une
 ## colonne, et une amélioration se débloque quand celles qui la précèdent sont achetées.
 ## Les branches sont réparties en pages, avec un onglet par page : les bonus, puis les
-## tours des mondes, dont chaque branche s'ouvre avec son monde.
-## Les étoiles gagnées sur les niveaux paient les achats ; « Réinitialiser » les rend.
+## tours des mondes, dont chaque branche s'ouvre avec son monde, puis les spécialisations
+## des tours.
+## Les étoiles gagnées sur les niveaux paient les achats, et les étoiles infinies (mode
+## infini) les spécialisations ; « Réinitialiser » les rend toutes.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const NODE_SIZE := Vector2(156, 62)
@@ -22,6 +24,8 @@ const OWNED_COLOR := Color(0.95, 0.78, 0.3)
 const BUYABLE_COLOR := Color(0.45, 0.85, 0.45)
 const TOO_EXPENSIVE_COLOR := Color(0.85, 0.45, 0.4)
 const LOCKED_COLOR := Color(0.45, 0.48, 0.45)
+const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
+const STARS_COLOR := Color(0.95, 0.85, 0.45)
 
 ## Amélioration affichée dans l'encadré du bas (survol ou dernier clic).
 var shown_perk: Perk
@@ -143,9 +147,9 @@ func _build_page(root: Control, page_index: int) -> void:
 		button.pressed.connect(buy.bind(perk))
 		button.mouse_entered.connect(_show_info.bind(perk))
 		button.focus_entered.connect(_show_info.bind(perk))
-		if not perk.unlocks_tower.is_empty():
+		if not perk.get_tower_path().is_empty():
 			var icon := TowerIcon.new()
-			icon.data = perk.get_unlocked_tower()
+			icon.data = load(perk.get_tower_path())
 			icon.size = Vector2.ONE * TOWER_ICON_SIZE
 			icon.position = Vector2(8.0, (NODE_SIZE.y - TOWER_ICON_SIZE) / 2.0)
 			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -165,14 +169,25 @@ func _add_label(parent: Control, text_value: String, font_size: int, color: Colo
 	return label
 
 
+## La page se paie en étoiles infinies (spécialisations).
+func is_endless_page(page_index: int) -> bool:
+	for perk in Perks.TREE.get_page_perks(page_index):
+		if perk.paid_with_endless_stars:
+			return true
+	return false
+
+
 func _refresh() -> void:
-	var available := Perks.get_available_stars()
-	var spent := Perks.get_spent_stars()
-	stars_label.text = "★ %d à dépenser   ·   %d dépensée%s   ·   arbre complet : %d" % [
-		available, spent, "s" if spent > 1 else "", Perks.TREE.get_total_cost()]
-	refund_button.disabled = spent == 0
+	var endless := is_endless_page(page)
+	var available := Perks.get_available_stars(endless)
+	var spent := Perks.get_spent_stars(endless)
+	stars_label.text = "%s★ %d à dépenser   ·   %d dépensée%s   ·   %s : %d" % [
+		"∞ " if endless else "", available, spent, "s" if spent > 1 else "",
+		"toutes les spécialisations" if endless else "arbre complet", Perks.TREE.get_total_cost(endless)]
+	stars_label.add_theme_color_override("font_color", ENDLESS_COLOR if endless else STARS_COLOR)
+	refund_button.disabled = Perks.get_owned_ids().is_empty()
 	for perk in Perks.TREE.perks:
-		_style_button(get_button(perk), perk, available)
+		_style_button(get_button(perk), perk)
 	for branch in _lock_labels:
 		_lock_labels[branch].text = _get_branch_lock_text(branch)
 	_show_info(shown_perk)
@@ -180,9 +195,9 @@ func _refresh() -> void:
 		root.queue_redraw()
 
 
-## Les cases qui débloquent une tour sont plus larges : elles montrent son image.
+## Les cases d'une tour (débloquée ou spécialisée) sont plus larges : elles montrent son image.
 func _get_node_width(perk: Perk) -> float:
-	return TOWER_NODE_WIDTH if not perk.unlocks_tower.is_empty() else NODE_SIZE.x
+	return TOWER_NODE_WIDTH if not perk.get_tower_path().is_empty() else NODE_SIZE.x
 
 
 ## « Finir La Ruche pour l'ouvrir » si la branche attend un monde pas encore débloqué.
@@ -193,14 +208,19 @@ func _get_branch_lock_text(branch: int) -> String:
 	return ""
 
 
-func _style_button(button: Button, perk: Perk, available: int) -> void:
-	var color := _state_color(perk, available)
+## Prix d'une amélioration : « ★ 3 », ou « ∞ ★ 3 » en étoiles infinies.
+func _price_text(perk: Perk) -> String:
+	return "%s★ %d" % ["∞ " if perk.paid_with_endless_stars else "", perk.cost]
+
+
+func _style_button(button: Button, perk: Perk) -> void:
+	var color := _state_color(perk)
 	var owned := Perks.is_owned(perk)
 	var status: String
 	if owned:
 		status = "Acquis"
 	elif Perks.is_unlocked(perk):
-		status = "★ %d" % perk.cost
+		status = _price_text(perk)
 	else:
 		status = "Verrouillé"
 	button.text = "%s\n%s" % [perk.display_name, status]
@@ -214,7 +234,7 @@ func _style_button(button: Button, perk: Perk, available: int) -> void:
 		style.set_corner_radius_all(8)
 		style.draw_center = style_name != "focus"
 		# Place pour l'image de la tour à gauche.
-		if not perk.unlocks_tower.is_empty():
+		if not perk.get_tower_path().is_empty():
 			style.content_margin_left = TOWER_ICON_SIZE + 12.0
 		button.add_theme_stylebox_override(style_name, style)
 	for icon in button.get_children():
@@ -225,7 +245,8 @@ func _style_button(button: Button, perk: Perk, available: int) -> void:
 	button.add_theme_color_override("font_pressed_color", color.lightened(0.35))
 
 
-func _state_color(perk: Perk, available: int) -> Color:
+func _state_color(perk: Perk) -> Color:
+	var available := Perks.get_available_stars(perk.paid_with_endless_stars)
 	if Perks.is_owned(perk):
 		return OWNED_COLOR
 	if not Perks.is_unlocked(perk):
@@ -235,6 +256,13 @@ func _state_color(perk: Perk, available: int) -> Color:
 
 func _show_info(perk: Perk) -> void:
 	shown_perk = perk
+	if perk == null and is_endless_page(page):
+		info_name.text = "Spécialisations"
+		info_description.text = ("Les étoiles infinies, gagnées en mode infini (ouvert sur chaque niveau gagné avec "
+			+ "3 étoiles), donnent à une tour un atout de plus, dans toutes les parties.")
+		info_status.text = "Survoler une spécialisation pour la voir, cliquer pour l'acheter."
+		info_status.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+		return
 	if perk == null:
 		info_name.text = "Améliorations permanentes"
 		info_description.text = "Les étoiles gagnées sur les niveaux achètent des bonus pour toutes les parties."
@@ -243,7 +271,11 @@ func _show_info(perk: Perk) -> void:
 		return
 	info_name.text = perk.display_name
 	info_description.text = perk.description
-	var available := Perks.get_available_stars()
+	var available := Perks.get_available_stars(perk.paid_with_endless_stars)
+	var missing_count := perk.cost - available
+	var unit := "étoile" + ("s" if missing_count > 1 else "")
+	if perk.paid_with_endless_stars:
+		unit += " infinie" + ("s" if missing_count > 1 else "")
 	if Perks.is_owned(perk):
 		info_status.text = "Acquis"
 	elif not Perks.is_world_unlocked(perk):
@@ -256,10 +288,10 @@ func _show_info(perk: Perk) -> void:
 				missing.append(required.display_name)
 		info_status.text = "Verrouillé : demande %s" % " et ".join(missing)
 	elif available >= perk.cost:
-		info_status.text = "Cliquer pour acheter  ·  ★ %d" % perk.cost
+		info_status.text = "Cliquer pour acheter  ·  %s" % _price_text(perk)
 	else:
-		info_status.text = "★ %d  ·  il manque %d étoile%s" % [perk.cost, perk.cost - available, "s" if perk.cost - available > 1 else ""]
-	info_status.add_theme_color_override("font_color", _state_color(perk, available))
+		info_status.text = "%s  ·  il manque %d %s" % [_price_text(perk), missing_count, unit]
+	info_status.add_theme_color_override("font_color", _state_color(perk))
 
 
 ## Un trait de chaque amélioration vers celles qu'elle débloque, doré une fois acquise.
@@ -267,6 +299,9 @@ func _draw_links(root: Control, page_index: int) -> void:
 	for perk in Perks.TREE.get_page_perks(page_index):
 		var to := get_node_position(perk)
 		for required in perk.requires:
+			# Une tour à débloquer sur une autre page : pas de trait, la fiche le dit.
+			if Perks.TREE.get_page(required) != page_index:
+				continue
 			var from := get_node_position(required) + Vector2(0, NODE_SIZE.y)
 			var color := OWNED_COLOR if Perks.is_owned(required) else LOCKED_COLOR.darkened(0.3)
 			var middle_y := (from.y + to.y) / 2.0

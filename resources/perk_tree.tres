@@ -234,10 +234,171 @@ column = 10.5
 row = 1
 unlocks_tower = "res://resources/towers/teargas.tres"
 
+[sub_resource type="Resource" id="Perk_spe_gatling"]
+script = ExtResource("2_perk")
+id = "spe_gatling"
+display_name = "Balles perforantes"
+description = "Mitrailleuse : ses balles ignorent l'armure des Scarabées, des Gardes et des Chenillards."
+cost = 2
+paid_with_endless_stars = true
+column = 12.5
+row = 0
+specializes_tower = "res://resources/towers/gatling.tres"
+armor_piercing = true
+
+[sub_resource type="Resource" id="Perk_spe_sniper"]
+script = ExtResource("2_perk")
+id = "spe_sniper"
+display_name = "Tir en pleine tête"
+description = "Sniper : 40 % de dégâts et 10 % de portée en plus."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_gatling")])
+column = 12.5
+row = 1
+damage_multiplier = 1.4
+range_multiplier = 1.1
+specializes_tower = "res://resources/towers/sniper.tres"
+
+[sub_resource type="Resource" id="Perk_spe_marksman"]
+script = ExtResource("2_perk")
+id = "spe_marksman"
+display_name = "Lunette thermique"
+description = "Franc-tireur : tire 35 % plus vite."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_sniper"), SubResource("Perk_marksman")])
+column = 12.5
+row = 2
+fire_rate_multiplier = 1.35
+specializes_tower = "res://resources/towers/marksman.tres"
+
+[sub_resource type="Resource" id="Perk_spe_rail"]
+script = ExtResource("2_perk")
+id = "spe_rail"
+display_name = "Surcharge"
+description = "Perforateur : 40 % de dégâts en plus."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_marksman"), SubResource("Perk_rail")])
+column = 12.5
+row = 3
+damage_multiplier = 1.4
+specializes_tower = "res://resources/towers/rail.tres"
+
+[sub_resource type="Resource" id="Perk_spe_cannon"]
+script = ExtResource("2_perk")
+id = "spe_cannon"
+display_name = "Boulets lourds"
+description = "Canon : 35 % de dégâts et 10 % de portée en plus."
+cost = 2
+paid_with_endless_stars = true
+column = 14.5
+row = 0
+damage_multiplier = 1.35
+range_multiplier = 1.1
+specializes_tower = "res://resources/towers/cannon.tres"
+
+[sub_resource type="Resource" id="Perk_spe_mortar"]
+script = ExtResource("2_perk")
+id = "spe_mortar"
+display_name = "Obus incendiaires"
+description = "Mortier : ses explosions brûlent, 8 dégâts par seconde pendant 2 s, sous l'armure."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_cannon")])
+column = 14.5
+row = 1
+specializes_tower = "res://resources/towers/mortar.tres"
+dot_damage_bonus = 8.0
+dot_duration_bonus = 2.0
+
+[sub_resource type="Resource" id="Perk_spe_flame"]
+script = ExtResource("2_perk")
+id = "spe_flame"
+display_name = "Napalm"
+description = "Lance-flammes : brûlure de 8 dégâts par seconde en plus, qui dure 1,5 s de plus."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_mortar"), SubResource("Perk_flame")])
+column = 14.5
+row = 2
+specializes_tower = "res://resources/towers/flame.tres"
+dot_damage_bonus = 8.0
+dot_duration_bonus = 1.5
+
+[sub_resource type="Resource" id="Perk_spe_pesticide"]
+script = ExtResource("2_perk")
+id = "spe_pesticide"
+display_name = "Nuage tenace"
+description = "Pesticide : nuage 30 % plus large, qui dure 2 s de plus."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_flame"), SubResource("Perk_pesticide")])
+column = 14.5
+row = 3
+specializes_tower = "res://resources/towers/pesticide.tres"
+cloud_radius_multiplier = 1.3
+cloud_duration_bonus = 2.0
+
+[sub_resource type="Resource" id="Perk_spe_frost"]
+script = ExtResource("2_perk")
+id = "spe_frost"
+display_name = "Zéro absolu"
+description = "Givre : ralentit 30 % plus fort, et 1 s de plus."
+cost = 2
+paid_with_endless_stars = true
+column = 16.5
+row = 0
+slow_duration_bonus = 1.0
+specializes_tower = "res://resources/towers/frost.tres"
+slow_factor_multiplier = 0.7
+
+[sub_resource type="Resource" id="Perk_spe_beam"]
+script = ExtResource("2_perk")
+id = "spe_beam"
+display_name = "Focalisation"
+description = "Rayon : sa montée en puissance va jusqu'à x4,5 au lieu de x3."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_frost")])
+column = 16.5
+row = 1
+specializes_tower = "res://resources/towers/beam.tres"
+beam_ramp_multiplier = 1.5
+
+[sub_resource type="Resource" id="Perk_spe_jammer"]
+script = ExtResource("2_perk")
+id = "spe_jammer"
+display_name = "Surtension"
+description = "Brouilleur IEM : 50 % de dégâts en plus, et les boucliers restent brouillés 2 s de plus."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_beam"), SubResource("Perk_jammer")])
+column = 16.5
+row = 2
+damage_multiplier = 1.5
+specializes_tower = "res://resources/towers/jammer.tres"
+shield_jam_bonus = 2.0
+
+[sub_resource type="Resource" id="Perk_spe_teargas"]
+script = ExtResource("2_perk")
+id = "spe_teargas"
+display_name = "Gaz suffocant"
+description = "Lacrymogène : son nuage empoisonne aussi, 10 dégâts par seconde, sous l'armure."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_jammer"), SubResource("Perk_teargas")])
+column = 16.5
+row = 3
+specializes_tower = "res://resources/towers/teargas.tres"
+dot_damage_bonus = 10.0
+dot_duration_bonus = 2.0
+
 [resource]
 script = ExtResource("1_tree")
-branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité"])
-branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1)])
-branch_pages = Array[int]([0, 0, 0, 1, 1, 1])
-page_names = Array[String](["Bonus", "Tours des mondes"])
-perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas")])
+branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle"])
+branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1)])
+branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2])
+page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations"])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas")])

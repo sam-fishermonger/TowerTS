@@ -7,6 +7,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/mecha/chenillard.tres" id="e2_chenillard"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/porte_drones.tres" id="e3_porte_drones"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/titan.tres" id="e4_titan"]
+[ext_resource type="TileSet" path="res://resources/tilesets/mecha.tres" id="t_tileset"]
 
 [resource]
 script = ExtResource("1_world")
@@ -15,3 +16,4 @@ description = "Mecha : des robots blindés, des drones, et des boucliers d'éner
 color = Color(0.45, 0.78, 0.95, 1)
 enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_drone"), ExtResource("e1_sentinelle"), ExtResource("e2_chenillard"), ExtResource("e3_porte_drones"), ExtResource("e4_titan")])
 levels = Array[String](["res://scenes/levels/mecha_01.tscn", "res://scenes/levels/mecha_02.tscn", "res://scenes/levels/mecha_03.tscn", "res://scenes/levels/mecha_04.tscn", "res://scenes/levels/mecha_05.tscn", "res://scenes/levels/mecha_06.tscn"])
+tileset = ExtResource("t_tileset")
