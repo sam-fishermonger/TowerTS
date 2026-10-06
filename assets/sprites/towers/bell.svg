@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Cloche funèbre : grosse cloche de bronze vue de dessus, sous un petit toit. -->
+  <rect x="12" y="12" width="40" height="40" rx="6" fill="#2b2433"/>
+  <rect x="15" y="15" width="34" height="34" rx="5" fill="#4b3f5a"/>
+  <circle cx="32" cy="32" r="14" fill="#5e4320"/>
+  <circle cx="32" cy="32" r="12" fill="#b8873a"/>
+  <circle cx="32" cy="32" r="8" fill="#d9aa55"/>
+  <circle cx="29" cy="29" r="3" fill="#f2d68e"/>
+  <circle cx="32" cy="32" r="2.5" fill="#5e4320"/>
+</svg>

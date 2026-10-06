@@ -5,7 +5,8 @@
 [ext_resource type="Resource" path="res://resources/worlds/insectoid.tres" id="3_insectoid"]
 [ext_resource type="Resource" path="res://resources/worlds/mecha.tres" id="4_mecha"]
 [ext_resource type="Resource" path="res://resources/worlds/humanoid.tres" id="5_humanoid"]
+[ext_resource type="Resource" path="res://resources/worlds/undead.tres" id="6_undead"]
 
 [resource]
 script = ExtResource("1_campaign")
-worlds = Array[ExtResource("2_world")]([ExtResource("3_insectoid"), ExtResource("4_mecha"), ExtResource("5_humanoid")])
+worlds = Array[ExtResource("2_world")]([ExtResource("3_insectoid"), ExtResource("4_mecha"), ExtResource("5_humanoid"), ExtResource("6_undead")])

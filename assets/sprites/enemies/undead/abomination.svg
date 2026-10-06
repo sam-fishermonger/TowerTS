@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Abomination : masse de chair recousue, énorme et lente. -->
+  <ellipse cx="32" cy="34" rx="28" ry="27" fill="#000" opacity="0.25"/>
+  <circle cx="42" cy="14" r="8" fill="#6d4a52"/>
+  <circle cx="42" cy="50" r="9" fill="#6d4a52"/>
+  <circle cx="42" cy="14" r="6" fill="#a7757f"/>
+  <circle cx="42" cy="50" r="7" fill="#a7757f"/>
+  <circle cx="29" cy="32" r="22" fill="#4a2f36"/>
+  <circle cx="29" cy="32" r="20" fill="#93636d"/>
+  <circle cx="21" cy="24" r="8" fill="#b07a85"/>
+  <path d="M14 36 L36 22 M17 38 l3 3 M22 35 l3 3 M27 32 l3 3 M32 29 l3 3" stroke="#3a2228" stroke-width="1.6"/>
+  <path d="M20 46 Q30 40 38 46" stroke="#3a2228" stroke-width="1.6" fill="none"/>
+  <circle cx="44" cy="32" r="8" fill="#4a2f36"/>
+  <circle cx="44" cy="32" r="6.5" fill="#b07a85"/>
+  <circle cx="47.5" cy="29.5" r="1.6" fill="#ffe14d"/>
+  <circle cx="46" cy="35" r="1.2" fill="#ffe14d"/>
+</svg>

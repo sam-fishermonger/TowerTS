@@ -62,6 +62,15 @@ const BOSS_COLOR := Color(1.0, 0.35, 0.3)
 ## Version élite d'un ennemi (voir make_elite()), pas à cocher à la main.
 @export var is_elite := false
 
+@export_group("Résurrection")
+## Nombre de fois que l'ennemi se relève après sa mort (0 = jamais), sauf s'il vient
+## d'être consacré (TowerData.revive_block_duration).
+@export var revive_count := 0
+## Part de sa vie (et de son bouclier) qu'il retrouve en se relevant.
+@export_range(0.1, 1.0) var revive_health_ratio := 0.5
+## Secondes passées au sol avant de se relever : pendant ce temps, les tours ne le voient pas.
+@export var revive_delay := 1.5
+
 @export_group("Soin")
 ## Points de vie rendus à chaque soin aux ennemis blessés autour de lui (0 = ne soigne pas).
 @export var heal_amount := 0.0
@@ -109,6 +118,10 @@ func get_abilities() -> Array[String]:
 	if summon_enemy and summon_count > 0:
 		result.append("Appelle %d %s en renfort toutes les %s s."
 			% [summon_count, plural(summon_enemy.display_name, summon_count), str(summon_interval).trim_suffix(".0")])
+	if revive_count > 0:
+		result.append("Se relève %s avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré."
+			% ["une fois" if revive_count == 1 else "%d fois" % revive_count, roundi(revive_health_ratio * 100.0),
+			str(revive_delay).trim_suffix(".0").replace(".", ",")])
 	if split_into and split_count > 0:
 		result.append("Libère %d %s à sa mort." % [split_count, plural(split_into.display_name, split_count)])
 	return result

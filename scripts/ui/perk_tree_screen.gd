@@ -21,6 +21,8 @@ const TOWER_ICON_SIZE := 40.0
 const TOWER_NODE_WIDTH := 200.0
 ## Images des deux tours dans la case d'un croisement.
 const CROSSING_ICON_SIZE := 34.0
+## Marge de chaque côté d'une page réduite pour tenir dans l'écran.
+const PAGE_MARGIN := 16.0
 
 const OWNED_COLOR := Color(0.95, 0.78, 0.3)
 const BUYABLE_COLOR := Color(0.45, 0.85, 0.45)
@@ -129,7 +131,11 @@ func _build_page(root: Control, page_index: int) -> void:
 	for perk in perks:
 		width = maxf(width, get_node_position(perk).x)
 		node_width = maxf(node_width, _get_node_width(perk))
-	root.position.x = (get_viewport_rect().size.x - width - node_width) / 2.0 + node_width / 2.0
+	# Une page trop large pour l'écran (les quatre mondes) est réduite pour tenir.
+	var screen_width := get_viewport_rect().size.x
+	var page_scale := minf(1.0, (screen_width - 2.0 * PAGE_MARGIN) / (width + node_width))
+	root.scale = Vector2.ONE * page_scale
+	root.position.x = (screen_width - (width + node_width) * page_scale) / 2.0 + node_width / 2.0 * page_scale
 	var branches := Perks.TREE.get_page_branches(page_index)
 	for i in branches.size():
 		var branch := branches[i]

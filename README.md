@@ -53,7 +53,7 @@ Le dossier `build/` est ignoré par git.
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** règlent la vitesse du jeu (**V** passe à la vitesse suivante). Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
-- **Difficulté** : en bas de la sélection des mondes, **Facile**, **Moyen**, **Difficile** ou **Cauchemar** règle les parties suivantes (le choix est enregistré, et rappelé en haut à gauche en jeu). Chaque difficulté a ses propres étoiles : un niveau en rapporte jusqu'à 3 par difficulté, soit 12, et 216 pour toute la campagne. Les boutons des niveaux montrent les étoiles de la difficulté choisie (celles des quatre en bulle d'aide), les cartes des mondes le total. Gagner un niveau dans n'importe quelle difficulté débloque le suivant.
+- **Difficulté** : en bas de la sélection des mondes, **Facile**, **Moyen**, **Difficile** ou **Cauchemar** règle les parties suivantes (le choix est enregistré, et rappelé en haut à gauche en jeu). Chaque difficulté a ses propres étoiles : un niveau en rapporte jusqu'à 3 par difficulté, soit 12, et 288 pour toute la campagne. Les boutons des niveaux montrent les étoiles de la difficulté choisie (celles des quatre en bulle d'aide), les cartes des mondes le total. Gagner un niveau dans n'importe quelle difficulté débloque le suivant.
 
   | Difficulté | Vie et bouclier des monstres | Nombre de monstres | Vitesse |
   |---|---|---|---|
@@ -72,19 +72,20 @@ Le dossier `build/` est ignoré par git.
   | La Ruche | **Reine de la Ruche** | 4000 (x1,4 au 1-3, x1,5 au 1-6) | Pond 3 Larves toutes les 5 s. |
   | La Fonderie | **Béhémoth** | 3500, bouclier 900, armure 6 (x1,7 au 2-6) | Lâche 2 Drones toutes les 6 s. |
   | La Cité | **Le Général** | 4200, armure 4 (x1,5 au 3-6) | Soigne de 30 points les ennemis autour de lui toutes les 3 s, appelle 3 Soldats toutes les 6 s. |
+  | La Nécropole | **La Liche** | 3800, armure 3 (x1,3 au 4-3, x1,5 au 4-6) | Relève 3 Squelettes toutes les 6 s, et se relève elle-même une fois (40 % de sa vie, après 2,5 s) si elle n'est pas consacrée. |
 
   Un boss coûte 10 vies s'il atteint la base et rapporte 150 à 170 or. Les élites se règlent dans `scripts/data/enemy_data.gd` (`ELITE_*`) ; un groupe de vague devient élite avec sa case `elite` (`SpawnGroup`), qui a aussi son propre multiplicateur de vie (`health_multiplier`). Un ennemi est un boss avec `is_boss`, et appelle des renforts avec le groupe **Renforts** de sa ressource.
 - **Lexique** (écran titre) : la fiche de chaque tour (statistiques, améliorations, comment la débloquer, spécialisation), de chaque monstre (statistiques, capacités, version élite), des élites et des boss, et de chaque monde (monstres, boss, tours du monde, étoiles). Il lit les ressources du jeu : une tour ajoutée dans `resources/towers/` ou un monstre ajouté à un monde y apparaît tout seul.
 - **Statistiques de fin de niveau** : l'écran de fin (victoire, défaite ou fin du mode infini) montre à droite le bilan de la partie : durée (en temps de jeu), monstres détruits (dont élites et boss), dégâts infligés, vies perdues, or dépensé (poses et améliorations) et gagné (monstres, bonus de vague, intérêts, primes, ventes), tours posées et améliorations achetées. Puis la **meilleure tour**, celle qui a infligé le plus de dégâts (son niveau, ses dégâts, ses destructions), et les **dégâts par tour** : une ligne par type de tour posé, avec le nombre de tours, une barre, les dégâts et leur part. Chaque coup est compté à la tour qui l'a porté, brûlures et poisons compris, et une tour vendue garde ce qu'elle a fait. Le calcul est dans `scripts/levels/level_stats.gd`.
-- **Succès** : 21 objectifs à remplir en jouant, dans n'importe quelle difficulté. Un bandeau doré les annonce en jeu au moment où ils sont remplis, et l'écran de fin liste ceux de la partie. **Succès** (écran titre, avec le compte) ouvre leur page : une vignette par succès, grisée tant qu'il n'est pas débloqué, avec l'avancement des objectifs chiffrés et la date du déblocage. La partie de l'écran titre n'en débloque pas, et **Effacer la progression** les garde.
+- **Succès** : 23 objectifs à remplir en jouant, dans n'importe quelle difficulté. Un bandeau doré les annonce en jeu au moment où ils sont remplis, et l'écran de fin liste ceux de la partie. **Succès** (écran titre, avec le compte) ouvre leur page : une vignette par succès, grisée tant qu'il n'est pas débloqué, avec l'avancement des objectifs chiffrés et la date du déblocage. La partie de l'écran titre n'en débloque pas, et **Effacer la progression** les garde.
 
   | Succès | Objectif |
   |---|---|
   | Premier pas | Gagner un niveau. |
   | Sans une égratignure | Gagner un niveau sans perdre de vie. |
   | Sur le fil | Gagner un niveau avec une seule vie restante. |
-  | La Ruche nettoyée, La Fonderie éteinte, La Cité libérée | Gagner tous les niveaux du monde. |
-  | Régicide, Démolition, Coup d'État | Vaincre la Reine de la Ruche, le Béhémoth, le Général (mode infini compris). |
+  | La Ruche nettoyée, La Fonderie éteinte, La Cité libérée, La Nécropole apaisée | Gagner tous les niveaux du monde. |
+  | Régicide, Démolition, Coup d'État, Requiem | Vaincre la Reine de la Ruche, le Béhémoth, le Général, la Liche (mode infini compris ; la Liche doit tomber pour de bon). |
   | Commando | Vaincre un boss avec 3 tours ou moins sur la carte. |
   | Minimaliste | Gagner un niveau en posant 5 tours au plus (ventes comprises). |
   | Brut de pose | Gagner un niveau sans améliorer aucune tour. |
@@ -100,9 +101,9 @@ Le dossier `build/` est ignoré par git.
 
   Le code Konami, qui gagne tous les niveaux et achète tout l'arbre, débloque du même coup les succès de mondes, d'étoiles et de l'arbre. Les succès sont dans `scripts/save/achievements.gd` (`LIST`) : un succès s'ajoute là, avec son objectif.
 - Dans la sélection des mondes, survoler un niveau (ou lui donner le focus au clavier) ouvre sa fenêtre de détail : or et vies de départ, et le contenu de chaque vague dans la difficulté choisie, élites et boss compris.
-- La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
+- La campagne compte **quatre mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha), **La Cité** (humanoïdes) et **La Nécropole** (morts-vivants). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
-- **Mode infini** : un niveau gagné avec 3 étoiles (dans n'importe quelle difficulté) s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (90 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
+- **Mode infini** : un niveau gagné avec 3 étoiles (dans n'importe quelle difficulté) s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (120 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
 - **Défi du jour** (écran titre) : chaque jour, un niveau de la campagne tiré au sort avec des règles imposées, le même toute la journée (le tirage ne dépend que de la date). Le défi impose 4 tours (au plus une Bobine ou un Électroaimant), et ajoute 2 règles parmi celles-ci :
 
   | Règle | Effet |
@@ -121,7 +122,7 @@ Le dossier `build/` est ignoré par git.
   - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours de base et des mondes, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
   - **Pouvoirs** : les trois pouvoirs actifs, payés en étoiles (le Gel s'ouvre avec La Fonderie, les Renforts avec La Cité), et sous chacun deux renforts payés en étoiles infinies (voir plus bas).
 
-  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (3 étoiles pour la première amélioration, jusqu'à 13 pour la Bobine et l'Électroaimant) : l'arbre complet coûte 216 étoiles, les 216 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies, et les renforts des pouvoirs 21. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (4 étoiles pour la première amélioration, jusqu'à 17 pour la Cloche funèbre) : l'arbre complet coûte 287 étoiles, sur les 288 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies, et les renforts des pouvoirs 21. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle.
@@ -132,9 +133,9 @@ Le dossier `build/` est ignoré par git.
 
 | Pouvoir | Prix | Effet | Recharge | Renforts (étoiles infinies) |
 |---|---|---|---|---|
-| **Météores** | ★ 3 | 6 météores tombent l'un après l'autre dans un rayon de 70 pixels autour du point visé ; chacun fait 80 dégâts à tous les ennemis à 46 pixels de son point de chute. | 40 s | **Pluie battante** (∞ 3) : +50 % de dégâts. **Comètes** (∞ 4) : recharge 30 % plus rapide. |
-| **Gel** | ★ 3, avec La Fonderie | Tous les ennemis de la carte s'arrêtent pendant 3 s (ni marche, ni soins, ni renforts appelés). Un boss ne gèle pas : il ralentit de moitié. | 55 s | **Blizzard** (∞ 3) : 2 s de plus. **Engelures** (∞ 4) : les ennemis gelés subissent 30 % de dégâts en plus. |
-| **Renforts** | ★ 4, avec La Cité | 3 soldats (150 vie, 24 dégâts/s) se postent sur le chemin, au plus près du point visé, pendant 20 s. Chacun arrête un ennemi à sa portée et le combat ; l'ennemi retenu le frappe (12 vie/s par vie qu'il coûterait en passant). Les boss ne s'arrêtent pas, mais un soldat libre les frappe au passage. | 45 s | **Vétérans** (∞ 3) : +50 % de vie et de dégâts. **Escouade** (∞ 4) : 2 soldats de plus. |
+| **Météores** | ★ 4 | 6 météores tombent l'un après l'autre dans un rayon de 70 pixels autour du point visé ; chacun fait 80 dégâts à tous les ennemis à 46 pixels de son point de chute. | 40 s | **Pluie battante** (∞ 3) : +50 % de dégâts. **Comètes** (∞ 4) : recharge 30 % plus rapide. |
+| **Gel** | ★ 4, avec La Fonderie | Tous les ennemis de la carte s'arrêtent pendant 3 s (ni marche, ni soins, ni renforts appelés). Un boss ne gèle pas : il ralentit de moitié. | 55 s | **Blizzard** (∞ 3) : 2 s de plus. **Engelures** (∞ 4) : les ennemis gelés subissent 30 % de dégâts en plus. |
+| **Renforts** | ★ 5, avec La Cité | 3 soldats (150 vie, 24 dégâts/s) se postent sur le chemin, au plus près du point visé, pendant 20 s. Chacun arrête un ennemi à sa portée et le combat ; l'ennemi retenu le frappe (12 vie/s par vie qu'il coûterait en passant). Les boss ne s'arrêtent pas, mais un soldat libre les frappe au passage. | 45 s | **Vétérans** (∞ 3) : +50 % de vie et de dégâts. **Escouade** (∞ 4) : 2 soldats de plus. |
 
 Un pouvoir est une ressource `Power` (`resources/powers/`). L'amélioration qui le débloque a son chemin dans `unlocks_power`, et celles qui le renforcent dans `improves_power`, avec les champs du groupe **Pouvoirs** de `Perk` (dégâts, recharge, durée, nombre, vulnérabilité).
 
@@ -163,11 +164,11 @@ Les tours, les ennemis, les rochers et la base sont des images SVG dans `assets/
 
 Chaque biome a ses **tuiles** (`assets/sprites/tiles/<biome>.png`, une planche de 8 x 3 tuiles de 64 pixels, lue par le `TileSet` de `resources/tilesets/`) :
 
-- 8 sols, en gris, teintés avec la couleur du sol du niveau (`ground_color`) : sol organique en alvéoles pour La Ruche, plaques de métal rivetées (tôle striée, grilles d'aération) pour La Fonderie, dalles et pavés pour La Cité ;
-- 8 détails en couleur semés sur le sol libre (œufs, bave, champignons ; taches d'huile, boulons, câbles ; herbes, plaques d'égout, feuilles mortes…) ;
-- 4 obstacles qui remplacent les rochers des cases bloquées (ruches, sacs d'œufs, épines ; caisses, barils, machines ; murs en ruine, arbres, barricades), teintés avec `rock_color`, et 4 petits détails semés sur le chemin (cailloux, fissures).
+- 8 sols, en gris, teintés avec la couleur du sol du niveau (`ground_color`) : sol organique en alvéoles pour La Ruche, plaques de métal rivetées (tôle striée, grilles d'aération) pour La Fonderie, dalles et pavés pour La Cité, terre sèche craquelée et dalles funéraires pour La Nécropole ;
+- 8 détails en couleur semés sur le sol libre (œufs, bave, champignons ; taches d'huile, boulons, câbles ; herbes, plaques d'égout, feuilles mortes ; os, crânes, bougies…) ;
+- 4 obstacles qui remplacent les rochers des cases bloquées (ruches, sacs d'œufs, épines ; caisses, barils, machines ; murs en ruine, arbres, barricades ; tombes, croix, colonnes brisées, arbres morts), teintés avec `rock_color`, et 4 petits détails semés sur le chemin (cailloux, fissures).
 
-La carte (`GameMap`) prend les tuiles du monde de son niveau (`tileset` de `resources/worlds/*.tres`) et les pose en deux calques `TileMapLayer` sous le chemin ; un niveau peut en choisir d'autres dans sa propriété `tileset`, ou régler `decal_density` et `path_detail_spacing`. Le tirage dépend du niveau : la carte est la même à chaque partie. Les tuiles sont dessinées par `tools/generate_tilesets.py` (Python 3, Pillow et numpy) : modifier le script puis le relancer réécrit les planches.
+La carte (`GameMap`) prend les tuiles du monde de son niveau (`tileset` de `resources/worlds/*.tres`) et les pose en deux calques `TileMapLayer` sous le chemin ; un niveau peut en choisir d'autres dans sa propriété `tileset`, ou régler `decal_density` et `path_detail_spacing`. Le tirage dépend du niveau : la carte est la même à chaque partie. Les tuiles sont dessinées par `tools/generate_tilesets.py` (Python 3, Pillow et numpy) : modifier le script puis le relancer réécrit les planches (`python3 tools/generate_tilesets.py undead` ne réécrit que celle d'un biome).
 
 ## Sons
 
@@ -182,8 +183,9 @@ Chaque monde a ses monstres, rangés dans `resources/enemies/<biome>/` avec leur
 | 1. La Ruche (insectoïdes) | Larve, Rôdeur (rapide), Scarabée (carapace : les petits dégâts rebondissent), Ravageur (gros), Couveuse (éclate en 3 Larves) | Les essaims et les ennemis qui se divisent |
 | 2. La Fonderie (mecha) | Drone (rapide), Sentinelle, Chenillard (très blindé), Porte-drones (libère 3 Drones), Titan (énorme) | **Bouclier d'énergie** (Sentinelle, Titan) : il encaisse les coups en premier, sans armure, et se recharge après 2 secondes sans être touché. Une barre bleue s'affiche au-dessus de la barre de vie. |
 | 3. La Cité (humanoïdes) | Soldat, Éclaireur (rapide), Garde (bouclier anti-émeute : armure), Médecin, Transport de troupes (libère 4 Soldats), Colosse (énorme) | **Soin** (Médecin) : il rend régulièrement des points de vie aux ennemis blessés autour de lui (onde et « +N » verts). Mieux vaut l'abattre en premier. |
+| 4. La Nécropole (morts-vivants) | Squelette, Goule (rapide), Chevalier noir (armure), Charogne (libère 4 Asticots), Asticot, Momie, Abomination (énorme) | **Résurrection** (Chevalier noir, Momie, la Liche) : abattus, ils tombent puis se relèvent sur place une fois (tache violette, « Se relève ! »), avec une partie de leur vie. Ils ne rapportent leur or qu'à leur vraie mort. Un ennemi **consacré** par l'Encensoir (petite croix dorée) ne se relève pas. |
 
-Le bouclier, le soin et les renforts se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier**, **Soin** et **Renforts**) : n'importe quel ennemi peut en avoir. Sa `description` est celle du lexique.
+Le bouclier, le soin, les renforts et la résurrection se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier**, **Soin**, **Renforts** et **Résurrection**) : n'importe quel ennemi peut en avoir. Sa `description` est celle du lexique.
 
 ### Tours des mondes
 
@@ -191,14 +193,16 @@ Chaque monde a deux tours à débloquer dans l'arbre des améliorations (onglet 
 
 | Monde | Tour | Prix | Atout |
 |---|---|---|---|
-| La Ruche | **Lance-flammes** | ★ 5 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
-| La Ruche | **Pesticide** | ★ 8 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
-| La Fonderie | **Brouilleur IEM** | ★ 7 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
-| La Fonderie | **Perforateur** | ★ 10 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
-| La Cité | **Franc-tireur** | ★ 9 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
-| La Cité | **Lacrymogène** | ★ 12 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
+| La Ruche | **Lance-flammes** | ★ 6 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
+| La Ruche | **Pesticide** | ★ 9 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
+| La Fonderie | **Brouilleur IEM** | ★ 8 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
+| La Fonderie | **Perforateur** | ★ 12 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
+| La Cité | **Franc-tireur** | ★ 11 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
+| La Cité | **Lacrymogène** | ★ 14 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
+| La Nécropole | **Encensoir** | ★ 13 | Braises sacrées qui explosent et brûlent, et **consacrent** ce qu'elles touchent : pendant 4 s, un ennemi consacré ne peut plus se relever. |
+| La Nécropole | **Cloche funèbre** | ★ 17 | Sonne le glas toutes les 3 s environ : son onde **étourdit** tous les ennemis à portée pendant 0,7 s, boss compris. |
 
-Ces effets se règlent dans la ressource de la tour (`TowerData`, groupes **Effets spéciaux**, **Nuage** et **Flammes**) : brûlure ou poison, coups qui ignorent l'armure, dégâts multipliés sur les boucliers, bouclier brouillé, soins bloqués, priorité aux soigneurs. N'importe quelle tour peut les combiner. La seconde tour d'une branche demande la première, et la branche ne s'ouvre qu'avec son monde (`required_world` de l'amélioration).
+Ces effets se règlent dans la ressource de la tour (`TowerData`, groupes **Effets spéciaux**, **Nuage** et **Flammes**) : brûlure ou poison, coups qui ignorent l'armure, dégâts multipliés sur les boucliers, bouclier brouillé, soins bloqués, priorité aux soigneurs, consécration (`revive_block_duration`). Un ralentissement de 100 % (`slow_factor` à 0) étourdit. N'importe quelle tour peut les combiner. La seconde tour d'une branche demande la première, et la branche ne s'ouvre qu'avec son monde (`required_world` de l'amélioration).
 
 ### Croisements
 
@@ -206,11 +210,11 @@ Sous les tours des mondes, l'arbre se croise : chaque croisement demande deux to
 
 | Croisement | Demande | Prix | Effet |
 |---|---|---|---|
-| **Arc électrique** | Pesticide + Perforateur | ★ 12 | Débloque l'Arc électrique : un éclair instantané qui rebondit 3 fois d'ennemi en ennemi (le plus proche pas encore touché, à 110 pixels au plus), avec un quart de dégâts en moins à chaque rebond. +50 % de dégâts sur les boucliers d'énergie. Chaque amélioration ajoute un rebond. |
-| **Bobine** | Perforateur + Lacrymogène | ★ 13 | Débloque la Bobine : elle ne tire pas, mais les tours des 8 cases autour d'elle font 25 % de dégâts en plus et tirent 15 % plus vite (+10 points par amélioration, et la dernière agrandit sa portée). Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte. La fiche d'une tour renforcée le dit. |
-| **Électroaimant** | Arc électrique + Bobine | ★ 13 | Débloque l'Électroaimant : son onde fait reculer de 45 pixels tous les ennemis à portée sur leur chemin. Les gros reculent moins (une Couveuse 30 % de moins), et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s : plusieurs Électroaimants ne le bloquent pas sur place. |
-| **Nuage ionisé** | Pesticide + Arc électrique | ★ 10 | L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie pendant 2,5 s. |
-| **Gaz sous tension** | Lacrymogène + Bobine | ★ 10 | La Bobine ralentit de 25 % les ennemis à sa portée et bloque leurs soins, comme le gaz, et le Lacrymogène tire 20 % plus loin et 25 % plus vite. |
+| **Arc électrique** | Pesticide + Perforateur | ★ 14 | Débloque l'Arc électrique : un éclair instantané qui rebondit 3 fois d'ennemi en ennemi (le plus proche pas encore touché, à 110 pixels au plus), avec un quart de dégâts en moins à chaque rebond. +50 % de dégâts sur les boucliers d'énergie. Chaque amélioration ajoute un rebond. |
+| **Bobine** | Perforateur + Lacrymogène | ★ 15 | Débloque la Bobine : elle ne tire pas, mais les tours des 8 cases autour d'elle font 25 % de dégâts en plus et tirent 15 % plus vite (+10 points par amélioration, et la dernière agrandit sa portée). Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte. La fiche d'une tour renforcée le dit. |
+| **Électroaimant** | Arc électrique + Bobine | ★ 15 | Débloque l'Électroaimant : son onde fait reculer de 45 pixels tous les ennemis à portée sur leur chemin. Les gros reculent moins (une Couveuse 30 % de moins), et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s : plusieurs Électroaimants ne le bloquent pas sur place. |
+| **Nuage ionisé** | Pesticide + Arc électrique | ★ 12 | L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie pendant 2,5 s. |
+| **Gaz sous tension** | Lacrymogène + Bobine | ★ 12 | La Bobine ralentit de 25 % les ennemis à sa portée et bloque leurs soins, comme le gaz, et le Lacrymogène tire 20 % plus loin et 25 % plus vite. |
 
 Un croisement qui échange des effets est une amélioration (`Perk`) avec `crossing`, dont `specializes_tower` reçoit les effets, et `partner_effect` une seconde amélioration avec les effets de l'autre tour (son `specializes_tower`). Comme pour les spécialisations, ces effets ne s'appliquent qu'à leur tour, et la fiche de la tour les rappelle (« Croisement : … »).
 
@@ -234,6 +238,12 @@ Un croisement qui échange des effets est une amélioration (`Perk`) avec `cross
 | 3-4 | Le pont : un chemin qui se recoupe trois fois | 8, avec le Colosse |
 | 3-5 | Les trois avenues : ouest, nord et sud | 8 |
 | 3-6 | Le palais : un long détour et une entrée au sud | 10 |
+| 4-1 | Le cimetière : un aller-retour entre les tombes | 6 |
+| 4-2 | Les deux allées (nord-ouest et sud-ouest) qui se rejoignent | 7, avec la Charogne |
+| 4-3 | La crypte : on entre par le nord, en serpentin | 7, avec la Momie |
+| 4-4 | L'ossuaire : un chemin qui se recoupe lui-même | 8, avec l'Abomination |
+| 4-5 | Les trois portes : ouest, nord et sud | 8 |
+| 4-6 | Le mausolée : la base au centre, un long détour et une entrée au sud | 10 |
 
 À partir du niveau 1-4, les 6 tours sont disponibles. Les mondes et leurs niveaux se suivent dans l'ordre de `resources/campaign.tres`, qui liste les mondes (`resources/worlds/*.tres` : nom, description, couleur, monstres montrés et niveaux) : pour ajouter un niveau, il suffit de l'ajouter à son monde.
 

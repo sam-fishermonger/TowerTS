@@ -43,6 +43,12 @@ const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
 const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
 const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
 const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
+const UNDEAD_01 := preload("res://scenes/levels/undead_01.tscn")
+const CENSER := preload("res://resources/towers/censer.tres")
+const BELL := preload("res://resources/towers/bell.tres")
+const CHEVALIER := preload("res://resources/enemies/undead/chevalier.tres")
+const SQUELETTE := preload("res://resources/enemies/undead/squelette.tres")
+const LICHE := preload("res://resources/enemies/undead/liche.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -118,6 +124,7 @@ func _run() -> void:
 	await _test_konami_code()
 	await _test_elites()
 	await _test_bosses()
+	await _test_necropolis()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -235,7 +242,7 @@ func _test_title_screen() -> void:
 	await _free(title)
 	await _test_title_demo()
 	var screen := await _spawn_world_select()
-	_check(screen.get_node("%Worlds").get_child_count() == 3, "une carte par monde")
+	_check(screen.get_node("%Worlds").get_child_count() == 4, "une carte par monde")
 	var first: Button = screen.get_level_button(LEVEL_01.resource_path)
 	var second: Button = screen.get_level_button(LEVEL_02.resource_path)
 	_check(not first.disabled and first.has_focus() and second.disabled and second.text.ends_with("Verrouillé"),
@@ -315,7 +322,7 @@ func _test_progress() -> void:
 	root.add_child(title)
 	await process_frame
 	_check(title.get_node("%PlayButton").text == "Continuer", "le bouton devient Continuer")
-	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 216"), "l'écran titre montre les étoiles de la campagne")
+	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 288"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and not Progress.is_unlocked(campaign, 1),
@@ -366,10 +373,8 @@ func _test_perk_tree() -> void:
 	_check(screen.stars_label.text.begins_with("★ %d à dépenser" % (8 - poudre.cost)), "le compteur d'étoiles se met à jour")
 	_check(not screen.buy(poudre), "une amélioration ne s'achète qu'une fois")
 	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0 * 1.1), "Poudre fine : +10 % de dégâts sur les tours")
-	var rouages := tree.get_perk("rouages")
-	Perks.buy(longue_vue)
-	_check(Perks.is_unlocked(rouages) and not Perks.can_buy(rouages) and Perks.get_available_stars() == 8 - poudre.cost - longue_vue.cost,
-		"une amélioration trop chère ne s'achète pas")
+	_check(Perks.is_unlocked(longue_vue) and not Perks.buy(longue_vue) and Perks.get_available_stars() == 8 - poudre.cost,
+		"une amélioration trop chère ne s'achète pas (Longue-vue : %d étoiles)" % longue_vue.cost)
 	screen.get_node("%RefundButton").pressed.emit()
 	_check(Perks.get_owned_ids().is_empty() and Perks.get_available_stars() == 8, "Réinitialiser l'arbre rend toutes les étoiles")
 	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0), "et retire les bonus")
@@ -416,11 +421,11 @@ func _test_biome_towers_in_tree() -> void:
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	var tree := Perks.TREE
 	var tower_perks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
-	var per_world := [0, 0, 0]
+	var per_world := [0, 0, 0, 0]
 	for perk: Perk in tower_perks:
 		if perk.required_world >= 0:
 			per_world[perk.required_world] += 1
-	_check(per_world == [2, 2, 2], "2 tours par monde (%s)" % [per_world])
+	_check(per_world == [2, 2, 2, 2], "2 tours par monde (%s)" % [per_world])
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
 	var campaign_stars := campaign.size() * Progress.MAX_LEVEL_STARS
@@ -458,7 +463,7 @@ func _test_biome_towers_in_tree() -> void:
 	_win_in_all_difficulties(campaign.levels)
 	for perk: Perk in tower_perks:
 		Perks.buy(perk)
-	_check(Perks.get_unlocked_towers().size() == 9, "les 9 tours achetées (6 des mondes, 3 croisements)")
+	_check(Perks.get_unlocked_towers().size() == 11, "les 11 tours achetées (8 des mondes, 3 croisements)")
 	# En Facile, on prend jusqu'à 9 tours : la barre d'achat doit les tenir.
 	Difficulty.set_current(Difficulty.FACILE)
 	level = await _spawn_level(HUMANOID_01)
@@ -1934,8 +1939,8 @@ func _test_tower_choice() -> void:
 	Perks.unlock_everything()
 	Difficulty.set_current(Difficulty.CAUCHEMAR)
 	var level := await _spawn_level(HUMANOID_01)
-	_check(level.available_tower_types.size() == 15 and level.is_choosing_towers and level.hud.tower_picker != null,
-		"avec 15 tours débloquées, le niveau s'ouvre sur le choix des tours")
+	_check(level.available_tower_types.size() == 17 and level.is_choosing_towers and level.hud.tower_picker != null,
+		"avec 17 tours débloquées, le niveau s'ouvre sur le choix des tours")
 	_check(level.tower_types.is_empty() and level.hud.tower_shop.get_child_count() == 0 and not level.can_start_next_wave(),
 		"pas de tour à poser ni de vague avant d'avoir choisi")
 	var picker := level.hud.tower_picker
@@ -1966,13 +1971,14 @@ func _test_tower_choice() -> void:
 
 
 func _test_worlds() -> void:
-	print("Mondes : trois biomes de 6 niveaux, débloqués l'un après l'autre")
+	print("Mondes : quatre biomes de 6 niveaux, débloqués l'un après l'autre")
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	_check(campaign.worlds.size() == 3 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 6),
-		"3 mondes de 6 niveaux")
-	_check(campaign.size() == 18 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
+	_check(campaign.worlds.size() == 4 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 6),
+		"4 mondes de 6 niveaux")
+	_check(campaign.size() == 24 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
 	_check(campaign.get_next(LEVEL_06.resource_path) == MECHA_01.resource_path, "après le niveau 1-6 vient le 2-1")
-	_check(campaign.get_next(campaign.worlds[2].levels[5]) == "", "le niveau 3-6 est le dernier")
+	_check(campaign.get_next(campaign.worlds[2].levels[5]) == campaign.worlds[3].levels[0], "après le niveau 3-6 vient le 4-1")
+	_check(campaign.get_next(campaign.worlds[3].levels[5]) == "", "le niveau 4-6 est le dernier")
 	# Chaque monde n'envoie que ses propres monstres.
 	for w in campaign.worlds.size():
 		var world := campaign.worlds[w]
@@ -2484,6 +2490,51 @@ func _test_bosses() -> void:
 	_check(GENERAL.heal_amount > 0.0 and GENERAL.summon_enemy == SOLDAT, "le Général soigne et appelle des Soldats")
 
 
+func _test_necropolis() -> void:
+	print("La Nécropole : résurrection, Encensoir et Cloche funèbre")
+	var level := await _spawn_level(UNDEAD_01)
+	level.start_next_wave()
+	level.spawner._queue.clear()
+	level.spawner.is_spawning = false
+	var knight := level.spawner.spawn(CHEVALIER, level.map.get_enemy_path(0), 200.0)
+	var gold := level.gold
+	knight.take_damage(100000.0, true)
+	await process_frame
+	_check(level.gold == gold and level._pending_revives == 1 and level._alive_enemy_count() == 1,
+		"un Chevalier noir abattu ne rapporte rien tout de suite et va se relever")
+	level._check_wave_cleared()
+	_check(level.get_waves_cleared() == 0, "la vague n'est pas finie tant qu'il est au sol")
+	var elapsed := 0.0
+	while elapsed < CHEVALIER.revive_delay + 0.2:
+		elapsed += await _step()
+	var risen: Array = get_nodes_in_group(Enemy.GROUP).filter(func(e: Enemy) -> bool: return e.data == CHEVALIER)
+	_check(risen.size() == 1 and risen[0].revives_left == 0 and level._pending_revives == 0
+		and is_equal_approx(risen[0].health.health, risen[0].health.max_health * CHEVALIER.revive_health_ratio)
+		and absf(risen[0].progress - 200.0) < 40.0, "il se relève sur place avec la moitié de sa vie")
+	gold = level.gold
+	risen[0].take_damage(100000.0, true)
+	await process_frame
+	_check(level.gold >= gold + level.get_enemy_reward(CHEVALIER) and level._pending_revives == 0 and level.get_waves_cleared() == 1,
+		"la seconde fois, il meurt pour de bon, rapporte son or et la vague est finie")
+	# Consacré par l'Encensoir : il ne se relève pas.
+	knight = level.spawner.spawn(CHEVALIER, level.map.get_enemy_path(0), 200.0)
+	knight.hit(1.0, CENSER.get_stats_at_level(1))
+	_check(knight.is_consecrated() and not knight.can_revive(), "touché par l'Encensoir, il est consacré")
+	knight.take_damage(100000.0, true)
+	await process_frame
+	_check(level._pending_revives == 0, "un ennemi consacré ne se relève pas")
+	# Cloche funèbre : l'onde étourdit tout ce qui est à portée.
+	var bell := _place_test_tower(level, BELL)
+	var target := _add_enemy_at(level, SQUELETTE, bell.global_position + Vector2(40, 0))
+	bell._attack(target)
+	_check(target.get_speed() == 0.0 and target.is_slowed(), "la Cloche funèbre étourdit les ennemis à portée")
+	await _free(level)
+	_check(LICHE.is_boss and LICHE.summon_enemy == SQUELETTE and LICHE.revive_count == 1,
+		"la Liche relève des Squelettes et se relève une fois")
+	_check(CHEVALIER.get_abilities().any(func(a: String) -> bool: return a.begins_with("Se relève une fois")),
+		"la fiche du monstre le dit")
+
+
 func _test_detail_windows() -> void:
 	print("Fenêtres de détail")
 	var level := await _spawn_level(LEVEL_03)
@@ -2536,13 +2587,14 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 20 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth")),
-		"onglet Monstres : les élites, les 16 monstres et les 3 boss")
+	_check(names.size() == 28 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+		and names.any(func(n: String) -> bool: return n.contains("Liche")),
+		"onglet Monstres : les élites, les 23 monstres et les 4 boss (%d)" % names.size())
 	var general: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.contains("Général"))[0]
 	general.pressed.emit()
 	_check(screen.detail_text.get_parsed_text().contains("Soldats en renfort"), "la fiche d'un boss donne ses capacités")
 	screen.show_tab(2)
-	_check(screen.get_entry_buttons().size() == 3 and screen.detail_text.get_parsed_text().contains("Reine de la Ruche"),
+	_check(screen.get_entry_buttons().size() == 4 and screen.detail_text.get_parsed_text().contains("Reine de la Ruche"),
 		"onglet Mondes : un par monde, avec ses monstres et son boss")
 	await _free(screen)
 
@@ -2719,6 +2771,10 @@ func _test_biome_tiles() -> void:
 	level = await _spawn_level(MECHA_01)
 	_check(level.map.tileset == campaign.worlds[1].tileset, "La Fonderie a les siennes")
 	await _free(level)
+	level = await _spawn_level(load(campaign.worlds[3].levels[0]))
+	_check(level.map.tileset == campaign.worlds[3].tileset and campaign.worlds[3].tileset != campaign.worlds[2].tileset,
+		"La Nécropole aussi")
+	await _free(level)
 
 
 func _ground_tiles(layer: TileMapLayer) -> Array:
@@ -2859,7 +2915,7 @@ func _test_levels_04_to_06_with_earned_gold() -> void:
 	])
 
 
-## Ordres de construction des mondes 2 et 3 pour l'équilibrage (18 tours par niveau).
+## Ordres de construction des mondes 2 à 4 pour l'équilibrage (18 tours par niveau).
 const WORLD_BUILD_ORDERS := {
 	"res://scenes/levels/mecha_01.tscn": [
 		[Vector2i(15, 2), CANNON], [Vector2i(15, 3), CANNON], [Vector2i(4, 5), MORTAR],
@@ -2957,13 +3013,61 @@ const WORLD_BUILD_ORDERS := {
 		[Vector2i(14, 5), MORTAR], [Vector2i(15, 5), BEAM], [Vector2i(16, 5), CANNON],
 		[Vector2i(9, 6), MORTAR], [Vector2i(11, 8), SNIPER], [Vector2i(15, 2), BEAM],
 	],
+	"res://scenes/levels/undead_01.tscn": [
+		[Vector2i(7, 3), CANNON], [Vector2i(9, 6), CANNON], [Vector2i(13, 6), MORTAR],
+		[Vector2i(15, 3), BEAM], [Vector2i(6, 3), FROST], [Vector2i(7, 4), CANNON],
+		[Vector2i(9, 5), SNIPER], [Vector2i(10, 6), MORTAR], [Vector2i(12, 6), BEAM],
+		[Vector2i(13, 5), GATLING], [Vector2i(15, 4), FROST], [Vector2i(16, 3), SNIPER],
+		[Vector2i(2, 1), MORTAR], [Vector2i(2, 3), BEAM], [Vector2i(3, 1), CANNON],
+		[Vector2i(3, 3), MORTAR], [Vector2i(4, 1), SNIPER], [Vector2i(4, 3), BEAM],
+	],
+	"res://scenes/levels/undead_02.tscn": [
+		[Vector2i(11, 6), CANNON], [Vector2i(12, 6), CANNON], [Vector2i(9, 6), MORTAR],
+		[Vector2i(11, 4), BEAM], [Vector2i(9, 7), FROST], [Vector2i(12, 4), CANNON],
+		[Vector2i(13, 4), SNIPER], [Vector2i(13, 6), MORTAR], [Vector2i(14, 4), BEAM],
+		[Vector2i(14, 6), GATLING], [Vector2i(15, 4), FROST], [Vector2i(15, 6), SNIPER],
+		[Vector2i(16, 4), MORTAR], [Vector2i(16, 6), BEAM], [Vector2i(17, 4), CANNON],
+		[Vector2i(17, 6), MORTAR], [Vector2i(8, 6), SNIPER], [Vector2i(8, 7), BEAM],
+	],
+	"res://scenes/levels/undead_03.tscn": [
+		[Vector2i(15, 6), CANNON], [Vector2i(4, 6), CANNON], [Vector2i(7, 6), MORTAR],
+		[Vector2i(9, 3), BEAM], [Vector2i(12, 3), FROST], [Vector2i(14, 6), CANNON],
+		[Vector2i(16, 5), SNIPER], [Vector2i(16, 6), MORTAR], [Vector2i(18, 6), BEAM],
+		[Vector2i(14, 5), GATLING], [Vector2i(15, 5), FROST], [Vector2i(4, 5), SNIPER],
+		[Vector2i(5, 6), MORTAR], [Vector2i(6, 6), BEAM], [Vector2i(7, 5), CANNON],
+		[Vector2i(9, 4), MORTAR], [Vector2i(10, 3), SNIPER], [Vector2i(11, 3), BEAM],
+	],
+	"res://scenes/levels/undead_04.tscn": [
+		[Vector2i(7, 3), CANNON], [Vector2i(5, 3), CANNON], [Vector2i(5, 5), MORTAR],
+		[Vector2i(7, 2), BEAM], [Vector2i(7, 5), FROST], [Vector2i(7, 6), CANNON],
+		[Vector2i(8, 2), SNIPER], [Vector2i(8, 3), MORTAR], [Vector2i(11, 6), BEAM],
+		[Vector2i(7, 7), GATLING], [Vector2i(11, 3), FROST], [Vector2i(11, 5), SNIPER],
+		[Vector2i(11, 7), MORTAR], [Vector2i(15, 2), BEAM], [Vector2i(17, 5), CANNON],
+		[Vector2i(4, 5), MORTAR], [Vector2i(5, 2), SNIPER], [Vector2i(5, 6), BEAM],
+	],
+	"res://scenes/levels/undead_05.tscn": [
+		[Vector2i(14, 4), CANNON], [Vector2i(13, 4), CANNON], [Vector2i(14, 5), MORTAR],
+		[Vector2i(16, 5), BEAM], [Vector2i(17, 5), FROST], [Vector2i(16, 4), CANNON],
+		[Vector2i(13, 5), SNIPER], [Vector2i(11, 4), MORTAR], [Vector2i(14, 2), BEAM],
+		[Vector2i(16, 7), GATLING], [Vector2i(10, 4), FROST], [Vector2i(13, 2), SNIPER],
+		[Vector2i(17, 4), MORTAR], [Vector2i(17, 7), BEAM], [Vector2i(14, 6), CANNON],
+		[Vector2i(12, 2), MORTAR], [Vector2i(15, 7), SNIPER], [Vector2i(18, 5), BEAM],
+	],
+	"res://scenes/levels/undead_06.tscn": [
+		[Vector2i(11, 5), CANNON], [Vector2i(12, 5), CANNON], [Vector2i(6, 7), MORTAR],
+		[Vector2i(12, 3), BEAM], [Vector2i(7, 7), FROST], [Vector2i(10, 5), CANNON],
+		[Vector2i(11, 3), SNIPER], [Vector2i(4, 7), MORTAR], [Vector2i(13, 3), BEAM],
+		[Vector2i(12, 7), GATLING], [Vector2i(14, 5), FROST], [Vector2i(3, 7), SNIPER],
+		[Vector2i(8, 7), MORTAR], [Vector2i(9, 5), BEAM], [Vector2i(9, 7), CANNON],
+		[Vector2i(10, 3), MORTAR], [Vector2i(10, 7), SNIPER], [Vector2i(11, 7), BEAM],
+	],
 }
 
 
 func _test_world_levels_maps() -> void:
-	print("Mondes 2 et 3 : cartes")
+	print("Mondes 2 à 4 : cartes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	for w in [1, 2]:
+	for w in [1, 2, 3]:
 		var world := campaign.worlds[w]
 		for i in world.levels.size():
 			var path := world.levels[i]

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Chevalier noir : armure sombre, écu et épée, heaume à visière. -->
+  <ellipse cx="30" cy="35" rx="22" ry="24" fill="#000" opacity="0.22"/>
+  <rect x="34" y="40" width="22" height="4" rx="1.5" fill="#b8bcc6"/>
+  <rect x="32" y="38" width="4" height="8" rx="1" fill="#5c4a2a"/>
+  <path d="M30 12 Q42 14 40 26 Q36 22 30 22 Z" fill="#2b2a35" stroke="#151419" stroke-width="1.5"/>
+  <path d="M33 15 L37 22" stroke="#7c3fa8" stroke-width="2"/>
+  <ellipse cx="25" cy="32" rx="14" ry="20" fill="#151419"/>
+  <ellipse cx="25" cy="32" rx="12" ry="18" fill="#3b3a48"/>
+  <path d="M15 24 Q25 20 35 24 M15 40 Q25 44 35 40" stroke="#5b5a6c" stroke-width="2" fill="none"/>
+  <circle cx="31" cy="32" r="9.5" fill="#151419"/>
+  <circle cx="31" cy="32" r="8" fill="#5b5a6c"/>
+  <rect x="34" y="30" width="5" height="4" rx="1" fill="#a66ce0"/>
+</svg>

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/squelette.tres" id="2_summon"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/undead/liche.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "La Liche"
+description = "La reine de la Nécropole : elle relève des Squelettes en marchant, et se relève elle-même une fois si on ne la consacre pas."
+max_health = 3800.0
+armor = 3.0
+speed = 26.0
+reward = 170
+damage = 10
+color = Color(0.45, 0.25, 0.6, 1)
+radius = 30.0
+texture = ExtResource("9_texture")
+summon_enemy = ExtResource("2_summon")
+summon_count = 3
+summon_interval = 6.0
+is_boss = true
+revive_count = 1
+revive_health_ratio = 0.4
+revive_delay = 2.5

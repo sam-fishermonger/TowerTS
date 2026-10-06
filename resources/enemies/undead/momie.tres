@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/undead/momie.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Momie"
+description = "Momifiée et coriace : elle se relève une fois avec plus de la moitié de sa vie."
+max_health = 200.0
+armor = 1.0
+speed = 44.0
+reward = 18
+damage = 2
+color = Color(0.86, 0.82, 0.66, 1)
+radius = 15.0
+texture = ExtResource("9_texture")
+revive_count = 1
+revive_health_ratio = 0.6
+revive_delay = 1.5

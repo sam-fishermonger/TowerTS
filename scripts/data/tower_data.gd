@@ -36,7 +36,7 @@ var source_tower_id := 0
 
 @export_group("Ralentissement")
 ## Multiplicateur de vitesse appliqué aux ennemis touchés (1 = aucun effet).
-@export_range(0.1, 1.0) var slow_factor := 1.0
+@export_range(0.0, 1.0) var slow_factor := 1.0
 ## Durée du ralentissement, en secondes.
 @export var slow_duration := 0.0
 
@@ -65,6 +65,9 @@ var source_tower_id := 0
 @export var heal_block_duration := 0.0
 ## Vise d'abord les soigneurs à portée, quelle que soit la règle de ciblage.
 @export var prefers_healers := false
+## Consécration : un ennemi touché ne peut plus se relever (EnemyData.revive_count)
+## pendant ce nombre de secondes.
+@export var revive_block_duration := 0.0
 
 @export_group("Nuage")
 ## Rayon du nuage laissé à l'impact (tours à projectile de nuage).

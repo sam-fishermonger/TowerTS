@@ -20,6 +20,8 @@ const HEAL_PULSE_DURATION := 0.5
 ## Une brûlure ou un poison frappe à ce rythme, en secondes.
 const DOT_TICK := 0.5
 const HEAL_BLOCK_COLOR := Color(0.9, 0.25, 0.3)
+## Marque d'un ennemi consacré, qui ne peut plus se relever.
+const CONSECRATED_COLOR := Color(1.0, 0.9, 0.55)
 const JAMMED_SHIELD_COLOR := Color(0.6, 0.6, 0.7)
 ## Distance, avant et après l'ennemi sur le chemin, qui donne le sens de la marche pour
 ## son décalage sur le côté : les virages sont arrondis au lieu de faire un saut.
@@ -47,6 +49,10 @@ var lateral_offset := 0.0
 var health_multiplier := 1.0
 ## Multiplicateur de la vitesse (difficulté du niveau).
 var speed_multiplier := 1.0
+## Fois où l'ennemi peut encore se relever (-1 : celles de sa ressource, lues à l'ajout).
+var revives_left := -1
+## Part de sa vie avec laquelle il apparaît (moins de 1 pour un ennemi qui se relève).
+var health_ratio := 1.0
 
 var _path_length := 0.0
 var _slow_factor := 1.0
@@ -76,6 +82,8 @@ var _frozen_left := 0.0
 var _frozen_vulnerability := 0.0
 ## Soldat (renforts) qui retient l'ennemi : il ne marche plus tant que le soldat tient.
 var holder: Node2D
+## Secondes pendant lesquelles l'ennemi est consacré : il ne peut plus se relever.
+var _consecrated_left := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -95,6 +103,13 @@ func _ready() -> void:
 	add_to_group(GROUP)
 	health.setup(data.max_health * health_multiplier, data.armor, data.max_shield * health_multiplier,
 		data.shield_regen)
+	if health_ratio < 1.0:
+		health.health = health.max_health * health_ratio
+		health.shield = health.max_shield * health_ratio
+		health.health_changed.emit(health.health, health.max_health)
+		health.shield_changed.emit(health.shield, health.max_shield)
+	if revives_left < 0:
+		revives_left = data.revive_count
 	health.depleted.connect(_on_health_depleted)
 	if data.max_shield > 0.0:
 		health.shield_changed.connect(func(_shield: float, _max: float) -> void: queue_redraw())
@@ -118,6 +133,10 @@ func _process(delta: float) -> void:
 			return
 	if _knockback_cooldown > 0.0:
 		_knockback_cooldown -= delta
+	if _consecrated_left > 0.0:
+		_consecrated_left -= delta
+		if _consecrated_left <= 0.0:
+			queue_redraw()
 	# Gelé : il ne marche plus, ne soigne plus et n'appelle plus de renforts.
 	if _frozen_left > 0.0:
 		_frozen_left -= delta
@@ -208,6 +227,8 @@ func hit(amount: float, stats: TowerData) -> float:
 	if stats.heal_block_duration > 0.0:
 		block_healing(stats.heal_block_duration)
 	damage_source_id = stats.source_tower_id
+	if stats.revive_block_duration > 0.0:
+		consecrate(stats.revive_block_duration)
 	var dealt := take_damage(amount, stats.armor_piercing, stats.shield_damage_multiplier)
 	damage_source_id = 0
 	apply_slow(stats.slow_factor, stats.slow_duration)
@@ -283,6 +304,24 @@ func block_healing(duration: float) -> void:
 	_heal_block_left = maxf(_heal_block_left, duration)
 
 
+## Consacre l'ennemi : il ne pourra pas se relever s'il meurt pendant la durée donnée.
+func consecrate(duration: float) -> void:
+	if not is_alive or duration <= 0.0:
+		return
+	if _consecrated_left <= 0.0:
+		queue_redraw()
+	_consecrated_left = maxf(_consecrated_left, duration)
+
+
+func is_consecrated() -> bool:
+	return _consecrated_left > 0.0
+
+
+## L'ennemi se relèvera s'il meurt maintenant.
+func can_revive() -> bool:
+	return revives_left > 0 and not is_consecrated()
+
+
 func can_be_healed() -> bool:
 	return _heal_block_left <= 0.0
 
@@ -355,6 +394,12 @@ func _draw() -> void:
 		draw_line(center + Vector2(-3, 0), center + Vector2(3, 0), Color.WHITE, 2.0)
 		draw_line(center + Vector2(0, -3), center + Vector2(0, 3), Color.WHITE, 2.0)
 		draw_line(center + Vector2(-4, 4), center + Vector2(4, -4), Color(0.2, 0, 0), 1.5)
+	if is_consecrated():
+		# Petite croix dorée : il ne se relèvera pas.
+		var mark := Vector2(-data.radius * 0.9, -data.radius * 0.9)
+		draw_circle(mark, 5.5, Color(0.25, 0.2, 0.05, 0.8))
+		draw_line(mark + Vector2(0, -4), mark + Vector2(0, 4), CONSECRATED_COLOR, 2.0)
+		draw_line(mark + Vector2(-3, -1.5), mark + Vector2(3, -1.5), CONSECRATED_COLOR, 2.0)
 	if data.texture:
 		# L'image déborde un peu du rayon de collision (ombre, pattes).
 		var size := data.radius * 2.6 * data.sprite_scale

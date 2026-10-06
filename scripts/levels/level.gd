@@ -85,6 +85,9 @@ var powers: Array[Power] = []
 var power_cooldowns: Array[float] = []
 
 var _wave_bonus_paid := -1
+## Ennemis tombés qui vont se relever (EnemyData.revive_count) : la vague n'est pas
+## finie tant qu'il en reste.
+var _pending_revives := 0
 ## Mode infini : record de vagues du niveau au lancement de la partie.
 var _endless_record_before := 0
 ## Bonus de l'arbre des améliorations, lus au lancement : ils ne changent pas en cours de partie.
@@ -565,6 +568,10 @@ func _on_enemy_healed(enemy: Enemy, amount: float) -> void:
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
+	# Un ennemi qui va se relever ne rapporte rien cette fois : seulement à sa vraie mort.
+	if enemy.can_revive():
+		_start_revive(enemy)
+		return
 	var reward := get_enemy_reward(enemy.data)
 	gold += reward
 	stats.gold_earned += reward
@@ -596,6 +603,27 @@ func _split(enemy: Enemy) -> void:
 			enemy.health_multiplier)
 
 
+## Un ennemi tombé se relèvera sur place après son délai, avec une partie de sa vie.
+func _start_revive(enemy: Enemy) -> void:
+	_pending_revives += 1
+	var effect := RiseEffect.new()
+	effect.radius = enemy.data.radius
+	effect.duration = enemy.data.revive_delay
+	effect.risen.connect(_revive.bind(enemy.data, enemy.path, enemy.progress, enemy.health_multiplier,
+		enemy.revives_left - 1))
+	stains.add_child(effect)
+	effect.global_position = enemy.global_position
+
+
+func _revive(data: EnemyData, path: Path2D, at_progress: float, health_multiplier: float, revives: int) -> void:
+	_pending_revives -= 1
+	if is_over:
+		return
+	var enemy := spawner.spawn(data, path, at_progress, health_multiplier, data.revive_health_ratio, revives)
+	Sound.play(&"enemy_split")
+	_show_floating_text("Se relève !", Color(0.75, 0.55, 1.0), enemy.global_position + Vector2(0, -data.radius - 14.0), 14)
+
+
 ## Renforts appelés par un ennemi (un boss) : ils apparaissent en file derrière lui.
 func _on_enemy_summoned(enemy: Enemy) -> void:
 	var data := enemy.data
@@ -615,8 +643,9 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 		_check_wave_cleared()
 
 
+## Ennemis en jeu, ceux qui vont se relever compris.
 func _alive_enemy_count() -> int:
-	return get_tree().get_node_count_in_group(Enemy.GROUP)
+	return get_tree().get_node_count_in_group(Enemy.GROUP) + _pending_revives
 
 
 func _check_wave_cleared() -> void:
