@@ -72,6 +72,7 @@ func _run() -> void:
 	await _test_pulse_tower()
 	await _test_lives_lost_feedback()
 	await _test_pause_and_game_speed()
+	await _test_shop_hotkeys()
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
 	await _test_wave_preview_and_early_call()
@@ -198,6 +199,7 @@ func _test_title_screen() -> void:
 	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	await _free(title)
+	await _test_title_demo()
 	var screen := await _spawn_world_select()
 	_check(screen.get_node("%Worlds").get_child_count() == 3, "une carte par monde")
 	var first: Button = screen.get_level_button(LEVEL_01.resource_path)
@@ -208,6 +210,43 @@ func _test_title_screen() -> void:
 		and screen.get_card(1).find_child("LockedHint", true, false) != null, "La Fonderie est verrouillée")
 	_check(screen.get_card(0).find_child("LockedHint", true, false) == null, "La Ruche est ouverte")
 	await _free(screen)
+
+
+## La partie simulée derrière l'écran titre se joue toute seule, en silence, sans
+## rien enregistrer ni mettre le jeu en pause à la fin.
+func _test_title_demo() -> void:
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var demo: TitleDemo = title.get_node("%Demo")
+	var level := demo.level
+	_check(level != null and level.is_demo and not level.hud.visible, "un niveau tourne derrière le menu, sans HUD")
+	_check(not title.get_node("%DemoLabel").text.is_empty(), "le niveau simulé est affiché")
+	_check(Sound.effects_muted, "la démo ne joue pas de sons")
+	var elapsed := 0.0
+	while elapsed < 10.0:
+		elapsed += await _step()
+	_check(level.towers.get_child_count() >= 3, "la démo pose des tours (%d)" % level.towers.get_child_count())
+	_check(level.spawner.current_wave == 0, "la démo lance la première vague")
+	# Carte vidée d'un coup : la vague suivante part peu après.
+	while level.spawner.is_spawning:
+		elapsed += await _step()
+	for enemy in get_nodes_in_group(Enemy.GROUP):
+		enemy.queue_free()
+	elapsed = 0.0
+	while elapsed < 3.0:
+		elapsed += await _step()
+	_check(level.spawner.current_wave == 1, "la démo lance la vague suivante une fois la carte vidée")
+	level._end_game(true)
+	await process_frame
+	_check(not paused and Perks.get_earned_stars() == 0, "la fin de la démo ne met pas en pause et n'enregistre rien")
+	var finished_path := level.scene_file_path
+	elapsed = 0.0
+	while demo.level == level and elapsed < 20.0:
+		elapsed += await _step()
+	_check(demo.level != level and demo.level.scene_file_path != finished_path, "un autre niveau prend la suite")
+	await _free(title)
+	_check(not Sound.effects_muted, "les sons reviennent en quittant l'écran titre")
 
 
 func _spawn_world_select() -> Control:
@@ -872,19 +911,12 @@ func _test_pause_and_game_speed() -> void:
 	_check(hud.speed_buttons.get_child(2).button_pressed and not hud.speed_buttons.get_child(0).button_pressed,
 		"le bouton x3 est enfoncé")
 	var key := InputEventKey.new()
-	key.physical_keycode = KEY_2
+	key.physical_keycode = KEY_V
 	key.pressed = true
 	hud._unhandled_key_input(key)
-	_check(Engine.time_scale == 2.0, "la touche 2 passe en x2")
-	# En AZERTY, la touche 1 sans Maj donne « & » : c'est sa position qui compte.
-	key.keycode = KEY_AMPERSAND
-	key.physical_keycode = KEY_1
+	_check(Engine.time_scale == 1.0, "V après x3 revient en x1")
 	hud._unhandled_key_input(key)
-	_check(Engine.time_scale == 1.0, "la touche 1 passe en x1 en AZERTY")
-	key.keycode = KEY_NONE
-	key.physical_keycode = KEY_KP_2
-	hud._unhandled_key_input(key)
-	_check(Engine.time_scale == 2.0, "le 2 du pavé numérique passe en x2")
+	_check(Engine.time_scale == 2.0 and hud.speed_buttons.get_child(1).button_pressed, "V passe à la vitesse suivante")
 
 	level.start_next_wave()
 	for i in 30:
@@ -925,6 +957,44 @@ func _test_pause_and_game_speed() -> void:
 	level = await _spawn_level(LEVEL_01)
 	_check(Engine.time_scale == 1.0, "un nouveau niveau repart en x1")
 	await _free(level)
+
+
+## Les touches 1 à 9 puis 0 choisissent les tours de la barre d'achat, dans l'ordre.
+func _test_shop_hotkeys() -> void:
+	print("Touches de la barre d'achat")
+	var level := await _spawn_level(LEVEL_01)
+	var hud := level.hud
+	level.gold = 10000
+	var slots := hud.tower_shop.get_children()
+	_check((slots[0] as TowerShopButton).hotkey == "1" and (slots[1] as TowerShopButton).hotkey == "2",
+		"le chiffre de la touche est affiché sur la case")
+	var key := InputEventKey.new()
+	key.pressed = true
+	# En AZERTY, la touche 3 sans Maj donne « " » : c'est sa position qui compte.
+	key.keycode = KEY_QUOTEDBL
+	key.physical_keycode = KEY_3
+	hud._unhandled_key_input(key)
+	_check(level.placer.selected_tower == level.tower_types[2] and (slots[2] as Button).button_pressed,
+		"la touche 3 choisit la troisième tour, même en AZERTY")
+	await _click(level, level.map.cell_to_world(Vector2i(2, 4)))
+	_check(level.map.get_occupant(Vector2i(2, 4)) is Tower, "un clic pose la tour choisie au clavier")
+	key.keycode = KEY_NONE
+	key.physical_keycode = KEY_KP_1
+	hud._unhandled_key_input(key)
+	_check(level.placer.selected_tower == level.tower_types[0], "le 1 du pavé numérique choisit la première tour")
+	hud._unhandled_key_input(key)
+	_check(level.placer.selected_tower == null and not (slots[0] as Button).button_pressed,
+		"la même touche repose la tour")
+	key.physical_keycode = KEY_0
+	hud._unhandled_key_input(key)
+	_check(level.placer.selected_tower == null, "une touche sans case ne fait rien")
+	level.gold = 0
+	key.physical_keycode = KEY_1
+	hud._unhandled_key_input(key)
+	_check(level.placer.selected_tower == null, "pas de tour trop chère choisie au clavier")
+	await _free(level)
+	_check(TowerShop.slot_for_key(KEY_0) == 9 and TowerShop.slot_for_key(KEY_KP_0) == 9
+		and TowerShop.slot_for_key(KEY_A) == -1, "0 choisit la dixième case")
 
 
 ## Nombre de coups reçus par un ennemi immobile pendant `game_seconds` secondes de jeu.

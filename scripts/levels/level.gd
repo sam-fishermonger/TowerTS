@@ -37,6 +37,9 @@ var is_over := false
 ## ne sont pas mis en pause), mais pas lancer de vague.
 var is_paused := false
 var game_speed := 1.0
+## Partie jouée toute seule derrière l'écran titre (TitleDemo), à régler avant l'ajout
+## à l'arbre : pas de HUD ni de commandes, rien d'enregistré, et pas de pause à la fin.
+var is_demo := false
 
 var _wave_bonus_paid := -1
 ## Bonus de l'arbre des améliorations, lus au lancement : ils ne changent pas en cours de partie.
@@ -65,6 +68,10 @@ func _ready() -> void:
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
 	hud.setup(level_name, tower_types, game_speeds)
+	if is_demo:
+		hud.visible = false
+		hud.process_mode = Node.PROCESS_MODE_DISABLED
+		placer.process_mode = Node.PROCESS_MODE_DISABLED
 	hud.pause_toggled.connect(func() -> void: set_paused(not is_paused))
 	hud.game_speed_selected.connect(set_game_speed)
 	hud.tower_selected.connect(select_tower)
@@ -313,6 +320,9 @@ func _end_game(victory: bool) -> void:
 	is_over = true
 	select_tower(null)
 	inspect_tower(null)
+	if is_demo:
+		game_over.emit(victory)
+		return
 	var stars := get_stars() if victory else 0
 	var new_record := victory and Progress.record_victory(scene_file_path, stars)
 	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record,

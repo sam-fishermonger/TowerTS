@@ -30,6 +30,10 @@ const VOICES := 16
 ## Mitrailleuse ou un Rayon ne saturent pas le mixage, même en x3.
 const MIN_REPEAT_DELAY := 0.06
 
+## Coupe les effets sonores (pas la musique) sans toucher au réglage du joueur :
+## la partie simulée derrière l'écran titre (TitleDemo) joue en silence.
+static var effects_muted := false
+
 var _voices: Array[AudioStreamPlayer] = []
 var _next_voice := 0
 ## Dernière lecture de chaque son, en millisecondes.
@@ -68,7 +72,7 @@ static func play(sound_name: StringName, volume_db := 0.0) -> void:
 ## Joue un son quelconque (par exemple celui d'une tour, défini dans ses données).
 static func play_stream(stream: AudioStream, volume_db := 0.0) -> void:
 	var player := get_player()
-	if player and stream and player._can_play():
+	if player and stream and not effects_muted and player._can_play():
 		player._play_stream(stream, volume_db)
 
 
