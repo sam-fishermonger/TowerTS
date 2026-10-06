@@ -20,8 +20,13 @@ func uses_target_mode() -> bool:
 	return false
 
 
+## L'onde ne vise personne : elle part dès qu'un ennemi est à portée, furtif caché compris.
+func _can_see(_enemy: Enemy) -> bool:
+	return true
+
+
 func _attack(_enemy: Enemy) -> void:
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range, stats):
 		enemy.hit(stats.damage, stats)
 	_pulse_time_left = PULSE_DURATION
 

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Aviateur : soldat à réacteur dorsal, deux tuyères qui crachent du feu, orienté vers la droite. -->
+  <path d="M10 18 L0 15 L4 20 Z M10 46 L0 49 L4 44 Z" fill="#ffb347"/>
+  <rect x="8" y="12" width="18" height="12" rx="4" fill="#1e1e1e"/>
+  <rect x="8" y="40" width="18" height="12" rx="4" fill="#1e1e1e"/>
+  <rect x="10" y="14" width="14" height="8" rx="3" fill="#8a8f98"/>
+  <rect x="10" y="42" width="14" height="8" rx="3" fill="#8a8f98"/>
+  <rect x="12" y="22" width="16" height="20" rx="3" fill="#3b3f46"/>
+  <rect x="38" y="30" width="22" height="4" rx="2" fill="#1e1e1e"/>
+  <ellipse cx="32" cy="32" rx="12" ry="18" fill="#28334a"/>
+  <ellipse cx="32" cy="32" rx="10" ry="16" fill="#4a6496"/>
+  <circle cx="34" cy="32" r="9.5" fill="#28334a"/>
+  <circle cx="34" cy="32" r="7.5" fill="#d8dde6"/>
+  <path d="M37 27 Q41 32 37 37" stroke="#3a7bd5" stroke-width="3" fill="none"/>
+</svg>

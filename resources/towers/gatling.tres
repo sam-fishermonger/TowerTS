@@ -26,6 +26,7 @@ description = "Mitraille à très haute cadence. Redoutable contre les nuées d'
 cost = 80
 scene = ExtResource("2_scene")
 attack_range = 120.0
+air_damage_multiplier = 1.5
 damage = 7.0
 fire_rate = 5.0
 color = Color(0.9, 0.55, 0.2, 1)

@@ -17,6 +17,7 @@ const SELL_RATIO := 0.7
 ## Tirs au plus par image : une tour très rapide (ou un jeu qui rame en x3) peut devoir
 ## tirer plusieurs fois dans la même image pour tenir sa cadence.
 const MAX_SHOTS_PER_FRAME := 4
+const DETECTION_COLOR := Color(0.75, 0.55, 1.0)
 
 ## Ennemi visé en priorité parmi ceux à portée.
 enum TargetMode { FIRST, LAST, STRONGEST, CLOSEST }
@@ -52,7 +53,17 @@ var _aim_angle := -PI / 2.0
 
 
 func _ready() -> void:
+	_refresh_stats()
+
+
+## Recalcule les statistiques (pose, amélioration, Bobine) et inscrit la tour parmi
+## celles qui détectent les furtifs si elle en est capable.
+func _refresh_stats() -> void:
 	stats = get_stats_at_level(level)
+	if stats.detects_stealth():
+		add_to_group(Enemy.DETECTOR_GROUP)
+	elif is_in_group(Enemy.DETECTOR_GROUP):
+		remove_from_group(Enemy.DETECTOR_GROUP)
 
 
 ## Statistiques de la tour à un niveau donné, avec le bonus de Bobine qu'elle reçoit.
@@ -70,7 +81,7 @@ func set_boost(damage_bonus: float, fire_rate_bonus: float) -> void:
 		return
 	boost_damage = damage_bonus
 	boost_fire_rate = fire_rate_bonus
-	stats = get_stats_at_level(level)
+	_refresh_stats()
 	queue_redraw()
 
 
@@ -145,7 +156,7 @@ func upgrade() -> bool:
 	if not can_upgrade():
 		return false
 	level += 1
-	stats = get_stats_at_level(level)
+	_refresh_stats()
 	queue_redraw()
 	upgraded.emit(self)
 	return true
@@ -155,7 +166,9 @@ func upgrade() -> bool:
 func find_target() -> Enemy:
 	var best: Enemy = null
 	var best_score := -INF
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range, stats):
+		if not _can_see(enemy):
+			continue
 		var score := _target_score(enemy)
 		if score > best_score:
 			best = enemy
@@ -187,6 +200,12 @@ func _mode_score(enemy: Enemy) -> float:
 			return -enemy.distance_to_end()
 
 
+## La tour peut prendre cet ennemi pour cible : pas un furtif caché. Les tours qui
+## frappent tout autour d'elles sans viser le redéfinissent.
+func _can_see(enemy: Enemy) -> bool:
+	return enemy.is_revealed()
+
+
 ## Attaque la cible. À redéfinir dans les sous-classes.
 func _attack(_enemy: Enemy) -> void:
 	pass
@@ -198,7 +217,7 @@ func _get_container() -> Node:
 
 ## Non typé : la cible peut avoir été libérée depuis la dernière image.
 func _is_valid_target(enemy: Variant) -> bool:
-	return is_instance_valid(enemy) and enemy.is_alive \
+	return is_instance_valid(enemy) and enemy.is_alive and enemy.can_be_hit_by(stats) and _can_see(enemy) \
 		and global_position.distance_to(enemy.global_position) <= stats.attack_range
 
 
@@ -206,7 +225,11 @@ func _draw() -> void:
 	if show_range:
 		draw_circle(Vector2.ZERO, stats.attack_range, Color(1, 1, 1, 0.08))
 		draw_arc(Vector2.ZERO, stats.attack_range, 0.0, TAU, 64, Color(1, 1, 1, 0.4), 1.5)
+		if stats.detects_stealth():
+			draw_dashed_circle(self, Vector2.ZERO, stats.detection_range, Color(DETECTION_COLOR, 0.7))
 	_draw_body()
+	if stats.detects_stealth():
+		draw_detection_eye(self, Vector2(SIZE / 2.0 - 7.0, -SIZE / 2.0 + 7.0))
 
 
 ## Socle et tourelle (images de TowerData, ou formes de remplacement), puis
@@ -225,6 +248,26 @@ func _draw_body() -> void:
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -4), center + Vector2(4, 0),
 			center + Vector2(0, 4), center + Vector2(-4, 0)]), Color(1, 0.85, 0.3))
 	_draw_effects()
+
+
+## Cercle en pointillés : la portée de détection des furtifs.
+static func draw_dashed_circle(canvas: CanvasItem, center: Vector2, radius: float, color: Color) -> void:
+	var dashes := maxi(int(radius / 9.0), 12)
+	for i in dashes:
+		var start := TAU * i / dashes
+		canvas.draw_arc(center, radius, start, start + TAU / dashes * 0.55, 4, color, 1.5)
+
+
+## Petit œil violet : la tour détecte les furtifs.
+static func draw_detection_eye(canvas: CanvasItem, center: Vector2) -> void:
+	canvas.draw_circle(center, 6.5, Color(0.12, 0.08, 0.2, 0.85))
+	var points := PackedVector2Array()
+	for i in 9:
+		points.append(center + Vector2(lerpf(-5.0, 5.0, i / 8.0), -sin(PI * i / 8.0) * 3.2))
+	for i in range(7, 0, -1):
+		points.append(center + Vector2(lerpf(-5.0, 5.0, i / 8.0), sin(PI * i / 8.0) * 3.2))
+	canvas.draw_colored_polygon(points, DETECTION_COLOR)
+	canvas.draw_circle(center, 1.8, Color(0.12, 0.08, 0.2))
 
 
 ## Dessine le socle et la tourelle d'un type de tour (qui doit avoir une image) sur

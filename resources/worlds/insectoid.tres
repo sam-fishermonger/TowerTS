@@ -8,6 +8,8 @@
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="e3_ravageur"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/couveuse.tres" id="e4_couveuse"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/reine.tres" id="b0_reine"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/frelon.tres" id="f0_frelon"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/mante.tres" id="f1_mante"]
 [ext_resource type="TileSet" path="res://resources/tilesets/insectoid.tres" id="t_tileset"]
 
 [resource]
@@ -15,7 +17,7 @@ script = ExtResource("1_world")
 display_name = "La Ruche"
 description = "Insectoïdes et xénomorphes : des essaims rapides, des carapaces et des couveuses qui éclatent en larves."
 color = Color(0.62, 0.42, 0.75, 1)
-enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_larve"), ExtResource("e1_rodeur"), ExtResource("e2_scarabee"), ExtResource("e3_ravageur"), ExtResource("e4_couveuse")])
+enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_larve"), ExtResource("e1_rodeur"), ExtResource("e2_scarabee"), ExtResource("e3_ravageur"), ExtResource("e4_couveuse"), ExtResource("f0_frelon"), ExtResource("f1_mante")])
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_reine")])
 levels = Array[String](["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn", "res://scenes/levels/level_03.tscn", "res://scenes/levels/level_04.tscn", "res://scenes/levels/level_05.tscn", "res://scenes/levels/level_06.tscn"])
 tileset = ExtResource("t_tileset")
