@@ -19,6 +19,11 @@ const TOWER_CHOICE_SETTING := "tower_choice"
 ## Méta du moteur posée juste avant d'ouvrir le défi du jour (voir open_challenge()) :
 ## le jour du défi (« 2026-10-06 »), lu et effacé au lancement du niveau.
 const CHALLENGE_META := &"level_challenge"
+## Méta du moteur posée juste avant d'ouvrir un niveau de l'éditeur (voir open_custom()) :
+## son dictionnaire (CustomLevel), lu et effacé quand la scène de niveau vide entre dans l'arbre.
+const CUSTOM_META := &"level_custom"
+const EMPTY_LEVEL := "res://scenes/levels/level.tscn"
+const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 
 @export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
@@ -75,6 +80,9 @@ var is_choosing_towers := false
 var challenge: DailyChallenge
 ## Défi du jour : points marqués jusqu'ici (voir DailyChallenge).
 var score := 0
+## Niveau fait dans l'éditeur (vide sinon, voir CustomLevel) : il ne compte ni pour la
+## progression ni pour les succès, et la partie finie ramène à l'éditeur.
+var custom_level: Dictionary = {}
 ## Statistiques de la partie, affichées sur l'écran de fin.
 var stats := LevelStats.new()
 ## Succès débloqués pendant la partie (identifiants, voir Achievements).
@@ -123,6 +131,27 @@ static func open_challenge(tree: SceneTree, daily: DailyChallenge) -> void:
 	tree.change_scene_to_file(daily.level_path)
 
 
+## Ouvre un niveau de l'éditeur (dictionnaire de CustomLevel) dans la scène de niveau vide.
+static func open_custom(tree: SceneTree, data: Dictionary) -> void:
+	Engine.set_meta(CUSTOM_META, data.duplicate(true))
+	tree.change_scene_to_file(EMPTY_LEVEL)
+
+
+func _enter_tree() -> void:
+	# La carte et les vagues d'un niveau de l'éditeur sont posées avant que la carte se
+	# prépare (elle lit ses chemins dans son _ready, appelé avant celui du niveau).
+	if Engine.has_meta(CUSTOM_META) and custom_level.is_empty() and not is_node_ready():
+		custom_level = Engine.get_meta(CUSTOM_META)
+		Engine.remove_meta(CUSTOM_META)
+		CustomLevel.apply(self, custom_level)
+
+
+## Les succès comptent dans les parties de la campagne, du mode infini et du défi, mais
+## pas dans la partie de l'écran titre ni dans les niveaux de l'éditeur.
+func counts_achievements() -> bool:
+	return not is_demo and custom_level.is_empty()
+
+
 func _ready() -> void:
 	if Engine.has_meta(ENDLESS_META):
 		is_endless = Engine.get_meta(ENDLESS_META)
@@ -169,6 +198,8 @@ func _ready() -> void:
 	if challenge:
 		title = "Défi du jour  ·  %s" % level_name
 	hud.setup(title, tower_types, game_speeds)
+	if not custom_level.is_empty():
+		hud.set_menu_button_text("Retour à l'éditeur")
 	if is_choosing_towers:
 		hud.show_tower_picker(types, tower_limit, get_default_tower_choice(), Difficulty.NAMES[difficulty])
 		hud.towers_chosen.connect(choose_towers)
@@ -228,7 +259,7 @@ func _exit_tree() -> void:
 
 ## Niveau proposé après une victoire ("" = dernier niveau).
 func get_next_level() -> String:
-	return campaign.get_next(scene_file_path) if campaign and not challenge else ""
+	return campaign.get_next(scene_file_path) if campaign and not challenge and custom_level.is_empty() else ""
 
 
 func has_next_level() -> bool:
@@ -576,7 +607,7 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	gold += reward
 	stats.gold_earned += reward
 	stats.on_kill(enemy.damage_source_id, enemy.data)
-	if enemy.data.is_boss and not is_demo:
+	if enemy.data.is_boss and counts_achievements():
 		_announce_achievements(Achievements.on_boss_killed(enemy.data, get_towers().size()))
 	if challenge:
 		add_score(reward * DailyChallenge.POINTS_PER_GOLD)
@@ -694,6 +725,8 @@ func _end_game(victory: bool) -> void:
 		var best_before := Progress.get_daily_score(challenge.date_key)
 		var new_record := Progress.record_daily(challenge.date_key, score)
 		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0)
+	elif not custom_level.is_empty():
+		hud.show_end_screen(victory, false, get_stars() if victory else 0)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
@@ -717,7 +750,7 @@ func _end_game(victory: bool) -> void:
 
 ## Ajoute les monstres détruits depuis le dernier appel aux compteurs des succès.
 func _count_kills() -> void:
-	if is_demo:
+	if not counts_achievements():
 		return
 	var kills := stats.kills - _counted_kills
 	var elite_kills := stats.elite_kills - _counted_elite_kills
@@ -729,7 +762,7 @@ func _count_kills() -> void:
 ## Débloque des succès (sauf dans la partie de l'écran titre) et annonce ceux qui
 ## ne l'étaient pas encore.
 func _unlock_achievements(ids: Array[String]) -> void:
-	if not is_demo:
+	if counts_achievements():
 		_announce_achievements(Achievements.unlock_all(ids))
 
 
@@ -749,6 +782,8 @@ func _on_restart_requested() -> void:
 		Engine.set_meta(ENDLESS_META, true)
 	if challenge:
 		Engine.set_meta(CHALLENGE_META, challenge.date_key)
+	if not custom_level.is_empty():
+		Engine.set_meta(CUSTOM_META, custom_level)
 	get_tree().reload_current_scene()
 
 
@@ -759,7 +794,7 @@ func _on_next_level_requested() -> void:
 
 func _on_menu_requested() -> void:
 	get_tree().paused = false
-	get_tree().change_scene_to_file(TITLE_SCREEN)
+	get_tree().change_scene_to_file(TITLE_SCREEN if custom_level.is_empty() else LEVEL_EDITOR)
 
 
 # --- Affichage --------------------------------------------------------------

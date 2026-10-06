@@ -393,6 +393,11 @@ func play_damage_effect(lives_lost: int) -> void:
 ## si c'est le meilleur résultat obtenu sur ce niveau.
 ## `unlocked_world` : nom du monde qu'ouvre cette victoire (le niveau suivant est alors
 ## le premier d'un nouveau monde), "" sinon.
+## Texte du bouton de l'écran de fin qui quitte la partie (« Menu principal »).
+func set_menu_button_text(text: String) -> void:
+	%MenuButton.text = text
+
+
 func show_end_screen(victory: bool, can_continue := false, stars := 0, new_record := false,
 		unlocked_world := "") -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"

@@ -129,6 +129,7 @@ func _run() -> void:
 	await _test_elites()
 	await _test_bosses()
 	await _test_necropolis()
+	await _test_level_editor()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -241,6 +242,7 @@ func _test_title_screen() -> void:
 	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%LexiconButton").text == "Lexique", "le bouton Lexique existe")
 	_check(title.get_node("%DailyButton").text == "Défi du jour", "le bouton Défi du jour existe")
+	_check(title.get_node("%EditorButton").text == "Éditeur de niveau", "le bouton Éditeur de niveau existe")
 	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	await _free(title)
@@ -3198,3 +3200,99 @@ func _test_world_levels_balance() -> void:
 		print("%s : gagnable avec l'or gagné, mais pas avec une petite défense" % level.level_name)
 		level.free()
 		await _check_build_order_balance(scene, WORLD_BUILD_ORDERS[path])
+
+
+func _test_level_editor() -> void:
+	print("Éditeur de niveau")
+	# Tracé du chemin.
+	_check(CustomLevel.extend_path([], Vector2i(5, 5)).is_empty(), "le chemin ne part pas du milieu de la carte")
+	var path := CustomLevel.extend_path([], Vector2i(0, 3))
+	path = CustomLevel.extend_path(path, Vector2i(1, 3))
+	path = CustomLevel.extend_path(path, Vector2i(4, 3))
+	_check(path == [Vector2i(0, 3), Vector2i(4, 3)], "une case dans le prolongement rallonge la ligne droite (%s)" % [path])
+	path = CustomLevel.extend_path(path, Vector2i(7, 6))
+	_check(path == [Vector2i(0, 3), Vector2i(7, 3), Vector2i(7, 6)], "une case pas alignée passe par un coin (%s)" % [path])
+	_check(CustomLevel.expand_path(path).size() == 11, "le chemin traverse 11 cases")
+	_check(CustomLevel.extend_path(path, Vector2i(7, 1)) == path, "le chemin ne revient pas sur lui-même")
+	_check(CustomLevel.extend_path(path, Vector2i(2, 3)) == [Vector2i(0, 3), Vector2i(2, 3)],
+		"cliquer sur le chemin le coupe là")
+	var points := CustomLevel.get_path_points(path)
+	_check(points[0] == Vector2(-32, 288) and points.size() == 4, "les ennemis arrivent du bord de l'écran (%s)" % [points])
+	var edge_path := CustomLevel.extend_path(CustomLevel.extend_path([Vector2i(5, 0)], Vector2i(5, 9)), Vector2i(19, 9))
+	_check(CustomLevel.get_path_points(edge_path)[-1].x > CustomLevel.COLUMNS * CustomLevel.CELL_SIZE,
+		"un chemin qui finit au bord sort de l'écran")
+
+	# Vérification.
+	var data := CustomLevel.create_default()
+	_check(CustomLevel.validate(data).is_empty(), "le niveau par défaut est jouable")
+	var broken := data.duplicate(true)
+	broken.path = [Vector2i(0, 2)]
+	_check(not CustomLevel.validate(broken).is_empty(), "un chemin d'une case ne se joue pas")
+	broken = data.duplicate(true)
+	broken.waves = []
+	_check(CustomLevel.validate(broken) == "Ajoutez au moins une vague.", "un niveau sans vague ne se joue pas")
+	var waves := CustomLevel.build_waves(data)
+	_check(waves.size() == 3 and waves[2].groups[1].enemy.is_boss and waves[2].groups[1].count == 1
+		and waves[1].groups[1].start_delay == CustomLevel.GROUP_DELAY and waves[2].bonus_gold == 0,
+		"les vagues se construisent (un seul boss, groupes décalés, pas de bonus à la dernière)")
+
+	# L'écran de l'éditeur.
+	Progress.set_setting(CustomLevel.SETTING, {})
+	var editor: LevelEditor = load("res://scenes/ui/level_editor.tscn").instantiate()
+	root.add_child(editor)
+	await process_frame
+	_check(editor.data.path == data.path and not editor.play_button.disabled, "l'éditeur ouvre le niveau par défaut")
+	editor._on_clear_pressed()
+	_check(editor.data.path.is_empty() and editor.play_button.disabled
+		and editor.status_label.text.begins_with("Tracez le chemin"), "sans chemin, Jouer est grisé et le bas de l'écran dit pourquoi")
+	editor.click_cell(Vector2i(0, 5))
+	editor.drag_cell(Vector2i(1, 5))
+	editor.drag_cell(Vector2i(2, 5))
+	editor.click_cell(Vector2i(10, 2))
+	editor.click_cell(Vector2i(19, 2))
+	_check(editor.data.path == [Vector2i(0, 5), Vector2i(10, 5), Vector2i(10, 2), Vector2i(19, 2)],
+		"le chemin se trace en cliquant et en glissant (%s)" % [editor.data.path])
+	editor.undo_path()
+	_check(editor.data.path[-1] == Vector2i(18, 2), "clic droit : le chemin recule d'une case")
+	editor.set_tool(LevelEditor.EditTool.ROCKS)
+	editor.click_cell(Vector2i(4, 4))
+	editor.click_cell(Vector2i(4, 5))
+	_check(editor.data.rocks.has(Vector2i(4, 4)) and not editor.data.rocks.has(Vector2i(4, 5)),
+		"un rocher se pose à côté du chemin, pas dessus")
+	var wave_count: int = editor.data.waves.size()
+	editor.add_wave()
+	_check(editor.data.waves.size() == wave_count + 1
+		and editor.data.waves[-1].groups[0].count > editor.data.waves[-2].groups[0].count,
+		"une vague ajoutée reprend la précédente, avec plus de monstres")
+	editor.add_group(0)
+	editor.remove_wave(editor.data.waves.size() - 1)
+	_check(editor.data.waves.size() == wave_count and editor.data.waves[0].groups.size() == 2, "groupes et vagues s'ajoutent et s'enlèvent")
+	editor.data.gold = 5000
+	await _free(editor)
+	var saved: Dictionary = CustomLevel.load_saved()
+	_check(saved.path[0] == Vector2i(0, 5) and saved.rocks.has(Vector2i(4, 4)), "le niveau en cours est enregistré")
+
+	# Jouer le niveau.
+	var stars_before := Progress.get_total_stars(Level.EMPTY_LEVEL)
+	var achievements_before := Achievements.get_unlocked_count()
+	data.gold = 2000
+	Engine.set_meta(Level.CUSTOM_META, data)
+	var level := await _spawn_level(load(Level.EMPTY_LEVEL))
+	_check(level.custom_level == data and not Engine.has_meta(Level.CUSTOM_META), "le niveau lit le niveau de l'éditeur")
+	_check(level.map.paths.size() == 1 and level.map.is_cell_on_path(Vector2i(8, 5))
+		and level.map.is_cell_blocked(Vector2i(3, 5)) and level.spawner.get_wave_count() == 3,
+		"la carte a son chemin, ses rochers et ses vagues")
+	_check(level.gold == level.starting_gold and level.starting_gold >= 2000 and level.level_name == CustomLevel.LEVEL_NAME,
+		"or de départ et nom du niveau")
+	_check(level.map.tileset != null and not level.has_next_level(), "tuiles du monde choisi, pas de niveau suivant")
+	_check(level.hud.get_node("%MenuButton").text == "Retour à l'éditeur", "la fin de partie ramène à l'éditeur")
+	if level.is_choosing_towers:
+		level.choose_towers(level.available_tower_types.slice(0, level.tower_limit))
+	_place_defense(level, [Vector2i(4, 1), Vector2i(4, 3), Vector2i(7, 4), Vector2i(9, 4), Vector2i(9, 6),
+		Vector2i(11, 6), Vector2i(13, 6), Vector2i(14, 5), Vector2i(16, 4), Vector2i(16, 2)], [CANNON])
+	await _play_until_over(level, 400.0)
+	_check(level.is_over and level.lives > 0, "le niveau se joue jusqu'à la victoire")
+	_check(Progress.get_total_stars(Level.EMPTY_LEVEL) == stars_before
+		and Achievements.get_unlocked_count() == achievements_before,
+		"ni étoiles ni succès dans un niveau de l'éditeur")
+	await _free(level)
