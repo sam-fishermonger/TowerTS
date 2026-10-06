@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Garde : policier en tenue anti-émeute derrière un grand bouclier, orienté vers la droite. -->
+  <ellipse cx="30" cy="35" rx="24" ry="25" fill="#000" opacity="0.2"/>
+  <ellipse cx="22" cy="32" rx="14" ry="22" fill="#1a2238"/>
+  <ellipse cx="22" cy="32" rx="12" ry="20" fill="#3d4f8a"/>
+  <circle cx="26" cy="32" r="10" fill="#1a2238"/>
+  <circle cx="26" cy="32" r="8" fill="#2d3a66"/>
+  <rect x="24" y="29" width="8" height="6" rx="2" fill="#9fc3ff" opacity="0.7"/>
+  <path d="M42 4 Q54 32 42 60" stroke="#1a2238" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M42 4 Q54 32 42 60" stroke="#a9c4e8" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.9"/>
+  <path d="M46 14 Q51 24 50 32" stroke="#fff" stroke-width="2" fill="none" opacity="0.6"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Rôdeur : xénomorphe fin et rapide, longue tête bombée, orienté vers la droite. -->
+  <g stroke="#1d1026" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M30 24 L22 8 L14 6M38 24 L42 9 L48 5M30 40 L22 56 L14 58M38 40 L42 55 L48 59"/>
+    <path d="M14 32 Q6 26 2 32"/>
+  </g>
+  <ellipse cx="32" cy="34" rx="24" ry="11" fill="#000" opacity="0.2"/>
+  <ellipse cx="26" cy="32" rx="14" ry="9" fill="#1d1026"/>
+  <ellipse cx="26" cy="32" rx="12" ry="7" fill="#6a3c8c"/>
+  <path d="M16 32 H36" stroke="#2e1a3d" stroke-width="2"/>
+  <ellipse cx="48" cy="32" rx="14" ry="8" fill="#1d1026"/>
+  <ellipse cx="48" cy="32" rx="12" ry="6" fill="#4b2a63"/>
+  <ellipse cx="45" cy="29.5" rx="7" ry="2" fill="#c9a6e6" opacity="0.6"/>
+  <path d="M58 30 L62 32 L58 34" fill="#e9e0f0"/>
+</svg>

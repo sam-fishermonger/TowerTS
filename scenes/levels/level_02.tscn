@@ -9,10 +9,10 @@
 [ext_resource type="Resource" path="res://resources/towers/frost.tres" id="7_frost"]
 [ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="8_wave_data"]
 [ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="9_spawn_group"]
-[ext_resource type="Resource" path="res://resources/enemies/slime.tres" id="10_slime"]
-[ext_resource type="Resource" path="res://resources/enemies/runner.tres" id="11_runner"]
-[ext_resource type="Resource" path="res://resources/enemies/tank.tres" id="12_tank"]
-[ext_resource type="Resource" path="res://resources/enemies/shell.tres" id="13_shell"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="10_slime"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/rodeur.tres" id="11_runner"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="12_tank"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="13_shell"]
 
 [sub_resource type="Curve2D" id="Curve2D_north"]
 _data = {
@@ -179,7 +179,7 @@ groups = Array[ExtResource("9_spawn_group")]([SubResource("Group_w6_1"), SubReso
 bonus_gold = 0
 
 [node name="Level02" instance=ExtResource("1_level")]
-level_name = "Niveau 2"
+level_name = "Niveau 1-2"
 starting_gold = 220
 starting_lives = 20
 tower_types = Array[ExtResource("2_tower_data")]([ExtResource("3_cannon"), ExtResource("4_gatling"), ExtResource("5_sniper"), ExtResource("6_mortar"), ExtResource("7_frost")])

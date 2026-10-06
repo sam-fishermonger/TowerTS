@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Éclaireur : coureur léger à capuche, penché vers l'avant, orienté vers la droite. -->
+  <ellipse cx="30" cy="35" rx="22" ry="18" fill="#000" opacity="0.2"/>
+  <path d="M16 20 L6 12M16 44 L28 56" stroke="#5c4320" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="24" cy="32" rx="11" ry="17" fill="#5c4320"/>
+  <ellipse cx="24" cy="32" rx="9" ry="15" fill="#c9a266"/>
+  <path d="M40 22 L48 16M40 42 L46 48" stroke="#5c4320" stroke-width="4" stroke-linecap="round"/>
+  <path d="M26 26 Q44 24 46 32 Q44 40 26 38 Z" fill="#5c4320"/>
+  <circle cx="36" cy="32" r="8" fill="#8a6a36"/>
+  <circle cx="38" cy="32" r="5" fill="#d9a77a"/>
+  <path d="M42 30 H44" stroke="#3b2a12" stroke-width="1.5"/>
+</svg>

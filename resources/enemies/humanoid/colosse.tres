@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/humanoid/colosse.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Colosse"
+max_health = 450.0
+armor = 3.0
+speed = 36.0
+reward = 35
+damage = 4
+color = Color(0.4, 0.34, 0.34, 1)
+radius = 20.0
+texture = ExtResource("9_texture")

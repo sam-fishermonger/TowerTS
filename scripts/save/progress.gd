@@ -2,7 +2,8 @@ class_name Progress
 extends RefCounted
 ## Progression du joueur, enregistrée sur le disque : étoiles obtenues sur chaque
 ## niveau (0 = pas encore gagné), améliorations permanentes (voir Perks) et
-## réglages. Un niveau est débloqué quand le précédent de la campagne a été gagné.
+## réglages. Un niveau est débloqué quand le précédent de la campagne a été gagné :
+## le premier niveau d'un monde s'ouvre en gagnant le dernier du monde précédent.
 
 const DEFAULT_SAVE_PATH := "user://progress.cfg"
 ## Méta du moteur qui remplace le fichier de sauvegarde : les tests l'utilisent pour ne
@@ -47,12 +48,26 @@ static func is_unlocked(campaign: Campaign, index: int) -> bool:
 	return index == 0 or (index > 0 and index < campaign.size() and get_stars(campaign.levels[index - 1]) > 0)
 
 
+## Un monde est débloqué quand son premier niveau l'est.
+static func is_world_unlocked(campaign: Campaign, world_index: int) -> bool:
+	return is_unlocked(campaign, campaign.first_level_index(world_index))
+
+
+## Étoiles obtenues sur les niveaux d'un monde.
+static func get_world_stars(world: World) -> int:
+	var total := 0
+	for path in world.levels:
+		total += get_stars(path)
+	return total
+
+
 ## Premier niveau débloqué pas encore gagné (ou le dernier si tout est gagné).
 static func get_next_to_play(campaign: Campaign) -> String:
-	for i in campaign.size():
-		if is_unlocked(campaign, i) and get_stars(campaign.levels[i]) == 0:
-			return campaign.levels[i]
-	return campaign.levels[campaign.size() - 1]
+	var levels := campaign.levels
+	for i in levels.size():
+		if is_unlocked(campaign, i) and get_stars(levels[i]) == 0:
+			return levels[i]
+	return levels[levels.size() - 1]
 
 
 static func get_setting(key: String, default: Variant) -> Variant:

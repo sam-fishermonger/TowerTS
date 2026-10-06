@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/humanoid/medecin.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Médecin"
+max_health = 90.0
+speed = 60.0
+reward = 15
+damage = 1
+color = Color(0.92, 0.92, 0.92, 1)
+radius = 13.0
+texture = ExtResource("9_texture")
+heal_amount = 14.0
+heal_radius = 120.0
+heal_interval = 1.5

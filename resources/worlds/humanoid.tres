@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="World" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/world.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="2_enemy_data"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/soldat.tres" id="e0_soldat"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/eclaireur.tres" id="e1_eclaireur"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/garde.tres" id="e2_garde"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/medecin.tres" id="e3_medecin"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/transport.tres" id="e4_transport"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/colosse.tres" id="e5_colosse"]
+
+[resource]
+script = ExtResource("1_world")
+display_name = "La Cité"
+description = "Humanoïdes : des soldats, des gardes à bouclier, et des médecins qui soignent leurs alliés."
+color = Color(0.95, 0.7, 0.35, 1)
+enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_soldat"), ExtResource("e1_eclaireur"), ExtResource("e2_garde"), ExtResource("e3_medecin"), ExtResource("e4_transport"), ExtResource("e5_colosse")])
+levels = Array[String](["res://scenes/levels/humanoid_01.tscn", "res://scenes/levels/humanoid_02.tscn", "res://scenes/levels/humanoid_03.tscn", "res://scenes/levels/humanoid_04.tscn", "res://scenes/levels/humanoid_05.tscn", "res://scenes/levels/humanoid_06.tscn"])
