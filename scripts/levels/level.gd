@@ -31,6 +31,10 @@ const CHALLENGE_META := &"level_challenge"
 @export_range(0.0, 1.0) var early_call_bonus_ratio := 0.5
 ## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
 @export var game_speeds: Array[float] = [1.0, 2.0, 3.0]
+## Intérêts : chaque fois que la carte est vidée, l'or gardé rapporte cette part en plus
+## du bonus de vague, sans dépasser `interest_cap`.
+@export_range(0.0, 0.5) var interest_rate := 0.05
+@export var interest_cap := 25
 
 var gold := 0:
 	set(value):
@@ -46,6 +50,8 @@ var is_over := false
 ## ne sont pas mis en pause), mais pas lancer de vague.
 var is_paused := false
 var game_speed := 1.0
+## Pause choisie par le joueur avant d'ouvrir le menu Options.
+var _paused_before_options := false
 ## Partie jouée toute seule derrière l'écran titre (TitleDemo), à régler avant l'ajout
 ## à l'arbre : pas de HUD ni de commandes, rien d'enregistré, et pas de pause à la fin.
 var is_demo := false
@@ -69,16 +75,29 @@ var is_choosing_towers := false
 var challenge: DailyChallenge
 ## Défi du jour : points marqués jusqu'ici (voir DailyChallenge).
 var score := 0
+## Statistiques de la partie, affichées sur l'écran de fin.
+var stats := LevelStats.new()
+## Succès débloqués pendant la partie (identifiants, voir Achievements).
+var unlocked_achievements: Array[String] = []
+## Pouvoirs actifs débloqués dans l'arbre des améliorations (aucun pour la partie de
+## l'écran titre), et les secondes de recharge restantes de chacun (0 = prêt).
+var powers: Array[Power] = []
+var power_cooldowns: Array[float] = []
 
 var _wave_bonus_paid := -1
 ## Mode infini : record de vagues du niveau au lancement de la partie.
 var _endless_record_before := 0
 ## Bonus de l'arbre des améliorations, lus au lancement : ils ne changent pas en cours de partie.
 var _bonuses: Perk
+## Monstres et élites détruits déjà ajoutés aux compteurs des succès.
+var _counted_kills := 0
+var _counted_elite_kills := 0
 
 @onready var map: GameMap = $Map
 @onready var stains: Node2D = $Stains
 @onready var enemies: Node2D = $Enemies
+## Soldats des renforts.
+@onready var allies: Node2D = $Allies
 @onready var towers: Node2D = $Towers
 @onready var projectiles: Node2D = $Projectiles
 ## Textes flottants (dégâts, or gagné), dessinés au-dessus des ennemis et des tirs.
@@ -157,6 +176,7 @@ func _ready() -> void:
 		placer.process_mode = Node.PROCESS_MODE_DISABLED
 	hud.pause_toggled.connect(func() -> void: set_paused(not is_paused))
 	hud.game_speed_selected.connect(set_game_speed)
+	hud.options_toggled.connect(_on_options_toggled)
 	hud.tower_selected.connect(select_tower)
 	hud.next_wave_requested.connect(start_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
@@ -165,6 +185,8 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
 	hud.menu_requested.connect(_on_menu_requested)
+	hud.power_selected.connect(select_power)
+	placer.power_selection_changed.connect(hud.set_selected_power)
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
 	spawner.wave_started.connect(func(_index: int) -> void: _refresh_hud())
 	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
@@ -173,13 +195,24 @@ func _ready() -> void:
 	_bonuses = Perks.get_bonuses()
 	starting_gold += _bonuses.starting_gold_bonus
 	starting_lives += _bonuses.lives_bonus
+	if not is_demo:
+		for power in Perks.get_powers():
+			powers.append(power)
+	power_cooldowns.resize(powers.size())
+	power_cooldowns.fill(0.0)
+	hud.setup_powers(powers)
+	hud.set_interest_rules(interest_rate, interest_cap)
 	if challenge:
 		starting_gold = challenge.get_starting_gold(starting_gold)
 		starting_lives = challenge.get_starting_lives(starting_lives)
 		hud.show_challenge_rules(challenge.describe_rules())
 	gold = starting_gold
 	lives = starting_lives
-	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+	# La démo de l'écran titre garde sa vitesse ; une partie démarre à celle des options.
+	if is_demo:
+		set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+	else:
+		set_game_speed(GameSettings.pick_start_speed(game_speeds))
 	Sound.play_music()
 
 
@@ -283,6 +316,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	tower.cell = cell
 	map.occupy(cell, tower)
 	gold -= data.get_cost()
+	stats.on_tower_placed(tower)
 	Sound.play(&"build")
 	refresh_boosts()
 	return tower
@@ -300,6 +334,7 @@ func upgrade_tower(tower: Tower) -> bool:
 	var cost := tower.get_upgrade_cost()
 	tower.upgrade()
 	gold -= cost
+	stats.on_tower_upgraded(tower, cost)
 	Sound.play(&"upgrade")
 	refresh_boosts()
 	return true
@@ -314,6 +349,7 @@ func sell_tower(tower: Tower) -> int:
 	if placer.inspected_tower == tower:
 		inspect_tower(null)
 	map.release(tower.cell)
+	stats.on_tower_sold(tower, value)
 	_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
 	tower.despawn()
 	gold += value
@@ -329,6 +365,78 @@ func get_towers() -> Array[Tower]:
 		var tower := node as Tower
 		if tower and tower.is_alive:
 			result.append(tower)
+	return result
+
+
+## Or rapporté par les intérêts si la carte était vidée maintenant.
+func get_interest() -> int:
+	return mini(floori(maxi(gold, 0) * interest_rate), interest_cap)
+
+
+# --- Pouvoirs ---------------------------------------------------------------
+
+func get_power_cooldown(power: Power) -> float:
+	var index := powers.find(power)
+	return power_cooldowns[index] if index >= 0 else 0.0
+
+
+func can_use_power(power: Power) -> bool:
+	return power != null and powers.has(power) and not is_over and not is_paused \
+		and not is_choosing_towers and get_power_cooldown(power) <= 0.0
+
+
+## Bouton ou touche d'un pouvoir : un pouvoir qui se lance sur la carte attend le clic
+## du joueur (le choisir à nouveau l'annule), le Gel part tout de suite.
+func select_power(power: Power) -> void:
+	if placer.selected_power == power or not can_use_power(power):
+		placer.select_power(null)
+	elif power.is_targeted():
+		placer.select_power(power)
+	else:
+		use_power(power)
+
+
+## Lance le pouvoir (sur le point `at` de la carte s'il se lance sur la carte) et le met
+## en recharge. Renvoie true s'il a été lancé.
+func use_power(power: Power, at := Vector2.ZERO) -> bool:
+	if not can_use_power(power):
+		return false
+	match power.kind:
+		Power.Kind.METEORS:
+			var strike := MeteorStrike.new()
+			strike.power = power
+			effects.add_child(strike)
+			strike.global_position = at
+		Power.Kind.FREEZE:
+			for node in get_tree().get_nodes_in_group(Enemy.GROUP):
+				(node as Enemy).freeze(power.duration, power.vulnerability)
+			var wave := FreezeWave.new()
+			wave.area = hud.get_play_area()
+			wave.color = power.color
+			effects.add_child(wave)
+			Sound.play(&"pulse_frost")
+		Power.Kind.REINFORCEMENTS:
+			# Les soldats se rangent en cercle sur le chemin, au plus près du point visé.
+			var center := map.get_closest_path_point(at)
+			for i in power.count:
+				var soldier := Soldier.new()
+				soldier.power = power
+				allies.add_child(soldier)
+				var spread := 0.0 if power.count == 1 else 16.0
+				soldier.global_position = center + Vector2.from_angle(TAU * i / power.count - PI / 2.0) * spread
+			Sound.play(&"build")
+	power_cooldowns[powers.find(power)] = power.cooldown
+	if placer.selected_power == power:
+		placer.select_power(null)
+	return true
+
+
+## Soldats des renforts encore sur le terrain.
+func get_soldiers() -> Array[Soldier]:
+	var result: Array[Soldier] = []
+	for node in allies.get_children():
+		if node is Soldier and node.is_alive:
+			result.append(node)
 	return result
 
 
@@ -374,6 +482,15 @@ func set_paused(value: bool) -> void:
 	_refresh_wave_ui()
 
 
+## Le menu Options met la partie en pause ; à sa fermeture, elle reprend si elle tournait.
+func _on_options_toggled(open: bool) -> void:
+	if open:
+		_paused_before_options = is_paused
+		set_paused(true)
+	elif not _paused_before_options:
+		set_paused(false)
+
+
 func set_game_speed(speed: float) -> void:
 	if is_over:
 		return
@@ -398,6 +515,10 @@ func start_next_wave() -> void:
 	Sound.play(&"wave_start")
 	if early_bonus > 0:
 		gold += early_bonus
+		stats.gold_earned += early_bonus
+		stats.early_calls += 1
+		if stats.early_calls >= Achievements.IMPATIENT_EARLY_CALLS:
+			_unlock_achievements(["impatient"])
 		Sound.play(&"coins")
 		var button_rect := hud.next_wave_button.get_global_rect()
 		_show_floating_text("+%d" % early_bonus, GOLD_TEXT_COLOR,
@@ -432,6 +553,7 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 
 
 func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
+	stats.on_damage(enemy.damage_source_id, amount)
 	# Petit décalage pour que les coups rapprochés ne se superposent pas.
 	var offset := Vector2(randf_range(-8.0, 8.0), -enemy.data.radius - 12.0)
 	_show_floating_text(str(roundi(amount)), DAMAGE_TEXT_COLOR, enemy.global_position + offset, 13)
@@ -445,6 +567,10 @@ func _on_enemy_healed(enemy: Enemy, amount: float) -> void:
 func _on_enemy_died(enemy: Enemy) -> void:
 	var reward := get_enemy_reward(enemy.data)
 	gold += reward
+	stats.gold_earned += reward
+	stats.on_kill(enemy.damage_source_id, enemy.data)
+	if enemy.data.is_boss and not is_demo:
+		_announce_achievements(Achievements.on_boss_killed(enemy.data, get_towers().size()))
 	if challenge:
 		add_score(reward * DailyChallenge.POINTS_PER_GOLD)
 	Sound.play(&"enemy_death", -3.0)
@@ -479,6 +605,7 @@ func _on_enemy_summoned(enemy: Enemy) -> void:
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
+	stats.lives_lost += mini(enemy.data.damage, lives)
 	lives -= enemy.data.damage
 	Sound.play(&"lives_lost")
 	_show_lives_lost(enemy.data.damage, enemy.global_position)
@@ -495,11 +622,18 @@ func _alive_enemy_count() -> int:
 func _check_wave_cleared() -> void:
 	if is_over or spawner.is_spawning or _alive_enemy_count() > 0:
 		return
+	# Intérêts sur l'or gardé, avant d'y ajouter les bonus : une fois par carte vidée.
+	var interest := get_interest() if _wave_bonus_paid < spawner.current_wave else 0
+	if interest > 0:
+		gold += interest
+		stats.gold_earned += interest
+		_show_floating_text("+%d intérêts" % interest, GOLD_TEXT_COLOR, hud.get_interest_anchor(), 16)
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
 	while _wave_bonus_paid < spawner.current_wave:
 		_wave_bonus_paid += 1
 		gold += get_wave_bonus(_wave_bonus_paid)
+		stats.gold_earned += get_wave_bonus(_wave_bonus_paid)
 		if challenge:
 			add_score(DailyChallenge.POINTS_PER_WAVE)
 		# Infirmerie : rend des vies perdues, sans dépasser celles du départ.
@@ -507,6 +641,9 @@ func _check_wave_cleared() -> void:
 			lives = mini(lives + _bonuses.lives_per_wave, starting_lives)
 	if is_endless and not is_demo:
 		Progress.record_endless(scene_file_path, get_waves_cleared(), get_endless_stars())
+		if get_waves_cleared() >= Achievements.TIRELESS_WAVES:
+			_unlock_achievements(["infatigable"])
+	_count_kills()
 	if not spawner.has_next_wave():
 		_end_game(true)
 
@@ -516,30 +653,63 @@ func _end_game(victory: bool) -> void:
 		return
 	is_over = true
 	select_tower(null)
+	placer.select_power(null)
 	inspect_tower(null)
 	if is_demo:
 		game_over.emit(victory)
 		return
+	_count_kills()
 	if challenge:
 		if victory:
 			add_score(lives * DailyChallenge.POINTS_PER_LIFE)
 		var best_before := Progress.get_daily_score(challenge.date_key)
 		var new_record := Progress.record_daily(challenge.date_key, score)
 		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0)
+	elif victory and not is_endless:
+		var stars_won := get_stars()
+		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
+		_announce_achievements(Achievements.on_victory(stats, lives, gold, difficulty))
+		hud.show_end_screen(true, has_next_level(), stars_won, new_record, get_next_world_name())
 	elif is_endless:
 		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
 		hud.show_endless_end_screen(get_waves_cleared(), get_endless_stars(),
 			get_waves_cleared() > _endless_record_before)
 	else:
-		var stars := get_stars() if victory else 0
-		var new_record := victory and Progress.record_victory(scene_file_path, stars, difficulty)
-		hud.show_end_screen(victory, victory and has_next_level(), stars, new_record,
-			get_next_world_name() if victory else "")
+		hud.show_end_screen(false)
+	hud.show_end_stats(stats, unlocked_achievements)
 	is_paused = false
 	Engine.time_scale = 1.0
 	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
+
+
+# --- Succès ----------------------------------------------------------------
+
+## Ajoute les monstres détruits depuis le dernier appel aux compteurs des succès.
+func _count_kills() -> void:
+	if is_demo:
+		return
+	var kills := stats.kills - _counted_kills
+	var elite_kills := stats.elite_kills - _counted_elite_kills
+	_counted_kills = stats.kills
+	_counted_elite_kills = stats.elite_kills
+	_announce_achievements(Achievements.add_counters({kills = kills, elite_kills = elite_kills}))
+
+
+## Débloque des succès (sauf dans la partie de l'écran titre) et annonce ceux qui
+## ne l'étaient pas encore.
+func _unlock_achievements(ids: Array[String]) -> void:
+	if not is_demo:
+		_announce_achievements(Achievements.unlock_all(ids))
+
+
+## Annonce des succès qui viennent d'être débloqués : bandeau en jeu, et liste sur
+## l'écran de fin.
+func _announce_achievements(ids: Array[String]) -> void:
+	for id in ids:
+		unlocked_achievements.append(id)
+		hud.show_achievement(Achievements.get_definition(id))
 
 
 # --- Navigation -------------------------------------------------------------
@@ -592,16 +762,28 @@ func _show_lives_lost(amount: int, at: Vector2) -> void:
 func _refresh_hud() -> void:
 	if not is_node_ready():
 		return
-	hud.update_stats(gold, lives, spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count())
+	hud.update_stats(gold, lives, spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count(),
+		get_interest() if interest_rate > 0.0 else -1)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if not is_over and not is_choosing_towers:
+		stats.duration += delta
+	# Les pouvoirs se rechargent en temps de jeu (pas pendant la pause).
+	if not is_over:
+		for i in power_cooldowns.size():
+			power_cooldowns[i] = maxf(power_cooldowns[i] - delta, 0.0)
 	# Le bouton et l'aperçu de vague dépendent du spawner et des ennemis en jeu, qui évoluent en continu.
 	_refresh_wave_ui()
 
 
 func _refresh_wave_ui() -> void:
 	hud.set_next_wave_available(can_start_next_wave())
+	if not powers.is_empty():
+		var usable: Array[bool] = []
+		for power in powers:
+			usable.append(can_use_power(power))
+		hud.update_powers(power_cooldowns, usable)
 	if not is_over:
 		var next_index := spawner.current_wave + 1
 		var next_wave: WaveData = spawner.get_wave(next_index) if spawner.has_next_wave() else null

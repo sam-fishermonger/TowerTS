@@ -41,6 +41,8 @@ const MEDECIN := preload("res://resources/enemies/humanoid/medecin.tres")
 const REINE := preload("res://resources/enemies/insectoid/reine.tres")
 const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
 const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
+const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
+const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -68,6 +70,7 @@ func _run() -> void:
 	await _test_tower_upgrade_stats()
 	await _test_tower_upgrade_in_level()
 	await _test_tower_info_panels()
+	await _test_touch_controls()
 	await _test_sell_tower()
 	await _test_target_modes()
 	await _test_level_02_map()
@@ -82,6 +85,11 @@ func _run() -> void:
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
 	await _test_wave_preview_and_early_call()
+	await _test_interest()
+	await _test_powers_in_tree()
+	await _test_meteors()
+	await _test_freeze()
+	await _test_reinforcements()
 	await _test_path_preview()
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
@@ -112,6 +120,8 @@ func _run() -> void:
 	await _test_bosses()
 	await _test_detail_windows()
 	await _test_lexicon()
+	await _test_end_stats()
+	await _test_achievements()
 	await _test_biome_tiles()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
@@ -476,41 +486,73 @@ func _test_sound() -> void:
 		_check(data.attack_sound != null, "%s : son de tir défini" % data.display_name)
 	for sound_name: StringName in sound.SOUNDS:
 		_check(sound.SOUNDS[sound_name] is AudioStream, "son « %s » chargé" % sound_name)
+	var music_bus := AudioServer.get_bus_index(&"Music")
+	var sfx_bus := AudioServer.get_bus_index(&"Sfx")
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	var music_button: Button = title.get_node("%AudioToggles").music_button
-	music_button.button_pressed = false
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")) and music_button.text == "Musique : non",
-		"le bouton Musique coupe la musique")
+	var options: OptionsMenu = title.open_options()
+	await process_frame
+	_check(options.music_check.button_pressed and options.sound_check.button_pressed
+		and options.music_slider.value == 100.0, "Options : musique et sons à 100 %")
+	options.music_check.button_pressed = false
+	_check(AudioServer.is_bus_mute(music_bus) and not options.music_slider.editable,
+		"la case Musique coupe la musique")
 	_check(Progress.get_setting("music", true) == false, "le choix est enregistré")
-	music_button.button_pressed = true
-	_check(not AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")), "et la remet")
-	var sound_button: Button = title.get_node("%AudioToggles").sound_button
-	sound_button.button_pressed = false
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "le bouton Sons coupe les effets")
-	sound_button.button_pressed = true
+	options.music_check.button_pressed = true
+	_check(not AudioServer.is_bus_mute(music_bus), "et la remet")
+	options.sound_check.button_pressed = false
+	_check(AudioServer.is_bus_mute(sfx_bus), "la case Sons coupe les effets")
+	options.sound_check.button_pressed = true
+	var full_db := AudioServer.get_bus_volume_db(music_bus)
+	options.music_slider.value = 50.0
+	_check(is_equal_approx(Sound.get_music_volume(), 0.5)
+		and is_equal_approx(AudioServer.get_bus_volume_db(music_bus), full_db + linear_to_db(0.5)),
+		"le curseur règle le volume de la musique")
+	_check(is_equal_approx(AudioServer.get_bus_volume_db(sfx_bus), Sound.BUS_BASE_DB[&"Sfx"]),
+		"sans toucher aux sons")
+	options.sound_slider.value = 0.0
+	_check(AudioServer.is_bus_mute(sfx_bus) and Sound.is_sound_enabled(), "le curseur des sons à 0 les coupe")
+	options.sound_slider.value = 80.0
+	_check(not AudioServer.is_bus_mute(sfx_bus) and is_equal_approx(Sound.get_sound_volume(), 0.8),
+		"et à 80 % les remet")
+	options.fullscreen_check.button_pressed = true
+	_check(Progress.get_setting("fullscreen", false) == true, "le plein écran est enregistré")
+	options.fullscreen_check.button_pressed = false
+	options.speed_buttons[1].pressed.emit()
+	_check(GameSettings.get_default_speed() == 2.0, "vitesse au départ : x2 enregistrée")
+	options.close_button.pressed.emit()
+	await process_frame
+	_check(not is_instance_valid(options), "Fermer referme les options")
 	await _free(title)
 
-	# Les mêmes réglages en jeu, dans la barre du bas, même pendant la pause.
+	# En jeu : la partie démarre à la vitesse choisie, et les options la mettent en pause.
 	var level := await _spawn_level(LEVEL_01)
-	var toggles := level.hud.audio_toggles
-	_check(toggles.is_visible_in_tree() and toggles.music_button.button_pressed and toggles.sound_button.button_pressed,
-		"en jeu : boutons Musique et Sons, à oui")
+	_check(Engine.time_scale == 2.0 and level.hud.speed_buttons.get_child(1).button_pressed,
+		"le niveau démarre à la vitesse des options")
+	level.hud.options_button.pressed.emit()
+	await process_frame
+	_check(level.is_paused and paused and level.hud.options_menu != null, "le bouton Options met la partie en pause")
+	level.hud.options_menu.music_slider.value = 30.0
+	_check(is_equal_approx(Sound.get_music_volume(), 0.3), "les volumes se règlent en jeu")
+	level.hud.options_menu.close()
+	await process_frame
+	_check(not level.is_paused and not paused and level.hud.options_menu == null, "la partie reprend en fermant")
 	level.set_paused(true)
-	toggles.music_button.button_pressed = false
-	toggles.sound_button.button_pressed = false
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music"))
-		and AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "en jeu et en pause, ils coupent musique et sons")
-	_check(toggles.music_button.text == "Musique : non" and toggles.sound_button.text == "Sons : non",
-		"les boutons affichent l'état")
+	level.hud.open_options()
+	level.hud.options_menu.close()
+	_check(level.is_paused, "mais reste en pause si elle l'était")
 	await _free(level)
 	title = TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(not title.get_node("%AudioToggles").music_button.button_pressed, "l'écran titre reprend le réglage choisi en jeu")
-	Sound.set_music_enabled(true)
-	Sound.set_sound_enabled(true)
+	options = title.open_options()
+	await process_frame
+	_check(options.music_slider.value == 30.0 and options.sound_slider.value == 80.0
+		and options.speed_buttons[1].button_pressed, "l'écran titre reprend les réglages choisis en jeu")
+	Sound.set_music_volume(1.0)
+	Sound.set_sound_volume(1.0)
+	GameSettings.set_default_speed(1.0)
 	await _free(title)
 
 
@@ -652,6 +694,58 @@ func _click(level: Level, screen_position: Vector2) -> void:
 	event.pressed = true
 	event.position = screen_position
 	await _send_to_placer(level, event)
+
+
+func _test_touch_controls() -> void:
+	print("Commandes tactiles")
+	GameSettings.set_touch_mode(true)
+	var level := await _spawn_level(LEVEL_01)
+	var cell := Vector2i(2, 4)
+	var at := level.map.cell_to_world(cell)
+	level.select_tower(CANNON)
+	await _click(level, at)
+	_check(level.map.get_occupant(cell) == null and level.placer.preview.visible,
+		"premier toucher : l'aperçu de la tour, rien n'est posé")
+	_check(level.placer.touch_hint.visible and level.placer.touch_hint.text == "Touchez encore pour poser",
+		"un rappel invite à toucher encore")
+	await _click(level, level.map.cell_to_world(Vector2i(4, 2)))
+	_check(level.map.get_occupant(Vector2i(4, 2)) == null and level.placer.touch_hint.text == "Impossible ici",
+		"toucher une autre case y déplace l'aperçu (sur le chemin : impossible)")
+	await _click(level, at)
+	_check(level.map.get_occupant(cell) == null, "revenir sur la case ne la pose pas encore")
+	await _click(level, at)
+	var tower := level.map.get_occupant(cell) as Tower
+	_check(tower != null and level.placer.selected_tower == null and not level.placer.touch_hint.visible,
+		"second toucher sur la même case : la tour est posée")
+	await _click(level, at)
+	_check(level.placer.inspected_tower == tower and level.hud.tower_details.visible, "toucher une tour ouvre sa fiche")
+	await _click(level, level.map.cell_to_world(Vector2i(4, 2)))
+	_check(level.placer.inspected_tower == null, "toucher la carte ailleurs la ferme")
+	_check(level.hud.shop_hint.text == Hud.TOUCH_HINT, "le rappel des commandes parle du tactile")
+
+	var enemy := _add_still_enemy(level, SCARABEE, 0, 100.0)
+	await process_frame
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	touch.position = enemy.get_global_transform_with_canvas().origin
+	level.hud._input(touch)
+	await process_frame
+	_check(level.hud.enemy_details.visible and level.hud.hovered_enemy == enemy, "toucher un monstre ouvre sa fiche")
+	touch.position = Vector2(20, 400)
+	level.hud._input(touch)
+	await process_frame
+	_check(not level.hud.enemy_details.visible, "toucher ailleurs la ferme")
+	await _free(level)
+
+	var button := Button.new()
+	_check(not GameSettings.confirm_touch(button) and GameSettings.confirm_touch(button),
+		"un bouton à fiche (niveau, amélioration) agit au second toucher")
+	GameSettings.set_touch_mode(false)
+	_check(GameSettings.confirm_touch(button), "et tout de suite à la souris")
+	button.free()
+	level = await _spawn_level(LEVEL_01)
+	_check(level.hud.shop_hint.text == Hud.MOUSE_HINT, "le rappel revient à la souris")
+	await _free(level)
 
 
 func _test_tower_info_panels() -> void:
@@ -1086,8 +1180,11 @@ func _test_wave_bonus_when_waves_overlap() -> void:
 		rewards += enemy.data.reward
 		enemy.take_damage(1e9)
 	var bonuses := level.spawner.waves[0].bonus_gold + level.spawner.waves[1].bonus_gold
-	_check(level.gold == gold_before + rewards + bonuses,
-		"les bonus des deux vagues sont versés (%d or attendus, %d reçus)" % [rewards + bonuses, level.gold - gold_before])
+	# Les intérêts, eux, ne sont versés qu'une fois : sur l'or gardé quand la carte est vidée.
+	var interest := mini(floori((gold_before + rewards) * level.interest_rate), level.interest_cap)
+	_check(level.gold == gold_before + rewards + interest + bonuses,
+		"les bonus des deux vagues sont versés, et les intérêts une fois (%d or attendus, %d reçus)"
+		% [rewards + interest + bonuses, level.gold - gold_before])
 	await _free(level)
 
 
@@ -1117,6 +1214,216 @@ func _test_wave_preview_and_early_call() -> void:
 	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % bonus),
 		"« +%d » s'affiche sous le bouton" % bonus)
 	await _free(level)
+
+
+func _test_interest() -> void:
+	print("Intérêts sur l'or gardé")
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 300
+	_check(level.get_interest() == 15, "300 or gardés rapportent 15 or d'intérêts (5 %)")
+	_check(level.hud.interest_label.visible and level.hud.interest_label.text == "Intérêts : +15",
+		"le HUD les annonce sous l'or (%s)" % level.hud.interest_label.text)
+	_check(level.hud.interest_label.tooltip_text.contains("5 %") and level.hud.interest_label.tooltip_text.contains("25"),
+		"sa bulle d'aide donne le taux et le plafond")
+	level.gold = 5000
+	_check(level.get_interest() == 25, "plafonnés à 25 or")
+	level.gold = 300
+	level.spawner.current_wave = 0
+	level._check_wave_cleared()
+	var bonus := level.get_wave_bonus(0)
+	_check(level.gold == 300 + 15 + bonus, "versés avec le bonus de vague, calculés sur l'or d'avant le bonus (%d)" % level.gold)
+	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+15 intérêts"),
+		"« +15 intérêts » s'affiche sous l'or")
+	var gold := level.gold
+	level._check_wave_cleared()
+	_check(level.gold == gold, "rien de plus tant qu'aucune nouvelle vague n'est repoussée")
+	await _free(level)
+
+
+## Débloque les mondes et achète les pouvoirs et leurs renforts (étoiles infinies comprises).
+func _buy_all_powers() -> void:
+	Perks.unlock_everything()
+	Progress.set_value("perks", "owned", PackedStringArray())
+	for perk in Perks.TREE.perks:
+		if not perk.get_power_path().is_empty():
+			_check(Perks.buy(perk), "achat : %s" % perk.display_name)
+
+
+func _test_powers_in_tree() -> void:
+	print("Pouvoirs : arbre des améliorations")
+	var tree := Perks.TREE
+	var unlocks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_power.is_empty())
+	var on_page := unlocks.all(func(p: Perk) -> bool: return tree.get_page(p) == 3 and not p.paid_with_endless_stars)
+	_check(unlocks.size() == 3 and on_page, "3 pouvoirs, payés en étoiles, sur la page Pouvoirs")
+	var upgrades := tree.perks.filter(func(p: Perk) -> bool: return not p.improves_power.is_empty())
+	_check(upgrades.size() == 6 and upgrades.all(func(p: Perk) -> bool: return p.paid_with_endless_stars),
+		"6 renforts de pouvoirs, payés en étoiles infinies")
+	_check(tree.get_total_cost(true) <= Progress.ENDLESS_MAX_STARS * Perks.CAMPAIGN.size(),
+		"les étoiles infinies suffisent à tout acheter (%d)" % tree.get_total_cost(true))
+	_check(Perks.get_powers().is_empty(), "aucun pouvoir sans achat")
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.powers.is_empty() and not level.hud.power_bar.visible, "ni bouton de pouvoir en jeu")
+	await _free(level)
+
+	_win_in_all_difficulties(Perks.CAMPAIGN.worlds[0].levels)
+	var meteors := tree.get_perk("pouvoir_meteores")
+	_check(Perks.is_unlocked(meteors) and Perks.is_unlocked(tree.get_perk("pouvoir_gel"))
+		and not Perks.is_unlocked(tree.get_perk("pouvoir_renforts")),
+		"Météores ouverts d'emblée, Gel avec La Fonderie, Renforts avec La Cité")
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(3)
+	_check(screen.get_button(meteors).is_visible_in_tree() and screen.get_button(meteors).get_child(0) is PowerIcon,
+		"la page Pouvoirs montre le pouvoir avec son image")
+	_check(screen.stars_label.text.contains("★") and screen.stars_label.text.contains("∞ ★"),
+		"et les deux monnaies (%s)" % screen.stars_label.text)
+	_check(screen.buy(meteors), "les Météores s'achètent")
+	await _free(screen)
+	var powers := Perks.get_powers()
+	_check(powers.size() == 1 and powers[0].id == "meteors" and is_equal_approx(powers[0].damage, 80.0),
+		"le pouvoir débloqué est disponible")
+	Progress.reset_campaign()
+
+	_buy_all_powers()
+	powers = Perks.get_powers()
+	_check(powers.size() == 3, "les 3 pouvoirs")
+	_check(is_equal_approx(powers[0].damage, 120.0) and is_equal_approx(powers[0].cooldown, 28.0),
+		"Pluie battante et Comètes : 120 dégâts, 28 s de recharge")
+	_check(is_equal_approx(powers[1].duration, 5.0) and is_equal_approx(powers[1].vulnerability, 0.3),
+		"Blizzard et Engelures : 5 s de gel, +30 % de dégâts subis")
+	_check(powers[2].count == 5 and is_equal_approx(powers[2].health, 225.0), "Vétérans et Escouade : 5 soldats de 225 vie")
+	var resource: Power = load("res://resources/powers/meteors.tres")
+	_check(is_equal_approx(resource.damage, 80.0), "sans toucher à la ressource du pouvoir")
+	level = await _spawn_level(LEVEL_01)
+	await process_frame
+	var buttons := level.hud.power_buttons
+	_check(buttons.size() == 3 and level.hud.power_bar.visible, "un bouton par pouvoir en haut de l'écran")
+	var top := level.hud.top_bar.get_global_rect()
+	_check(buttons.all(func(b: PowerButton) -> bool: return top.encloses(b.get_global_rect()))
+		and buttons[2].get_global_rect().end.x <= level.hud.next_wave_button.get_global_rect().position.x
+		and level.hud.wave_label.get_global_rect().end.x < buttons[0].get_global_rect().position.x,
+		"ils tiennent dans la barre du haut, entre la vague et le bouton de vague")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _press_key(level: Level, physical: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = physical
+	event.pressed = true
+	level.hud._unhandled_key_input(event)
+
+
+func _test_meteors() -> void:
+	print("Pouvoir : Météores")
+	_buy_all_powers()
+	var level := await _spawn_level(LEVEL_01)
+	var meteors := level.powers[0]
+	var at := level.map.get_enemy_path(0).to_global(level.map.get_enemy_path(0).curve.sample_baked(400.0))
+	var near := _add_enemy_at(level, LARVE, at)
+	var far := _add_enemy_at(level, LARVE, at + Vector2(400, 0))
+	var health := near.health.health
+	_press_key(level, KEY_Q)
+	_check(level.placer.selected_power == meteors and level.hud.power_buttons[0].button_pressed,
+		"Q (A en AZERTY) vise les Météores, et leur bouton reste enfoncé")
+	_press_key(level, KEY_Q)
+	_check(level.placer.selected_power == null, "la même touche annule")
+	level.select_tower(CANNON)
+	level.select_power(meteors)
+	_check(level.placer.selected_tower == null and level.placer.selected_power == meteors, "viser un pouvoir lâche la tour choisie")
+	level.select_tower(CANNON)
+	_check(level.placer.selected_power == null, "et inversement")
+	level.select_tower(null)
+	level.select_power(meteors)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = at
+	await _send_to_placer(level, click)
+	_check(level.placer.selected_power == null and level.get_power_cooldown(meteors) > meteors.cooldown - 0.5,
+		"un clic sur la carte lance la pluie, et le pouvoir se recharge")
+	_check(not level.can_use_power(meteors) and level.hud.power_buttons[0].disabled, "en recharge, il ne se relance pas")
+	var elapsed := 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(not is_instance_valid(near) or not near.is_alive or near.health.health < health - meteors.damage * 0.9,
+		"les météores frappent les ennemis de la zone")
+	_check(far.health.health == far.health.max_health, "et pas ceux d'ailleurs")
+	_check(level.get_power_cooldown(meteors) < meteors.cooldown - 1.0, "la recharge avance avec le jeu")
+	_check(level.hud.power_buttons[0].text.ends_with(" s"), "le bouton montre les secondes restantes")
+	level.power_cooldowns[0] = 0.0
+	level.set_paused(true)
+	_check(not level.use_power(meteors, at), "pas de pouvoir pendant la pause")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _test_freeze() -> void:
+	print("Pouvoir : Gel")
+	_buy_all_powers()
+	var level := await _spawn_level(LEVEL_01)
+	var freeze := level.powers[1]
+	var walker := _add_still_enemy(level, LARVE, 0, 200.0)
+	walker.set_process(true)
+	var boss := _add_still_enemy(level, REINE, 0, 100.0)
+	boss.set_process(true)
+	await process_frame
+	level.select_power(freeze)
+	_check(walker.is_frozen() and level.get_power_cooldown(freeze) > 0.0, "le Gel part tout de suite, sans viser")
+	_check(not boss.is_frozen() and boss.is_slowed(), "un boss ne gèle pas : il ralentit")
+	var progress := walker.progress
+	var elapsed := 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(walker.progress == progress, "un ennemi gelé ne bouge plus")
+	var dealt := walker.take_damage(10.0, true)
+	_check(is_equal_approx(dealt, 13.0), "Engelures : il subit 30 %% de dégâts en plus (%.1f)" % dealt)
+	while elapsed < freeze.duration + 0.5:
+		elapsed += await _step()
+	_check(not walker.is_frozen() and walker.progress > progress, "puis il repart")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _test_reinforcements() -> void:
+	print("Pouvoir : Renforts")
+	_buy_all_powers()
+	var level := await _spawn_level(LEVEL_01)
+	var reinforcements := level.powers[2]
+	var path := level.map.get_enemy_path(0)
+	var post := path.to_global(path.curve.sample_baked(500.0))
+	_check(level.map.get_closest_path_point(post + Vector2(3, 4)).distance_to(post) < 6.0,
+		"le point du chemin le plus proche d'un clic")
+	_check(level.use_power(reinforcements, post), "les renforts se lancent sur le chemin")
+	var soldiers := level.get_soldiers()
+	_check(soldiers.size() == reinforcements.count, "%d soldats arrivent" % reinforcements.count)
+	_check(soldiers.all(func(s: Soldier) -> bool: return s.global_position.distance_to(post) < 20.0),
+		"ils se postent autour du point visé")
+	var enemy := _add_still_enemy(level, SCARABEE, 0, 460.0)
+	enemy.set_process(true)
+	var boss := _add_still_enemy(level, REINE, 0, 380.0)
+	boss.set_process(true)
+	var elapsed := 0.0
+	while elapsed < 1.5:
+		elapsed += await _step()
+	_check(enemy.is_held(), "un soldat arrête le premier ennemi qui arrive")
+	var progress := enemy.progress
+	var health := enemy.health.health
+	while elapsed < 2.5:
+		elapsed += await _step()
+	_check(not enemy.is_alive or (enemy.progress == progress and enemy.health.health < health),
+		"l'ennemi retenu ne marche plus et se fait frapper")
+	_check(not boss.is_held(), "un boss ne s'arrête pas")
+	_check(soldiers.any(func(s: Soldier) -> bool: return s.health < s.max_health) or not enemy.is_alive,
+		"l'ennemi retenu frappe son soldat")
+	boss.despawn()
+	while elapsed < reinforcements.duration + 1.0:
+		elapsed += await _step()
+	_check(level.get_soldiers().is_empty(), "les soldats repartent au bout de %d s" % reinforcements.duration)
+	_check(not is_instance_valid(enemy) or not enemy.is_alive or not enemy.is_held(), "et lâchent leur ennemi")
+	await _free(level)
+	Progress.reset_campaign()
 
 
 func _test_path_preview() -> void:
@@ -2238,6 +2545,155 @@ func _test_lexicon() -> void:
 	_check(screen.get_entry_buttons().size() == 3 and screen.detail_text.get_parsed_text().contains("Reine de la Ruche"),
 		"onglet Mondes : un par monde, avec ses monstres et son boss")
 	await _free(screen)
+
+
+func _test_end_stats() -> void:
+	print("Statistiques de fin de niveau")
+	var level := await _spawn_level(LEVEL_03)
+	var poison := _place_test_tower(level, PESTICIDE)
+	poison.set_process(false)
+	var still: EnemyData = SCARABEE.duplicate()
+	still.speed = 0.0
+	# Apparu par le WaveSpawner : le niveau suit ses dégâts.
+	var target := level.spawner.spawn(still, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	poison._attack(target)
+	var elapsed := 0.0
+	while elapsed < 3.0:
+		elapsed += await _step()
+	var record: LevelStats.TowerRecord = level.stats.towers.get(poison.get_instance_id())
+	_check(record != null and record.damage > 10.0 and is_equal_approx(record.damage, still.max_health - target.health.health),
+		"le poison est compté à la tour qui l'a posé (%s)" % (record.damage if record else -1.0))
+	await _free(level)
+
+	level = await _spawn_level(LEVEL_01)
+	level.gold = 5000
+	_place_defense(level, [Vector2i(3, 3), Vector2i(5, 3), Vector2i(3, 6), Vector2i(5, 6),
+			Vector2i(9, 2), Vector2i(11, 2), Vector2i(9, 6), Vector2i(11, 6),
+			Vector2i(14, 2), Vector2i(16, 2), Vector2i(14, 7), Vector2i(16, 7)], [CANNON, GATLING])
+	var sniper := level.place_tower(Vector2i(7, 4), SNIPER)
+	level.upgrade_tower(sniper)
+	# Dans un tableau : la tour vendue est libérée, et une lambda ne peut pas garder un objet libéré.
+	var sold := [level.place_tower(Vector2i(13, 4), SNIPER)]
+	var expected_spent := 6 * CANNON.get_cost() + 6 * GATLING.get_cost() + 2 * SNIPER.get_cost() + SNIPER.get_upgrade_cost(1)
+	await _play_until_over(level, 300.0, false, func() -> void:
+		if is_instance_valid(sold[0]) and sold[0].is_alive and level.spawner.current_wave >= 1:
+			level.sell_tower(sold[0]))
+	var stats := level.stats
+	_check(level.is_over and level.lives > 0, "partie gagnée")
+	_check(stats.towers_built == 14 and stats.upgrades_bought == 1 and stats.towers_sold == 1,
+		"tours posées, améliorées et vendues comptées")
+	_check(stats.gold_spent == expected_spent and stats.gold_spent_on_upgrades == SNIPER.get_upgrade_cost(1),
+		"or dépensé : poses et améliorations (%d)" % stats.gold_spent)
+	_check(stats.gold_earned > 0 and stats.kills > 20 and stats.lives_lost == level.starting_lives - level.lives,
+		"or gagné, monstres détruits, vies perdues")
+	var types := stats.get_types()
+	var type_total := 0.0
+	var type_kills := 0
+	for type in types:
+		type_total += type.damage
+		type_kills += type.kills
+	_check(types.size() == 3 and types[0].damage >= types[1].damage and types[1].damage >= types[2].damage,
+		"un bilan par type de tour, du plus de dégâts au moins")
+	_check(is_equal_approx(type_total, stats.get_total_damage()) and stats.get_total_damage() > 1000.0,
+		"les dégâts de chaque tour s'additionnent (%d)" % stats.get_total_damage())
+	_check(type_kills > stats.kills * 0.9 and type_kills <= stats.kills, "les destructions sont comptées aux tours")
+	var best := stats.get_best_tower()
+	_check(best != null and stats.towers.values().all(func(r: LevelStats.TowerRecord) -> bool: return r.damage <= best.damage),
+		"meilleure tour : celle qui a fait le plus de dégâts")
+	_check(stats.towers.values().filter(func(r: LevelStats.TowerRecord) -> bool: return r.sold).size() == 1,
+		"la tour vendue garde ses statistiques")
+	_check(stats.duration > 10.0, "durée de la partie (%s)" % LevelStats.format_duration(stats.duration))
+	var end := level.hud.end_stats
+	_check(end.visible and end.type_rows.size() == 3 and end.best_label.text.contains(best.data.display_name)
+		and end.summary["Or dépensé"] == LevelStats.format_number(expected_spent),
+		"l'écran de fin affiche les statistiques et la meilleure tour")
+	_check(level.hud.end_panel.get_global_rect().grow(1.0).encloses(end.get_global_rect())
+		and Rect2(Vector2.ZERO, Vector2(1280, 800)).encloses(level.hud.end_panel.get_global_rect()),
+		"le panneau de fin tient à l'écran")
+	_check(LevelStats.format_number(1234567) == "1 234 567" and LevelStats.format_duration(125.0) == "2:05",
+		"nombres et durées lisibles")
+	await _free(level)
+
+
+func _test_achievements() -> void:
+	print("Succès")
+	# Progression à part : les succès débloqués par les autres tests ne comptent pas.
+	var save_path := Progress.get_save_path()
+	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_achievements.cfg")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	var ids := Achievements.LIST.map(func(d: Dictionary) -> String: return d.id)
+	_check(ids.size() >= 20 and ids.all(func(id: String) -> bool: return ids.count(id) == 1),
+		"%d succès, chacun son identifiant" % ids.size())
+	_check(Achievements.LIST.filter(func(d: Dictionary) -> bool: return d.has("boss"))
+		.all(func(d: Dictionary) -> bool: return ResourceLoader.exists(d.boss) and load(d.boss).is_boss),
+		"les succès de boss visent des boss")
+	_check(Achievements.get_unlocked_count() == 0, "aucun succès au départ")
+
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 5000
+	_place_defense(level, [Vector2i(3, 3), Vector2i(5, 3), Vector2i(3, 6), Vector2i(5, 6),
+			Vector2i(9, 2), Vector2i(11, 2), Vector2i(9, 6), Vector2i(11, 6),
+			Vector2i(14, 2), Vector2i(16, 2), Vector2i(14, 7), Vector2i(16, 7)], [CANNON])
+	await _play_until_over(level, 600.0, true)
+	_check(level.is_over and level.lives > 0, "partie gagnée avec des Canons seulement")
+	var expected := ["premier_pas", "brut_de_pose", "monoculture", "tresor"]
+	if level.lives == level.starting_lives:
+		expected.append("sans_egratignure")
+	_check(expected.all(func(id: String) -> bool: return Achievements.is_unlocked(id) and level.unlocked_achievements.has(id))
+		and not Achievements.is_unlocked("minimaliste") and not Achievements.is_unlocked("cauchemar"),
+		"victoire : Premier pas, Brut de pose, Monoculture, Trésor de guerre (%s)" % ", ".join(level.unlocked_achievements))
+	_check(Achievements.get_counter("kills") == level.stats.kills, "les monstres détruits s'ajoutent au compteur")
+	_check(level.hud.end_stats.achievements_label != null
+		and level.hud.end_stats.achievements_label.text.contains("Premier\u00a0pas"), "l'écran de fin liste les succès débloqués")
+	await _free(level)
+
+	level = await _spawn_level(LEVEL_03)
+	level.gold = 5000
+	level.place_tower(Vector2i(4, 2), CANNON)
+	var boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	boss.take_damage(1000000.0, true)
+	await process_frame
+	_check(Achievements.is_unlocked("regicide") and Achievements.is_unlocked("commando")
+		and not Achievements.is_unlocked("demolition"), "vaincre la Reine avec une tour : Régicide et Commando")
+	_check(level.hud.achievement_toasts.get_child_count() == 2, "un bandeau annonce chaque succès en jeu")
+	for cell in [Vector2i(4, 4), Vector2i(2, 2), Vector2i(6, 6)]:
+		level.place_tower(cell, CANNON)
+	var behemoth := level.spawner.spawn(BEHEMOTH, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	behemoth.take_damage(1000000.0, true)
+	await process_frame
+	_check(Achievements.is_unlocked("demolition") and level.unlocked_achievements == ["regicide", "commando", "demolition"],
+		"Démolition avec 4 tours, sans redébloquer Commando")
+	await _free(level)
+
+	var unlocked := Achievements.add_counters({kills = 5000})
+	_check(unlocked == ["exterminateur"] and Achievements.add_counters({kills = 10}).is_empty(),
+		"Exterminateur à 5000 monstres, une seule fois")
+	_check(Achievements.get_progress(Achievements.get_definition("chasseur"))[1] == 50, "avancement des objectifs chiffrés")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	for path in campaign.worlds[0].levels:
+		Progress.record_victory(path, 3)
+	_check(Achievements.check_progress() == ["ruche"], "gagner tous les niveaux de La Ruche")
+
+	var screen := ACHIEVEMENTS_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	var count := Achievements.get_unlocked_count()
+	_check(screen.cards.size() == Achievements.LIST.size()
+		and screen.counter_label.text == "%d / %d débloqués" % [count, Achievements.LIST.size()],
+		"page des succès : une vignette par succès et le compte (%s)" % screen.counter_label.text)
+	_check(screen.cards.all(func(c: Control) -> bool: return c.size.x > 300.0), "les vignettes se partagent la largeur")
+	await _free(screen)
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	_check(title.achievements_button.text == "Succès  ·  %d / %d" % [count, Achievements.LIST.size()],
+		"le bouton Succès de l'écran titre donne le compte")
+	await _free(title)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Engine.set_meta(Progress.SAVE_PATH_META, save_path)
 
 
 func _test_biome_tiles() -> void:

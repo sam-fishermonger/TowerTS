@@ -1,9 +1,11 @@
 class_name Hud
 extends CanvasLayer
 ## Interface du niveau : or, vies et vague en haut ; barre d'achat des tours, pause,
-## vitesse et réglages du son en bas ; fiches des tours et écran de fin.
+## vitesse et menu Options en bas ; fiches des tours et écran de fin.
 ## Au survol, des fenêtres de détail : celle de la prochaine vague (sur son aperçu) et
 ## celle du monstre sous la souris. La vie des boss en jeu s'affiche en haut de la carte.
+## Un bandeau annonce chaque succès débloqué, et l'écran de fin montre les statistiques
+## de la partie.
 
 ## Émis quand le joueur choisit une tour à placer (null = aucune).
 signal tower_selected(data: TowerData)
@@ -21,13 +23,24 @@ signal tower_details_closed
 signal pause_toggled
 ## Émis quand le joueur choisit une vitesse de jeu (bouton, ou V pour passer à la suivante).
 signal game_speed_selected(speed: float)
+## Émis quand le menu Options s'ouvre (vrai) ou se ferme (faux) : la partie s'arrête pendant ce temps.
+signal options_toggled(open: bool)
 ## Émis quand le joueur valide son choix de tours au lancement du niveau (TowerPicker).
 signal towers_chosen(types: Array[TowerData])
+## Émis quand le joueur choisit un pouvoir actif (bouton, ou touche A/Z/E en AZERTY).
+signal power_selected(power: Power)
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
 const LIVES_COLOR := Color(1, 0.5, 0.5)
 const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
+## Rappel des commandes à côté de la barre d'achat, à la souris et au tactile.
+const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
+const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
+## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
+const ACHIEVEMENT_TOAST_DURATION := 4.0
+## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
+const POWER_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E]
 
 var _speed_group := ButtonGroup.new()
 var _gold := 0
@@ -48,8 +61,19 @@ var wave_details: DetailPopup
 var enemy_details: DetailPopup
 ## Monstre décrit par enemy_details, ou null.
 var hovered_enemy: Enemy
+## Au tactile : monstre touché du doigt, dont la fiche reste ouverte jusqu'au toucher suivant.
+var touched_enemy: Enemy
 ## Vie des boss en jeu, en haut de la carte.
 var boss_bar: BossBar
+## Menu Options ouvert (null s'il est fermé).
+var options_menu: OptionsMenu
+## Statistiques de la partie, à droite de l'écran de fin (cachées jusqu'à la fin).
+var end_stats: EndStats
+## Bandeaux des succès débloqués en jeu, en bas de la carte.
+var achievement_toasts: VBoxContainer
+## Boutons des pouvoirs actifs, en haut, à gauche du bouton de vague.
+var power_bar: HBoxContainer
+var power_buttons: Array[PowerButton] = []
 ## Défi du jour : score, dans la barre du haut (null hors défi)…
 var score_label: Label
 ## … et règles, au milieu de la carte jusqu'à la première vague.
@@ -57,6 +81,8 @@ var challenge_rules: PanelContainer
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
+## Intérêts que rapporterait l'or gardé, sous l'or.
+@onready var interest_label: Label = %InterestLabel
 @onready var lives_label: Label = %LivesLabel
 @onready var wave_label: Label = %WaveLabel
 ## Barre d'achat, en bas à gauche.
@@ -75,7 +101,7 @@ var challenge_rules: PanelContainer
 @onready var tower_details: TowerInfoPanel = %TowerDetails
 @onready var pause_button: Button = %PauseButton
 @onready var speed_buttons: HBoxContainer = %SpeedButtons
-@onready var audio_toggles: AudioToggles = %AudioToggles
+@onready var options_button: Button = %OptionsButton
 @onready var top_bar: Control = %TopBar
 @onready var bottom_bar: Control = %BottomBar
 @onready var pause_overlay: ColorRect = %PauseOverlay
@@ -96,6 +122,7 @@ func _ready() -> void:
 	tower_details.sell_requested.connect(sell_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
+	options_button.pressed.connect(open_options)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
 	boss_bar = BossBar.new()
 	add_child(boss_bar)
@@ -104,6 +131,22 @@ func _ready() -> void:
 	add_child(wave_details)
 	enemy_details = DetailPopup.new(270.0)
 	add_child(enemy_details)
+	# Fond plus opaque que celui du thème : les statistiques se lisent mieux sans la carte derrière.
+	var end_style := StyleBoxFlat.new()
+	end_style.bg_color = Color(0.07, 0.08, 0.08, 0.94)
+	end_style.border_color = Color(1, 1, 1, 0.15)
+	end_style.set_border_width_all(2)
+	end_style.set_corner_radius_all(12)
+	end_panel.add_theme_stylebox_override(&"panel", end_style)
+	end_stats = EndStats.new()
+	end_stats.visible = false
+	%EndPanel.get_node("Margin/Row").add_child(end_stats)
+	achievement_toasts = VBoxContainer.new()
+	achievement_toasts.alignment = BoxContainer.ALIGNMENT_END
+	achievement_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	achievement_toasts.add_theme_constant_override(&"separation", 6)
+	add_child(achievement_toasts)
+	move_child(achievement_toasts, end_panel.get_index())
 	# L'aperçu de vague prend la souris pour ouvrir sa fenêtre de détail.
 	wave_preview.mouse_filter = Control.MOUSE_FILTER_STOP
 	wave_preview.mouse_default_cursor_shape = Control.CURSOR_HELP
@@ -113,12 +156,15 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if not key.pressed or key.echo or end_panel.visible or tower_picker:
+	if not key.pressed or key.echo or end_panel.visible or tower_picker or options_menu:
 		return
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
 	var slot := TowerShop.slot_for_key(code)
-	if code == KEY_SPACE or code == KEY_P:
+	var power_index := POWER_KEYS.find(code)
+	if power_index >= 0 and power_index < power_buttons.size():
+		power_selected.emit(power_buttons[power_index].power)
+	elif code == KEY_SPACE or code == KEY_P:
 		pause_toggled.emit()
 	elif code == KEY_V:
 		_select_next_speed()
@@ -149,6 +195,56 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	tower_shop.hover_ended.connect(shop_info.close)
 
 
+## Ajoute un bouton par pouvoir actif, en haut de l'écran, à gauche du bouton de vague.
+func setup_powers(powers: Array[Power]) -> void:
+	if power_bar == null:
+		power_bar = HBoxContainer.new()
+		power_bar.add_theme_constant_override("separation", 6)
+		next_wave_button.get_parent().add_child(power_bar)
+		next_wave_button.get_parent().move_child(power_bar, next_wave_button.get_index())
+	for i in powers.size():
+		var button := PowerButton.new()
+		button.setup(powers[i], key_label(POWER_KEYS[i]) if i < POWER_KEYS.size() else "")
+		button.pressed.connect(func() -> void: power_selected.emit(button.power))
+		power_bar.add_child(button)
+		power_buttons.append(button)
+	power_bar.visible = not powers.is_empty()
+
+
+## Lettre écrite sur la touche à cette position du clavier, dans la disposition du joueur.
+static func key_label(physical: Key) -> String:
+	# Sans fenêtre (tests), le clavier n'est pas connu : on garde la touche QWERTY.
+	if DisplayServer.get_name() == "headless":
+		return OS.get_keycode_string(physical)
+	var keycode := DisplayServer.keyboard_get_keycode_from_physical(physical)
+	var label := OS.get_keycode_string(keycode) if keycode != KEY_NONE else ""
+	return label if not label.is_empty() else OS.get_keycode_string(physical)
+
+
+## Recharge restante de chaque pouvoir, et ceux qu'on peut lancer maintenant.
+func update_powers(cooldowns: Array[float], usable: Array[bool]) -> void:
+	for i in mini(power_buttons.size(), cooldowns.size()):
+		power_buttons[i].set_state(cooldowns[i], usable[i])
+
+
+## Le bouton du pouvoir visé reste enfoncé (null = aucun).
+func set_selected_power(power: Power) -> void:
+	for button in power_buttons:
+		button.set_pressed_no_signal(button.power == power)
+
+
+## Bulle d'aide des intérêts : leur taux et leur plafond.
+func set_interest_rules(rate: float, cap: int) -> void:
+	interest_label.tooltip_text = ("Chaque fois que la carte est vidée, l'or gardé rapporte %d %% d'intérêts "
+		+ "(%d or au plus), avant le bonus de vague.") % [roundi(rate * 100.0), cap]
+
+
+## Point de l'écran où s'affichent les intérêts versés : sous l'or.
+func get_interest_anchor() -> Vector2:
+	var rect := interest_label.get_global_rect() if interest_label.visible else gold_label.get_global_rect()
+	return Vector2(rect.get_center().x, rect.end.y + 14.0)
+
+
 ## Remplit la barre d'achat (après le choix des tours, s'il y en a un).
 func set_tower_types(tower_types: Array[TowerData]) -> void:
 	tower_shop.setup(tower_types)
@@ -167,6 +263,18 @@ func show_tower_picker(available: Array[TowerData], limit: int, selected: Array[
 	tower_picker.menu_requested.connect(menu_requested.emit)
 
 
+## Ouvre le menu Options par-dessus la partie, qui s'arrête jusqu'à sa fermeture.
+func open_options() -> void:
+	if options_menu:
+		return
+	options_menu = OptionsMenu.new()
+	options_menu.closed.connect(func() -> void:
+		options_menu = null
+		options_toggled.emit(false))
+	add_child(options_menu)
+	options_toggled.emit(true)
+
+
 func _on_towers_chosen(types: Array[TowerData]) -> void:
 	tower_picker.queue_free()
 	tower_picker = null
@@ -183,9 +291,12 @@ func _select_next_speed() -> void:
 
 
 ## `wave_count` négatif : mode infini, les vagues ne s'arrêtent pas.
-func update_stats(gold: int, lives: int, wave: int, wave_count: int) -> void:
+## `interest` : or que rapporteraient les intérêts maintenant (négatif : pas d'intérêts).
+func update_stats(gold: int, lives: int, wave: int, wave_count: int, interest := -1) -> void:
 	_gold = gold
 	gold_label.text = "Or : %d" % gold
+	interest_label.visible = interest >= 0
+	interest_label.text = "Intérêts : +%d" % maxi(interest, 0)
 	lives_label.text = "Vies : %d" % lives
 	wave_label.text = "Vague : %d / %s" % [wave, str(wave_count) if wave_count >= 0 else "∞"]
 	tower_shop.set_gold(gold)
@@ -329,6 +440,73 @@ func show_endless_end_screen(waves: int, endless_stars: int, new_record := false
 		% Progress.ENDLESS_STAR_STEP
 
 
+## Statistiques de la partie et succès débloqués, à droite de l'écran de fin (à appeler
+## après show_end_screen ou show_endless_end_screen).
+func show_end_stats(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
+	end_stats.setup(stats, achievement_ids)
+	end_stats.visible = true
+	# Les succès sont listés dans le panneau : les bandeaux s'effacent.
+	for toast in achievement_toasts.get_children():
+		toast.queue_free()
+	_center_end_panel.call_deferred()
+
+
+func _center_end_panel() -> void:
+	end_panel.reset_size()
+	end_panel.position = ((get_viewport().get_visible_rect().size - end_panel.size) / 2.0).round()
+
+
+## Bandeau « Succès débloqué » en bas de la carte, qui s'efface tout seul.
+func show_achievement(definition: Dictionary) -> void:
+	if definition.is_empty():
+		return
+	var toast := PanelContainer.new()
+	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.07, 0.04, 0.92)
+	style.border_color = Achievements.COLOR
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	toast.add_theme_stylebox_override(&"panel", style)
+	var label := RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.fit_content = true
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override(&"normal_font_size", 16)
+	label.add_theme_font_size_override(&"bold_font_size", 18)
+	label.text = "[color=#%s][b]%s  Succès débloqué : %s[/b][/color]\n[color=#ffffffb0]%s[/color]" % [
+		Achievements.COLOR.to_html(false), definition.icon, definition.name, definition.description]
+	toast.add_child(label)
+	achievement_toasts.add_child(toast)
+	_place_achievement_toasts.call_deferred()
+	toast.modulate.a = 0.0
+	# Temps réel : le bandeau dure autant en x3 et pendant la pause de fin de partie.
+	var tween := toast.create_tween().set_ignore_time_scale()
+	tween.tween_property(toast, "modulate:a", 1.0, 0.25)
+	tween.tween_interval(ACHIEVEMENT_TOAST_DURATION)
+	tween.tween_property(toast, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(func() -> void:
+		toast.queue_free()
+		_place_achievement_toasts.call_deferred())
+	Sound.play(&"upgrade")
+
+
+## Les bandeaux sont centrés, juste au-dessus de la barre du bas.
+func _place_achievement_toasts() -> void:
+	if not is_inside_tree():
+		return
+	achievement_toasts.reset_size()
+	var screen := get_viewport().get_visible_rect().size
+	achievement_toasts.position = Vector2(((screen.x - achievement_toasts.size.x) / 2.0),
+		bottom_bar.get_global_rect().position.y - 12.0 - achievement_toasts.size.y).round()
+
+
 ## Zone de la carte visible entre la barre du haut et celle du bas.
 func get_play_area() -> Rect2:
 	var screen := get_viewport().get_visible_rect()
@@ -452,11 +630,27 @@ func show_wave_details() -> void:
 
 func _process(_delta: float) -> void:
 	_update_hovered_enemy()
+	var hint := TOUCH_HINT if GameSettings.is_touch_mode() else MOUSE_HINT
+	if shop_hint.text != hint:
+		shop_hint.text = hint
 
 
-## Monstre sous la souris : sa fenêtre de détail le suit, avec sa vie restante.
+## Au tactile, toucher un monstre ouvre sa fiche (il n'y a pas de survol) ; toucher
+## ailleurs la ferme. `_input` : le toucher continue vers la carte (pose des tours).
+func _input(event: InputEvent) -> void:
+	var touch := event as InputEventScreenTouch
+	if touch and touch.pressed:
+		touched_enemy = find_enemy_at(touch.position)
+
+
+## Monstre sous la souris (ou touché) : sa fenêtre de détail le suit, avec sa vie restante.
 func _update_hovered_enemy() -> void:
-	show_enemy_details(_find_enemy_under_mouse() if visible and not end_panel.visible else null)
+	if not visible or end_panel.visible:
+		show_enemy_details(null)
+	elif GameSettings.is_touch_mode():
+		show_enemy_details(touched_enemy if is_instance_valid(touched_enemy) else null)
+	else:
+		show_enemy_details(find_enemy_at(get_viewport().get_mouse_position()))
 
 
 ## Fenêtre de détail d'un monstre en jeu, à côté de lui (null = la fermer).
@@ -477,9 +671,8 @@ func show_enemy_details(enemy: Enemy) -> void:
 	enemy_details.show_text(text, Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0), border)
 
 
-## Monstre en jeu le plus proche de la souris, si elle est dessus (sur la carte).
-func _find_enemy_under_mouse() -> Enemy:
-	var mouse := get_viewport().get_mouse_position()
+## Monstre en jeu le plus proche de ce point de l'écran, s'il est dessus (sur la carte).
+func find_enemy_at(mouse: Vector2) -> Enemy:
 	if not get_play_area().has_point(mouse) or wave_preview.get_global_rect().has_point(mouse):
 		return null
 	var best: Enemy = null

@@ -31,6 +31,7 @@ const KNOCKBACK_MIN_RATIO := 0.35
 ## Secondes après un recul pendant lesquelles l'ennemi ne peut plus reculer : plusieurs
 ## Électroaimants ne peuvent pas le bloquer sur place.
 const KNOCKBACK_COOLDOWN := 1.5
+const FROZEN_COLOR := Color(0.7, 0.92, 1.0)
 
 @export var data: EnemyData
 
@@ -65,6 +66,16 @@ var _dot_color := Color.ORANGE
 ## Secondes pendant lesquelles l'ennemi ne peut ni être soigné ni soigner.
 var _heal_block_left := 0.0
 var _knockback_cooldown := 0.0
+## Tour qui porte le coup en cours (identifiant d'instance, 0 = aucune) : lue par le niveau
+## quand l'ennemi émet `damaged` ou `died`, pour les statistiques de fin de niveau.
+var damage_source_id := 0
+## Tour qui a posé la brûlure ou le poison en cours.
+var _dot_source_id := 0
+## Gel (pouvoir) : secondes restantes, et part des dégâts subis en plus pendant ce temps.
+var _frozen_left := 0.0
+var _frozen_vulnerability := 0.0
+## Soldat (renforts) qui retient l'ennemi : il ne marche plus tant que le soldat tient.
+var holder: Node2D
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -107,6 +118,13 @@ func _process(delta: float) -> void:
 			return
 	if _knockback_cooldown > 0.0:
 		_knockback_cooldown -= delta
+	# Gelé : il ne marche plus, ne soigne plus et n'appelle plus de renforts.
+	if _frozen_left > 0.0:
+		_frozen_left -= delta
+		if _frozen_left <= 0.0:
+			_frozen_vulnerability = 0.0
+			queue_redraw()
+		return
 	if _heal_block_left > 0.0:
 		_heal_block_left -= delta
 		if _heal_block_left <= 0.0:
@@ -121,6 +139,8 @@ func _process(delta: float) -> void:
 	if data.is_elite or data.is_boss:
 		_aura_time += delta
 		queue_redraw()
+	if is_held():
+		return
 	progress += get_speed() * delta
 	if progress >= _path_length:
 		despawn()
@@ -137,6 +157,28 @@ func is_slowed() -> bool:
 	return _slow_time_left > 0.0
 
 
+func is_frozen() -> bool:
+	return _frozen_left > 0.0
+
+
+## Retenu par un soldat encore debout.
+func is_held() -> bool:
+	return is_instance_valid(holder) and holder.is_alive
+
+
+## Gel (pouvoir) : l'ennemi s'arrête pendant `duration` et subit `vulnerability` de
+## dégâts en plus. Un boss ne gèle pas : il ralentit de moitié.
+func freeze(duration: float, vulnerability := 0.0) -> void:
+	if not is_alive or duration <= 0.0:
+		return
+	if data.is_boss:
+		apply_slow(0.5, duration)
+		return
+	_frozen_left = maxf(_frozen_left, duration)
+	_frozen_vulnerability = maxf(_frozen_vulnerability, vulnerability)
+	queue_redraw()
+
+
 ## Distance restant à parcourir avant la base : plus elle est petite, plus
 ## l'ennemi est dangereux.
 func distance_to_end() -> float:
@@ -147,6 +189,8 @@ func distance_to_end() -> float:
 func take_damage(amount: float, ignore_armor := false, shield_multiplier := 1.0) -> float:
 	if not is_alive:
 		return 0.0
+	if is_frozen():
+		amount *= 1.0 + _frozen_vulnerability
 	var dealt := health.take_damage(amount, ignore_armor, shield_multiplier)
 	if dealt > 0.0:
 		damaged.emit(self, dealt)
@@ -163,9 +207,12 @@ func hit(amount: float, stats: TowerData) -> float:
 		health.jam_shield(stats.shield_jam_duration)
 	if stats.heal_block_duration > 0.0:
 		block_healing(stats.heal_block_duration)
+	damage_source_id = stats.source_tower_id
 	var dealt := take_damage(amount, stats.armor_piercing, stats.shield_damage_multiplier)
+	damage_source_id = 0
 	apply_slow(stats.slow_factor, stats.slow_duration)
-	apply_dot(stats.dot_damage, stats.dot_duration, stats.color)
+	if apply_dot(stats.dot_damage, stats.dot_duration, stats.color):
+		_dot_source_id = stats.source_tower_id
 	if stats.knockback > 0.0:
 		push_back(stats.knockback)
 	return dealt
@@ -195,9 +242,10 @@ func apply_slow(factor: float, duration: float) -> void:
 
 ## Brûlure ou poison : `damage_per_second` pendant `duration`, en ignorant l'armure.
 ## Le plus fort et le plus long l'emportent, comme pour le ralentissement.
-func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE) -> void:
+## Renvoie true si l'effet a été posé.
+func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE) -> bool:
 	if not is_alive or damage_per_second <= 0.0 or duration <= 0.0:
-		return
+		return false
 	if _dot_left <= 0.0:
 		_dot_damage = damage_per_second
 		_dot_tick_left = DOT_TICK
@@ -206,6 +254,7 @@ func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE)
 	_dot_left = maxf(_dot_left, duration)
 	_dot_color = color
 	queue_redraw()
+	return true
 
 
 func is_burning() -> bool:
@@ -217,7 +266,9 @@ func _update_dot(delta: float) -> void:
 	_dot_tick_left -= delta
 	if _dot_tick_left <= 0.0:
 		_dot_tick_left += DOT_TICK
+		damage_source_id = _dot_source_id
 		take_damage(_dot_damage * DOT_TICK, true)
+		damage_source_id = 0
 	if _dot_left <= 0.0:
 		_dot_damage = 0.0
 		queue_redraw()
@@ -309,8 +360,9 @@ func _draw() -> void:
 		var size := data.radius * 2.6 * data.sprite_scale
 		draw_set_transform(Vector2.ZERO, _heading)
 		draw_texture_rect(data.texture, Rect2(-size / 2.0, -size / 2.0, size, size), false,
-			Color(0.6, 0.8, 1.0) if is_slowed() else Color.WHITE)
+			Color(0.6, 0.8, 1.0) if is_slowed() or is_frozen() else Color.WHITE)
 		draw_set_transform(Vector2.ZERO)
+		_draw_ice()
 		return
 	var color := data.color.lerp(Color(0.55, 0.8, 1.0), 0.5) if is_slowed() else data.color
 	draw_circle(Vector2.ZERO, data.radius, color)
@@ -321,6 +373,19 @@ func _draw() -> void:
 		for i in data.split_count:
 			var offset := Vector2.from_angle(TAU * i / data.split_count - PI / 2.0) * data.radius * 0.45
 			draw_circle(offset, data.radius * 0.28, data.split_into.color.darkened(0.15))
+	_draw_ice()
+
+
+## Gelé : une gangue de glace par-dessus l'ennemi.
+func _draw_ice() -> void:
+	if not is_frozen():
+		return
+	var r := data.radius * 1.15
+	draw_circle(Vector2.ZERO, r, Color(FROZEN_COLOR, 0.35))
+	draw_arc(Vector2.ZERO, r, 0.0, TAU, 6, Color(FROZEN_COLOR, 0.9), 2.0)
+	for i in 3:
+		var direction := Vector2.from_angle(TAU * i / 3.0 + PI / 6.0) * r * 0.75
+		draw_line(-direction, direction, Color(1, 1, 1, 0.55), 1.5)
 
 
 ## Aura dorée qui pulse autour d'un élite, rouge et dorée autour d'un boss.

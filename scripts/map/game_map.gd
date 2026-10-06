@@ -125,6 +125,21 @@ func get_enemy_path(index: int) -> Path2D:
 	return paths[index] if index >= 0 and index < paths.size() else paths[0]
 
 
+## Point des chemins le plus proche d'un point de la carte (repère global), pris sur la
+## partie des chemins qui est dans la grille.
+func get_closest_path_point(world_position: Vector2) -> Vector2:
+	var best := world_position
+	var best_distance := INF
+	for path in paths:
+		for point in path.curve.get_baked_points():
+			var global_point := path.to_global(point)
+			var distance := global_point.distance_squared_to(world_position)
+			if distance < best_distance and is_cell_in_grid(world_to_cell(global_point)):
+				best = global_point
+				best_distance = distance
+	return best
+
+
 # --- Décor ------------------------------------------------------------------
 
 ## Pose les tuiles du biome : sol, détails, obstacles et cailloux du chemin.

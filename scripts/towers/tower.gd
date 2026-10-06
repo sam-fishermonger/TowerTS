@@ -28,8 +28,13 @@ signal upgraded(tower: Tower)
 @export var data: TowerData
 ## Niveau d'amélioration : 1 à la pose, jusqu'à data.get_max_level().
 var level := 1
-## Statistiques effectives au niveau actuel.
-var stats: TowerData
+## Statistiques effectives au niveau actuel. Elles portent l'identifiant de la tour, pour
+## que ses dégâts lui soient comptés (TowerData.source_tower_id).
+var stats: TowerData:
+	set(value):
+		stats = value
+		if stats:
+			stats.source_tower_id = get_instance_id()
 ## Case de la carte occupée par la tour.
 var cell := Vector2i.ZERO
 var target_mode := TargetMode.FIRST

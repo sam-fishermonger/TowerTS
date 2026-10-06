@@ -59,6 +59,22 @@ static func get_unlocked_towers() -> Array[Resource]:
 	return result
 
 
+## Pouvoirs actifs (Power) débloqués par les améliorations achetées, dans l'ordre de
+## l'arbre, avec les renforts achetés : des copies, qu'on peut modifier.
+static func get_powers() -> Array[Resource]:
+	var owned := get_owned_ids()
+	var result: Array[Resource] = []
+	for perk in TREE.perks:
+		if perk.unlocks_power.is_empty() or not owned.has(perk.id):
+			continue
+		var power: Resource = load(perk.unlocks_power).duplicate()
+		for upgrade in TREE.perks:
+			if upgrade.improves_power == perk.unlocks_power and owned.has(upgrade.id):
+				upgrade.apply_to_power(power)
+		result.append(power)
+	return result
+
+
 ## Spécialisations et croisements achetés pour une tour (chemin de sa TowerData), dans
 ## l'ordre de l'arbre. Pour la seconde tour d'un croisement, c'est son effet
 ## (partner_effect) qui est dans la liste.

@@ -1,0 +1,51 @@
+class_name PowerIcon
+extends Control
+## Image d'un pouvoir actif, dessinée en code : un météore, un flocon ou un bouclier.
+
+## Pouvoir dessiné (Power).
+var power: Power:
+	set(value):
+		power = value
+		queue_redraw()
+
+
+func _draw() -> void:
+	if power:
+		draw_icon(self, power, Rect2(Vector2.ZERO, size), modulate.a)
+
+
+## Dessine l'image du pouvoir dans `rect`, sur n'importe quel CanvasItem.
+static func draw_icon(canvas: CanvasItem, power: Power, rect: Rect2, alpha := 1.0) -> void:
+	var c := rect.get_center()
+	var r := minf(rect.size.x, rect.size.y) / 2.0
+	var color := Color(power.color, alpha)
+	match power.kind:
+		Power.Kind.METEORS:
+			# Un rocher en feu et sa traînée, qui tombe en diagonale.
+			var rock := c + Vector2(r * 0.25, r * 0.25)
+			canvas.draw_line(rock - Vector2(r, r) * 0.8, rock, Color(color, 0.55 * alpha), r * 0.5)
+			canvas.draw_line(rock - Vector2(r, r) * 0.45, rock, Color(1, 0.85, 0.45, 0.7 * alpha), r * 0.3)
+			canvas.draw_circle(rock, r * 0.45, color)
+			canvas.draw_circle(rock - Vector2(r, r) * 0.12, r * 0.2, Color(1, 0.92, 0.7, alpha))
+		Power.Kind.FREEZE:
+			# Un flocon : trois branches et leurs petites pointes.
+			for i in 3:
+				var direction := Vector2.from_angle(PI / 2.0 + TAU * i / 6.0)
+				canvas.draw_line(c - direction * r * 0.9, c + direction * r * 0.9, color, maxf(r * 0.14, 1.5))
+			for i in 6:
+				var direction := Vector2.from_angle(PI / 2.0 + TAU * i / 6.0)
+				var base := c + direction * r * 0.55
+				for side in [-1.0, 1.0]:
+					canvas.draw_line(base, base + direction.rotated(side * 0.8) * r * 0.3, color, maxf(r * 0.1, 1.0))
+			canvas.draw_circle(c, r * 0.16, Color(1, 1, 1, alpha))
+		Power.Kind.REINFORCEMENTS:
+			# Un bouclier et une épée en travers.
+			var shield := PackedVector2Array([c + Vector2(-r * 0.6, -r * 0.7), c + Vector2(r * 0.6, -r * 0.7),
+				c + Vector2(r * 0.6, 0.0), c + Vector2(0.0, r * 0.85), c + Vector2(-r * 0.6, 0.0)])
+			canvas.draw_line(c + Vector2(-r * 0.85, r * 0.85), c + Vector2(r * 0.85, -r * 0.85),
+				Color(0.9, 0.9, 0.95, alpha), maxf(r * 0.14, 1.5))
+			canvas.draw_colored_polygon(shield, color.darkened(0.25))
+			shield.append(shield[0])
+			canvas.draw_polyline(shield, Color(1, 1, 1, 0.8 * alpha), maxf(r * 0.1, 1.0))
+			canvas.draw_line(c + Vector2(0.0, -r * 0.5), c + Vector2(0.0, r * 0.55), Color(1, 1, 1, 0.6 * alpha),
+				maxf(r * 0.1, 1.0))

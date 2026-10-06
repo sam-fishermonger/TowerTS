@@ -3,7 +3,8 @@ extends Node
 ## Sons et musique. Le nœud est chargé au démarrage (autoload « SoundPlayer ») et
 ## s'utilise par ses fonctions statiques : `Sound.play(&"build")`. Il joue les effets
 ## sur un petit groupe de lecteurs réutilisés, et la musique en boucle d'une scène
-## à l'autre. Les sons et la musique se coupent séparément ; le choix est enregistré.
+## à l'autre. Les sons et la musique se coupent et se règlent séparément (menu
+## Options) ; les choix sont enregistrés.
 ## (Fonctions statiques plutôt que le nom de l'autoload : les scripts restent
 ## compilables quand l'autoload n'est pas encore là, comme dans les tests.)
 
@@ -24,6 +25,8 @@ const SOUNDS := {
 const NODE_NAME := &"SoundPlayer"
 const MUSIC_BUS := &"Music"
 const SFX_BUS := &"Sfx"
+## Volume de chaque bus quand son curseur est au maximum, en décibels.
+const BUS_BASE_DB := {MUSIC_BUS: -8.0, SFX_BUS: -4.0}
 ## Nombre de sons joués en même temps, au plus.
 const VOICES := 16
 ## Méta du moteur qui coupe les effets sonores (voir set_effects_muted).
@@ -42,8 +45,8 @@ var _music_player: AudioStreamPlayer
 func _ready() -> void:
 	# Les sons continuent pendant la pause (achats, écran de fin).
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_ensure_bus(MUSIC_BUS, -8.0)
-	_ensure_bus(SFX_BUS, -4.0)
+	_ensure_bus(MUSIC_BUS)
+	_ensure_bus(SFX_BUS)
 	for i in VOICES:
 		var voice := AudioStreamPlayer.new()
 		voice.bus = SFX_BUS
@@ -52,8 +55,8 @@ func _ready() -> void:
 	_music_player = AudioStreamPlayer.new()
 	_music_player.bus = MUSIC_BUS
 	add_child(_music_player)
-	_apply_mute(MUSIC_BUS, not is_music_enabled())
-	_apply_mute(SFX_BUS, not is_sound_enabled())
+	_apply_volume(MUSIC_BUS)
+	_apply_volume(SFX_BUS)
 
 
 ## Nœud des sons, ou null s'il n'est pas chargé.
@@ -101,12 +104,31 @@ static func is_sound_enabled() -> bool:
 
 static func set_music_enabled(enabled: bool) -> void:
 	Progress.set_setting("music", enabled)
-	_apply_mute(MUSIC_BUS, not enabled)
+	_apply_volume(MUSIC_BUS)
 
 
 static func set_sound_enabled(enabled: bool) -> void:
 	Progress.set_setting("sound", enabled)
-	_apply_mute(SFX_BUS, not enabled)
+	_apply_volume(SFX_BUS)
+
+
+## Volume de la musique, de 0 (muette) à 1 (le maximum).
+static func get_music_volume() -> float:
+	return Progress.get_setting("music_volume", 1.0)
+
+
+static func get_sound_volume() -> float:
+	return Progress.get_setting("sound_volume", 1.0)
+
+
+static func set_music_volume(volume: float) -> void:
+	Progress.set_setting("music_volume", clampf(volume, 0.0, 1.0))
+	_apply_volume(MUSIC_BUS)
+
+
+static func set_sound_volume(volume: float) -> void:
+	Progress.set_setting("sound_volume", clampf(volume, 0.0, 1.0))
+	_apply_volume(SFX_BUS)
 
 
 ## Sans fenêtre (tests, serveur), personne n'écoute : on ne joue rien. Le pilote
@@ -137,15 +159,22 @@ func _start_music() -> void:
 	_music_player.play()
 
 
-static func _apply_mute(bus: StringName, muted: bool) -> void:
-	AudioServer.set_bus_mute(AudioServer.get_bus_index(bus), muted)
+## Règle un bus d'après les réglages : coupé, ou à son volume (le curseur suit
+## l'oreille : linear_to_db, et 0 coupe le bus).
+static func _apply_volume(bus: StringName) -> void:
+	var index := AudioServer.get_bus_index(bus)
+	if index == -1:
+		return
+	var enabled := is_music_enabled() if bus == MUSIC_BUS else is_sound_enabled()
+	var volume := get_music_volume() if bus == MUSIC_BUS else get_sound_volume()
+	AudioServer.set_bus_mute(index, not enabled or volume <= 0.0)
+	AudioServer.set_bus_volume_db(index, BUS_BASE_DB[bus] + linear_to_db(maxf(volume, 0.001)))
 
 
-static func _ensure_bus(bus: StringName, volume_db: float) -> void:
+static func _ensure_bus(bus: StringName) -> void:
 	if AudioServer.get_bus_index(bus) != -1:
 		return
 	AudioServer.add_bus()
 	var index := AudioServer.bus_count - 1
 	AudioServer.set_bus_name(index, bus)
-	AudioServer.set_bus_volume_db(index, volume_db)
 	AudioServer.set_bus_send(index, &"Master")

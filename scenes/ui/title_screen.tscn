@@ -1,7 +1,6 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="1_title"]
-[ext_resource type="PackedScene" path="res://scenes/ui/audio_toggles.tscn" id="9_audio"]
 [ext_resource type="Script" path="res://scripts/ui/title_demo.gd" id="2_demo"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
@@ -150,11 +149,21 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Lexique"
 
-
-[node name="AudioToggles" parent="Center/Panel/Menu" instance=ExtResource("9_audio")]
+[node name="AchievementsButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 44)
 layout_mode = 2
-theme_override_constants/separation = 12
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Succès"
+
+[node name="OptionsButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Options"
 
 [node name="QuitButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true

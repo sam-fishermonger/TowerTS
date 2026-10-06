@@ -47,6 +47,8 @@ Le dossier `build/` est ignoré par git.
 - Sous le bouton, un encadré annonce la composition de la prochaine vague (élites et boss signalés). Le survoler ouvre sa fenêtre de détail : chaque sorte de monstre avec son nombre, sa vie (difficulté comprise), son armure, son bouclier, sa vitesse, l'or qu'il rapporte, les vies qu'il retire et ses capacités, plus le bonus de la vague.
 - Survoler un monstre sur la carte ouvre sa fiche, qui le suit : nom, rang, vie et bouclier restants, statistiques et capacités.
 - Lancer la vague alors que des ennemis sont encore en jeu rapporte une prime : la moitié de son bonus, versée tout de suite (réglable dans la propriété `early_call_bonus_ratio` du niveau).
+- **Intérêts** : chaque fois que la carte est vidée, l'or gardé rapporte 5 % d'intérêts (25 or au plus), comptés avant le bonus de vague et affichés en « +N intérêts » sous l'or. Le HUD annonce sous l'or ce que rapporterait l'or gardé à ce moment-là. Épargner entre deux vagues rapporte donc un peu, sans dépasser le plafond. Le taux et le plafond se règlent dans les propriétés `interest_rate` et `interest_cap` du niveau.
+- **Pouvoirs** : achetés dans l'arbre des améliorations (onglet **Pouvoirs**), ils ont chacun leur bouton en haut de l'écran, à gauche de **Lancer la vague**, et leur touche : **A**, **Z** et **E** en AZERTY (Q, W, E en QWERTY), la lettre étant rappelée dans le coin du bouton. Après chaque usage, un pouvoir se recharge (en temps de jeu : x2 et x3 accélèrent la recharge, la pause l'arrête) ; son bouton montre les secondes restantes. **Météores** et **Renforts** se lancent sur la carte : leur zone suit la souris jusqu'au clic (clic droit ou Échap pour annuler, et la même touche aussi). Le **Gel** part tout de suite. Voir le tableau plus bas.
 - Les dégâts infligés s'affichent au-dessus des ennemis touchés. Un ennemi détruit affiche l'or gagné et laisse au sol une tache qui s'estompe en 20 secondes.
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** règlent la vitesse du jeu (**V** passe à la vitesse suivante). Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
@@ -73,6 +75,30 @@ Le dossier `build/` est ignoré par git.
 
   Un boss coûte 10 vies s'il atteint la base et rapporte 150 à 170 or. Les élites se règlent dans `scripts/data/enemy_data.gd` (`ELITE_*`) ; un groupe de vague devient élite avec sa case `elite` (`SpawnGroup`), qui a aussi son propre multiplicateur de vie (`health_multiplier`). Un ennemi est un boss avec `is_boss`, et appelle des renforts avec le groupe **Renforts** de sa ressource.
 - **Lexique** (écran titre) : la fiche de chaque tour (statistiques, améliorations, comment la débloquer, spécialisation), de chaque monstre (statistiques, capacités, version élite), des élites et des boss, et de chaque monde (monstres, boss, tours du monde, étoiles). Il lit les ressources du jeu : une tour ajoutée dans `resources/towers/` ou un monstre ajouté à un monde y apparaît tout seul.
+- **Statistiques de fin de niveau** : l'écran de fin (victoire, défaite ou fin du mode infini) montre à droite le bilan de la partie : durée (en temps de jeu), monstres détruits (dont élites et boss), dégâts infligés, vies perdues, or dépensé (poses et améliorations) et gagné (monstres, bonus de vague, intérêts, primes, ventes), tours posées et améliorations achetées. Puis la **meilleure tour**, celle qui a infligé le plus de dégâts (son niveau, ses dégâts, ses destructions), et les **dégâts par tour** : une ligne par type de tour posé, avec le nombre de tours, une barre, les dégâts et leur part. Chaque coup est compté à la tour qui l'a porté, brûlures et poisons compris, et une tour vendue garde ce qu'elle a fait. Le calcul est dans `scripts/levels/level_stats.gd`.
+- **Succès** : 21 objectifs à remplir en jouant, dans n'importe quelle difficulté. Un bandeau doré les annonce en jeu au moment où ils sont remplis, et l'écran de fin liste ceux de la partie. **Succès** (écran titre, avec le compte) ouvre leur page : une vignette par succès, grisée tant qu'il n'est pas débloqué, avec l'avancement des objectifs chiffrés et la date du déblocage. La partie de l'écran titre n'en débloque pas, et **Effacer la progression** les garde.
+
+  | Succès | Objectif |
+  |---|---|
+  | Premier pas | Gagner un niveau. |
+  | Sans une égratignure | Gagner un niveau sans perdre de vie. |
+  | Sur le fil | Gagner un niveau avec une seule vie restante. |
+  | La Ruche nettoyée, La Fonderie éteinte, La Cité libérée | Gagner tous les niveaux du monde. |
+  | Régicide, Démolition, Coup d'État | Vaincre la Reine de la Ruche, le Béhémoth, le Général (mode infini compris). |
+  | Commando | Vaincre un boss avec 3 tours ou moins sur la carte. |
+  | Minimaliste | Gagner un niveau en posant 5 tours au plus (ventes comprises). |
+  | Brut de pose | Gagner un niveau sans améliorer aucune tour. |
+  | Monoculture | Gagner un niveau avec un seul type de tour. |
+  | Impatient | Lancer 5 vagues en avance dans une même partie. |
+  | Trésor de guerre | Gagner un niveau avec 1000 pièces d'or en poche. |
+  | Cauchemar vaincu | Gagner un niveau en Cauchemar. |
+  | Infatigable | Repousser 30 vagues dans une partie du mode infini. |
+  | Chasseur d'élites | Détruire 50 monstres élites (toutes parties confondues). |
+  | Exterminateur | Détruire 5000 monstres (toutes parties confondues). |
+  | Constellation | Obtenir 100 étoiles. |
+  | Jardinier | Acheter 15 améliorations dans l'arbre. |
+
+  Le code Konami, qui gagne tous les niveaux et achète tout l'arbre, débloque du même coup les succès de mondes, d'étoiles et de l'arbre. Les succès sont dans `scripts/save/achievements.gd` (`LIST`) : un succès s'ajoute là, avec son objectif.
 - Dans la sélection des mondes, survoler un niveau (ou lui donner le focus au clavier) ouvre sa fenêtre de détail : or et vies de départ, et le contenu de chaque vague dans la difficulté choisie, élites et boss compris.
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
@@ -89,15 +115,28 @@ Le dossier `build/` est ignoré par git.
   | Sans amélioration | Les tours ne s'améliorent pas. |
 
   Un jour sur trois environ, **Deux tours seulement** remplace les 4 tours imposées par 2 tours qui font des dégâts. L'arbre des améliorations ne compte pas pendant le défi (ni bonus, ni tours débloquées, ni spécialisations), et la partie se joue en Moyen : tout le monde a les mêmes chances. Le défi ne rapporte pas d'étoiles mais un **score** : 10 points par pièce d'or que rapporte un monstre détruit, 100 par vague repoussée et, en cas de victoire, 50 par vie gardée ; une défaite garde les points marqués. L'écran du défi montre le niveau, les tours et les règles du jour, le meilleur score du jour et ceux des derniers jours ; le score s'affiche en jeu à côté des vagues, avec les règles en bulle d'aide. Les règles et le score se règlent dans `scripts/data/daily_challenge.gd`.
-- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois onglets :
+- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Quatre onglets :
   - **Bonus**, en trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée) ;
   - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune, puis les **croisements**, qui demandent deux tours de branches différentes (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée s'ajoute aux tours proposées dans tous les niveaux ;
   - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours de base et des mondes, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
+  - **Pouvoirs** : les trois pouvoirs actifs, payés en étoiles (le Gel s'ouvre avec La Fonderie, les Renforts avec La Cité), et sous chacun deux renforts payés en étoiles infinies (voir plus bas).
 
-  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (3 étoiles pour la première amélioration, jusqu'à 14 pour Maître artilleur) : l'arbre complet coûte 212 étoiles, sur les 216 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (3 étoiles pour la première amélioration, jusqu'à 13 pour la Bobine et l'Électroaimant) : l'arbre complet coûte 216 étoiles, les 216 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies, et les renforts des pouvoirs 21. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
-- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
+- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle.
+- **Options** (écran titre, ou en bas à droite en jeu, ce qui met la partie en pause le temps des réglages) : **Musique** et **Sons** ont chacun leur case pour les couper et leur curseur de volume ; **Plein écran** (aussi **F11** ou **Alt + Entrée** à tout moment) ; **Vitesse au départ** : x1, x2 ou x3, la vitesse à laquelle chaque niveau commence. Tout s'applique et s'enregistre tout de suite. Sur la version web, le navigateur ne rouvre pas le plein écran tout seul au lancement : il se redemande dans les Options.
+- **Au tactile** (téléphone, tablette, version web) : toucher une tour de la barre d'achat, puis une case : l'aperçu de la tour s'y affiche (portée, et en rouge si elle ne peut pas s'y poser) avec « Touchez encore pour poser » ; un second toucher sur la même case la pose, un toucher ailleurs déplace l'aperçu. Toucher encore la tour dans la barre annule. Toucher une tour posée ouvre sa fiche, toucher la carte ailleurs la ferme ; toucher un monstre ouvre la sienne. Dans la sélection des mondes et l'arbre des améliorations, le premier toucher sur un niveau ou une amélioration ouvre sa fiche, le second le lance ou l'achète. Le jeu se joue à l'horizontale : tenu en hauteur, l'écran invite à tourner l'appareil. Le jeu passe tout seul en mode tactile au premier toucher, et revient à la souris dès qu'elle bouge (`scripts/save/game_settings.gd`).
+
+### Pouvoirs
+
+| Pouvoir | Prix | Effet | Recharge | Renforts (étoiles infinies) |
+|---|---|---|---|---|
+| **Météores** | ★ 3 | 6 météores tombent l'un après l'autre dans un rayon de 70 pixels autour du point visé ; chacun fait 80 dégâts à tous les ennemis à 46 pixels de son point de chute. | 40 s | **Pluie battante** (∞ 3) : +50 % de dégâts. **Comètes** (∞ 4) : recharge 30 % plus rapide. |
+| **Gel** | ★ 3, avec La Fonderie | Tous les ennemis de la carte s'arrêtent pendant 3 s (ni marche, ni soins, ni renforts appelés). Un boss ne gèle pas : il ralentit de moitié. | 55 s | **Blizzard** (∞ 3) : 2 s de plus. **Engelures** (∞ 4) : les ennemis gelés subissent 30 % de dégâts en plus. |
+| **Renforts** | ★ 4, avec La Cité | 3 soldats (150 vie, 24 dégâts/s) se postent sur le chemin, au plus près du point visé, pendant 20 s. Chacun arrête un ennemi à sa portée et le combat ; l'ennemi retenu le frappe (12 vie/s par vie qu'il coûterait en passant). Les boss ne s'arrêtent pas, mais un soldat libre les frappe au passage. | 45 s | **Vétérans** (∞ 3) : +50 % de vie et de dégâts. **Escouade** (∞ 4) : 2 soldats de plus. |
+
+Un pouvoir est une ressource `Power` (`resources/powers/`). L'amélioration qui le débloque a son chemin dans `unlocks_power`, et celles qui le renforcent dans `improves_power`, avec les champs du groupe **Pouvoirs** de `Perk` (dégâts, recharge, durée, nombre, vulnérabilité).
 
 ### Spécialisations
 
@@ -231,11 +270,13 @@ Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du b
 ├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
 ├── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
 ├── TowerPicker              choix des tours au lancement du niveau (limite de la difficulté)
-└── BossBar                  vie du boss en jeu, en haut de la carte
+├── BossBar                  vie du boss en jeu, en haut de la carte
+└── EndStats                 statistiques de la partie sur l'écran de fin (LevelStats)
 DetailPopup (PanelContainer) scripts/ui/detail_popup.gd   fenêtre de détail au survol (texte BBCode, reste dans l'écran)
 EnemyInfo                    scripts/ui/enemy_info.gd     textes qui décrivent un ennemi ou une vague (lexique, fenêtres de détail)
 GameMap (Node2D)             scripts/map/game_map.gd      grille, chemins (Path2D enfants), rochers, cases occupées
-Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, navigation
+Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, succès, navigation
+├── LevelStats               dégâts et destructions de chaque tour, or, durée (statistiques de fin de niveau)
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris
 └── WaveSpawner              fait apparaître les ennemis sur les chemins de la carte
 TitleDemo                    scripts/ui/title_demo.gd     partie jouée toute seule derrière l'écran titre (Level.is_demo)
@@ -250,7 +291,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 ```
 project.godot        Configuration du projet
 export_presets.cfg   Réglages d'export (Windows, Linux, Web)
-scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, HUD, fiches et boutons du son
+scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, succès, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower, PulseTower, BeamTower, FlameTower et RailTower
@@ -263,10 +304,10 @@ scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile 
 scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
 resources/tilesets/  Tuiles de chaque biome (TileSet)
 tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py)
-scripts/save/        Progression enregistrée (Progress) et améliorations permanentes achetées (Perks)
+scripts/save/        Progression enregistrée (Progress), améliorations permanentes achetées (Perks) et succès (Achievements)
 resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites
 assets/audio/        Musiques et effets sonores
-assets/fonts/        Police de l'interface : Open Sans + symboles ★ ☆ ✕ (voir LICENCES.md)
+assets/fonts/        Police de l'interface : Open Sans + symboles ★ ☆ ✕ et ceux des succès (voir LICENCES.md)
 ```
