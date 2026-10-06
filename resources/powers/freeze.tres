@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Power" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/power.gd" id="1_power"]
+
+[resource]
+script = ExtResource("1_power")
+id = "freeze"
+display_name = "Gel"
+description = "Gèle sur place tous les ennemis de la carte. Les boss ne font que ralentir de moitié."
+kind = 1
+color = Color(0.55, 0.85, 1, 1)
+cooldown = 55.0
+duration = 3.0

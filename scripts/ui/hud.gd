@@ -25,6 +25,8 @@ signal pause_toggled
 signal game_speed_selected(speed: float)
 ## Émis quand le joueur valide son choix de tours au lancement du niveau (TowerPicker).
 signal towers_chosen(types: Array[TowerData])
+## Émis quand le joueur choisit un pouvoir actif (bouton, ou touche A/Z/E en AZERTY).
+signal power_selected(power: Power)
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
@@ -32,6 +34,8 @@ const LIVES_COLOR := Color(1, 0.5, 0.5)
 const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
+## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
+const POWER_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E]
 
 var _speed_group := ButtonGroup.new()
 var _gold := 0
@@ -58,9 +62,14 @@ var boss_bar: BossBar
 var end_stats: EndStats
 ## Bandeaux des succès débloqués en jeu, en bas de la carte.
 var achievement_toasts: VBoxContainer
+## Boutons des pouvoirs actifs, en haut, à gauche du bouton de vague.
+var power_bar: HBoxContainer
+var power_buttons: Array[PowerButton] = []
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
+## Intérêts que rapporterait l'or gardé, sous l'or.
+@onready var interest_label: Label = %InterestLabel
 @onready var lives_label: Label = %LivesLabel
 @onready var wave_label: Label = %WaveLabel
 ## Barre d'achat, en bas à gauche.
@@ -138,7 +147,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
 	var slot := TowerShop.slot_for_key(code)
-	if code == KEY_SPACE or code == KEY_P:
+	var power_index := POWER_KEYS.find(code)
+	if power_index >= 0 and power_index < power_buttons.size():
+		power_selected.emit(power_buttons[power_index].power)
+	elif code == KEY_SPACE or code == KEY_P:
 		pause_toggled.emit()
 	elif code == KEY_V:
 		_select_next_speed()
@@ -167,6 +179,56 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	tower_shop.tower_selected.connect(tower_selected.emit)
 	tower_shop.tower_hovered.connect(_on_shop_button_hovered)
 	tower_shop.hover_ended.connect(shop_info.close)
+
+
+## Ajoute un bouton par pouvoir actif, en haut de l'écran, à gauche du bouton de vague.
+func setup_powers(powers: Array[Power]) -> void:
+	if power_bar == null:
+		power_bar = HBoxContainer.new()
+		power_bar.add_theme_constant_override("separation", 6)
+		next_wave_button.get_parent().add_child(power_bar)
+		next_wave_button.get_parent().move_child(power_bar, next_wave_button.get_index())
+	for i in powers.size():
+		var button := PowerButton.new()
+		button.setup(powers[i], key_label(POWER_KEYS[i]) if i < POWER_KEYS.size() else "")
+		button.pressed.connect(func() -> void: power_selected.emit(button.power))
+		power_bar.add_child(button)
+		power_buttons.append(button)
+	power_bar.visible = not powers.is_empty()
+
+
+## Lettre écrite sur la touche à cette position du clavier, dans la disposition du joueur.
+static func key_label(physical: Key) -> String:
+	# Sans fenêtre (tests), le clavier n'est pas connu : on garde la touche QWERTY.
+	if DisplayServer.get_name() == "headless":
+		return OS.get_keycode_string(physical)
+	var keycode := DisplayServer.keyboard_get_keycode_from_physical(physical)
+	var label := OS.get_keycode_string(keycode) if keycode != KEY_NONE else ""
+	return label if not label.is_empty() else OS.get_keycode_string(physical)
+
+
+## Recharge restante de chaque pouvoir, et ceux qu'on peut lancer maintenant.
+func update_powers(cooldowns: Array[float], usable: Array[bool]) -> void:
+	for i in mini(power_buttons.size(), cooldowns.size()):
+		power_buttons[i].set_state(cooldowns[i], usable[i])
+
+
+## Le bouton du pouvoir visé reste enfoncé (null = aucun).
+func set_selected_power(power: Power) -> void:
+	for button in power_buttons:
+		button.set_pressed_no_signal(button.power == power)
+
+
+## Bulle d'aide des intérêts : leur taux et leur plafond.
+func set_interest_rules(rate: float, cap: int) -> void:
+	interest_label.tooltip_text = ("Chaque fois que la carte est vidée, l'or gardé rapporte %d %% d'intérêts "
+		+ "(%d or au plus), avant le bonus de vague.") % [roundi(rate * 100.0), cap]
+
+
+## Point de l'écran où s'affichent les intérêts versés : sous l'or.
+func get_interest_anchor() -> Vector2:
+	var rect := interest_label.get_global_rect() if interest_label.visible else gold_label.get_global_rect()
+	return Vector2(rect.get_center().x, rect.end.y + 14.0)
 
 
 ## Remplit la barre d'achat (après le choix des tours, s'il y en a un).
@@ -203,9 +265,12 @@ func _select_next_speed() -> void:
 
 
 ## `wave_count` négatif : mode infini, les vagues ne s'arrêtent pas.
-func update_stats(gold: int, lives: int, wave: int, wave_count: int) -> void:
+## `interest` : or que rapporteraient les intérêts maintenant (négatif : pas d'intérêts).
+func update_stats(gold: int, lives: int, wave: int, wave_count: int, interest := -1) -> void:
 	_gold = gold
 	gold_label.text = "Or : %d" % gold
+	interest_label.visible = interest >= 0
+	interest_label.text = "Intérêts : +%d" % maxi(interest, 0)
 	lives_label.text = "Vies : %d" % lives
 	wave_label.text = "Vague : %d / %s" % [wave, str(wave_count) if wave_count >= 0 else "∞"]
 	tower_shop.set_gold(gold)

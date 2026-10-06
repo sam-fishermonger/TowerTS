@@ -34,7 +34,7 @@ var towers := {}
 var gold_spent := 0
 ## Or dépensé en améliorations (compris dans gold_spent).
 var gold_spent_on_upgrades := 0
-## Or gagné : monstres détruits, bonus de vague, primes de lancement en avance et ventes.
+## Or gagné : monstres détruits, bonus de vague, intérêts, primes de lancement en avance et ventes.
 var gold_earned := 0
 var kills := 0
 var elite_kills := 0
