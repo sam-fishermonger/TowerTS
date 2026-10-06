@@ -1,6 +1,7 @@
 class_name WaveSpawner
 extends Node
-## Fait apparaître les ennemis de chaque vague sur les chemins de la carte, selon les WaveData.
+## Fait apparaître les ennemis de chaque vague sur les chemins de la carte, selon les WaveData,
+## changés par la difficulté du niveau (voir apply_difficulty()).
 ## Chaque ennemi marche un peu sur le côté du chemin, tiré au hasard, pour que les vagues
 ## ne forment pas une seule file. En mode infini, des vagues de plus en plus dures
 ## suivent celles du niveau, sans fin.
@@ -37,6 +38,8 @@ var is_spawning := false
 ## Mode infini : après les vagues du niveau, il y en a toujours une suivante. À régler
 ## avant la première vague.
 var endless := false
+## Multiplicateur de la vitesse des ennemis (difficulté).
+var speed_multiplier := 1.0
 
 var _queue: Array[Dictionary] = []
 var _elapsed := 0.0
@@ -58,6 +61,25 @@ func has_next_wave() -> bool:
 ## Nombre de vagues du niveau (sans les vagues sans fin du mode infini).
 func get_wave_count() -> int:
 	return waves.size()
+
+
+## Applique une difficulté (Difficulty) aux vagues du niveau : vie et bouclier, nombre
+## d'ennemis de chaque groupe (le groupe dure à peu près aussi longtemps) et vitesse.
+## À appeler avant la première vague. Les vagues de la scène ne sont pas modifiées :
+## le spawner garde des copies.
+func apply_difficulty(difficulty: int) -> void:
+	speed_multiplier = Difficulty.SPEED[difficulty]
+	var count_multiplier := Difficulty.ENEMY_COUNT[difficulty]
+	var scaled: Array[WaveData] = []
+	for wave in waves:
+		var copy := WaveData.new()
+		copy.bonus_gold = wave.bonus_gold
+		copy.health_multiplier = wave.health_multiplier * Difficulty.HEALTH[difficulty]
+		for group in wave.groups:
+			copy.groups.append(_scale_group(group, count_multiplier))
+		scaled.append(copy)
+	waves = scaled
+	_endless_waves.clear()
 
 
 ## Vague d'index donné : une de celles du niveau, ou au-delà, une vague du mode infini.
@@ -105,6 +127,7 @@ func spawn(data: EnemyData, path: Path2D, progress := 0.0, health_multiplier := 
 	enemy.path = path
 	enemy.progress = progress
 	enemy.health_multiplier = health_multiplier
+	enemy.speed_multiplier = speed_multiplier
 	var spread := get_max_lateral_offset(data)
 	enemy.lateral_offset = _rng.randf_range(-spread, spread)
 	enemy_container.add_child(enemy)
@@ -127,9 +150,15 @@ func _make_endless_wave(index: int) -> WaveData:
 	wave.bonus_gold = roundi(base.bonus_gold * (1.0 + ENDLESS_BONUS_GROWTH * extra))
 	wave.health_multiplier = base.health_multiplier * pow(ENDLESS_HEALTH_GROWTH, extra)
 	for group in base.groups:
-		var copy: SpawnGroup = group.duplicate()
-		copy.count = ceili(group.count * (1.0 + ENDLESS_COUNT_GROWTH * extra))
-		# Le groupe dure à peu près aussi longtemps : les ennemis en plus se resserrent.
-		copy.interval = maxf(group.interval * group.count / copy.count, ENDLESS_MIN_INTERVAL)
-		wave.groups.append(copy)
+		wave.groups.append(_scale_group(group, 1.0 + ENDLESS_COUNT_GROWTH * extra))
 	return wave
+
+
+## Copie d'un groupe avec plus (ou moins) d'ennemis, au moins un. Le groupe dure à peu
+## près aussi longtemps : les ennemis en plus se resserrent, ceux en moins s'espacent.
+func _scale_group(group: SpawnGroup, count_multiplier: float) -> SpawnGroup:
+	var copy: SpawnGroup = group.duplicate()
+	copy.count = ceili(group.count * count_multiplier) if count_multiplier > 1.0 \
+		else maxi(roundi(group.count * count_multiplier), 1)
+	copy.interval = maxf(group.interval * group.count / copy.count, minf(group.interval, ENDLESS_MIN_INTERVAL))
+	return copy

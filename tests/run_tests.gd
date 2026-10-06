@@ -93,6 +93,7 @@ func _run() -> void:
 	await _test_worlds()
 	await _test_spawn_spread()
 	await _test_endless_mode()
+	await _test_difficulties()
 	await _test_specializations()
 	await _test_konami_code()
 	await _test_biome_tiles()
@@ -280,13 +281,13 @@ func _test_progress() -> void:
 	_check(screen.get_level_button(LEVEL_01.resource_path).text == "1-1\n★★☆"
 		and not screen.get_level_button(LEVEL_02.resource_path).disabled,
 		"la sélection montre les étoiles et le niveau débloqué")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 18", "la carte du monde compte ses étoiles")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 72", "la carte du monde compte ses étoiles")
 	await _free(screen)
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
 	_check(title.get_node("%PlayButton").text == "Continuer", "le bouton devient Continuer")
-	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 54"), "l'écran titre montre les étoiles de la campagne")
+	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 216"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and not Progress.is_unlocked(campaign, 1),
@@ -310,13 +311,15 @@ func _test_perk_tree() -> void:
 	var longue_vue := tree.get_perk("longue_vue")
 	_check(Perks.get_available_stars() == 0 and not Perks.can_buy(poudre), "sans étoiles, rien à acheter")
 	Progress.record_victory(LEVEL_01.resource_path, 3)
+	Progress.record_victory(LEVEL_01.resource_path, 3, Difficulty.FACILE)
 	Progress.record_victory(LEVEL_02.resource_path, 2)
-	_check(Perks.get_earned_stars() == 5 and Perks.get_available_stars() == 5, "les étoiles des niveaux gagnés sont la monnaie")
+	_check(Perks.get_earned_stars() == 8 and Perks.get_available_stars() == 8,
+		"les étoiles des niveaux gagnés, dans chaque difficulté, sont la monnaie")
 
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(title.get_node("%PerksButton").text.ends_with("★ 5"), "l'écran titre signale les étoiles à dépenser")
+	_check(title.get_node("%PerksButton").text.ends_with("★ 8"), "l'écran titre signale les étoiles à dépenser")
 	await _free(title)
 
 	var screen := PERK_TREE_SCREEN.instantiate()
@@ -327,19 +330,20 @@ func _test_perk_tree() -> void:
 	_check(not Perks.is_owned(longue_vue), "une amélioration verrouillée ne s'achète pas")
 	_check(screen.info_status.text.contains("Poudre fine"), "la fiche dit ce qui manque")
 	screen.get_button(poudre).pressed.emit()
-	_check(Perks.is_owned(poudre) and Perks.get_available_stars() == 4, "acheter Poudre fine coûte 1 étoile")
-	_check(screen.get_button(poudre).text.ends_with("Acquis") and screen.get_button(longue_vue).text.ends_with("★ 1"),
+	_check(Perks.is_owned(poudre) and Perks.get_available_stars() == 8 - poudre.cost,
+		"acheter Poudre fine coûte %d étoiles" % poudre.cost)
+	_check(screen.get_button(poudre).text.ends_with("Acquis")
+		and screen.get_button(longue_vue).text.ends_with("★ %d" % longue_vue.cost),
 		"Poudre fine est acquise et débloque Longue-vue")
-	_check(screen.stars_label.text.begins_with("★ 4 à dépenser"), "le compteur d'étoiles se met à jour")
+	_check(screen.stars_label.text.begins_with("★ %d à dépenser" % (8 - poudre.cost)), "le compteur d'étoiles se met à jour")
 	_check(not screen.buy(poudre), "une amélioration ne s'achète qu'une fois")
 	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0 * 1.1), "Poudre fine : +10 % de dégâts sur les tours")
-	var artilleur := tree.get_perk("artilleur")
+	var rouages := tree.get_perk("rouages")
 	Perks.buy(longue_vue)
-	Perks.buy(tree.get_perk("rouages"))
-	_check(Perks.is_unlocked(artilleur) and not Perks.can_buy(artilleur) and Perks.get_available_stars() == 1,
+	_check(Perks.is_unlocked(rouages) and not Perks.can_buy(rouages) and Perks.get_available_stars() == 8 - poudre.cost - longue_vue.cost,
 		"une amélioration trop chère ne s'achète pas")
 	screen.get_node("%RefundButton").pressed.emit()
-	_check(Perks.get_owned_ids().is_empty() and Perks.get_available_stars() == 5, "Réinitialiser l'arbre rend toutes les étoiles")
+	_check(Perks.get_owned_ids().is_empty() and Perks.get_available_stars() == 8, "Réinitialiser l'arbre rend toutes les étoiles")
 	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0), "et retire les bonus")
 	Perks.buy(poudre)
 	Progress.reset_campaign()
@@ -349,9 +353,7 @@ func _test_perk_tree() -> void:
 
 func _test_perks_in_level() -> void:
 	print("Arbre des améliorations : effets en jeu")
-	Progress.record_victory(LEVEL_01.resource_path, 3)
-	Progress.record_victory(LEVEL_02.resource_path, 3)
-	Progress.record_victory(LEVEL_03.resource_path, 3)
+	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path])
 	for id in ["tresor", "architecte", "brocanteur", "remparts", "infirmerie", "pillage"]:
 		_check(Perks.buy(Perks.TREE.get_perk(id)), "achat : %s" % Perks.TREE.get_perk(id).display_name)
 	var level := await _spawn_level(LEVEL_01)
@@ -374,6 +376,13 @@ func _test_perks_in_level() -> void:
 	Progress.reset_campaign()
 
 
+## Enregistre une victoire à 3 étoiles dans chaque difficulté pour chacun des niveaux.
+func _win_in_all_difficulties(paths: Array[String]) -> void:
+	for path in paths:
+		for d in Difficulty.COUNT:
+			Progress.record_victory(path, 3, d)
+
+
 func _test_biome_towers_in_tree() -> void:
 	print("Arbre des améliorations : tours des mondes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
@@ -385,9 +394,11 @@ func _test_biome_towers_in_tree() -> void:
 	_check(per_world == [2, 2, 2], "2 tours par monde (%s)" % [per_world])
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
-	var campaign_stars := campaign.size() * 3
-	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars - 3,
+	var campaign_stars := campaign.size() * Progress.MAX_LEVEL_STARS
+	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.9,
 		"l'arbre complet (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [tree.get_total_cost(), campaign_stars])
+	_check(tree.get_total_cost() > campaign.size() * 3 * 3,
+		"il faut des étoiles de Cauchemar pour tout acheter")
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
@@ -415,9 +426,7 @@ func _test_biome_towers_in_tree() -> void:
 	fresh.free()
 	await _free(level)
 
-	for world in campaign.worlds:
-		for path in world.levels:
-			Progress.record_victory(path, 3)
+	_win_in_all_difficulties(campaign.levels)
 	for perk: Perk in tower_perks:
 		Perks.buy(perk)
 	_check(Perks.get_unlocked_towers().size() == 6, "les 6 tours achetées")
@@ -1595,6 +1604,99 @@ func _test_endless_mode() -> void:
 	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == 0, "Effacer la progression efface les records du mode infini")
 
 
+func _test_difficulties() -> void:
+	print("Difficultés : Facile, Moyen, Difficile, Cauchemar")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_check(Difficulty.get_current() == Difficulty.MOYEN, "Moyen par défaut")
+	_check(Difficulty.describe(Difficulty.DIFFICILE) == "Monstres 35 % plus résistants, 25 % plus nombreux et 10 % plus rapides.",
+		"chaque difficulté décrit ses effets")
+	var counts := func(level: Level) -> Array:
+		var result := []
+		for wave in level.spawner.waves:
+			for group in wave.groups:
+				result.append(group.count)
+		return result
+	var level := await _spawn_level(LEVEL_03)
+	var normal: Array = counts.call(level)
+	_check(level.difficulty == Difficulty.MOYEN and level.hud.level_label.text.ends_with("Moyen"),
+		"le niveau se joue en Moyen et l'affiche")
+	await _free(level)
+
+	Difficulty.set_current(Difficulty.DIFFICILE)
+	level = await _spawn_level(LEVEL_03)
+	var hard: Array = counts.call(level)
+	var expected := normal.map(func(c: int) -> int: return ceili(c * 1.25))
+	_check(hard == expected, "Difficile : 25 %% de monstres en plus dans chaque groupe (%s)" % [hard])
+	_check(is_equal_approx(level.spawner.waves[0].health_multiplier, 1.35), "et 35 % de vie en plus")
+	_check(level.hud.level_label.text.ends_with("Difficile"), "le nom du niveau affiche la difficulté")
+	var enemy := level.spawner.spawn(SCARABEE, level.map.get_enemy_path(0), 0.0, level.spawner.waves[0].health_multiplier)
+	_check(is_equal_approx(enemy.get_speed(), SCARABEE.speed * 1.1)
+		and is_equal_approx(enemy.health.max_health, SCARABEE.max_health * 1.35), "un monstre est plus rapide et plus résistant")
+	var fresh: Level = LEVEL_03.instantiate()
+	var untouched := true
+	for wave in fresh.get_node("WaveSpawner").waves:
+		untouched = untouched and is_equal_approx(wave.health_multiplier, 1.0)
+	_check(untouched and fresh.get_node("WaveSpawner").waves[0].groups[0].count == normal[0],
+		"les vagues de la scène ne sont pas modifiées")
+	fresh.free()
+	level._end_game(true)
+	_check(Progress.get_stars(LEVEL_03.resource_path, Difficulty.DIFFICILE) == 3
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.MOYEN) == 0, "la victoire compte en Difficile seulement")
+	_check(Progress.is_unlocked(campaign, 3) and Progress.is_endless_unlocked(LEVEL_03.resource_path),
+		"elle débloque le niveau suivant et le mode infini")
+	await _free(level)
+	Progress.record_victory(LEVEL_03.resource_path, 2, Difficulty.FACILE)
+	_check(Progress.get_stars(LEVEL_03.resource_path) == 3 and Progress.get_total_stars(LEVEL_03.resource_path) == 5
+		and Perks.get_earned_stars() == 5, "les étoiles des difficultés s'additionnent")
+
+	Engine.set_meta(Level.ENDLESS_META, true)
+	level = await _spawn_level(LEVEL_03)
+	_check(level.difficulty == Difficulty.MOYEN and counts.call(level).slice(0, normal.size()) == normal,
+		"le mode infini se joue toujours en Moyen")
+	await _free(level)
+
+	Difficulty.set_current(Difficulty.FACILE)
+	level = await _spawn_level(LEVEL_03)
+	var easy: Array = counts.call(level)
+	_check(easy == normal.map(func(c: int) -> int: return maxi(roundi(c * 0.75), 1)), "Facile : 25 % de monstres en moins")
+	await _free(level)
+
+	Progress.record_victory(LEVEL_02.resource_path, 1)
+	var screen := await _spawn_world_select()
+	_check(screen.difficulty_bar.visible and screen.get_difficulty_button(Difficulty.FACILE).button_pressed,
+		"la sélection des mondes montre la difficulté choisie")
+	_check(screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★☆"), "et les étoiles du niveau dans celle-ci")
+	_check(screen.mode_hint.text.begins_with("Facile : Monstres"), "avec ses effets")
+	screen.get_difficulty_button(Difficulty.CAUCHEMAR).pressed.emit()
+	_check(Difficulty.get_current() == Difficulty.CAUCHEMAR and screen.get_level_button(LEVEL_03.resource_path).text.ends_with("☆☆☆"),
+		"choisir Cauchemar l'enregistre et met les boutons à jour")
+	_check(screen.get_level_button(LEVEL_03.resource_path).tooltip_text.contains("★★★  Difficile"),
+		"la bulle d'aide du niveau donne les étoiles de chaque difficulté")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 72", "la carte compte les étoiles des 4 difficultés")
+	screen.set_endless_mode(true)
+	_check(not screen.difficulty_bar.visible, "pas de difficulté en mode infini")
+	await _free(screen)
+	Progress.reset_campaign()
+
+	print("Difficultés : équilibrage du niveau 4")
+	var order := [
+		[Vector2i(7, 2), CANNON], [Vector2i(6, 4), CANNON], [Vector2i(8, 2), MORTAR],
+		[Vector2i(4, 2), BEAM], [Vector2i(9, 2), FROST], [Vector2i(4, 6), CANNON],
+		[Vector2i(10, 2), SNIPER], [Vector2i(6, 5), MORTAR], [Vector2i(12, 2), BEAM],
+		[Vector2i(13, 4), GATLING], [Vector2i(6, 6), FROST], [Vector2i(11, 2), SNIPER],
+		[Vector2i(13, 7), MORTAR], [Vector2i(15, 2), BEAM], [Vector2i(6, 7), CANNON],
+		[Vector2i(11, 4), MORTAR], [Vector2i(17, 2), SNIPER], [Vector2i(13, 2), BEAM],
+	]
+	Difficulty.set_current(Difficulty.FACILE)
+	var result := await _play_build_order(LEVEL_04, order, 6)
+	_check(result.won, "Facile : gagné avec les 6 tours qui perdent en Moyen")
+	Difficulty.set_current(Difficulty.CAUCHEMAR)
+	result = await _play_build_order(LEVEL_04, order, order.size())
+	_check(not result.won, "Cauchemar : perdu avec les 18 tours qui gagnent en Moyen")
+	Difficulty.set_current(Difficulty.MOYEN)
+	Progress.reset_campaign()
+
+
 func _test_specializations() -> void:
 	print("Spécialisations des tours, payées en étoiles infinies")
 	var tree := Perks.TREE
@@ -1668,8 +1770,8 @@ func _test_konami_code() -> void:
 		event.pressed = true
 		title._input(event)
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	_check(Perks.get_earned_stars() == campaign.size() * 3 and Progress.is_world_unlocked(campaign, 2),
-		"le code débloque tous les mondes et tous les niveaux, avec 3 étoiles")
+	_check(Perks.get_earned_stars() == campaign.size() * Progress.MAX_LEVEL_STARS and Progress.is_world_unlocked(campaign, 2),
+		"le code débloque tous les mondes et tous les niveaux, avec 3 étoiles dans chaque difficulté")
 	var endless_open := true
 	for path in campaign.levels:
 		endless_open = endless_open and Progress.is_endless_unlocked(path) \
@@ -1694,7 +1796,7 @@ func _test_konami_code() -> void:
 		if i == 4:
 			_check(title._konami_label.visible and title._konami_label.text.begins_with("● ● ● ● ● ·"),
 				"le code en cours s'affiche, une pastille par touche juste")
-	_check(Perks.get_earned_stars() == campaign.size() * 3, "les flèches du pavé numérique et le A d'un clavier QWERTY comptent")
+	_check(Perks.get_earned_stars() == campaign.size() * Progress.MAX_LEVEL_STARS, "les flèches du pavé numérique et le A d'un clavier QWERTY comptent")
 	_check(not title._konami_label.visible, "les pastilles disparaissent une fois le code entré")
 	await _free(title)
 	Progress.reset_campaign()

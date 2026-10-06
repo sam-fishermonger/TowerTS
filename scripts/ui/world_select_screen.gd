@@ -4,6 +4,8 @@ extends Control
 ## se débloque en gagnant le dernier niveau du monde précédent.
 ## Le bouton Mode infini fait passer les cartes au mode infini : chaque niveau gagné avec
 ## 3 étoiles s'y joue sans fin, et y gagne des étoiles infinies (records et étoiles en bleu).
+## En bas, le choix de la difficulté (Difficulty) : les boutons des niveaux montrent les
+## étoiles obtenues dans celle-ci, et les cartes celles de toutes les difficultés.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
@@ -16,6 +18,7 @@ var endless_mode := false
 
 ## Bouton de chaque niveau, par chemin de scène.
 var _level_buttons := {}
+var _difficulty_group := ButtonGroup.new()
 
 @onready var worlds_box: HBoxContainer = %Worlds
 @onready var back_button: Button = %BackButton
@@ -23,10 +26,13 @@ var _level_buttons := {}
 @onready var title_label: Label = %Title
 ## Règles du mode affiché, en bas de l'écran.
 @onready var mode_hint: Label = %ModeHint
+## Choix de la difficulté (caché en mode infini, qui se joue toujours en Moyen).
+@onready var difficulty_bar: HBoxContainer = %DifficultyBar
 
 
 func _ready() -> void:
 	back_button.pressed.connect(go_back)
+	_build_difficulty_buttons()
 	mode_button.toggled.connect(set_endless_mode)
 	set_endless_mode(false)
 	Sound.play_music()
@@ -54,12 +60,46 @@ func set_endless_mode(value: bool) -> void:
 	mode_button.set_pressed_no_signal(value)
 	title_label.text = "Mode infini" if value else "Choisir un monde"
 	title_label.add_theme_color_override(&"font_color", ENDLESS_COLOR if value else STARS_COLOR)
-	if value:
+	difficulty_bar.visible = not value
+	_refresh()
+
+
+## Choisit la difficulté des prochaines parties (enregistrée) et met les boutons à jour.
+func set_difficulty(difficulty: int) -> void:
+	Difficulty.set_current(difficulty)
+	_refresh()
+
+
+## Bouton d'une difficulté.
+func get_difficulty_button(difficulty: int) -> Button:
+	return difficulty_bar.get_child(difficulty + 1)
+
+
+func _build_difficulty_buttons() -> void:
+	for d in Difficulty.COUNT:
+		var button := Button.new()
+		button.text = Difficulty.NAMES[d]
+		button.toggle_mode = true
+		button.button_group = _difficulty_group
+		button.custom_minimum_size = Vector2(132, 40)
+		button.add_theme_font_size_override(&"font_size", 18)
+		for color_name in [&"font_pressed_color", &"font_hover_pressed_color"]:
+			button.add_theme_color_override(color_name, Difficulty.COLORS[d])
+		button.tooltip_text = Difficulty.describe(d)
+		button.pressed.connect(set_difficulty.bind(d))
+		difficulty_bar.add_child(button)
+
+
+func _refresh() -> void:
+	var difficulty := Difficulty.get_current()
+	get_difficulty_button(difficulty).set_pressed_no_signal(true)
+	if endless_mode:
 		mode_hint.text = ("Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d "
 			+ "vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les "
 			+ "spécialisations des tours, dans Améliorations.") % [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
 	else:
-		mode_hint.text = "Gagner un niveau avec 3 étoiles ouvre son mode infini."
+		mode_hint.text = ("%s : %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau "
+			+ "avec 3 étoiles ouvre son mode infini.") % [Difficulty.NAMES[difficulty], Difficulty.describe(difficulty)]
 	for card in worlds_box.get_children():
 		worlds_box.remove_child(card)
 		card.queue_free()
@@ -132,7 +172,10 @@ func _make_card(world_index: int) -> Control:
 		stars = _label("∞  ★ %d / %d" % [Progress.get_world_endless_stars(world),
 			world.levels.size() * Progress.ENDLESS_MAX_STARS], 20, ENDLESS_COLOR)
 	else:
-		stars = _label("★ %d / %d" % [Progress.get_world_stars(world), world.levels.size() * 3], 20, STARS_COLOR)
+		stars = _label("★ %d / %d" % [Progress.get_world_stars(world), world.levels.size() * Progress.MAX_LEVEL_STARS],
+			20, STARS_COLOR)
+		stars.tooltip_text = "Étoiles des 4 difficultés"
+		stars.mouse_filter = Control.MOUSE_FILTER_PASS
 	stars.name = "Stars"
 	column.add_child(stars)
 
@@ -151,7 +194,9 @@ func _make_card(world_index: int) -> Control:
 		else:
 			button.disabled = not Progress.is_unlocked(CAMPAIGN, first + i)
 			button.text = "%d-%d\n%s" % [world_index + 1, i + 1,
-				"Verrouillé" if button.disabled else Progress.star_text(Progress.get_stars(path))]
+				"Verrouillé" if button.disabled else Progress.star_text(Progress.get_stars(path, Difficulty.get_current()))]
+			if not button.disabled:
+				button.tooltip_text = _level_tooltip(path)
 		_level_buttons[path] = button
 		button.pressed.connect(open_level.bind(path))
 		grid.add_child(button)
@@ -164,6 +209,14 @@ func _make_card(world_index: int) -> Control:
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		column.add_child(hint)
 	return card
+
+
+## Étoiles d'un niveau dans chaque difficulté, une ligne par difficulté.
+func _level_tooltip(path: String) -> String:
+	var lines: Array[String] = []
+	for d in Difficulty.COUNT:
+		lines.append("%s  %s" % [Progress.star_text(Progress.get_stars(path, d)), Difficulty.NAMES[d]])
+	return "\n".join(lines)
 
 
 ## Bouton d'un niveau en mode infini : ouvert avec 3 étoiles sur le niveau, il montre

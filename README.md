@@ -49,17 +49,27 @@ Le dossier `build/` est ignoré par git.
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** règlent la vitesse du jeu (**V** passe à la vitesse suivante). Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
+- **Difficulté** : en bas de la sélection des mondes, **Facile**, **Moyen**, **Difficile** ou **Cauchemar** règle les parties suivantes (le choix est enregistré, et rappelé en haut à gauche en jeu). Chaque difficulté a ses propres étoiles : un niveau en rapporte jusqu'à 3 par difficulté, soit 12, et 216 pour toute la campagne. Les boutons des niveaux montrent les étoiles de la difficulté choisie (celles des quatre en bulle d'aide), les cartes des mondes le total. Gagner un niveau dans n'importe quelle difficulté débloque le suivant.
+
+  | Difficulté | Vie et bouclier des monstres | Nombre de monstres | Vitesse |
+  |---|---|---|---|
+  | Facile | -30 % | -25 % | -10 % |
+  | Moyen | l'équilibrage des niveaux | | |
+  | Difficile | +35 % | +25 % | +10 % |
+  | Cauchemar | +75 % | +50 % | +20 % |
+
+  Chaque groupe d'une vague garde à peu près sa durée : les monstres en plus se resserrent, ceux en moins s'espacent. Le mode infini et la partie de l'écran titre se jouent toujours en Moyen. Les réglages sont dans `scripts/data/difficulty.gd`.
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
-- **Mode infini** : un niveau gagné avec 3 étoiles s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (90 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
+- **Mode infini** : un niveau gagné avec 3 étoiles (dans n'importe quelle difficulté) s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (90 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
 - **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois onglets :
   - **Bonus**, en trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée) ;
   - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée apparaît dans la barre d'achat de tous les niveaux ;
   - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
 
-  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte 53 étoiles (la campagne en rapporte 54), et les spécialisations 42 étoiles infinies : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (3 étoiles pour la première amélioration, jusqu'à 14 pour Maître artilleur) : l'arbre complet coûte 199 étoiles, sur les 216 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
-- **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
+- **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
 
 ### Spécialisations
@@ -115,12 +125,12 @@ Chaque monde a deux tours à débloquer dans l'arbre des améliorations (onglet 
 
 | Monde | Tour | Prix | Atout |
 |---|---|---|---|
-| La Ruche | **Lance-flammes** | ★ 3 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
-| La Ruche | **Pesticide** | ★ 4 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
-| La Fonderie | **Brouilleur IEM** | ★ 4 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
-| La Fonderie | **Perforateur** | ★ 5 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
-| La Cité | **Franc-tireur** | ★ 5 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
-| La Cité | **Lacrymogène** | ★ 6 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
+| La Ruche | **Lance-flammes** | ★ 10 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
+| La Ruche | **Pesticide** | ★ 14 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
+| La Fonderie | **Brouilleur IEM** | ★ 14 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
+| La Fonderie | **Perforateur** | ★ 18 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
+| La Cité | **Franc-tireur** | ★ 18 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
+| La Cité | **Lacrymogène** | ★ 22 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
 
 Ces effets se règlent dans la ressource de la tour (`TowerData`, groupes **Effets spéciaux**, **Nuage** et **Flammes**) : brûlure ou poison, coups qui ignorent l'armure, dégâts multipliés sur les boucliers, bouclier brouillé, soins bloqués, priorité aux soigneurs. N'importe quelle tour peut les combiner. La seconde tour d'une branche demande la première, et la branche ne s'ouvre qu'avec son monde (`required_world` de l'amélioration).
 
