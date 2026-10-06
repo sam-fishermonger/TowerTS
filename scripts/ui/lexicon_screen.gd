@@ -91,7 +91,7 @@ func show_tab(tab: Tab) -> void:
 					_add_entry("%s  ·  boss" % boss.display_name, EnemyData.BOSS_COLOR, boss.texture, null,
 						show_enemy.bind(boss, world))
 				for raider in world.raiders:
-					_add_entry("%s  ·  Conquête" % raider.display_name, Enemy.RAID_COLOR, raider.texture, null,
+					_add_entry(tr("%s  ·  Conquête") % tr(raider.display_name), Enemy.RAID_COLOR, raider.texture, null,
 						show_enemy.bind(raider, world))
 		Tab.WORLDS:
 			for i in CAMPAIGN.worlds.size():
@@ -193,7 +193,7 @@ func show_enemy(data: EnemyData, world: World) -> void:
 		lines.append("[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]" % MUTED)
 	elif data.raider:
 		lines.append("")
-		lines.append("[color=%s]Mode Conquête seulement : il n'apparaît pas dans la campagne.[/color]" % MUTED)
+		lines.append("[color=%s]%s[/color]" % [MUTED, tr("Mode Conquête seulement : il n'apparaît pas dans la campagne.")])
 	elif not data.split_into or data.split_count == 0:
 		var elite := data.make_elite()
 		lines.append("")
@@ -241,7 +241,7 @@ func show_world(index: int) -> void:
 		lines.append("%s  %s" % [EnemyInfo.icon(boss, 36), EnemyInfo.title(boss)])
 	if not world.raiders.is_empty():
 		lines.append("")
-		lines.append("[b]Pillards (mode Conquête)[/b]")
+		lines.append("[b]%s[/b]" % tr("Pillards (mode Conquête)"))
 		for raider in world.raiders:
 			lines.append("%s  %s" % [EnemyInfo.icon(raider, 28), EnemyInfo.title(raider)])
 	var towers: Array[String] = []

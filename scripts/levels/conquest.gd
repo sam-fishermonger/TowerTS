@@ -219,7 +219,7 @@ func deposit(amount: int, kind := Ore.STONE, at := Vector2.INF) -> void:
 	stone += amount
 	stone_mined += amount
 	level.stats.stone_mined += amount
-	_show_text("+%d pierre" % amount, STONE_COLOR, shown_at, 14)
+	_show_text(tr("+%d pierre") % amount, STONE_COLOR, shown_at, 14)
 	changed.emit()
 
 
@@ -228,7 +228,7 @@ func add_essence(amount: int, at: Vector2) -> void:
 	essence += amount
 	essence_mined += amount
 	level.stats.essence_mined += amount
-	_show_text("+%d essence" % amount, ESSENCE_COLOR, at, 14)
+	_show_text(tr("+%d essence") % amount, ESSENCE_COLOR, at, 14)
 	changed.emit()
 
 
@@ -432,7 +432,7 @@ func sell_building(building: Building) -> int:
 func _on_building_built(building: Building) -> void:
 	level.stats.buildings_built += 1
 	Sound.play(&"upgrade")
-	_show_text("%s bâti" % building.get_display_name(), Color(0.6, 1.0, 0.65),
+	_show_text(tr("%s bâti") % tr(building.get_display_name()), Color(0.6, 1.0, 0.65),
 		building.global_position + Vector2(0, -32), 14)
 	changed.emit()
 
@@ -440,7 +440,7 @@ func _on_building_built(building: Building) -> void:
 func _on_building_destroyed(building: Building) -> void:
 	buildings_lost += 1
 	Sound.play(&"lives_lost", -6.0)
-	_show_text("%s détruit" % building.get_display_name(), Color(1.0, 0.45, 0.4),
+	_show_text(tr("%s détruit") % tr(building.get_display_name()), Color(1.0, 0.45, 0.4),
 		building.global_position + Vector2(0, -24), 14)
 	_remove_building(building)
 

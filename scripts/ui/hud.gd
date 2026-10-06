@@ -566,7 +566,7 @@ func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callab
 	workers_label.add_theme_font_size_override("font_size", 13)
 	workers_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	workers_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	workers_label.tooltip_text = "Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus)." \
+	workers_label.tooltip_text = tr("Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus).") \
 		% [Conquest.BASE_WORKERS, Building.HOUSE_WORKERS, Conquest.MAX_WORKERS]
 	box.add_child(workers_label)
 	recruit_button = Button.new()
@@ -695,9 +695,9 @@ func show_building_details(building: Building) -> void:
 ## Pierre, essence, ouvriers (sur le maximum), compte à rebours de la prochaine vague et
 ## bâtiments qu'on peut payer.
 func update_conquest(conquest: Conquest) -> void:
-	stone_label.text = "Pierre : %d" % conquest.stone
-	essence_label.text = "Essence : %d" % conquest.essence
-	workers_label.text = "Ouvriers : %d / %d" % [conquest.get_workers().size(), conquest.get_max_workers()]
+	stone_label.text = tr("Pierre : %d") % conquest.stone
+	essence_label.text = tr("Essence : %d") % conquest.essence
+	workers_label.text = tr("Ouvriers : %d / %d") % [conquest.get_workers().size(), conquest.get_max_workers()]
 	recruit_button.disabled = not conquest.can_recruit() or end_panel.visible
 	var countdown := conquest.wave_countdown
 	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else "Vague dans %d s" % ceili(countdown)

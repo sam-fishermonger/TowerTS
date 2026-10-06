@@ -195,8 +195,8 @@ func _refresh_prices() -> void:
 		return
 	var cost := tower.get_upgrade_cost()
 	var essence: int = essence_cost.call(tower) if essence_cost.is_valid() else 0
-	upgrade_button.text = "Améliorer  ·  %d or" % cost if essence == 0 \
-		else "Améliorer  ·  %d or  ·  %d essence" % [cost, essence]
+	upgrade_button.text = tr("Améliorer  ·  %d or") % cost if essence == 0 \
+		else tr("Améliorer  ·  %d or  ·  %d essence") % [cost, essence]
 	upgrade_button.disabled = _gold < cost or _essence < essence
 
 

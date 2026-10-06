@@ -34,7 +34,7 @@ func _make_button(kind: int) -> Button:
 	button.focus_mode = Control.FOCUS_NONE
 	button.button_group = _group
 	button.clip_contents = true
-	button.tooltip_text = "%s\n%s" % [definition.name, definition.description]
+	button.tooltip_text = "%s\n%s" % [tr(definition.name), tr(definition.description)]
 	var styles := UiStyle.slot_styles(definition.color)
 	styles[&"disabled"] = styles[&"normal"]
 	UiStyle.apply_styles(button, styles)
@@ -61,8 +61,8 @@ func _make_button(kind: int) -> Button:
 ## Prix d'un bâtiment, sur une ligne : « 90 or · 40 p · 4 e ».
 static func _price_text(definition: Dictionary) -> String:
 	if definition.essence > 0:
-		return "%d or · %d p · %d e" % [definition.gold, definition.stone, definition.essence]
-	return "%d or · %d p" % [definition.gold, definition.stone]
+		return TranslationServer.translate("%d or · %d p · %d e") % [definition.gold, definition.stone, definition.essence]
+	return TranslationServer.translate("%d or · %d p") % [definition.gold, definition.stone]
 
 
 func _add_label(parent: Control, text_value: String, font_size: int, color: Color) -> Label:

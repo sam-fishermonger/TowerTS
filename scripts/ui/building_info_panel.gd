@@ -89,11 +89,11 @@ func _process(_delta: float) -> void:
 ## Chantier ou vie, et ce que rendrait la démolition.
 func _refresh() -> void:
 	if building.is_built():
-		_status_label.text = "Vie : %d / %d" % [ceili(maxf(building.health, 0.0)), roundi(building.max_health)]
+		_status_label.text = tr("Vie : %d / %d") % [ceili(maxf(building.health, 0.0)), roundi(building.max_health)]
 	else:
-		_status_label.text = "En construction : %d %%" % floori(building.build_progress * 100.0)
+		_status_label.text = tr("En construction : %d %%") % floori(building.build_progress * 100.0)
 	var refund := conquest.get_building_refund(building)
-	_demolish_button.text = "Démolir  ·  +%d or" % refund.gold
+	_demolish_button.text = tr("Démolir  ·  +%d or") % refund.gold
 	_demolish_button.disabled = conquest.level.is_over
 
 

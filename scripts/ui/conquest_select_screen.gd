@@ -139,9 +139,9 @@ func get_difficulty_button(difficulty: int) -> Button:
 func _refresh() -> void:
 	var difficulty := Difficulty.get_current()
 	get_difficulty_button(difficulty).set_pressed_no_signal(true)
-	_hint.text = ("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour "
-		+ "l'arbre des améliorations.") % [Difficulty.NAMES[difficulty], Difficulty.describe(difficulty),
-		Difficulty.describe_tower_limit(difficulty)]
+	var stars_rule := tr("Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour l'arbre des améliorations.")
+	_hint.text = "%s : %s %s %s" % [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty),
+		Difficulty.describe_tower_limit(difficulty), stars_rule]
 	for card in _cards.get_children():
 		_cards.remove_child(card)
 		card.queue_free()
@@ -162,7 +162,7 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 8)
 	card.add_child(column)
-	var number := _label("Niveau %d  ·  %s" % [index + 1, world.display_name], 14, world.color.lightened(0.3))
+	var number := _label(tr("Niveau %d  ·  %s") % [index + 1, tr(world.display_name)], 14, world.color.lightened(0.3))
 	column.add_child(number)
 	var name_label := _label(info.name, 24, Color.WHITE)
 	name_label.theme_type_variation = UiStyle.TITLE_VARIATION
@@ -174,18 +174,18 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	column.add_child(description)
 	if not world.raiders.is_empty():
 		var raider: EnemyData = world.raiders[0]
-		var raider_label := _label("Pillards : %s" % EnemyData.plural(raider.display_name, 2), 14, Enemy.RAID_COLOR)
+		var raider_label := _label(tr("Pillards : %s") % tr(raider.display_name), 14, Enemy.RAID_COLOR)
 		column.add_child(raider_label)
 	var stars := Progress.get_stars(path, difficulty)
 	column.add_child(_label(Progress.star_text(stars), 30, STARS_COLOR))
-	column.add_child(_label("★ %d / %d (4 difficultés)" % [Progress.get_total_stars(path), Progress.MAX_LEVEL_STARS],
+	column.add_child(_label(tr("★ %d / %d (4 difficultés)") % [Progress.get_total_stars(path), Progress.MAX_LEVEL_STARS],
 		14, MUTED))
 	var play := Button.new()
 	play.text = "Jouer" if unlocked else "Verrouillé"
 	play.disabled = not unlocked
 	play.custom_minimum_size = Vector2(0, 44)
 	if not unlocked:
-		play.tooltip_text = "Gagner « %s » pour l'ouvrir." % ConquestLevels.INFO[index - 1].name
+		play.tooltip_text = tr("Gagner « %s » pour l'ouvrir.") % tr(ConquestLevels.INFO[index - 1].name)
 	play.pressed.connect(open_level.bind(index))
 	column.add_child(play)
 	play_buttons.append(play)
