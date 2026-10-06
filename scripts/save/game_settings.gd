@@ -1,7 +1,7 @@
 class_name GameSettings
 extends CanvasLayer
 ## Réglages du menu Options qui ne sont pas du son (voir Sound pour les volumes) :
-## plein écran et vitesse de jeu par défaut. Enregistrés avec la progression
+## plein écran, vitesse de jeu par défaut et langue. Enregistrés avec la progression
 ## (section « settings »).
 ##
 ## Le nœud est chargé au démarrage (autoload « Settings ») : il remet le plein écran
@@ -12,6 +12,10 @@ extends CanvasLayer
 
 ## Vitesses proposées comme vitesse par défaut (celles des niveaux).
 const DEFAULT_SPEEDS: Array[float] = [1.0, 2.0, 3.0]
+## Langues proposées, avec leur nom écrit dans la langue même. Le jeu est écrit en
+## français : les autres langues traduisent ses textes (translations/<code>.po).
+const LANGUAGES := {"fr": "Français", "en": "English"}
+const DEFAULT_LANGUAGE := "fr"
 ## Méta du moteur : vrai quand le dernier geste du joueur était un toucher d'écran.
 ## (Pas de `static var`, voir Progress.)
 const TOUCH_MODE_META := &"settings_touch_mode"
@@ -25,6 +29,7 @@ var _rotate_hint: Control
 func _ready() -> void:
 	layer = 128
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	apply_language()
 	# Le navigateur refuse le plein écran sans geste du joueur : sur le web, il ne se
 	# demande que depuis le menu Options.
 	if is_fullscreen_saved() and not OS.has_feature("web"):
@@ -96,6 +101,26 @@ static func pick_start_speed(speeds: Array[float]) -> float:
 		if is_equal_approx(speed, get_default_speed()):
 			return speed
 	return speeds[0]
+
+
+# --- Langue ------------------------------------------------------------------
+
+## Code de la langue choisie dans les Options (une clé de LANGUAGES).
+static func get_language() -> String:
+	var code: String = Progress.get_setting("language", DEFAULT_LANGUAGE)
+	return code if LANGUAGES.has(code) else DEFAULT_LANGUAGE
+
+
+## Change la langue tout de suite : les textes fixes se traduisent seuls, et chaque nœud
+## reçoit NOTIFICATION_TRANSLATION_CHANGED pour recalculer ses textes composés.
+static func set_language(code: String) -> void:
+	Progress.set_setting("language", code)
+	apply_language()
+
+
+static func apply_language() -> void:
+	if TranslationServer.get_locale() != get_language():
+		TranslationServer.set_locale(get_language())
 
 
 # --- Tactile ------------------------------------------------------------------

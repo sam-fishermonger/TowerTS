@@ -1,0 +1,133 @@
+# Version anglaise de TowerTS.
+#
+# Le jeu est écrit en français : chaque msgid est le texte français tel qu'il apparaît
+# dans le code ou les scènes, et msgstr sa traduction anglaise. Un texte sans traduction
+# reste en français. Voir « Traduction » dans le README.
+msgid ""
+msgstr ""
+"Project-Id-Version: TowerTS\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# --- Écran titre ---------------------------------------------------------------
+
+msgid "TowerTS"
+msgstr "TowerTS"
+
+msgid "Tower Defense"
+msgstr "Tower Defense"
+
+msgid "Prototype v0.3"
+msgstr "Prototype v0.3"
+
+msgid "Jouer"
+msgstr "Play"
+
+msgid "Campagne"
+msgstr "Campaign"
+
+msgid "Continuer"
+msgstr "Continue"
+
+msgid "Mondes"
+msgstr "Worlds"
+
+msgid "Défi du jour"
+msgstr "Daily challenge"
+
+msgid "Conquête"
+msgstr "Conquest"
+
+msgid "Prototype : récolte de pierre, ouvriers et tours en chantier."
+msgstr "Prototype: stone gathering, workers and towers under construction."
+
+msgid "Éditeur de niveau"
+msgstr "Level editor"
+
+msgid "Retour"
+msgstr "Back"
+
+msgid "Améliorations"
+msgstr "Upgrades"
+
+msgid "Lexique"
+msgstr "Codex"
+
+msgid "Succès"
+msgstr "Achievements"
+
+msgid "Quitter"
+msgstr "Quit"
+
+msgid "Effacer la progression"
+msgstr "Erase progress"
+
+msgid "Effacer"
+msgstr "Erase"
+
+msgid "Annuler"
+msgstr "Cancel"
+
+msgid "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le premier niveau de La Ruche restera débloqué."
+msgstr "The stars of every level and all purchased upgrades will be lost, and only the first level of The Hive will remain unlocked."
+
+msgid "Code Konami : tout est débloqué !"
+msgstr "Konami code: everything is unlocked!"
+
+msgid "Démo"
+msgstr "Demo"
+
+# --- Mondes --------------------------------------------------------------------
+
+msgid "La Ruche"
+msgstr "The Hive"
+
+msgid "La Fonderie"
+msgstr "The Foundry"
+
+msgid "La Cité"
+msgstr "The City"
+
+msgid "La Nécropole"
+msgstr "The Necropolis"
+
+# --- Options -------------------------------------------------------------------
+
+msgid "Options"
+msgstr "Options"
+
+msgid "Langue"
+msgstr "Language"
+
+msgid "Musique"
+msgstr "Music"
+
+msgid "Sons"
+msgstr "Sounds"
+
+msgid "coupée"
+msgstr "off"
+
+msgid "coupés"
+msgstr "off"
+
+msgid "Plein écran"
+msgstr "Fullscreen"
+
+msgid "F11 ou Alt + Entrée, à tout moment"
+msgstr "F11 or Alt + Enter, at any time"
+
+msgid "Vitesse au départ"
+msgstr "Starting speed"
+
+msgid "Chaque niveau commence à cette vitesse."
+msgstr "Every level starts at this speed."
+
+msgid "Fermer"
+msgstr "Close"
+
+msgid "Tournez l'appareil\npour jouer à l'horizontale."
+msgstr "Turn your device\nto play in landscape."

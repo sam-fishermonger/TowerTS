@@ -69,12 +69,15 @@ func _run() -> void:
 	# Progression à part, vidée à chaque lancement : les tests ne touchent pas à celle du joueur.
 	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_progress.cfg")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	# Les textes vérifiés sont ceux du jeu en français, quelle que soit la langue du système.
+	GameSettings.apply_language()
 	await _test_title_screen()
 	await _test_progress()
 	await _test_perk_tree()
 	await _test_perks_in_level()
 	await _test_biome_towers_in_tree()
 	await _test_sound()
+	await _test_language()
 	await _test_health_component()
 	await _test_entity_despawn()
 	await _test_tower_placement()
@@ -587,6 +590,38 @@ func _test_sound() -> void:
 	Sound.set_music_volume(1.0)
 	Sound.set_sound_volume(1.0)
 	GameSettings.set_default_speed(1.0)
+	await _free(title)
+
+
+func _test_language() -> void:
+	print("Langue")
+	_check(GameSettings.get_language() == "fr" and TranslationServer.get_locale() == "fr",
+		"le jeu est en français par défaut")
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var options: OptionsMenu = title.open_options()
+	await process_frame
+	_check(options.language_buttons.size() == GameSettings.LANGUAGES.size()
+		and options.language_buttons[0].button_pressed, "Options : une case par langue, Français cochée")
+	options.language_buttons[1].pressed.emit()
+	await process_frame
+	_check(GameSettings.get_language() == "en" and Progress.get_setting("language", "") == "en"
+		and options.language_buttons[1].button_pressed, "English se choisit et s'enregistre")
+	_check(tr("Jouer") == "Play" and title.tr("Jouer") == "Play", "les textes passent en anglais")
+	var worlds_button: Button = title.get_node("%WorldsButton")
+	_check(worlds_button.text == "Worlds", "les textes composés de l'écran titre sont refaits")
+	_check(options.language_buttons[0].text == "Français" and options.language_buttons[0].auto_translate_mode
+		== Node.AUTO_TRANSLATE_MODE_DISABLED, "chaque langue garde son propre nom")
+	# Chaque texte traduit doit l'être entièrement : pas de msgstr vide dans le fichier.
+	var english: Translation = load("res://translations/en.po")
+	var untranslated := Array(english.get_message_list()).filter(func(message: String) -> bool:
+		return english.get_message(message).is_empty())
+	_check(english.locale == "en" and english.get_message_count() > 20 and untranslated.is_empty(),
+		"translations/en.po : chaque texte a sa traduction %s" % [untranslated])
+	options.language_buttons[0].pressed.emit()
+	await process_frame
+	_check(GameSettings.get_language() == "fr" and worlds_button.text == "Mondes", "retour au français")
 	await _free(title)
 
 

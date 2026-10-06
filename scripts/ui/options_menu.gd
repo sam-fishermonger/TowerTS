@@ -1,7 +1,7 @@
 class_name OptionsMenu
 extends Control
-## Menu Options, ouvert depuis l'écran titre ou en jeu : musique et sons (chacun avec
-## sa case pour le couper et son curseur de volume), plein écran et vitesse de jeu au
+## Menu Options, ouvert depuis l'écran titre ou en jeu : langue, musique et sons (chacun
+## avec sa case pour le couper et son curseur de volume), plein écran et vitesse de jeu au
 ## lancement d'un niveau. Chaque réglage s'applique et s'enregistre tout de suite
 ## (voir Sound et GameSettings). Couvre tout l'écran ; **Fermer** ou Échap le referme.
 
@@ -17,11 +17,14 @@ var sound_slider: HSlider
 var fullscreen_check: CheckButton
 ## Un bouton par vitesse de GameSettings.DEFAULT_SPEEDS.
 var speed_buttons: Array[Button] = []
+## Un bouton par langue de GameSettings.LANGUAGES, dans le même ordre.
+var language_buttons: Array[Button] = []
 var close_button: Button
 
 var _music_value: Label
 var _sound_value: Label
 var _speed_group := ButtonGroup.new()
+var _language_group := ButtonGroup.new()
 
 
 func _init() -> void:
@@ -56,6 +59,28 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 16)
 	grid.add_theme_constant_override("v_separation", 10)
 	column.add_child(grid)
+
+	# La langue d'abord : c'est la ligne que cherche celui qui ne lit pas le français.
+	var language_label := _label("Langue", 20, Color.WHITE)
+	language_label.custom_minimum_size.y = ROW_HEIGHT
+	language_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var language_row := HBoxContainer.new()
+	language_row.add_theme_constant_override("separation", 6)
+	for code: String in GameSettings.LANGUAGES:
+		var button := Button.new()
+		button.text = GameSettings.LANGUAGES[code]
+		# Chaque langue garde son propre nom, quelle que soit la langue choisie.
+		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		button.toggle_mode = true
+		button.button_group = _language_group
+		button.custom_minimum_size = Vector2(124, ROW_HEIGHT)
+		button.add_theme_font_size_override(&"font_size", 20)
+		button.pressed.connect(func() -> void:
+			GameSettings.set_language(code)
+			refresh())
+		language_row.add_child(button)
+		language_buttons.append(button)
+	_add_row(grid, language_label, language_row, Control.new())
 
 	music_check = _check("Musique", Sound.is_music_enabled())
 	music_slider = _slider(Sound.get_music_volume())
@@ -145,6 +170,9 @@ func refresh() -> void:
 	_music_value.text = "%d %%" % roundi(music_slider.value) if music_check.button_pressed else "coupée"
 	_sound_value.text = "%d %%" % roundi(sound_slider.value) if sound_check.button_pressed else "coupés"
 	fullscreen_check.set_pressed_no_signal(GameSettings.is_fullscreen())
+	var languages := GameSettings.LANGUAGES.keys()
+	for i in language_buttons.size():
+		language_buttons[i].set_pressed_no_signal(languages[i] == GameSettings.get_language())
 	var default_speed := GameSettings.get_default_speed()
 	for i in speed_buttons.size():
 		speed_buttons[i].set_pressed_no_signal(is_equal_approx(GameSettings.DEFAULT_SPEEDS[i], default_speed))

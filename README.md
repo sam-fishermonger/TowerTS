@@ -130,7 +130,7 @@ Le dossier `build/` est ignoré par git.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle.
-- **Options** (écran titre, ou en bas à droite en jeu, ce qui met la partie en pause le temps des réglages) : **Musique** et **Sons** ont chacun leur case pour les couper et leur curseur de volume ; **Plein écran** (aussi **F11** ou **Alt + Entrée** à tout moment) ; **Vitesse au départ** : x1, x2 ou x3, la vitesse à laquelle chaque niveau commence. Tout s'applique et s'enregistre tout de suite. Sur la version web, le navigateur ne rouvre pas le plein écran tout seul au lancement : il se redemande dans les Options.
+- **Options** (écran titre, ou en bas à droite en jeu, ce qui met la partie en pause le temps des réglages) : **Langue** (Français ou English, voir [Langues](#langues)) ; **Musique** et **Sons** ont chacun leur case pour les couper et leur curseur de volume ; **Plein écran** (aussi **F11** ou **Alt + Entrée** à tout moment) ; **Vitesse au départ** : x1, x2 ou x3, la vitesse à laquelle chaque niveau commence. Tout s'applique et s'enregistre tout de suite. Sur la version web, le navigateur ne rouvre pas le plein écran tout seul au lancement : il se redemande dans les Options.
 - **Au tactile** (téléphone, tablette, version web) : toucher une tour de la barre d'achat, puis une case : l'aperçu de la tour s'y affiche (portée, et en rouge si elle ne peut pas s'y poser) avec « Touchez encore pour poser » ; un second toucher sur la même case la pose, un toucher ailleurs déplace l'aperçu. Toucher encore la tour dans la barre annule. Toucher une tour posée ouvre sa fiche, toucher la carte ailleurs la ferme ; toucher un monstre ouvre la sienne. Dans la sélection des mondes et l'arbre des améliorations, le premier toucher sur un niveau ou une amélioration ouvre sa fiche, le second le lance ou l'achète. Le jeu se joue à l'horizontale : tenu en hauteur, l'écran invite à tourner l'appareil. Le jeu passe tout seul en mode tactile au premier toucher, et revient à la souris dès qu'elle bouge (`scripts/save/game_settings.gd`).
 
 ### Pouvoirs
@@ -276,6 +276,21 @@ Un croisement qui échange des effets est une amélioration (`Perk`) avec `cross
 
 À partir du niveau 1-4, les 6 tours sont disponibles. Les mondes et leurs niveaux se suivent dans l'ordre de `resources/campaign.tres`, qui liste les mondes (`resources/worlds/*.tres` : nom, description, couleur, monstres montrés et niveaux) : pour ajouter un niveau, il suffit de l'ajouter à son monde.
 
+## Langues
+
+Le jeu est écrit en français et se joue aussi en anglais : **Options > Langue** (Français ou English), enregistré avec la progression. Le changement s'applique tout de suite.
+
+La traduction passe par le mécanisme de Godot (gettext) : `translations/en.po` associe à chaque texte français (`msgid`) sa traduction anglaise (`msgstr`). Il est déclaré dans **Projet > Paramètres > Localisation** (`internationalization/locale/translations`), avec le français comme langue de repli : un texte sans traduction reste en français.
+
+Pour écrire un texte traduisible :
+
+- **Texte fixe** (un `Label`, un bouton, une bulle d'aide, posé dans une scène ou affecté tel quel dans le code, `button.text = "Fermer"`) : rien à faire dans le code, Godot le traduit à l'affichage. Il suffit d'ajouter son entrée dans `en.po`.
+- **Texte composé** (nombre, nom inséré, morceaux recollés) : traduire le modèle avec `tr()` avant de le remplir, `tr("Vague %d / %d") % [vague, total]`, ou chaque morceau, `tr("Mondes") + "  ·  ★ %d" % etoiles`. Pour un pluriel, `tr_n("%d étoile", "%d étoiles", n) % n`. Un nom tiré d'une ressource (tour, monstre, monde) passe aussi par `tr()` : `tr(data.display_name)`.
+- **Changement de langue** : un nœud qui compose ses textes les recalcule dans `_notification(NOTIFICATION_TRANSLATION_CHANGED)` (voir `title_screen.gd`), les textes fixes suivent seuls.
+- Un texte qui ne doit pas être traduit (le nom d'une langue, un nom propre) : `auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED`.
+
+`python3 tools/textes_a_traduire.py` liste les textes marqués (`tr()` dans les scripts, textes des scènes) qui manquent dans `en.po` ; avec `--ajouter`, il les y ajoute avec un `msgstr` vide, à remplir. Les tests échouent tant qu'une entrée de `en.po` n'a pas de traduction.
+
 ## Tests
 
 ```
@@ -345,7 +360,8 @@ scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
 scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
 resources/tilesets/  Tuiles de chaque biome (TileSet)
-tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py)
+tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py), textes à traduire (textes_a_traduire.py)
+translations/        Traductions des textes du jeu (en.po : anglais)
 scripts/save/        Progression enregistrée (Progress), améliorations permanentes achetées (Perks) et succès (Achievements)
 resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
