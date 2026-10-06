@@ -32,6 +32,11 @@ window/stretch/mode="canvas_items"
 theme/custom="res://resources/ui/theme.tres"
 theme/custom_font="res://assets/fonts/police_interface.tres"
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://translations/en.po")
+locale/fallback="fr"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

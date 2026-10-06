@@ -112,6 +112,15 @@ func show_play_menu(open: bool) -> void:
 	(campaign_button if open else play_button).grab_focus()
 
 
+## Langue changée dans les Options : les textes fixes se traduisent seuls, les textes
+## composés (étoiles, scores, niveau de la démo) sont refaits.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_refresh()
+		if demo.level:
+			_on_demo_level_started(demo.level)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and is_play_menu_open():
 		show_play_menu(false)
@@ -213,11 +222,13 @@ func _refresh() -> void:
 	var earned := Perks.get_earned_stars()
 	var any_won := earned > 0
 	campaign_button.text = "Continuer" if any_won else "Campagne"
-	worlds_button.text = "Mondes  ·  ★ %d / %d" % [earned, CAMPAIGN.size() * Progress.MAX_LEVEL_STARS] if any_won else "Mondes"
+	worlds_button.text = tr("Mondes")
+	if any_won:
+		worlds_button.text += "  ·  ★ %d / %d" % [earned, CAMPAIGN.size() * Progress.MAX_LEVEL_STARS]
 	# Les étoiles non dépensées sont signalées sur le bouton de l'arbre.
 	var available := Perks.get_available_stars()
 	var endless_available := Perks.get_available_stars(true)
-	perks_button.text = "Améliorations"
+	perks_button.text = tr("Améliorations")
 	if available > 0:
 		perks_button.text += "  ·  ★ %d" % available
 	if endless_available > 0:
@@ -225,12 +236,15 @@ func _refresh() -> void:
 	reset_button.visible = any_won
 	# Le meilleur score du défi du jour, s'il a déjà été joué aujourd'hui.
 	var daily_score := Progress.get_daily_score(DailyChallenge.today().date_key)
-	daily_button.text = "Défi du jour  ·  %d" % daily_score if daily_score >= 0 else "Défi du jour"
+	daily_button.text = tr("Défi du jour")
+	if daily_score >= 0:
+		daily_button.text += "  ·  %d" % daily_score
 	# Les objectifs remplis par la progression (arbre, étoiles, code Konami) se débloquent ici.
 	Achievements.check_progress()
 	var unlocked := Achievements.get_unlocked_count()
-	achievements_button.text = "Succès  ·  %d / %d" % [unlocked, Achievements.LIST.size()] if unlocked > 0 else "Succès"
-
+	achievements_button.text = tr("Succès")
+	if unlocked > 0:
+		achievements_button.text += "  ·  %d / %d" % [unlocked, Achievements.LIST.size()]
 
 ## Le panneau grandit en apparaissant, puis les lignes du menu s'affichent en cascade.
 func _play_intro() -> void:
@@ -264,7 +278,7 @@ func _add_hover_effect(button: Button) -> void:
 func _on_demo_level_started(level: Level) -> void:
 	var world := CAMPAIGN.world_index_of(level.scene_file_path)
 	var world_name := CAMPAIGN.worlds[world].display_name if world >= 0 else ""
-	demo_label.text = "▶  Démo  ·  %s  ·  %s" % [world_name, level.level_name]
+	demo_label.text = "▶  %s  ·  %s  ·  %s" % [tr("Démo"), tr(world_name), tr(level.level_name)]
 
 
 func _on_reset_confirmed() -> void:
