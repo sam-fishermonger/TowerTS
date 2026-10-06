@@ -28,6 +28,10 @@ const TOWER_CHOICE_SETTING := "tower_choice"
 @export_range(0.0, 1.0) var early_call_bonus_ratio := 0.5
 ## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
 @export var game_speeds: Array[float] = [1.0, 2.0, 3.0]
+## Intérêts : chaque fois que la carte est vidée, l'or gardé rapporte cette part en plus
+## du bonus de vague, sans dépasser `interest_cap`.
+@export_range(0.0, 0.5) var interest_rate := 0.05
+@export var interest_cap := 25
 
 var gold := 0:
 	set(value):
@@ -61,6 +65,10 @@ var tower_limit := 0
 var available_tower_types: Array[TowerData] = []
 ## Le choix des tours est ouvert : pas de vague tant qu'il n'est pas validé.
 var is_choosing_towers := false
+## Pouvoirs actifs débloqués dans l'arbre des améliorations (aucun pour la partie de
+## l'écran titre), et les secondes de recharge restantes de chacun (0 = prêt).
+var powers: Array[Power] = []
+var power_cooldowns: Array[float] = []
 
 var _wave_bonus_paid := -1
 ## Mode infini : record de vagues du niveau au lancement de la partie.
@@ -71,6 +79,8 @@ var _bonuses: Perk
 @onready var map: GameMap = $Map
 @onready var stains: Node2D = $Stains
 @onready var enemies: Node2D = $Enemies
+## Soldats des renforts.
+@onready var allies: Node2D = $Allies
 @onready var towers: Node2D = $Towers
 @onready var projectiles: Node2D = $Projectiles
 ## Textes flottants (dégâts, or gagné), dessinés au-dessus des ennemis et des tirs.
@@ -138,6 +148,8 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
 	hud.menu_requested.connect(_on_menu_requested)
+	hud.power_selected.connect(select_power)
+	placer.power_selection_changed.connect(hud.set_selected_power)
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
 	spawner.wave_started.connect(func(_index: int) -> void: _refresh_hud())
 	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
@@ -146,6 +158,13 @@ func _ready() -> void:
 	_bonuses = Perks.get_bonuses()
 	starting_gold += _bonuses.starting_gold_bonus
 	starting_lives += _bonuses.lives_bonus
+	if not is_demo:
+		for power in Perks.get_powers():
+			powers.append(power)
+	power_cooldowns.resize(powers.size())
+	power_cooldowns.fill(0.0)
+	hud.setup_powers(powers)
+	hud.set_interest_rules(interest_rate, interest_cap)
 	gold = starting_gold
 	lives = starting_lives
 	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
@@ -295,6 +314,78 @@ func get_towers() -> Array[Tower]:
 		var tower := node as Tower
 		if tower and tower.is_alive:
 			result.append(tower)
+	return result
+
+
+## Or rapporté par les intérêts si la carte était vidée maintenant.
+func get_interest() -> int:
+	return mini(floori(maxi(gold, 0) * interest_rate), interest_cap)
+
+
+# --- Pouvoirs ---------------------------------------------------------------
+
+func get_power_cooldown(power: Power) -> float:
+	var index := powers.find(power)
+	return power_cooldowns[index] if index >= 0 else 0.0
+
+
+func can_use_power(power: Power) -> bool:
+	return power != null and powers.has(power) and not is_over and not is_paused \
+		and not is_choosing_towers and get_power_cooldown(power) <= 0.0
+
+
+## Bouton ou touche d'un pouvoir : un pouvoir qui se lance sur la carte attend le clic
+## du joueur (le choisir à nouveau l'annule), le Gel part tout de suite.
+func select_power(power: Power) -> void:
+	if placer.selected_power == power or not can_use_power(power):
+		placer.select_power(null)
+	elif power.is_targeted():
+		placer.select_power(power)
+	else:
+		use_power(power)
+
+
+## Lance le pouvoir (sur le point `at` de la carte s'il se lance sur la carte) et le met
+## en recharge. Renvoie true s'il a été lancé.
+func use_power(power: Power, at := Vector2.ZERO) -> bool:
+	if not can_use_power(power):
+		return false
+	match power.kind:
+		Power.Kind.METEORS:
+			var strike := MeteorStrike.new()
+			strike.power = power
+			effects.add_child(strike)
+			strike.global_position = at
+		Power.Kind.FREEZE:
+			for node in get_tree().get_nodes_in_group(Enemy.GROUP):
+				(node as Enemy).freeze(power.duration, power.vulnerability)
+			var wave := FreezeWave.new()
+			wave.area = hud.get_play_area()
+			wave.color = power.color
+			effects.add_child(wave)
+			Sound.play(&"pulse_frost")
+		Power.Kind.REINFORCEMENTS:
+			# Les soldats se rangent en cercle sur le chemin, au plus près du point visé.
+			var center := map.get_closest_path_point(at)
+			for i in power.count:
+				var soldier := Soldier.new()
+				soldier.power = power
+				allies.add_child(soldier)
+				var spread := 0.0 if power.count == 1 else 16.0
+				soldier.global_position = center + Vector2.from_angle(TAU * i / power.count - PI / 2.0) * spread
+			Sound.play(&"build")
+	power_cooldowns[powers.find(power)] = power.cooldown
+	if placer.selected_power == power:
+		placer.select_power(null)
+	return true
+
+
+## Soldats des renforts encore sur le terrain.
+func get_soldiers() -> Array[Soldier]:
+	var result: Array[Soldier] = []
+	for node in allies.get_children():
+		if node is Soldier and node.is_alive:
+			result.append(node)
 	return result
 
 
@@ -458,6 +549,11 @@ func _alive_enemy_count() -> int:
 func _check_wave_cleared() -> void:
 	if is_over or spawner.is_spawning or _alive_enemy_count() > 0:
 		return
+	# Intérêts sur l'or gardé, avant d'y ajouter les bonus : une fois par carte vidée.
+	var interest := get_interest() if _wave_bonus_paid < spawner.current_wave else 0
+	if interest > 0:
+		gold += interest
+		_show_floating_text("+%d intérêts" % interest, GOLD_TEXT_COLOR, hud.get_interest_anchor(), 16)
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
 	while _wave_bonus_paid < spawner.current_wave:
@@ -477,6 +573,7 @@ func _end_game(victory: bool) -> void:
 		return
 	is_over = true
 	select_tower(null)
+	placer.select_power(null)
 	inspect_tower(null)
 	if is_demo:
 		game_over.emit(victory)
@@ -539,16 +636,26 @@ func _show_lives_lost(amount: int, at: Vector2) -> void:
 func _refresh_hud() -> void:
 	if not is_node_ready():
 		return
-	hud.update_stats(gold, lives, spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count())
+	hud.update_stats(gold, lives, spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count(),
+		get_interest() if interest_rate > 0.0 else -1)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# Les pouvoirs se rechargent en temps de jeu (pas pendant la pause).
+	if not is_over:
+		for i in power_cooldowns.size():
+			power_cooldowns[i] = maxf(power_cooldowns[i] - delta, 0.0)
 	# Le bouton et l'aperçu de vague dépendent du spawner et des ennemis en jeu, qui évoluent en continu.
 	_refresh_wave_ui()
 
 
 func _refresh_wave_ui() -> void:
 	hud.set_next_wave_available(can_start_next_wave())
+	if not powers.is_empty():
+		var usable: Array[bool] = []
+		for power in powers:
+			usable.append(can_use_power(power))
+		hud.update_powers(power_cooldowns, usable)
 	if not is_over:
 		var next_index := spawner.current_wave + 1
 		var next_wave: WaveData = spawner.get_wave(next_index) if spawner.has_next_wave() else null
