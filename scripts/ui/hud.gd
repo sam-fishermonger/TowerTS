@@ -50,6 +50,10 @@ var enemy_details: DetailPopup
 var hovered_enemy: Enemy
 ## Vie des boss en jeu, en haut de la carte.
 var boss_bar: BossBar
+## Défi du jour : score, dans la barre du haut (null hors défi)…
+var score_label: Label
+## … et règles, au milieu de la carte jusqu'à la première vague.
+var challenge_rules: PanelContainer
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -336,6 +340,90 @@ func _on_shop_button_hovered(button: TowerShopButton) -> void:
 	# L'aperçu s'ouvre au-dessus de la barre d'achat, sur la carte.
 	shop_info.bounds = get_play_area()
 	shop_info.show_tower_type(button.data, _gold, button.get_global_rect())
+
+
+# --- Défi du jour -------------------------------------------------------------
+
+## Affiche les règles du défi au milieu de la carte (jusqu'à la première vague) et le
+## score dans la barre du haut, avec les règles en bulle d'aide.
+func show_challenge_rules(rules: Array[String]) -> void:
+	score_label = Label.new()
+	score_label.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	score_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	score_label.tooltip_text = "\n".join(rules) + "\n" + DailyChallenge.describe_score()
+	wave_label.add_sibling(score_label)
+	set_score(0)
+	challenge_rules = PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.07, 0.06, 0.88)
+	style.border_color = Progress.ENDLESS_STAR_COLOR
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(12)
+	style.set_content_margin_all(18)
+	challenge_rules.add_theme_stylebox_override("panel", style)
+	challenge_rules.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	challenge_rules.add_child(column)
+	var heading := Label.new()
+	heading.text = "Défi du jour"
+	heading.add_theme_font_size_override("font_size", 26)
+	heading.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(heading)
+	for rule in rules:
+		var line := Label.new()
+		line.text = "•  " + rule
+		column.add_child(line)
+	var footer := Label.new()
+	footer.text = DailyChallenge.describe_score()
+	footer.add_theme_color_override("font_color", Color(0.75, 0.8, 0.75))
+	footer.add_theme_font_size_override("font_size", 14)
+	footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	footer.custom_minimum_size.x = 520.0
+	column.add_child(footer)
+	add_child(challenge_rules)
+	move_child(challenge_rules, wave_preview.get_index())
+	_place_challenge_rules.call_deferred()
+
+
+func _place_challenge_rules() -> void:
+	if not challenge_rules:
+		return
+	challenge_rules.reset_size()
+	# Au milieu de l'écran (les barres ne sont pas encore placées au lancement).
+	challenge_rules.position = (get_viewport().get_visible_rect().size - challenge_rules.size) / 2.0
+
+
+## Les règles s'effacent au lancement de la première vague (elles restent sur le score).
+func hide_challenge_rules() -> void:
+	if not challenge_rules:
+		return
+	var panel := challenge_rules
+	challenge_rules = null
+	var tween := panel.create_tween()
+	tween.tween_property(panel, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(panel.queue_free)
+
+
+func set_score(score: int) -> void:
+	if score_label:
+		score_label.text = "Score : %d" % score
+
+
+## Écran de fin du défi du jour : score de la partie, meilleur score du jour, et
+## « Nouveau record » s'il est battu.
+func show_challenge_end_screen(victory: bool, score: int, best: int, new_record := false) -> void:
+	show_end_screen(victory)
+	hide_challenge_rules()
+	end_title.text = "Défi réussi !" if victory else "Défi perdu"
+	end_stars.visible = true
+	end_stars.text = "%d points" % score
+	end_stars.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	end_message.text += "\nMeilleur score du jour : %d" % best
+	if new_record:
+		end_message.text += "\nNouveau record !"
+	end_message.text += "\nUn nouveau défi demain."
 
 
 # --- Fenêtres de détail -------------------------------------------------------

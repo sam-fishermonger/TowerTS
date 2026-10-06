@@ -69,13 +69,18 @@ func get_wave_count() -> int:
 ## À appeler avant la première vague. Les vagues de la scène ne sont pas modifiées :
 ## le spawner garde des copies.
 func apply_difficulty(difficulty: int) -> void:
-	speed_multiplier = Difficulty.SPEED[difficulty]
-	var count_multiplier := Difficulty.ENEMY_COUNT[difficulty]
+	apply_modifiers(Difficulty.HEALTH[difficulty], Difficulty.ENEMY_COUNT[difficulty], Difficulty.SPEED[difficulty])
+
+
+## Change la vie (et le bouclier), le nombre et la vitesse des ennemis de toutes les
+## vagues (difficulté, règles du défi du jour), comme apply_difficulty().
+func apply_modifiers(health_multiplier: float, count_multiplier: float, enemy_speed_multiplier: float) -> void:
+	speed_multiplier = enemy_speed_multiplier
 	var scaled: Array[WaveData] = []
 	for wave in waves:
 		var copy := WaveData.new()
 		copy.bonus_gold = wave.bonus_gold
-		copy.health_multiplier = wave.health_multiplier * Difficulty.HEALTH[difficulty]
+		copy.health_multiplier = wave.health_multiplier * health_multiplier
 		for group in wave.groups:
 			copy.groups.append(_scale_group(group, count_multiplier))
 		scaled.append(copy)

@@ -11,9 +11,14 @@ const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## à chaque prix ou statistique de tour, le fichier n'est relu qu'après un changement
 ## de la progression. (Une liste et pas un objet : Godot signalerait une fuite.)
 const OWNED_META := &"perks_owned"
+## Méta du moteur posée pendant un défi du jour : l'arbre ne compte plus (ni bonus, ni
+## tours débloquées, ni spécialisations), tout le monde joue avec les mêmes tours.
+const DISABLED_META := &"perks_disabled"
 
 
 static func get_owned_ids() -> PackedStringArray:
+	if Engine.has_meta(DISABLED_META):
+		return PackedStringArray()
 	if not Engine.has_meta(OWNED_META):
 		Engine.set_meta(OWNED_META, Progress.get_value("perks", "owned", PackedStringArray()))
 	return Engine.get_meta(OWNED_META).duplicate()
