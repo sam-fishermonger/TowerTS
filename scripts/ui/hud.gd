@@ -17,7 +17,7 @@ signal sell_requested(tower: Tower)
 signal tower_details_closed
 ## Émis quand le joueur met le jeu en pause ou le relance (bouton ou Espace).
 signal pause_toggled
-## Émis quand le joueur choisit une vitesse de jeu (bouton ou touches 1, 2, 3).
+## Émis quand le joueur choisit une vitesse de jeu (bouton, ou V pour passer à la suivante).
 signal game_speed_selected(speed: float)
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
@@ -81,15 +81,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
-	var speed_index := -1
-	if code >= KEY_1 and code <= KEY_9:
-		speed_index = code - KEY_1
-	elif code >= KEY_KP_1 and code <= KEY_KP_9:
-		speed_index = code - KEY_KP_1
+	var slot := TowerShop.slot_for_key(code)
 	if code == KEY_SPACE or code == KEY_P:
 		pause_toggled.emit()
-	elif speed_index >= 0 and speed_index < speed_buttons.get_child_count():
-		speed_buttons.get_child(speed_index).pressed.emit()
+	elif code == KEY_V:
+		_select_next_speed()
+	elif slot >= 0:
+		tower_shop.toggle_slot(slot)
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -105,6 +103,7 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 		speed_button.focus_mode = Control.FOCUS_NONE
 		speed_button.custom_minimum_size = Vector2(36, 0)
 		speed_button.set_meta("speed", speed)
+		speed_button.tooltip_text = "Vitesse x%s (V : vitesse suivante)" % str(speed).trim_suffix(".0")
 		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
 		speed_buttons.add_child(speed_button)
 	tower_shop.setup(tower_types)
@@ -113,6 +112,15 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	tower_shop.tower_selected.connect(tower_selected.emit)
 	tower_shop.tower_hovered.connect(_on_shop_button_hovered)
 	tower_shop.hover_ended.connect(shop_info.close)
+
+
+## Passe à la vitesse suivante (après la dernière, on revient à la première).
+func _select_next_speed() -> void:
+	var buttons := speed_buttons.get_children()
+	if buttons.is_empty():
+		return
+	var current := buttons.find(_speed_group.get_pressed_button())
+	(buttons[(current + 1) % buttons.size()] as Button).pressed.emit()
 
 
 func update_stats(gold: int, lives: int, wave: int, wave_count: int) -> void:
