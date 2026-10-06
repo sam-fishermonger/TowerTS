@@ -41,6 +41,8 @@ const MEDECIN := preload("res://resources/enemies/humanoid/medecin.tres")
 const REINE := preload("res://resources/enemies/insectoid/reine.tres")
 const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
 const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
+const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
+const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -116,6 +118,8 @@ func _run() -> void:
 	await _test_bosses()
 	await _test_detail_windows()
 	await _test_lexicon()
+	await _test_end_stats()
+	await _test_achievements()
 	await _test_biome_tiles()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
@@ -2358,6 +2362,155 @@ func _test_lexicon() -> void:
 	_check(screen.get_entry_buttons().size() == 3 and screen.detail_text.get_parsed_text().contains("Reine de la Ruche"),
 		"onglet Mondes : un par monde, avec ses monstres et son boss")
 	await _free(screen)
+
+
+func _test_end_stats() -> void:
+	print("Statistiques de fin de niveau")
+	var level := await _spawn_level(LEVEL_03)
+	var poison := _place_test_tower(level, PESTICIDE)
+	poison.set_process(false)
+	var still: EnemyData = SCARABEE.duplicate()
+	still.speed = 0.0
+	# Apparu par le WaveSpawner : le niveau suit ses dégâts.
+	var target := level.spawner.spawn(still, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	poison._attack(target)
+	var elapsed := 0.0
+	while elapsed < 3.0:
+		elapsed += await _step()
+	var record: LevelStats.TowerRecord = level.stats.towers.get(poison.get_instance_id())
+	_check(record != null and record.damage > 10.0 and is_equal_approx(record.damage, still.max_health - target.health.health),
+		"le poison est compté à la tour qui l'a posé (%s)" % (record.damage if record else -1.0))
+	await _free(level)
+
+	level = await _spawn_level(LEVEL_01)
+	level.gold = 5000
+	_place_defense(level, [Vector2i(3, 3), Vector2i(5, 3), Vector2i(3, 6), Vector2i(5, 6),
+			Vector2i(9, 2), Vector2i(11, 2), Vector2i(9, 6), Vector2i(11, 6),
+			Vector2i(14, 2), Vector2i(16, 2), Vector2i(14, 7), Vector2i(16, 7)], [CANNON, GATLING])
+	var sniper := level.place_tower(Vector2i(7, 4), SNIPER)
+	level.upgrade_tower(sniper)
+	# Dans un tableau : la tour vendue est libérée, et une lambda ne peut pas garder un objet libéré.
+	var sold := [level.place_tower(Vector2i(13, 4), SNIPER)]
+	var expected_spent := 6 * CANNON.get_cost() + 6 * GATLING.get_cost() + 2 * SNIPER.get_cost() + SNIPER.get_upgrade_cost(1)
+	await _play_until_over(level, 300.0, false, func() -> void:
+		if is_instance_valid(sold[0]) and sold[0].is_alive and level.spawner.current_wave >= 1:
+			level.sell_tower(sold[0]))
+	var stats := level.stats
+	_check(level.is_over and level.lives > 0, "partie gagnée")
+	_check(stats.towers_built == 14 and stats.upgrades_bought == 1 and stats.towers_sold == 1,
+		"tours posées, améliorées et vendues comptées")
+	_check(stats.gold_spent == expected_spent and stats.gold_spent_on_upgrades == SNIPER.get_upgrade_cost(1),
+		"or dépensé : poses et améliorations (%d)" % stats.gold_spent)
+	_check(stats.gold_earned > 0 and stats.kills > 20 and stats.lives_lost == level.starting_lives - level.lives,
+		"or gagné, monstres détruits, vies perdues")
+	var types := stats.get_types()
+	var type_total := 0.0
+	var type_kills := 0
+	for type in types:
+		type_total += type.damage
+		type_kills += type.kills
+	_check(types.size() == 3 and types[0].damage >= types[1].damage and types[1].damage >= types[2].damage,
+		"un bilan par type de tour, du plus de dégâts au moins")
+	_check(is_equal_approx(type_total, stats.get_total_damage()) and stats.get_total_damage() > 1000.0,
+		"les dégâts de chaque tour s'additionnent (%d)" % stats.get_total_damage())
+	_check(type_kills > stats.kills * 0.9 and type_kills <= stats.kills, "les destructions sont comptées aux tours")
+	var best := stats.get_best_tower()
+	_check(best != null and stats.towers.values().all(func(r: LevelStats.TowerRecord) -> bool: return r.damage <= best.damage),
+		"meilleure tour : celle qui a fait le plus de dégâts")
+	_check(stats.towers.values().filter(func(r: LevelStats.TowerRecord) -> bool: return r.sold).size() == 1,
+		"la tour vendue garde ses statistiques")
+	_check(stats.duration > 10.0, "durée de la partie (%s)" % LevelStats.format_duration(stats.duration))
+	var end := level.hud.end_stats
+	_check(end.visible and end.type_rows.size() == 3 and end.best_label.text.contains(best.data.display_name)
+		and end.summary["Or dépensé"] == LevelStats.format_number(expected_spent),
+		"l'écran de fin affiche les statistiques et la meilleure tour")
+	_check(level.hud.end_panel.get_global_rect().grow(1.0).encloses(end.get_global_rect())
+		and Rect2(Vector2.ZERO, Vector2(1280, 800)).encloses(level.hud.end_panel.get_global_rect()),
+		"le panneau de fin tient à l'écran")
+	_check(LevelStats.format_number(1234567) == "1 234 567" and LevelStats.format_duration(125.0) == "2:05",
+		"nombres et durées lisibles")
+	await _free(level)
+
+
+func _test_achievements() -> void:
+	print("Succès")
+	# Progression à part : les succès débloqués par les autres tests ne comptent pas.
+	var save_path := Progress.get_save_path()
+	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_achievements.cfg")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	var ids := Achievements.LIST.map(func(d: Dictionary) -> String: return d.id)
+	_check(ids.size() >= 20 and ids.all(func(id: String) -> bool: return ids.count(id) == 1),
+		"%d succès, chacun son identifiant" % ids.size())
+	_check(Achievements.LIST.filter(func(d: Dictionary) -> bool: return d.has("boss"))
+		.all(func(d: Dictionary) -> bool: return ResourceLoader.exists(d.boss) and load(d.boss).is_boss),
+		"les succès de boss visent des boss")
+	_check(Achievements.get_unlocked_count() == 0, "aucun succès au départ")
+
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 5000
+	_place_defense(level, [Vector2i(3, 3), Vector2i(5, 3), Vector2i(3, 6), Vector2i(5, 6),
+			Vector2i(9, 2), Vector2i(11, 2), Vector2i(9, 6), Vector2i(11, 6),
+			Vector2i(14, 2), Vector2i(16, 2), Vector2i(14, 7), Vector2i(16, 7)], [CANNON])
+	await _play_until_over(level, 600.0, true)
+	_check(level.is_over and level.lives > 0, "partie gagnée avec des Canons seulement")
+	var expected := ["premier_pas", "brut_de_pose", "monoculture", "tresor"]
+	if level.lives == level.starting_lives:
+		expected.append("sans_egratignure")
+	_check(expected.all(func(id: String) -> bool: return Achievements.is_unlocked(id) and level.unlocked_achievements.has(id))
+		and not Achievements.is_unlocked("minimaliste") and not Achievements.is_unlocked("cauchemar"),
+		"victoire : Premier pas, Brut de pose, Monoculture, Trésor de guerre (%s)" % ", ".join(level.unlocked_achievements))
+	_check(Achievements.get_counter("kills") == level.stats.kills, "les monstres détruits s'ajoutent au compteur")
+	_check(level.hud.end_stats.achievements_label != null
+		and level.hud.end_stats.achievements_label.text.contains("Premier\u00a0pas"), "l'écran de fin liste les succès débloqués")
+	await _free(level)
+
+	level = await _spawn_level(LEVEL_03)
+	level.gold = 5000
+	level.place_tower(Vector2i(4, 2), CANNON)
+	var boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	boss.take_damage(1000000.0, true)
+	await process_frame
+	_check(Achievements.is_unlocked("regicide") and Achievements.is_unlocked("commando")
+		and not Achievements.is_unlocked("demolition"), "vaincre la Reine avec une tour : Régicide et Commando")
+	_check(level.hud.achievement_toasts.get_child_count() == 2, "un bandeau annonce chaque succès en jeu")
+	for cell in [Vector2i(4, 4), Vector2i(2, 2), Vector2i(6, 6)]:
+		level.place_tower(cell, CANNON)
+	var behemoth := level.spawner.spawn(BEHEMOTH, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	behemoth.take_damage(1000000.0, true)
+	await process_frame
+	_check(Achievements.is_unlocked("demolition") and level.unlocked_achievements == ["regicide", "commando", "demolition"],
+		"Démolition avec 4 tours, sans redébloquer Commando")
+	await _free(level)
+
+	var unlocked := Achievements.add_counters({kills = 5000})
+	_check(unlocked == ["exterminateur"] and Achievements.add_counters({kills = 10}).is_empty(),
+		"Exterminateur à 5000 monstres, une seule fois")
+	_check(Achievements.get_progress(Achievements.get_definition("chasseur"))[1] == 50, "avancement des objectifs chiffrés")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	for path in campaign.worlds[0].levels:
+		Progress.record_victory(path, 3)
+	_check(Achievements.check_progress() == ["ruche"], "gagner tous les niveaux de La Ruche")
+
+	var screen := ACHIEVEMENTS_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	var count := Achievements.get_unlocked_count()
+	_check(screen.cards.size() == Achievements.LIST.size()
+		and screen.counter_label.text == "%d / %d débloqués" % [count, Achievements.LIST.size()],
+		"page des succès : une vignette par succès et le compte (%s)" % screen.counter_label.text)
+	_check(screen.cards.all(func(c: Control) -> bool: return c.size.x > 300.0), "les vignettes se partagent la largeur")
+	await _free(screen)
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	_check(title.achievements_button.text == "Succès  ·  %d / %d" % [count, Achievements.LIST.size()],
+		"le bouton Succès de l'écran titre donne le compte")
+	await _free(title)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Engine.set_meta(Progress.SAVE_PATH_META, save_path)
 
 
 func _test_biome_tiles() -> void:

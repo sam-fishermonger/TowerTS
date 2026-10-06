@@ -75,6 +75,30 @@ Le dossier `build/` est ignoré par git.
 
   Un boss coûte 10 vies s'il atteint la base et rapporte 150 à 170 or. Les élites se règlent dans `scripts/data/enemy_data.gd` (`ELITE_*`) ; un groupe de vague devient élite avec sa case `elite` (`SpawnGroup`), qui a aussi son propre multiplicateur de vie (`health_multiplier`). Un ennemi est un boss avec `is_boss`, et appelle des renforts avec le groupe **Renforts** de sa ressource.
 - **Lexique** (écran titre) : la fiche de chaque tour (statistiques, améliorations, comment la débloquer, spécialisation), de chaque monstre (statistiques, capacités, version élite), des élites et des boss, et de chaque monde (monstres, boss, tours du monde, étoiles). Il lit les ressources du jeu : une tour ajoutée dans `resources/towers/` ou un monstre ajouté à un monde y apparaît tout seul.
+- **Statistiques de fin de niveau** : l'écran de fin (victoire, défaite ou fin du mode infini) montre à droite le bilan de la partie : durée (en temps de jeu), monstres détruits (dont élites et boss), dégâts infligés, vies perdues, or dépensé (poses et améliorations) et gagné (monstres, bonus de vague, intérêts, primes, ventes), tours posées et améliorations achetées. Puis la **meilleure tour**, celle qui a infligé le plus de dégâts (son niveau, ses dégâts, ses destructions), et les **dégâts par tour** : une ligne par type de tour posé, avec le nombre de tours, une barre, les dégâts et leur part. Chaque coup est compté à la tour qui l'a porté, brûlures et poisons compris, et une tour vendue garde ce qu'elle a fait. Le calcul est dans `scripts/levels/level_stats.gd`.
+- **Succès** : 21 objectifs à remplir en jouant, dans n'importe quelle difficulté. Un bandeau doré les annonce en jeu au moment où ils sont remplis, et l'écran de fin liste ceux de la partie. **Succès** (écran titre, avec le compte) ouvre leur page : une vignette par succès, grisée tant qu'il n'est pas débloqué, avec l'avancement des objectifs chiffrés et la date du déblocage. La partie de l'écran titre n'en débloque pas, et **Effacer la progression** les garde.
+
+  | Succès | Objectif |
+  |---|---|
+  | Premier pas | Gagner un niveau. |
+  | Sans une égratignure | Gagner un niveau sans perdre de vie. |
+  | Sur le fil | Gagner un niveau avec une seule vie restante. |
+  | La Ruche nettoyée, La Fonderie éteinte, La Cité libérée | Gagner tous les niveaux du monde. |
+  | Régicide, Démolition, Coup d'État | Vaincre la Reine de la Ruche, le Béhémoth, le Général (mode infini compris). |
+  | Commando | Vaincre un boss avec 3 tours ou moins sur la carte. |
+  | Minimaliste | Gagner un niveau en posant 5 tours au plus (ventes comprises). |
+  | Brut de pose | Gagner un niveau sans améliorer aucune tour. |
+  | Monoculture | Gagner un niveau avec un seul type de tour. |
+  | Impatient | Lancer 5 vagues en avance dans une même partie. |
+  | Trésor de guerre | Gagner un niveau avec 1000 pièces d'or en poche. |
+  | Cauchemar vaincu | Gagner un niveau en Cauchemar. |
+  | Infatigable | Repousser 30 vagues dans une partie du mode infini. |
+  | Chasseur d'élites | Détruire 50 monstres élites (toutes parties confondues). |
+  | Exterminateur | Détruire 5000 monstres (toutes parties confondues). |
+  | Constellation | Obtenir 100 étoiles. |
+  | Jardinier | Acheter 15 améliorations dans l'arbre. |
+
+  Le code Konami, qui gagne tous les niveaux et achète tout l'arbre, débloque du même coup les succès de mondes, d'étoiles et de l'arbre. Les succès sont dans `scripts/save/achievements.gd` (`LIST`) : un succès s'ajoute là, avec son objectif.
 - Dans la sélection des mondes, survoler un niveau (ou lui donner le focus au clavier) ouvre sa fenêtre de détail : or et vies de départ, et le contenu de chaque vague dans la difficulté choisie, élites et boss compris.
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
@@ -232,11 +256,13 @@ Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du b
 ├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
 ├── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
 ├── TowerPicker              choix des tours au lancement du niveau (limite de la difficulté)
-└── BossBar                  vie du boss en jeu, en haut de la carte
+├── BossBar                  vie du boss en jeu, en haut de la carte
+└── EndStats                 statistiques de la partie sur l'écran de fin (LevelStats)
 DetailPopup (PanelContainer) scripts/ui/detail_popup.gd   fenêtre de détail au survol (texte BBCode, reste dans l'écran)
 EnemyInfo                    scripts/ui/enemy_info.gd     textes qui décrivent un ennemi ou une vague (lexique, fenêtres de détail)
 GameMap (Node2D)             scripts/map/game_map.gd      grille, chemins (Path2D enfants), rochers, cases occupées
-Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, navigation
+Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, succès, navigation
+├── LevelStats               dégâts et destructions de chaque tour, or, durée (statistiques de fin de niveau)
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris
 └── WaveSpawner              fait apparaître les ennemis sur les chemins de la carte
 TitleDemo                    scripts/ui/title_demo.gd     partie jouée toute seule derrière l'écran titre (Level.is_demo)
@@ -251,7 +277,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 ```
 project.godot        Configuration du projet
 export_presets.cfg   Réglages d'export (Windows, Linux, Web)
-scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, HUD, fiches et boutons du son
+scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, succès, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower, PulseTower, BeamTower, FlameTower et RailTower
@@ -264,10 +290,10 @@ scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile 
 scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
 resources/tilesets/  Tuiles de chaque biome (TileSet)
 tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py)
-scripts/save/        Progression enregistrée (Progress) et améliorations permanentes achetées (Perks)
+scripts/save/        Progression enregistrée (Progress), améliorations permanentes achetées (Perks) et succès (Achievements)
 resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites
 assets/audio/        Musiques et effets sonores
-assets/fonts/        Police de l'interface : Open Sans + symboles ★ ☆ ✕ (voir LICENCES.md)
+assets/fonts/        Police de l'interface : Open Sans + symboles ★ ☆ ✕ et ceux des succès (voir LICENCES.md)
 ```

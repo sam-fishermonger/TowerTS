@@ -142,6 +142,14 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Lexique"
 
+[node name="AchievementsButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Succès"
+
 
 [node name="AudioToggles" parent="Center/Panel/Menu" instance=ExtResource("9_audio")]
 unique_name_in_owner = true

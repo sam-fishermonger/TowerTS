@@ -4,6 +4,8 @@ extends CanvasLayer
 ## vitesse et réglages du son en bas ; fiches des tours et écran de fin.
 ## Au survol, des fenêtres de détail : celle de la prochaine vague (sur son aperçu) et
 ## celle du monstre sous la souris. La vie des boss en jeu s'affiche en haut de la carte.
+## Un bandeau annonce chaque succès débloqué, et l'écran de fin montre les statistiques
+## de la partie.
 
 ## Émis quand le joueur choisit une tour à placer (null = aucune).
 signal tower_selected(data: TowerData)
@@ -30,6 +32,8 @@ signal power_selected(power: Power)
 const DAMAGE_FLASH_DURATION := 0.6
 const LIVES_COLOR := Color(1, 0.5, 0.5)
 const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
+## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
+const ACHIEVEMENT_TOAST_DURATION := 4.0
 ## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
 const POWER_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E]
 
@@ -54,6 +58,10 @@ var enemy_details: DetailPopup
 var hovered_enemy: Enemy
 ## Vie des boss en jeu, en haut de la carte.
 var boss_bar: BossBar
+## Statistiques de la partie, à droite de l'écran de fin (cachées jusqu'à la fin).
+var end_stats: EndStats
+## Bandeaux des succès débloqués en jeu, en bas de la carte.
+var achievement_toasts: VBoxContainer
 ## Boutons des pouvoirs actifs, en haut, à gauche du bouton de vague.
 var power_bar: HBoxContainer
 var power_buttons: Array[PowerButton] = []
@@ -109,6 +117,22 @@ func _ready() -> void:
 	add_child(wave_details)
 	enemy_details = DetailPopup.new(270.0)
 	add_child(enemy_details)
+	# Fond plus opaque que celui du thème : les statistiques se lisent mieux sans la carte derrière.
+	var end_style := StyleBoxFlat.new()
+	end_style.bg_color = Color(0.07, 0.08, 0.08, 0.94)
+	end_style.border_color = Color(1, 1, 1, 0.15)
+	end_style.set_border_width_all(2)
+	end_style.set_corner_radius_all(12)
+	end_panel.add_theme_stylebox_override(&"panel", end_style)
+	end_stats = EndStats.new()
+	end_stats.visible = false
+	%EndPanel.get_node("Margin/Row").add_child(end_stats)
+	achievement_toasts = VBoxContainer.new()
+	achievement_toasts.alignment = BoxContainer.ALIGNMENT_END
+	achievement_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	achievement_toasts.add_theme_constant_override(&"separation", 6)
+	add_child(achievement_toasts)
+	move_child(achievement_toasts, end_panel.get_index())
 	# L'aperçu de vague prend la souris pour ouvrir sa fenêtre de détail.
 	wave_preview.mouse_filter = Control.MOUSE_FILTER_STOP
 	wave_preview.mouse_default_cursor_shape = Control.CURSOR_HELP
@@ -388,6 +412,73 @@ func show_endless_end_screen(waves: int, endless_stars: int, new_record := false
 		end_message.text += "\nNouveau record !"
 	end_message.text += "\nUne étoile infinie toutes les %d vagues au-delà de celles du niveau." \
 		% Progress.ENDLESS_STAR_STEP
+
+
+## Statistiques de la partie et succès débloqués, à droite de l'écran de fin (à appeler
+## après show_end_screen ou show_endless_end_screen).
+func show_end_stats(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
+	end_stats.setup(stats, achievement_ids)
+	end_stats.visible = true
+	# Les succès sont listés dans le panneau : les bandeaux s'effacent.
+	for toast in achievement_toasts.get_children():
+		toast.queue_free()
+	_center_end_panel.call_deferred()
+
+
+func _center_end_panel() -> void:
+	end_panel.reset_size()
+	end_panel.position = ((get_viewport().get_visible_rect().size - end_panel.size) / 2.0).round()
+
+
+## Bandeau « Succès débloqué » en bas de la carte, qui s'efface tout seul.
+func show_achievement(definition: Dictionary) -> void:
+	if definition.is_empty():
+		return
+	var toast := PanelContainer.new()
+	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.07, 0.04, 0.92)
+	style.border_color = Achievements.COLOR
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	toast.add_theme_stylebox_override(&"panel", style)
+	var label := RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.fit_content = true
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override(&"normal_font_size", 16)
+	label.add_theme_font_size_override(&"bold_font_size", 18)
+	label.text = "[color=#%s][b]%s  Succès débloqué : %s[/b][/color]\n[color=#ffffffb0]%s[/color]" % [
+		Achievements.COLOR.to_html(false), definition.icon, definition.name, definition.description]
+	toast.add_child(label)
+	achievement_toasts.add_child(toast)
+	_place_achievement_toasts.call_deferred()
+	toast.modulate.a = 0.0
+	# Temps réel : le bandeau dure autant en x3 et pendant la pause de fin de partie.
+	var tween := toast.create_tween().set_ignore_time_scale()
+	tween.tween_property(toast, "modulate:a", 1.0, 0.25)
+	tween.tween_interval(ACHIEVEMENT_TOAST_DURATION)
+	tween.tween_property(toast, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(func() -> void:
+		toast.queue_free()
+		_place_achievement_toasts.call_deferred())
+	Sound.play(&"upgrade")
+
+
+## Les bandeaux sont centrés, juste au-dessus de la barre du bas.
+func _place_achievement_toasts() -> void:
+	if not is_inside_tree():
+		return
+	achievement_toasts.reset_size()
+	var screen := get_viewport().get_visible_rect().size
+	achievement_toasts.position = Vector2(((screen.x - achievement_toasts.size.x) / 2.0),
+		bottom_bar.get_global_rect().position.y - 12.0 - achievement_toasts.size.y).round()
 
 
 ## Zone de la carte visible entre la barre du haut et celle du bas.
