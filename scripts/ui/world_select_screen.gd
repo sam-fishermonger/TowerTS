@@ -57,6 +57,7 @@ func _make_card(world_index: int) -> Control:
 	var card := PanelContainer.new()
 	card.name = "World%d" % (world_index + 1)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.09, 0.08, 0.92)
 	style.border_color = world.color if unlocked else world.color.darkened(0.6)

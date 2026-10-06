@@ -11,7 +11,7 @@
 [resource]
 script = ExtResource("1_world")
 display_name = "La Fonderie"
-description = "Mecha : des robots blindés, des drones,\net des boucliers d'énergie qui se rechargent."
+description = "Mecha : des robots blindés, des drones, et des boucliers d'énergie qui se rechargent."
 color = Color(0.45, 0.78, 0.95, 1)
 enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_drone"), ExtResource("e1_sentinelle"), ExtResource("e2_chenillard"), ExtResource("e3_porte_drones"), ExtResource("e4_titan")])
 levels = Array[String](["res://scenes/levels/mecha_01.tscn", "res://scenes/levels/mecha_02.tscn", "res://scenes/levels/mecha_03.tscn", "res://scenes/levels/mecha_04.tscn", "res://scenes/levels/mecha_05.tscn", "res://scenes/levels/mecha_06.tscn"])

@@ -80,6 +80,8 @@ func _run() -> void:
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
 	await _test_levels_04_to_06_with_earned_gold()
+	await _test_world_levels_maps()
+	await _test_world_levels_balance()
 	if _failures == 0:
 		print("TOUS LES TESTS SONT PASSÉS")
 	else:
@@ -185,8 +187,8 @@ func _test_title_screen() -> void:
 	await _free(title)
 	var screen := await _spawn_world_select()
 	_check(screen.get_node("%Worlds").get_child_count() == 3, "une carte par monde")
-	var first := screen.get_level_button(LEVEL_01.resource_path)
-	var second := screen.get_level_button(LEVEL_02.resource_path)
+	var first: Button = screen.get_level_button(LEVEL_01.resource_path)
+	var second: Button = screen.get_level_button(LEVEL_02.resource_path)
 	_check(not first.disabled and first.has_focus() and second.disabled and second.text.ends_with("Verrouillé"),
 		"au départ, seul le niveau 1-1 est débloqué, et il a le focus")
 	_check(screen.get_level_button(MECHA_01.resource_path).disabled
@@ -636,7 +638,7 @@ func _test_target_modes() -> void:
 func _test_level_02_map() -> void:
 	print("Niveau 2 : carte")
 	var level := await _spawn_level(LEVEL_02)
-	_check(level.level_name == "Niveau 2" and level.gold == 220 and level.lives == 20, "nom, or et vies de départ")
+	_check(level.level_name == "Niveau 1-2" and level.gold == 220 and level.lives == 20, "nom, or et vies de départ")
 	_check(level.spawner.waves.size() == 6, "6 vagues définies")
 	_check(level.tower_types.size() == 5, "5 types de tours proposés")
 	_check(level.map.paths.size() == 2, "deux chemins")
@@ -1012,7 +1014,7 @@ func _test_level_02_with_earned_gold() -> void:
 func _test_level_03_map() -> void:
 	print("Niveau 3 : carte")
 	var level := await _spawn_level(LEVEL_03)
-	_check(level.level_name == "Niveau 3" and level.gold == 250 and level.lives == 20, "nom, or et vies de départ")
+	_check(level.level_name == "Niveau 1-3" and level.gold == 250 and level.lives == 20, "nom, or et vies de départ")
 	_check(level.spawner.waves.size() == 7, "7 vagues définies")
 	_check(level.tower_types.size() == 6 and level.tower_types.has(BEAM), "6 types de tours, dont le Rayon")
 	_check(level.get_next_level() == LEVEL_04.resource_path, "le niveau 4 suit")
@@ -1087,8 +1089,9 @@ func _test_healer_enemy() -> void:
 	_check(close.health.health == SOLDAT.max_health, "le soldat blessé à côté est soigné")
 	_check(far.health.health == SOLDAT.max_health - 40.0, "pas celui qui est trop loin")
 	_check(medecin.health.health == MEDECIN.max_health - 40.0, "le Médecin ne se soigne pas lui-même")
-	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text.begins_with("+")
-		and n.color == Level.HEAL_TEXT_COLOR), "le soin s'affiche en vert")
+	var heal_shown := level.effects.get_children().any(func(n: Node) -> bool:
+		return n is FloatingText and n.text.begins_with("+") and n.color == Level.HEAL_TEXT_COLOR)
+	_check(heal_shown, "le soin s'affiche en vert")
 	await _free(level)
 
 
@@ -1261,3 +1264,140 @@ func _test_levels_04_to_06_with_earned_gold() -> void:
 		[Vector2i(6, 7), MORTAR], [Vector2i(3, 4), BEAM], [Vector2i(16, 2), CANNON],
 		[Vector2i(9, 5), MORTAR], [Vector2i(3, 7), SNIPER], [Vector2i(13, 4), BEAM],
 	])
+
+
+## Ordres de construction des mondes 2 et 3 pour l'équilibrage (18 tours par niveau).
+const WORLD_BUILD_ORDERS := {
+	"res://scenes/levels/mecha_01.tscn": [
+		[Vector2i(15, 2), CANNON], [Vector2i(15, 3), CANNON], [Vector2i(4, 5), MORTAR],
+		[Vector2i(4, 6), BEAM], [Vector2i(16, 2), FROST], [Vector2i(16, 3), CANNON],
+		[Vector2i(3, 5), SNIPER], [Vector2i(3, 6), MORTAR], [Vector2i(3, 2), BEAM],
+		[Vector2i(4, 2), GATLING], [Vector2i(5, 2), FROST], [Vector2i(6, 2), SNIPER],
+		[Vector2i(7, 2), MORTAR], [Vector2i(8, 2), BEAM], [Vector2i(9, 2), CANNON],
+		[Vector2i(10, 2), MORTAR], [Vector2i(11, 2), SNIPER], [Vector2i(12, 2), BEAM],
+	],
+	"res://scenes/levels/mecha_02.tscn": [
+		[Vector2i(11, 5), CANNON], [Vector2i(12, 5), CANNON], [Vector2i(14, 5), MORTAR],
+		[Vector2i(12, 6), BEAM], [Vector2i(14, 6), FROST], [Vector2i(15, 6), CANNON],
+		[Vector2i(5, 3), SNIPER], [Vector2i(7, 3), MORTAR], [Vector2i(8, 3), BEAM],
+		[Vector2i(15, 5), GATLING], [Vector2i(11, 6), FROST], [Vector2i(4, 3), SNIPER],
+		[Vector2i(4, 2), MORTAR], [Vector2i(5, 2), BEAM], [Vector2i(7, 2), CANNON],
+		[Vector2i(9, 3), MORTAR], [Vector2i(10, 3), SNIPER], [Vector2i(11, 3), BEAM],
+	],
+	"res://scenes/levels/mecha_03.tscn": [
+		[Vector2i(10, 3), CANNON], [Vector2i(10, 4), CANNON], [Vector2i(9, 3), MORTAR],
+		[Vector2i(11, 3), BEAM], [Vector2i(9, 4), FROST], [Vector2i(11, 4), CANNON],
+		[Vector2i(4, 5), SNIPER], [Vector2i(7, 5), MORTAR], [Vector2i(13, 5), BEAM],
+		[Vector2i(16, 5), GATLING], [Vector2i(18, 5), FROST], [Vector2i(4, 6), SNIPER],
+		[Vector2i(5, 6), MORTAR], [Vector2i(6, 6), BEAM], [Vector2i(7, 6), CANNON],
+		[Vector2i(13, 6), MORTAR], [Vector2i(14, 6), SNIPER], [Vector2i(15, 6), BEAM],
+	],
+	"res://scenes/levels/mecha_04.tscn": [
+		[Vector2i(5, 3), CANNON], [Vector2i(6, 3), CANNON], [Vector2i(7, 3), MORTAR],
+		[Vector2i(8, 3), BEAM], [Vector2i(15, 3), FROST], [Vector2i(16, 3), CANNON],
+		[Vector2i(5, 4), SNIPER], [Vector2i(8, 4), MORTAR], [Vector2i(15, 4), BEAM],
+		[Vector2i(3, 5), GATLING], [Vector2i(10, 5), FROST], [Vector2i(13, 5), SNIPER],
+		[Vector2i(2, 6), MORTAR], [Vector2i(3, 6), BEAM], [Vector2i(10, 6), CANNON],
+		[Vector2i(11, 6), MORTAR], [Vector2i(12, 6), SNIPER], [Vector2i(13, 6), BEAM],
+	],
+	"res://scenes/levels/mecha_05.tscn": [
+		[Vector2i(5, 1), CANNON], [Vector2i(6, 1), CANNON], [Vector2i(8, 1), MORTAR],
+		[Vector2i(9, 1), BEAM], [Vector2i(15, 5), FROST], [Vector2i(16, 5), CANNON],
+		[Vector2i(3, 1), SNIPER], [Vector2i(7, 1), MORTAR], [Vector2i(11, 1), BEAM],
+		[Vector2i(3, 3), GATLING], [Vector2i(5, 3), FROST], [Vector2i(9, 3), SNIPER],
+		[Vector2i(11, 3), MORTAR], [Vector2i(12, 3), BEAM], [Vector2i(11, 4), CANNON],
+		[Vector2i(13, 4), MORTAR], [Vector2i(15, 4), SNIPER], [Vector2i(12, 5), BEAM],
+	],
+	"res://scenes/levels/mecha_06.tscn": [
+		[Vector2i(17, 3), CANNON], [Vector2i(16, 3), CANNON], [Vector2i(16, 2), MORTAR],
+		[Vector2i(17, 2), BEAM], [Vector2i(17, 5), FROST], [Vector2i(17, 6), CANNON],
+		[Vector2i(8, 2), SNIPER], [Vector2i(9, 2), MORTAR], [Vector2i(10, 2), BEAM],
+		[Vector2i(7, 3), GATLING], [Vector2i(8, 3), FROST], [Vector2i(9, 3), SNIPER],
+		[Vector2i(10, 3), MORTAR], [Vector2i(11, 3), BEAM], [Vector2i(2, 6), CANNON],
+		[Vector2i(3, 6), MORTAR], [Vector2i(16, 6), SNIPER], [Vector2i(2, 2), BEAM],
+	],
+	"res://scenes/levels/humanoid_01.tscn": [
+		[Vector2i(6, 2), CANNON], [Vector2i(7, 2), CANNON], [Vector2i(9, 2), MORTAR],
+		[Vector2i(10, 2), BEAM], [Vector2i(4, 3), FROST], [Vector2i(6, 3), CANNON],
+		[Vector2i(10, 3), SNIPER], [Vector2i(3, 4), MORTAR], [Vector2i(4, 4), BEAM],
+		[Vector2i(17, 4), GATLING], [Vector2i(12, 5), FROST], [Vector2i(15, 5), SNIPER],
+		[Vector2i(17, 5), MORTAR], [Vector2i(12, 6), BEAM], [Vector2i(13, 6), CANNON],
+		[Vector2i(14, 6), MORTAR], [Vector2i(15, 6), SNIPER], [Vector2i(3, 3), BEAM],
+	],
+	"res://scenes/levels/humanoid_02.tscn": [
+		[Vector2i(14, 6), CANNON], [Vector2i(14, 5), CANNON], [Vector2i(2, 2), MORTAR],
+		[Vector2i(3, 2), BEAM], [Vector2i(5, 2), FROST], [Vector2i(6, 2), CANNON],
+		[Vector2i(6, 4), SNIPER], [Vector2i(7, 4), MORTAR], [Vector2i(9, 4), BEAM],
+		[Vector2i(10, 4), GATLING], [Vector2i(15, 5), FROST], [Vector2i(17, 5), SNIPER],
+		[Vector2i(10, 6), MORTAR], [Vector2i(11, 6), BEAM], [Vector2i(13, 6), CANNON],
+		[Vector2i(15, 6), MORTAR], [Vector2i(17, 6), SNIPER], [Vector2i(5, 1), BEAM],
+	],
+	"res://scenes/levels/humanoid_03.tscn": [
+		[Vector2i(11, 5), CANNON], [Vector2i(11, 6), CANNON], [Vector2i(12, 5), MORTAR],
+		[Vector2i(12, 6), BEAM], [Vector2i(14, 6), FROST], [Vector2i(14, 7), CANNON],
+		[Vector2i(15, 7), SNIPER], [Vector2i(10, 5), MORTAR], [Vector2i(15, 6), BEAM],
+		[Vector2i(10, 3), GATLING], [Vector2i(11, 3), FROST], [Vector2i(12, 3), SNIPER],
+		[Vector2i(8, 5), MORTAR], [Vector2i(14, 5), BEAM], [Vector2i(10, 6), CANNON],
+		[Vector2i(12, 7), MORTAR], [Vector2i(16, 7), SNIPER], [Vector2i(17, 7), BEAM],
+	],
+	"res://scenes/levels/humanoid_04.tscn": [
+		[Vector2i(4, 2), CANNON], [Vector2i(4, 3), CANNON], [Vector2i(3, 3), MORTAR],
+		[Vector2i(5, 3), BEAM], [Vector2i(12, 3), FROST], [Vector2i(13, 2), CANNON],
+		[Vector2i(14, 2), SNIPER], [Vector2i(13, 3), MORTAR], [Vector2i(14, 3), BEAM],
+		[Vector2i(3, 2), GATLING], [Vector2i(5, 2), FROST], [Vector2i(12, 2), SNIPER],
+		[Vector2i(15, 2), MORTAR], [Vector2i(7, 3), BEAM], [Vector2i(10, 3), CANNON],
+		[Vector2i(15, 3), MORTAR], [Vector2i(3, 5), SNIPER], [Vector2i(4, 5), BEAM],
+	],
+	"res://scenes/levels/humanoid_05.tscn": [
+		[Vector2i(12, 4), CANNON], [Vector2i(13, 3), CANNON], [Vector2i(15, 3), MORTAR],
+		[Vector2i(16, 3), BEAM], [Vector2i(13, 4), FROST], [Vector2i(15, 4), CANNON],
+		[Vector2i(12, 3), SNIPER], [Vector2i(16, 4), MORTAR], [Vector2i(11, 6), BEAM],
+		[Vector2i(13, 6), GATLING], [Vector2i(15, 1), FROST], [Vector2i(16, 1), SNIPER],
+		[Vector2i(17, 1), MORTAR], [Vector2i(17, 3), BEAM], [Vector2i(11, 4), CANNON],
+		[Vector2i(10, 6), MORTAR], [Vector2i(14, 6), SNIPER], [Vector2i(11, 7), BEAM],
+	],
+	"res://scenes/levels/humanoid_06.tscn": [
+		[Vector2i(11, 6), CANNON], [Vector2i(12, 6), CANNON], [Vector2i(13, 6), MORTAR],
+		[Vector2i(14, 6), BEAM], [Vector2i(15, 6), FROST], [Vector2i(16, 6), CANNON],
+		[Vector2i(10, 6), SNIPER], [Vector2i(17, 6), MORTAR], [Vector2i(12, 8), BEAM],
+		[Vector2i(11, 5), GATLING], [Vector2i(12, 5), FROST], [Vector2i(13, 5), SNIPER],
+		[Vector2i(14, 5), MORTAR], [Vector2i(15, 5), BEAM], [Vector2i(16, 5), CANNON],
+		[Vector2i(9, 6), MORTAR], [Vector2i(11, 8), SNIPER], [Vector2i(15, 2), BEAM],
+	],
+}
+
+
+func _test_world_levels_maps() -> void:
+	print("Mondes 2 et 3 : cartes")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	for w in [1, 2]:
+		var world := campaign.worlds[w]
+		for i in world.levels.size():
+			var path := world.levels[i]
+			var level := await _spawn_level(load(path))
+			var label := "Niveau %d-%d" % [w + 1, i + 1]
+			_check(level.level_name == label and level.tower_types.size() == 6, "%s : nom et 6 types de tours" % label)
+			var rocks_off_path := level.map.blocked_cells.all(func(cell: Vector2i) -> bool:
+				return not level.map.is_cell_on_path(cell))
+			var used_paths := {}
+			for wave in level.spawner.waves:
+				for group in wave.groups:
+					used_paths[group.path_index] = true
+			# Tous les chemins finissent au même endroit : la base.
+			var ends := {}
+			for enemy_path in level.map.paths:
+				var curve := enemy_path.curve
+				ends[curve.get_point_position(curve.point_count - 1)] = true
+			_check(rocks_off_path and used_paths.size() == level.map.paths.size() and ends.size() == 1,
+				"%s : %d chemin(s) qui mènent tous à la base, tous utilisés, rochers hors des chemins"
+				% [label, level.map.paths.size()])
+			await _free(level)
+
+
+func _test_world_levels_balance() -> void:
+	for path: String in WORLD_BUILD_ORDERS:
+		var scene: PackedScene = load(path)
+		var level: Level = scene.instantiate()
+		print("%s : gagnable avec l'or gagné, mais pas avec une petite défense" % level.level_name)
+		level.free()
+		await _check_build_order_balance(scene, WORLD_BUILD_ORDERS[path])

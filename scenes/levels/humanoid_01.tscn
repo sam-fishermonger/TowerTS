@@ -24,14 +24,14 @@ point_count = 8
 [sub_resource type="Resource" id="Group_w1_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_soldat")
-count = 13
+count = 29
 interval = 0.7
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w1_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_eclaireur")
-count = 9
+count = 19
 interval = 0.35
 start_delay = 4.0
 
@@ -43,14 +43,14 @@ bonus_gold = 15
 [sub_resource type="Resource" id="Group_w2_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_soldat")
-count = 6
+count = 12
 interval = 0.7
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w2_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_eclaireur")
-count = 13
+count = 29
 interval = 0.35
 start_delay = 4.0
 
@@ -62,14 +62,14 @@ bonus_gold = 20
 [sub_resource type="Resource" id="Group_w3_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_soldat")
-count = 20
+count = 43
 interval = 0.7
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w3_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_eclaireur")
-count = 22
+count = 48
 interval = 0.35
 start_delay = 4.0
 
@@ -81,7 +81,7 @@ bonus_gold = 25
 [sub_resource type="Resource" id="Group_w4_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_garde")
-count = 21
+count = 46
 interval = 1.0
 start_delay = 0.0
 
@@ -93,7 +93,7 @@ bonus_gold = 30
 [sub_resource type="Resource" id="Group_w5_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_garde")
-count = 28
+count = 60
 interval = 1.0
 start_delay = 0.0
 
@@ -105,21 +105,21 @@ bonus_gold = 35
 [sub_resource type="Resource" id="Group_w6_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_garde")
-count = 31
+count = 67
 interval = 1.0
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w6_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_soldat")
-count = 15
+count = 34
 interval = 0.7
 start_delay = 4.0
 
 [sub_resource type="Resource" id="Group_w6_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_eclaireur")
-count = 44
+count = 96
 interval = 0.35
 start_delay = 8.0
 

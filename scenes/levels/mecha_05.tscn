@@ -33,14 +33,14 @@ point_count = 6
 [sub_resource type="Resource" id="Group_w1_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_sentinelle")
-count = 13
+count = 8
 interval = 0.7
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w1_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_drone")
-count = 9
+count = 5
 interval = 0.35
 start_delay = 4.0
 path_index = 1
@@ -53,7 +53,7 @@ bonus_gold = 15
 [sub_resource type="Resource" id="Group_w2_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chenillard")
-count = 7
+count = 4
 interval = 1.0
 start_delay = 0.0
 path_index = 1
@@ -61,7 +61,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w2_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_sentinelle")
-count = 13
+count = 8
 interval = 0.7
 start_delay = 4.0
 
@@ -73,14 +73,14 @@ bonus_gold = 20
 [sub_resource type="Resource" id="Group_w3_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_titan")
-count = 4
+count = 3
 interval = 1.6
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w3_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chenillard")
-count = 9
+count = 5
 interval = 1.0
 start_delay = 4.0
 path_index = 1
@@ -93,7 +93,7 @@ bonus_gold = 25
 [sub_resource type="Resource" id="Group_w4_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_porte_drones")
-count = 9
+count = 5
 interval = 1.4
 start_delay = 0.0
 path_index = 1
@@ -101,14 +101,14 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w4_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_drone")
-count = 22
+count = 14
 interval = 0.35
 start_delay = 4.0
 
 [sub_resource type="Resource" id="Group_w4_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_sentinelle")
-count = 11
+count = 7
 interval = 0.7
 start_delay = 8.0
 path_index = 1
@@ -121,14 +121,14 @@ bonus_gold = 30
 [sub_resource type="Resource" id="Group_w5_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_titan")
-count = 8
+count = 5
 interval = 1.6
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w5_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chenillard")
-count = 13
+count = 8
 interval = 1.0
 start_delay = 4.0
 path_index = 1
@@ -141,7 +141,7 @@ bonus_gold = 35
 [sub_resource type="Resource" id="Group_w6_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_porte_drones")
-count = 12
+count = 7
 interval = 1.4
 start_delay = 0.0
 path_index = 1
@@ -149,14 +149,14 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w6_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_titan")
-count = 7
+count = 4
 interval = 1.6
 start_delay = 4.0
 
 [sub_resource type="Resource" id="Group_w6_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_drone")
-count = 29
+count = 18
 interval = 0.35
 start_delay = 8.0
 path_index = 1
@@ -169,14 +169,14 @@ bonus_gold = 40
 [sub_resource type="Resource" id="Group_w7_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_porte_drones")
-count = 15
+count = 10
 interval = 1.4
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w7_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chenillard")
-count = 15
+count = 10
 interval = 1.0
 start_delay = 4.0
 path_index = 1
@@ -184,7 +184,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w7_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_drone")
-count = 40
+count = 24
 interval = 0.35
 start_delay = 8.0
 
@@ -196,7 +196,7 @@ bonus_gold = 45
 [sub_resource type="Resource" id="Group_w8_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_titan")
-count = 13
+count = 8
 interval = 1.6
 start_delay = 0.0
 path_index = 1
@@ -204,14 +204,14 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w8_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_porte_drones")
-count = 15
+count = 10
 interval = 1.4
 start_delay = 4.0
 
 [sub_resource type="Resource" id="Group_w8_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chenillard")
-count = 18
+count = 11
 interval = 1.0
 start_delay = 8.0
 path_index = 1
@@ -219,7 +219,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w8_4"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_drone")
-count = 44
+count = 27
 interval = 0.35
 start_delay = 12.0
 
