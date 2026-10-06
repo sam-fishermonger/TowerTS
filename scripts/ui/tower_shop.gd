@@ -10,6 +10,11 @@ signal tower_selected(data: TowerData)
 signal tower_hovered(button: TowerShopButton)
 signal hover_ended
 
+## Largeur que la barre peut prendre sans pousser les boutons de droite : au-delà de
+## quelques tours (tours débloquées dans l'arbre), les cases rétrécissent.
+const MAX_WIDTH := 990.0
+const MIN_SLOT_WIDTH := 70.0
+
 var _group := ButtonGroup.new()
 var _gold := 0
 
@@ -19,8 +24,12 @@ func _ready() -> void:
 
 
 func setup(tower_types: Array[TowerData]) -> void:
+	var separation := get_theme_constant("separation")
+	var slot_width := clampf(floorf(MAX_WIDTH / maxi(tower_types.size(), 1)) - separation,
+		MIN_SLOT_WIDTH, TowerShopButton.SLOT_SIZE.x)
 	for data in tower_types:
 		var button := TowerShopButton.new(data)
+		button.custom_minimum_size.x = slot_width
 		button.button_group = _group
 		button.pressed.connect(_on_button_pressed)
 		button.mouse_entered.connect(tower_hovered.emit.bind(button))

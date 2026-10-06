@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/rail_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/shot_sniper.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/rail.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 100
+damage_multiplier = 1.4
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 150
+damage_multiplier = 1.35
+range_multiplier = 1.1
+fire_rate_multiplier = 1.25
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Perforateur"
+description = "Tir instantané qui traverse tous les ennemis alignés jusqu'au bout de sa portée, en ignorant leur armure."
+cost = 140
+scene = ExtResource("2_scene")
+attack_range = 260.0
+damage = 55.0
+fire_rate = 0.55
+color = Color(0.3, 0.8, 0.78, 1)
+turret_texture = ExtResource("10_turret")
+attack_sound = ExtResource("9_sound")
+armor_piercing = true
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

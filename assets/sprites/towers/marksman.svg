@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Franc-tireur : fusil à lunette et silencieux, orienté vers la droite. -->
+  <path d="M16 24 L32 27 L32 37 L16 40 Z" fill="#4a1218"/>
+  <path d="M18 26.5 L30 28.7 L30 35.3 L18 37.5 Z" fill="#a8323c"/>
+  <rect x="28" y="29.5" width="26" height="5" rx="2" fill="#2a0c10"/>
+  <rect x="29" y="31" width="24" height="2" rx="1" fill="#c9c2bb"/>
+  <rect x="50" y="28" width="12" height="8" rx="3" fill="#2a0c10"/>
+  <rect x="30" y="21" width="14" height="6" rx="3" fill="#2a0c10"/>
+  <circle cx="43" cy="24" r="2.6" fill="#ff6b6b"/>
+  <path d="M22 32 m-3 0 h6 m-3 -3 v6" stroke="#ffd2d2" stroke-width="1.6"/>
+</svg>

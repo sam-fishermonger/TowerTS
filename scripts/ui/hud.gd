@@ -37,6 +37,8 @@ var _wave_preview_text := ""
 @onready var wave_label: Label = %WaveLabel
 ## Barre d'achat, en bas à gauche.
 @onready var tower_shop: TowerShop = %TowerShop
+## Rappel des commandes, à côté de la barre d'achat.
+@onready var shop_hint: Label = $BottomBar/Margin/Row/Hint
 @onready var next_wave_button: Button = %NextWaveButton
 @onready var end_panel: PanelContainer = %EndPanel
 @onready var end_title: Label = %EndTitle
@@ -106,6 +108,8 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
 		speed_buttons.add_child(speed_button)
 	tower_shop.setup(tower_types)
+	# Avec les tours débloquées dans l'arbre, la barre d'achat prend la place du rappel des commandes.
+	shop_hint.visible = tower_types.size() <= 7
 	tower_shop.tower_selected.connect(tower_selected.emit)
 	tower_shop.tower_hovered.connect(_on_shop_button_hovered)
 	tower_shop.hover_ended.connect(shop_info.close)

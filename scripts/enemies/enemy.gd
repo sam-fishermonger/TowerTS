@@ -14,6 +14,10 @@ const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
 const HEAL_COLOR := Color(0.45, 1.0, 0.55)
 ## Durée de l'onde verte dessinée autour d'un soigneur quand il soigne.
 const HEAL_PULSE_DURATION := 0.5
+## Une brûlure ou un poison frappe à ce rythme, en secondes.
+const DOT_TICK := 0.5
+const HEAL_BLOCK_COLOR := Color(0.9, 0.25, 0.3)
+const JAMMED_SHIELD_COLOR := Color(0.6, 0.6, 0.7)
 
 @export var data: EnemyData
 
@@ -29,6 +33,13 @@ var _slow_time_left := 0.0
 var _heading := 0.0
 var _heal_cooldown := 0.0
 var _heal_pulse_left := 0.0
+## Brûlure ou poison en cours : dégâts par seconde, temps restant, couleur.
+var _dot_damage := 0.0
+var _dot_left := 0.0
+var _dot_tick_left := 0.0
+var _dot_color := Color.ORANGE
+## Secondes pendant lesquelles l'ennemi ne peut ni être soigné ni soigner.
+var _heal_block_left := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -63,6 +74,14 @@ func _process(delta: float) -> void:
 		if _slow_time_left <= 0.0:
 			_slow_factor = 1.0
 			queue_redraw()
+	if _dot_left > 0.0:
+		_update_dot(delta)
+		if not is_alive:
+			return
+	if _heal_block_left > 0.0:
+		_heal_block_left -= delta
+		if _heal_block_left <= 0.0:
+			queue_redraw()
 	if data.heal_amount > 0.0:
 		_update_healing(delta)
 	progress += get_speed() * delta
@@ -88,12 +107,28 @@ func distance_to_end() -> float:
 
 
 ## Applique un coup et renvoie les dégâts réellement subis.
-func take_damage(amount: float) -> float:
+func take_damage(amount: float, ignore_armor := false, shield_multiplier := 1.0) -> float:
 	if not is_alive:
 		return 0.0
-	var dealt := health.take_damage(amount)
+	var dealt := health.take_damage(amount, ignore_armor, shield_multiplier)
 	if dealt > 0.0:
 		damaged.emit(self, dealt)
+	return dealt
+
+
+## Coup porté par une tour : les dégâts donnés, puis les effets de ses statistiques
+## (ralentissement, brûlure ou poison, bouclier brouillé, soins bloqués).
+## Renvoie les dégâts réellement subis.
+func hit(amount: float, stats: TowerData) -> float:
+	if not is_alive:
+		return 0.0
+	if stats.shield_jam_duration > 0.0:
+		health.jam_shield(stats.shield_jam_duration)
+	if stats.heal_block_duration > 0.0:
+		block_healing(stats.heal_block_duration)
+	var dealt := take_damage(amount, stats.armor_piercing, stats.shield_damage_multiplier)
+	apply_slow(stats.slow_factor, stats.slow_duration)
+	apply_dot(stats.dot_damage, stats.dot_duration, stats.color)
 	return dealt
 
 
@@ -106,17 +141,61 @@ func apply_slow(factor: float, duration: float) -> void:
 	queue_redraw()
 
 
+## Brûlure ou poison : `damage_per_second` pendant `duration`, en ignorant l'armure.
+## Le plus fort et le plus long l'emportent, comme pour le ralentissement.
+func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE) -> void:
+	if not is_alive or damage_per_second <= 0.0 or duration <= 0.0:
+		return
+	if _dot_left <= 0.0:
+		_dot_damage = damage_per_second
+		_dot_tick_left = DOT_TICK
+	else:
+		_dot_damage = maxf(_dot_damage, damage_per_second)
+	_dot_left = maxf(_dot_left, duration)
+	_dot_color = color
+	queue_redraw()
+
+
+func is_burning() -> bool:
+	return _dot_left > 0.0
+
+
+func _update_dot(delta: float) -> void:
+	_dot_left -= delta
+	_dot_tick_left -= delta
+	if _dot_tick_left <= 0.0:
+		_dot_tick_left += DOT_TICK
+		take_damage(_dot_damage * DOT_TICK, true)
+	if _dot_left <= 0.0:
+		_dot_damage = 0.0
+		queue_redraw()
+
+
+## Empêche l'ennemi d'être soigné, et de soigner s'il est soigneur, pendant la durée donnée.
+func block_healing(duration: float) -> void:
+	if not is_alive or duration <= 0.0:
+		return
+	if _heal_block_left <= 0.0:
+		queue_redraw()
+	_heal_block_left = maxf(_heal_block_left, duration)
+
+
+func can_be_healed() -> bool:
+	return _heal_block_left <= 0.0
+
+
 ## Soigneur : soigne régulièrement les autres ennemis blessés à sa portée.
 func _update_healing(delta: float) -> void:
 	if _heal_pulse_left > 0.0:
 		_heal_pulse_left -= delta
 		queue_redraw()
 	_heal_cooldown -= delta
-	if _heal_cooldown > 0.0:
+	# Un soigneur touché par une tour qui bloque les soins ne soigne plus.
+	if _heal_cooldown > 0.0 or not can_be_healed():
 		return
 	var patients: Array[Enemy] = []
 	for enemy in get_alive_in_radius(get_tree(), global_position, data.heal_radius):
-		if enemy != self and enemy.health.health < enemy.health.max_health:
+		if enemy != self and enemy.can_be_healed() and enemy.health.health < enemy.health.max_health:
 			patients.append(enemy)
 	# Personne à soigner : il réessaie à l'image suivante, sans attendre.
 	if patients.is_empty():
@@ -152,8 +231,19 @@ func _draw() -> void:
 			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0)
 	if data.max_shield > 0.0 and health.shield > 0.0:
 		var ratio := health.shield / data.max_shield
-		draw_circle(Vector2.ZERO, data.radius * 1.45, Color(SHIELD_COLOR, 0.12 + 0.12 * ratio))
-		draw_arc(Vector2.ZERO, data.radius * 1.45, 0.0, TAU, 32, Color(SHIELD_COLOR, 0.35 + 0.45 * ratio), 2.0)
+		var shield_color := JAMMED_SHIELD_COLOR if health.is_shield_jammed() else SHIELD_COLOR
+		draw_circle(Vector2.ZERO, data.radius * 1.45, Color(shield_color, 0.12 + 0.12 * ratio))
+		draw_arc(Vector2.ZERO, data.radius * 1.45, 0.0, TAU, 32, Color(shield_color, 0.35 + 0.45 * ratio), 2.0)
+	if is_burning():
+		# Halo de la couleur de la tour qui brûle ou empoisonne.
+		draw_circle(Vector2.ZERO, data.radius * 1.2, Color(_dot_color, 0.3))
+	if not can_be_healed():
+		# Croix barrée rouge : plus de soins.
+		var center := Vector2(data.radius * 0.9, -data.radius * 0.9)
+		draw_circle(center, 5.5, HEAL_BLOCK_COLOR)
+		draw_line(center + Vector2(-3, 0), center + Vector2(3, 0), Color.WHITE, 2.0)
+		draw_line(center + Vector2(0, -3), center + Vector2(0, 3), Color.WHITE, 2.0)
+		draw_line(center + Vector2(-4, 4), center + Vector2(4, -4), Color(0.2, 0, 0), 1.5)
 	if data.texture:
 		# L'image déborde un peu du rayon de collision (ombre, pattes).
 		var size := data.radius * 2.6 * data.sprite_scale

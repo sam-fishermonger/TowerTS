@@ -22,6 +22,8 @@ var health := 0.0
 var shield := 0.0
 
 var _since_hit := 0.0
+## Secondes pendant lesquelles le bouclier est brouillé : il ne se recharge pas.
+var _jam_left := 0.0
 
 
 func _ready() -> void:
@@ -42,7 +44,9 @@ func setup(new_max_health: float, new_armor: float, new_max_shield := 0.0, new_s
 
 func _process(delta: float) -> void:
 	_since_hit += delta
-	if shield < max_shield and shield_regen > 0.0 and _since_hit >= shield_regen_delay and not is_depleted():
+	_jam_left = maxf(_jam_left - delta, 0.0)
+	if shield < max_shield and shield_regen > 0.0 and _since_hit >= shield_regen_delay and not is_shield_jammed() \
+			and not is_depleted():
 		shield = minf(shield + shield_regen * delta, max_shield)
 		shield_changed.emit(shield, max_shield)
 
@@ -51,21 +55,33 @@ func is_depleted() -> bool:
 	return health <= 0.0
 
 
+func is_shield_jammed() -> bool:
+	return _jam_left > 0.0
+
+
+## Brouille le bouclier : il ne se recharge plus pendant la durée donnée.
+func jam_shield(duration: float) -> void:
+	if max_shield > 0.0:
+		_jam_left = maxf(_jam_left, duration)
+
+
 ## Applique un coup et renvoie les dégâts réellement subis. Le bouclier encaisse
-## en premier, sans armure ; sur les points de vie, l'armure ne peut pas réduire
-## un coup en dessous de 1 point de dégât.
-func take_damage(amount: float) -> float:
+## en premier, sans armure (`shield_multiplier` multiplie les dégâts qu'il reçoit) ;
+## sur les points de vie, l'armure ne peut pas réduire un coup en dessous de 1 point
+## de dégât, sauf si le coup l'ignore (`ignore_armor`).
+func take_damage(amount: float, ignore_armor := false, shield_multiplier := 1.0) -> float:
 	if is_depleted() or amount <= 0.0:
 		return 0.0
 	_since_hit = 0.0
-	var absorbed := minf(amount, shield)
+	var absorbed := minf(amount * shield_multiplier, shield)
 	if absorbed > 0.0:
 		shield -= absorbed
 		shield_changed.emit(shield, max_shield)
-		amount -= absorbed
-		if amount <= 0.0:
+		amount -= absorbed / shield_multiplier
+		# Marge pour les arrondis : un reste infime ne doit pas coûter 1 point de vie.
+		if amount <= 0.0001:
 			return absorbed
-	var dealt := minf(maxf(amount - armor, 1.0), health)
+	var dealt := minf(amount if ignore_armor else maxf(amount - armor, 1.0), health)
 	health -= dealt
 	health_changed.emit(health, max_health)
 	if is_depleted():

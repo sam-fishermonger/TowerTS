@@ -165,7 +165,79 @@ column = 4.5
 row = 2
 lives_bonus = 10
 
+[sub_resource type="Resource" id="Perk_flame"]
+script = ExtResource("2_perk")
+id = "flame"
+display_name = "Lance-flammes"
+description = "Nouvelle tour : un jet de flammes en cône qui brûle tout un essaim. La brûlure passe sous les carapaces des Scarabées."
+cost = 3
+required_world = 0
+column = 6.5
+row = 0
+unlocks_tower = "res://resources/towers/flame.tres"
+
+[sub_resource type="Resource" id="Perk_pesticide"]
+script = ExtResource("2_perk")
+id = "pesticide"
+display_name = "Pesticide"
+description = "Nouvelle tour : des grenades qui laissent un nuage de poison sur le chemin. Les larves d'une Couveuse naissent dedans."
+cost = 4
+requires = Array[Resource]([SubResource("Perk_flame")])
+required_world = 0
+column = 6.5
+row = 1
+unlocks_tower = "res://resources/towers/pesticide.tres"
+
+[sub_resource type="Resource" id="Perk_jammer"]
+script = ExtResource("2_perk")
+id = "jammer"
+display_name = "Brouilleur IEM"
+description = "Nouvelle tour : une onde qui fait 5 fois plus de dégâts aux boucliers d'énergie et les empêche de se recharger."
+cost = 4
+required_world = 1
+column = 8.5
+row = 0
+unlocks_tower = "res://resources/towers/jammer.tres"
+
+[sub_resource type="Resource" id="Perk_rail"]
+script = ExtResource("2_perk")
+id = "rail"
+display_name = "Perforateur"
+description = "Nouvelle tour : un tir qui traverse tous les ennemis alignés en ignorant leur armure, contre les Chenillards et les Titans."
+cost = 5
+requires = Array[Resource]([SubResource("Perk_jammer")])
+required_world = 1
+column = 8.5
+row = 1
+unlocks_tower = "res://resources/towers/rail.tres"
+
+[sub_resource type="Resource" id="Perk_marksman"]
+script = ExtResource("2_perk")
+id = "marksman"
+display_name = "Franc-tireur"
+description = "Nouvelle tour : un tireur qui abat les Médecins en premier. Un ennemi touché ne peut plus être soigné, ni soigner."
+cost = 5
+required_world = 2
+column = 10.5
+row = 0
+unlocks_tower = "res://resources/towers/marksman.tres"
+
+[sub_resource type="Resource" id="Perk_teargas"]
+script = ExtResource("2_perk")
+id = "teargas"
+display_name = "Lacrymogène"
+description = "Nouvelle tour : des grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_marksman")])
+required_world = 2
+column = 10.5
+row = 1
+unlocks_tower = "res://resources/towers/teargas.tres"
+
 [resource]
 script = ExtResource("1_tree")
-branch_names = Array[String](["Tours", "Or", "Vies"])
-perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle")])
+branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité"])
+branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1)])
+branch_pages = Array[int]([0, 0, 0, 1, 1, 1])
+page_names = Array[String](["Bonus", "Tours des mondes"])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas")])

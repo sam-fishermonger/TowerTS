@@ -182,6 +182,24 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 			"x%s en %s s" % [_format(next.beam_ramp_max), _format(next.beam_ramp_time)] if next else "")
 	if stats.splash_radius > 0.0:
 		_add_stat("Explosion", _format(stats.splash_radius), _format(next.splash_radius) if next else "")
+	if stats.cloud_radius > 0.0:
+		_add_stat("Nuage", "%s, %s s" % [_format(stats.cloud_radius), _format(stats.cloud_duration)],
+			"%s, %s s" % [_format(next.cloud_radius), _format(next.cloud_duration)] if next else "")
+	if stats.dot_damage > 0.0:
+		var dot_name := "Poison" if stats.cloud_radius > 0.0 else "Brûlure"
+		_add_stat(dot_name, "%s/s, %s s" % [_format(stats.dot_damage), _format(stats.dot_duration)],
+			"%s/s, %s s" % [_format(next.dot_damage), _format(next.dot_duration)] if next else "")
+	if stats.armor_piercing:
+		_add_stat("Armure", "ignorée", "")
+	if stats.shield_damage_multiplier != 1.0:
+		_add_stat("Boucliers", "x%s dégâts" % _format(stats.shield_damage_multiplier),
+			"x%s dégâts" % _format(next.shield_damage_multiplier) if next else "")
+	if stats.shield_jam_duration > 0.0:
+		_add_stat("Brouillés", "%s s" % _format(stats.shield_jam_duration),
+			"%s s" % _format(next.shield_jam_duration) if next else "")
+	if stats.heal_block_duration > 0.0:
+		_add_stat("Anti-soin", "%s s" % _format(stats.heal_block_duration),
+			"%s s" % _format(next.heal_block_duration) if next else "")
 	if stats.slow_factor < 1.0:
 		_add_stat("Ralentit", "-%d %%" % roundi((1.0 - stats.slow_factor) * 100.0),
 			"-%d %%" % roundi((1.0 - next.slow_factor) * 100.0) if next else "")

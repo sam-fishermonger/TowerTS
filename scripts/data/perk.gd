@@ -12,11 +12,17 @@ extends Resource
 ## Améliorations (Perk) à posséder avant de pouvoir acheter celle-ci (toutes).
 ## (Array[Resource] : un Array[Perk] dans Perk empêcherait Godot de libérer le script.)
 @export var requires: Array[Resource] = []
+## Monde à avoir débloqué avant de pouvoir l'acheter (index dans la campagne, -1 = aucun).
+@export var required_world := -1
 ## Place dans l'arbre : colonne (deux par branche, 0.5 pour centrer) et rang (profondeur).
 @export var column := 0.0
 @export var row := 0
 
 @export_group("Tours")
+## Nouvelle tour (TowerData) ajoutée à la barre d'achat de tous les niveaux.
+## (Un chemin et pas la ressource : TowerData lit l'arbre pour ses prix, la charger
+## ici ferait une boucle de chargement.)
+@export_file("*.tres") var unlocks_tower := ""
 @export var damage_multiplier := 1.0
 @export var range_multiplier := 1.0
 @export var fire_rate_multiplier := 1.0
@@ -38,6 +44,12 @@ extends Resource
 @export var lives_bonus := 0
 ## Vies rendues à chaque vague repoussée, sans dépasser les vies de départ.
 @export var lives_per_wave := 0
+
+
+## Tour débloquée par cette amélioration (TowerData), ou null. (Resource et pas
+## TowerData pour la même raison : ce script ne doit pas dépendre de TowerData.)
+func get_unlocked_tower() -> Resource:
+	return load(unlocks_tower) if not unlocks_tower.is_empty() else null
 
 
 ## Ajoute les bonus de cette amélioration à `total` (modifié sur place) : les

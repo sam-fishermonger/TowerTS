@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/pulse_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/pulse_frost.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/jammer.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 80
+damage_multiplier = 1.5
+range_multiplier = 1.15
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 120
+damage_multiplier = 1.5
+fire_rate_multiplier = 1.25
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Brouilleur IEM"
+description = "Onde électromagnétique qui touche tout ce qui est à portée : 5 fois plus de dégâts sur les boucliers d'énergie, qui ne se rechargent plus pendant 4 s."
+cost = 110
+scene = ExtResource("2_scene")
+attack_range = 115.0
+damage = 6.0
+fire_rate = 0.7
+color = Color(0.5, 0.56, 1, 1)
+turret_texture = ExtResource("10_turret")
+turret_rotates = false
+attack_sound = ExtResource("9_sound")
+shield_damage_multiplier = 5.0
+shield_jam_duration = 4.0
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])
