@@ -124,6 +124,32 @@ static func get_world_endless_stars(world: World) -> int:
 	return total
 
 
+## Défi du jour : meilleur score d'un jour (« 2026-10-06 »), -1 s'il n'a pas été joué.
+static func get_daily_score(date_key: String) -> int:
+	return _load().get_value("daily", date_key, -1)
+
+
+## Enregistre un score du défi du jour. Seul le meilleur est gardé ; renvoie true s'il
+## est battu (ou si c'est le premier).
+static func record_daily(date_key: String, score: int) -> bool:
+	var config := _load()
+	if score <= config.get_value("daily", date_key, -1):
+		return false
+	config.set_value("daily", date_key, score)
+	_save(config)
+	return true
+
+
+## Défi du jour : meilleurs scores de chaque jour joué, { date: score }.
+static func get_daily_scores() -> Dictionary:
+	var config := _load()
+	var result := {}
+	if config.has_section("daily"):
+		for key in config.get_section_keys("daily"):
+			result[key] = config.get_value("daily", key)
+	return result
+
+
 ## Code Konami : tous les niveaux gagnés avec 3 étoiles dans toutes les difficultés (mondes et modes infinis
 ## ouverts), toutes les étoiles infinies, et toutes les améliorations données.
 ## Les meilleurs résultats déjà obtenus sont gardés.
@@ -181,11 +207,11 @@ static func set_value(section: String, key: String, value: Variant) -> void:
 	_save(config)
 
 
-## Efface les étoiles, les records du mode infini et les améliorations achetées avec
-## (les réglages sont gardés).
+## Efface les étoiles, les records du mode infini et du défi du jour, et les
+## améliorations achetées avec (les réglages sont gardés).
 static func reset_campaign() -> void:
 	var config := _load()
-	var sections := ["endless_waves", "endless_stars", "perks"]
+	var sections := ["endless_waves", "endless_stars", "perks", "daily"]
 	for d in Difficulty.COUNT:
 		sections.append(stars_section(d))
 	for section in sections:

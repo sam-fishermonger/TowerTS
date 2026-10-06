@@ -112,6 +112,7 @@ func _run() -> void:
 	await _test_worlds()
 	await _test_spawn_spread()
 	await _test_endless_mode()
+	await _test_daily_challenge()
 	await _test_difficulties()
 	await _test_specializations()
 	await _test_konami_code()
@@ -228,6 +229,7 @@ func _test_title_screen() -> void:
 	_check(title.get_node("%PlayButton").has_focus(), "le bouton Jouer a le focus")
 	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%LexiconButton").text == "Lexique", "le bouton Lexique existe")
+	_check(title.get_node("%DailyButton").text == "Défi du jour", "le bouton Défi du jour existe")
 	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	await _free(title)
@@ -2104,6 +2106,102 @@ func _test_endless_mode() -> void:
 	await _free(level)
 	Progress.reset_campaign()
 	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == 0, "Effacer la progression efface les records du mode infini")
+
+
+## Premier jour de 2026 dont le défi a toutes les règles données (et, avec `level_path`,
+## ce niveau), ou "".
+func _find_challenge_day(rules: Array[int], level_path := "") -> String:
+	for day in 365:
+		var date := Time.get_date_dict_from_unix_time(Time.get_unix_time_from_datetime_string("2026-01-01") + day * 86400)
+		var key := DailyChallenge.date_key_of(date.year, date.month, date.day)
+		var challenge := DailyChallenge.for_date(key)
+		if rules.all(challenge.has_rule) and (level_path.is_empty() or challenge.level_path == level_path):
+			return key
+	return ""
+
+
+func _test_daily_challenge() -> void:
+	print("Défi du jour")
+	var a := DailyChallenge.for_date("2026-10-06")
+	var b := DailyChallenge.for_date("2026-10-06")
+	_check(a.level_path == b.level_path and a.rules == b.rules and a.tower_paths == b.tower_paths,
+		"le défi d'un jour est toujours le même")
+	var levels := {}
+	var rule_seen := {}
+	var valid := true
+	for day in 60:
+		var date := Time.get_date_dict_from_unix_time(Time.get_unix_time_from_datetime_string("2026-09-01") + day * 86400)
+		var challenge := DailyChallenge.for_date(DailyChallenge.date_key_of(date.year, date.month, date.day))
+		levels[challenge.level_path] = true
+		for rule in challenge.rules:
+			rule_seen[rule] = true
+		var few := challenge.has_rule(DailyChallenge.DEUX_TOURS)
+		var towers := challenge.get_towers()
+		valid = valid and DailyChallenge.CAMPAIGN.levels.has(challenge.level_path) \
+			and towers.size() == (DailyChallenge.FEW_TOWER_COUNT if few else DailyChallenge.TOWER_COUNT) \
+			and challenge.rules.size() == DailyChallenge.EXTRA_RULES + (1 if few else 0) \
+			and towers.filter(func(t: TowerData) -> bool: return t.is_support() or t.knockback > 0.0).size() \
+				<= (0 if few else DailyChallenge.UTILITY_TOWERS_MAX)
+	_check(valid, "chaque défi a son niveau de la campagne, 2 règles en plus et 4 tours imposées, au plus une qui ne fait presque pas de dégâts (aucune avec Deux tours seulement)")
+	_check(levels.size() >= 10 and rule_seen.size() == DailyChallenge.RULE_NAMES.size(), "le niveau et les règles changent d'un jour à l'autre")
+	_check(a.get_date_text() == "mardi 6 octobre 2026", "date du défi en toutes lettres")
+
+	# Un défi sans amélioration, en bourse serrée, sur le niveau 1-1.
+	var key := _find_challenge_day([DailyChallenge.SANS_AMELIORATION, DailyChallenge.OR_SERRE], LEVEL_01.resource_path)
+	_check(not key.is_empty(), "un jour de 2026 a ce défi")
+	var challenge := DailyChallenge.for_date(key)
+	var raw: Level = LEVEL_01.instantiate()
+	var level_gold := raw.starting_gold
+	raw.free()
+	Progress.set_value("perks", "owned", PackedStringArray(["tresor", "poudre"]))
+	_check(Perks.get_bonuses().starting_gold_bonus > 0, "une amélioration d'or achetée")
+	Engine.set_meta(Level.CHALLENGE_META, key)
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.challenge != null and not Engine.has_meta(Level.CHALLENGE_META) and level.difficulty == Difficulty.MOYEN,
+		"le niveau s'ouvre en défi du jour")
+	_check(level.tower_types == challenge.get_towers() and not level.is_choosing_towers, "les tours du défi, sans choix des tours")
+	_check(level.gold == roundi(level_gold * DailyChallenge.GOLD_MULTIPLIER)
+		and level.tower_types[0].get_cost() == level.tower_types[0].cost, "l'arbre des améliorations ne compte pas pendant le défi")
+	_check(level.hud.level_label.text.begins_with("Défi du jour") and level.hud.score_label.text == "Score : 0"
+		and level.hud.challenge_rules != null, "le HUD montre le défi, le score et les règles")
+	_check(not level.has_next_level(), "pas de niveau suivant")
+	level.gold = 2000
+	var tower := level.place_tower(Vector2i(4, 1), level.tower_types[0])
+	_check(tower and not level.upgrade_tower(tower), "Sans amélioration : les tours ne s'améliorent pas")
+	level.start_next_wave()
+	_check(level.hud.challenge_rules == null, "les règles s'effacent à la première vague")
+	var enemy := level.spawner.spawn(LARVE, level.map.get_enemy_path(0), 10.0)
+	enemy.take_damage(10000.0)
+	await process_frame
+	_check(level.score == LARVE.reward * DailyChallenge.POINTS_PER_GOLD, "un monstre détruit rapporte 10 points par pièce d'or")
+	for node in get_nodes_in_group(Enemy.GROUP):
+		node.queue_free()
+	level.spawner.current_wave = level.spawner.get_wave_count() - 1
+	level.spawner.is_spawning = false
+	level.spawner._queue.clear()
+	await process_frame
+	level._check_wave_cleared()
+	var expected := LARVE.reward * DailyChallenge.POINTS_PER_GOLD + level.spawner.get_wave_count() * DailyChallenge.POINTS_PER_WAVE \
+		+ level.lives * DailyChallenge.POINTS_PER_LIFE
+	_check(level.is_over and level.score == expected, "victoire : 100 points par vague et 50 par vie gardée (%d)" % level.score)
+	_check(Progress.get_daily_score(key) == expected and level.hud.end_title.text == "Défi réussi !"
+		and level.hud.end_stars.text == "%d points" % expected, "le score est enregistré et affiché")
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles")
+	await _free(level)
+	_check(not Engine.has_meta(Perks.DISABLED_META) and Perks.get_bonuses().starting_gold_bonus > 0,
+		"l'arbre compte de nouveau après le défi")
+	_check(not Progress.record_daily(key, expected - 1) and Progress.record_daily(key, expected + 1)
+		and Progress.get_daily_scores()[key] == expected + 1, "seul le meilleur score du jour est gardé")
+
+	var screen: Control = load("res://scenes/ui/daily_challenge_screen.tscn").instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(screen.challenge.date_key == DailyChallenge.today().date_key and screen.play_button.has_focus(),
+		"l'écran du défi montre celui d'aujourd'hui, Jouer prêt")
+	_check(screen.get_history_text().contains("1 défi joué"), "et l'historique des scores")
+	await _free(screen)
+	Progress.reset_campaign()
+	_check(Progress.get_daily_scores().is_empty(), "Effacer la progression efface les scores du défi")
 
 
 func _test_difficulties() -> void:

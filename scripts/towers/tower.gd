@@ -38,6 +38,8 @@ var stats: TowerData:
 ## Case de la carte occupée par la tour.
 var cell := Vector2i.ZERO
 var target_mode := TargetMode.FIRST
+## Les améliorations sont interdites (règle du défi du jour).
+var upgrades_locked := false
 ## Bonus de dégâts et de cadence donnés par la Bobine la plus forte à portée (0 = aucun).
 ## Le niveau les recalcule quand une tour est posée, améliorée ou vendue.
 var boost_damage := 0.0
@@ -107,7 +109,7 @@ func _process(delta: float) -> void:
 
 
 func can_upgrade() -> bool:
-	return level < data.get_max_level()
+	return not upgrades_locked and level < data.get_max_level()
 
 
 ## Prix de la prochaine amélioration, ou -1 si la tour est au niveau maximal.

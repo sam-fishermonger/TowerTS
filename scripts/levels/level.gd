@@ -16,6 +16,9 @@ const ENDLESS_META := &"level_endless"
 ## Réglage (Progress) qui garde le dernier choix de tours (chemins des TowerData) : il est
 ## coché d'avance au lancement du niveau suivant.
 const TOWER_CHOICE_SETTING := "tower_choice"
+## Méta du moteur posée juste avant d'ouvrir le défi du jour (voir open_challenge()) :
+## le jour du défi (« 2026-10-06 »), lu et effacé au lancement du niveau.
+const CHALLENGE_META := &"level_challenge"
 
 @export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
@@ -67,6 +70,11 @@ var tower_limit := 0
 var available_tower_types: Array[TowerData] = []
 ## Le choix des tours est ouvert : pas de vague tant qu'il n'est pas validé.
 var is_choosing_towers := false
+## Défi du jour joué sur ce niveau (null sinon) : ses règles remplacent les tours du
+## niveau, l'arbre des améliorations et la difficulté (Moyen), et la partie compte un score.
+var challenge: DailyChallenge
+## Défi du jour : points marqués jusqu'ici (voir DailyChallenge).
+var score := 0
 ## Statistiques de la partie, affichées sur l'écran de fin.
 var stats := LevelStats.new()
 ## Succès débloqués pendant la partie (identifiants, voir Achievements).
@@ -106,14 +114,29 @@ static func open(tree: SceneTree, path: String, endless := false) -> void:
 	tree.change_scene_to_file(path)
 
 
+## Ouvre le défi du jour sur son niveau.
+static func open_challenge(tree: SceneTree, daily: DailyChallenge) -> void:
+	Engine.set_meta(CHALLENGE_META, daily.date_key)
+	tree.change_scene_to_file(daily.level_path)
+
+
 func _ready() -> void:
 	if Engine.has_meta(ENDLESS_META):
 		is_endless = Engine.get_meta(ENDLESS_META)
 		Engine.remove_meta(ENDLESS_META)
+	if Engine.has_meta(CHALLENGE_META):
+		challenge = DailyChallenge.for_date(Engine.get_meta(CHALLENGE_META))
+		Engine.remove_meta(CHALLENGE_META)
+		is_endless = false
+		# L'arbre des améliorations ne compte pas pendant le défi (voir _exit_tree()).
+		Engine.set_meta(Perks.DISABLED_META, true)
 	spawner.endless = is_endless
-	if not is_endless and not is_demo:
+	if not is_endless and not is_demo and not challenge:
 		difficulty = Difficulty.get_current()
-	if difficulty != Difficulty.MOYEN:
+	if challenge:
+		spawner.apply_modifiers(challenge.get_health_multiplier(), challenge.get_count_multiplier(),
+			challenge.get_speed_multiplier())
+	elif difficulty != Difficulty.MOYEN:
 		spawner.apply_difficulty(difficulty)
 	# La carte prend les tuiles du biome de son monde, si elle n'en a pas.
 	var world := campaign.world_index_of(scene_file_path) if campaign else -1
@@ -127,8 +150,10 @@ func _ready() -> void:
 	for data in Perks.get_unlocked_towers():
 		if not types.has(data):
 			types.append(data)
+	if challenge:
+		types = challenge.get_towers()
 	available_tower_types = types
-	tower_limit = 0 if is_demo else Difficulty.TOWER_LIMITS[difficulty]
+	tower_limit = 0 if is_demo or challenge else Difficulty.TOWER_LIMITS[difficulty]
 	is_choosing_towers = tower_limit > 0 and types.size() > tower_limit
 	if is_choosing_towers:
 		tower_types = []
@@ -138,6 +163,8 @@ func _ready() -> void:
 	placer.inspection_changed.connect(hud.show_tower_details)
 	var title := "%s  ·  Mode infini" % level_name if is_endless \
 		else "%s  ·  %s" % [level_name, Difficulty.NAMES[difficulty]]
+	if challenge:
+		title = "Défi du jour  ·  %s" % level_name
 	hud.setup(title, tower_types, game_speeds)
 	if is_choosing_towers:
 		hud.show_tower_picker(types, tower_limit, get_default_tower_choice(), Difficulty.NAMES[difficulty])
@@ -175,6 +202,10 @@ func _ready() -> void:
 	power_cooldowns.fill(0.0)
 	hud.setup_powers(powers)
 	hud.set_interest_rules(interest_rate, interest_cap)
+	if challenge:
+		starting_gold = challenge.get_starting_gold(starting_gold)
+		starting_lives = challenge.get_starting_lives(starting_lives)
+		hud.show_challenge_rules(challenge.describe_rules())
 	gold = starting_gold
 	lives = starting_lives
 	# La démo de l'écran titre garde sa vitesse ; une partie démarre à celle des options.
@@ -188,11 +219,13 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	# La vitesse est globale au moteur : on la remet à x1 en quittant le niveau.
 	Engine.time_scale = 1.0
+	if challenge and Engine.has_meta(Perks.DISABLED_META):
+		Engine.remove_meta(Perks.DISABLED_META)
 
 
 ## Niveau proposé après une victoire ("" = dernier niveau).
 func get_next_level() -> String:
-	return campaign.get_next(scene_file_path) if campaign else ""
+	return campaign.get_next(scene_file_path) if campaign and not challenge else ""
 
 
 func has_next_level() -> bool:
@@ -276,6 +309,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 		return null
 	var tower: Tower = data.scene.instantiate()
 	tower.data = data
+	tower.upgrades_locked = challenge != null and not challenge.allows_upgrades()
 	tower.projectile_container = projectiles
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
@@ -477,6 +511,7 @@ func start_next_wave() -> void:
 		return
 	var early_bonus := get_early_call_bonus()
 	spawner.start_next_wave()
+	hud.hide_challenge_rules()
 	Sound.play(&"wave_start")
 	if early_bonus > 0:
 		gold += early_bonus
@@ -536,6 +571,8 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	stats.on_kill(enemy.damage_source_id, enemy.data)
 	if enemy.data.is_boss and not is_demo:
 		_announce_achievements(Achievements.on_boss_killed(enemy.data, get_towers().size()))
+	if challenge:
+		add_score(reward * DailyChallenge.POINTS_PER_GOLD)
 	Sound.play(&"enemy_death", -3.0)
 	_show_floating_text("+%d" % reward, GOLD_TEXT_COLOR, enemy.global_position, 16)
 	var stain := GroundStain.new()
@@ -597,6 +634,8 @@ func _check_wave_cleared() -> void:
 		_wave_bonus_paid += 1
 		gold += get_wave_bonus(_wave_bonus_paid)
 		stats.gold_earned += get_wave_bonus(_wave_bonus_paid)
+		if challenge:
+			add_score(DailyChallenge.POINTS_PER_WAVE)
 		# Infirmerie : rend des vies perdues, sans dépasser celles du départ.
 		if lives < starting_lives:
 			lives = mini(lives + _bonuses.lives_per_wave, starting_lives)
@@ -620,7 +659,13 @@ func _end_game(victory: bool) -> void:
 		game_over.emit(victory)
 		return
 	_count_kills()
-	if victory and not is_endless:
+	if challenge:
+		if victory:
+			add_score(lives * DailyChallenge.POINTS_PER_LIFE)
+		var best_before := Progress.get_daily_score(challenge.date_key)
+		var new_record := Progress.record_daily(challenge.date_key, score)
+		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0)
+	elif victory and not is_endless:
 		var stars_won := get_stars()
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		_announce_achievements(Achievements.on_victory(stats, lives, gold, difficulty))
@@ -673,6 +718,8 @@ func _on_restart_requested() -> void:
 	get_tree().paused = false
 	if is_endless:
 		Engine.set_meta(ENDLESS_META, true)
+	if challenge:
+		Engine.set_meta(CHALLENGE_META, challenge.date_key)
 	get_tree().reload_current_scene()
 
 
@@ -687,6 +734,12 @@ func _on_menu_requested() -> void:
 
 
 # --- Affichage --------------------------------------------------------------
+
+## Défi du jour : ajoute des points au score, affiché en haut.
+func add_score(points: int) -> void:
+	score += points
+	hud.set_score(score)
+
 
 func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int) -> void:
 	var label := FloatingText.new()
