@@ -17,12 +17,17 @@ const INTRO_DURATION := 0.5
 const INTRO_STAGGER := 0.06
 const KONAMI_CODE: Array[Key] = [KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_LEFT, KEY_RIGHT,
 	KEY_B, KEY_A]
+## Flèches du pavé numérique (sans Verr. Num.), comptées comme les flèches.
+const KEYPAD_ARROWS := {KEY_KP_8: KEY_UP, KEY_KP_2: KEY_DOWN, KEY_KP_4: KEY_LEFT, KEY_KP_6: KEY_RIGHT}
+## Le code en cours s'affiche (une pastille par touche) à partir de ce nombre de touches justes.
+const KONAMI_SHOWN_FROM := 3
 ## Durée du message affiché quand le code Konami est entré, en secondes.
 const KONAMI_MESSAGE_DURATION := 3.0
 
 var _time := 0.0
 ## Touches du code Konami déjà entrées dans l'ordre.
 var _konami_progress := 0
+var _konami_label: Label
 
 @onready var play_button: Button = %PlayButton
 @onready var perks_button: Button = %PerksButton
@@ -68,14 +73,20 @@ func _process(delta: float) -> void:
 
 ## Les flèches servent aussi à passer d'un bouton à l'autre : le code est guetté dans
 ## _input, avant le menu, sans bloquer les touches.
+## Une lettre compte qu'on lise la touche selon la disposition du clavier (le A d'un
+## clavier AZERTY) ou selon sa place (la touche A d'un clavier QWERTY, le Q en AZERTY).
 func _input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key and key.pressed and not key.echo:
-		enter_konami_key(key.keycode if key.keycode != KEY_NONE else key.physical_keycode)
+	if not key or not key.pressed or key.echo:
+		return
+	var keycode: Key = KEYPAD_ARROWS.get(key.keycode, key.keycode)
+	if keycode == KEY_NONE:
+		keycode = key.physical_keycode
+	var expected := KONAMI_CODE[_konami_progress]
+	enter_konami_key(expected if key.physical_keycode == expected else keycode)
 
 
 ## Ajoute une touche au code Konami en cours ; débloque tout quand il est complet.
-## Les lettres sont lues selon la disposition du clavier (le A d'un clavier AZERTY).
 func enter_konami_key(keycode: Key) -> void:
 	if keycode == KONAMI_CODE[_konami_progress]:
 		_konami_progress += 1
@@ -87,6 +98,23 @@ func enter_konami_key(keycode: Key) -> void:
 	if _konami_progress == KONAMI_CODE.size():
 		_konami_progress = 0
 		unlock_everything()
+	_show_konami_progress()
+
+
+## Pastilles du code en cours, en haut de l'écran : on voit que les touches sont prises.
+func _show_konami_progress() -> void:
+	if not _konami_label:
+		_konami_label = Label.new()
+		_konami_label.add_theme_font_size_override(&"font_size", 22)
+		_konami_label.add_theme_color_override(&"font_color", Progress.ENDLESS_STAR_COLOR)
+		_konami_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_konami_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_konami_label)
+		_konami_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		_konami_label.offset_top = 24.0
+	_konami_label.visible = _konami_progress >= KONAMI_SHOWN_FROM
+	_konami_label.text = " ".join(PackedStringArray(range(KONAMI_CODE.size()).map(
+		func(i: int) -> String: return "●" if i < _konami_progress else "·")))
 
 
 ## Code Konami : tout est débloqué, les boutons se mettent à jour et un message le dit.

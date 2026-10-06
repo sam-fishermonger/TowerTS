@@ -1680,6 +1680,22 @@ func _test_konami_code() -> void:
 	for child in title.get_children():
 		announced = announced or (child is Label and child.text.contains("Konami"))
 	_check(title.get_node("%PlayButton").text == "Continuer" and announced, "l'écran titre se met à jour et l'annonce")
+	Progress.reset_campaign()
+	# Flèches du pavé numérique, et A lu à sa place sur le clavier (le Q d'un AZERTY).
+	var events := [[KEY_KP_8, KEY_KP_8], [KEY_KP_8, KEY_KP_8], [KEY_DOWN, KEY_DOWN], [KEY_DOWN, KEY_DOWN],
+		[KEY_LEFT, KEY_LEFT], [KEY_RIGHT, KEY_RIGHT], [KEY_LEFT, KEY_LEFT], [KEY_RIGHT, KEY_RIGHT],
+		[KEY_B, KEY_B], [KEY_Q, KEY_A]]
+	for i in events.size():
+		var event := InputEventKey.new()
+		event.keycode = events[i][0]
+		event.physical_keycode = events[i][1]
+		event.pressed = true
+		title._input(event)
+		if i == 4:
+			_check(title._konami_label.visible and title._konami_label.text.begins_with("● ● ● ● ● ·"),
+				"le code en cours s'affiche, une pastille par touche juste")
+	_check(Perks.get_earned_stars() == campaign.size() * 3, "les flèches du pavé numérique et le A d'un clavier QWERTY comptent")
+	_check(not title._konami_label.visible, "les pastilles disparaissent une fois le code entré")
 	await _free(title)
 	Progress.reset_campaign()
 
