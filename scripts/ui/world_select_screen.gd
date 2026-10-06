@@ -208,7 +208,10 @@ func _make_card(world_index: int) -> Control:
 			if not button.disabled:
 				button.tooltip_text = _level_tooltip(path)
 		_level_buttons[path] = button
-		button.pressed.connect(open_level.bind(path))
+		# Au tactile, le premier toucher ouvre la fenêtre de détail, le second le niveau.
+		button.pressed.connect(func() -> void:
+			if GameSettings.confirm_touch(button):
+				open_level(path))
 		button.mouse_entered.connect(show_level_details.bind(path))
 		button.focus_entered.connect(show_level_details.bind(path))
 		button.mouse_exited.connect(level_details.close)

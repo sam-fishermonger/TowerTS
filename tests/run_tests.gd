@@ -70,6 +70,7 @@ func _run() -> void:
 	await _test_tower_upgrade_stats()
 	await _test_tower_upgrade_in_level()
 	await _test_tower_info_panels()
+	await _test_touch_controls()
 	await _test_sell_tower()
 	await _test_target_modes()
 	await _test_level_02_map()
@@ -483,41 +484,73 @@ func _test_sound() -> void:
 		_check(data.attack_sound != null, "%s : son de tir défini" % data.display_name)
 	for sound_name: StringName in sound.SOUNDS:
 		_check(sound.SOUNDS[sound_name] is AudioStream, "son « %s » chargé" % sound_name)
+	var music_bus := AudioServer.get_bus_index(&"Music")
+	var sfx_bus := AudioServer.get_bus_index(&"Sfx")
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	var music_button: Button = title.get_node("%AudioToggles").music_button
-	music_button.button_pressed = false
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")) and music_button.text == "Musique : non",
-		"le bouton Musique coupe la musique")
+	var options: OptionsMenu = title.open_options()
+	await process_frame
+	_check(options.music_check.button_pressed and options.sound_check.button_pressed
+		and options.music_slider.value == 100.0, "Options : musique et sons à 100 %")
+	options.music_check.button_pressed = false
+	_check(AudioServer.is_bus_mute(music_bus) and not options.music_slider.editable,
+		"la case Musique coupe la musique")
 	_check(Progress.get_setting("music", true) == false, "le choix est enregistré")
-	music_button.button_pressed = true
-	_check(not AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music")), "et la remet")
-	var sound_button: Button = title.get_node("%AudioToggles").sound_button
-	sound_button.button_pressed = false
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "le bouton Sons coupe les effets")
-	sound_button.button_pressed = true
+	options.music_check.button_pressed = true
+	_check(not AudioServer.is_bus_mute(music_bus), "et la remet")
+	options.sound_check.button_pressed = false
+	_check(AudioServer.is_bus_mute(sfx_bus), "la case Sons coupe les effets")
+	options.sound_check.button_pressed = true
+	var full_db := AudioServer.get_bus_volume_db(music_bus)
+	options.music_slider.value = 50.0
+	_check(is_equal_approx(Sound.get_music_volume(), 0.5)
+		and is_equal_approx(AudioServer.get_bus_volume_db(music_bus), full_db + linear_to_db(0.5)),
+		"le curseur règle le volume de la musique")
+	_check(is_equal_approx(AudioServer.get_bus_volume_db(sfx_bus), Sound.BUS_BASE_DB[&"Sfx"]),
+		"sans toucher aux sons")
+	options.sound_slider.value = 0.0
+	_check(AudioServer.is_bus_mute(sfx_bus) and Sound.is_sound_enabled(), "le curseur des sons à 0 les coupe")
+	options.sound_slider.value = 80.0
+	_check(not AudioServer.is_bus_mute(sfx_bus) and is_equal_approx(Sound.get_sound_volume(), 0.8),
+		"et à 80 % les remet")
+	options.fullscreen_check.button_pressed = true
+	_check(Progress.get_setting("fullscreen", false) == true, "le plein écran est enregistré")
+	options.fullscreen_check.button_pressed = false
+	options.speed_buttons[1].pressed.emit()
+	_check(GameSettings.get_default_speed() == 2.0, "vitesse au départ : x2 enregistrée")
+	options.close_button.pressed.emit()
+	await process_frame
+	_check(not is_instance_valid(options), "Fermer referme les options")
 	await _free(title)
 
-	# Les mêmes réglages en jeu, dans la barre du bas, même pendant la pause.
+	# En jeu : la partie démarre à la vitesse choisie, et les options la mettent en pause.
 	var level := await _spawn_level(LEVEL_01)
-	var toggles := level.hud.audio_toggles
-	_check(toggles.is_visible_in_tree() and toggles.music_button.button_pressed and toggles.sound_button.button_pressed,
-		"en jeu : boutons Musique et Sons, à oui")
+	_check(Engine.time_scale == 2.0 and level.hud.speed_buttons.get_child(1).button_pressed,
+		"le niveau démarre à la vitesse des options")
+	level.hud.options_button.pressed.emit()
+	await process_frame
+	_check(level.is_paused and paused and level.hud.options_menu != null, "le bouton Options met la partie en pause")
+	level.hud.options_menu.music_slider.value = 30.0
+	_check(is_equal_approx(Sound.get_music_volume(), 0.3), "les volumes se règlent en jeu")
+	level.hud.options_menu.close()
+	await process_frame
+	_check(not level.is_paused and not paused and level.hud.options_menu == null, "la partie reprend en fermant")
 	level.set_paused(true)
-	toggles.music_button.button_pressed = false
-	toggles.sound_button.button_pressed = false
-	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Music"))
-		and AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Sfx")), "en jeu et en pause, ils coupent musique et sons")
-	_check(toggles.music_button.text == "Musique : non" and toggles.sound_button.text == "Sons : non",
-		"les boutons affichent l'état")
+	level.hud.open_options()
+	level.hud.options_menu.close()
+	_check(level.is_paused, "mais reste en pause si elle l'était")
 	await _free(level)
 	title = TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(not title.get_node("%AudioToggles").music_button.button_pressed, "l'écran titre reprend le réglage choisi en jeu")
-	Sound.set_music_enabled(true)
-	Sound.set_sound_enabled(true)
+	options = title.open_options()
+	await process_frame
+	_check(options.music_slider.value == 30.0 and options.sound_slider.value == 80.0
+		and options.speed_buttons[1].button_pressed, "l'écran titre reprend les réglages choisis en jeu")
+	Sound.set_music_volume(1.0)
+	Sound.set_sound_volume(1.0)
+	GameSettings.set_default_speed(1.0)
 	await _free(title)
 
 
@@ -659,6 +692,58 @@ func _click(level: Level, screen_position: Vector2) -> void:
 	event.pressed = true
 	event.position = screen_position
 	await _send_to_placer(level, event)
+
+
+func _test_touch_controls() -> void:
+	print("Commandes tactiles")
+	GameSettings.set_touch_mode(true)
+	var level := await _spawn_level(LEVEL_01)
+	var cell := Vector2i(2, 4)
+	var at := level.map.cell_to_world(cell)
+	level.select_tower(CANNON)
+	await _click(level, at)
+	_check(level.map.get_occupant(cell) == null and level.placer.preview.visible,
+		"premier toucher : l'aperçu de la tour, rien n'est posé")
+	_check(level.placer.touch_hint.visible and level.placer.touch_hint.text == "Touchez encore pour poser",
+		"un rappel invite à toucher encore")
+	await _click(level, level.map.cell_to_world(Vector2i(4, 2)))
+	_check(level.map.get_occupant(Vector2i(4, 2)) == null and level.placer.touch_hint.text == "Impossible ici",
+		"toucher une autre case y déplace l'aperçu (sur le chemin : impossible)")
+	await _click(level, at)
+	_check(level.map.get_occupant(cell) == null, "revenir sur la case ne la pose pas encore")
+	await _click(level, at)
+	var tower := level.map.get_occupant(cell) as Tower
+	_check(tower != null and level.placer.selected_tower == null and not level.placer.touch_hint.visible,
+		"second toucher sur la même case : la tour est posée")
+	await _click(level, at)
+	_check(level.placer.inspected_tower == tower and level.hud.tower_details.visible, "toucher une tour ouvre sa fiche")
+	await _click(level, level.map.cell_to_world(Vector2i(4, 2)))
+	_check(level.placer.inspected_tower == null, "toucher la carte ailleurs la ferme")
+	_check(level.hud.shop_hint.text == Hud.TOUCH_HINT, "le rappel des commandes parle du tactile")
+
+	var enemy := _add_still_enemy(level, SCARABEE, 0, 100.0)
+	await process_frame
+	var touch := InputEventScreenTouch.new()
+	touch.pressed = true
+	touch.position = enemy.get_global_transform_with_canvas().origin
+	level.hud._input(touch)
+	await process_frame
+	_check(level.hud.enemy_details.visible and level.hud.hovered_enemy == enemy, "toucher un monstre ouvre sa fiche")
+	touch.position = Vector2(20, 400)
+	level.hud._input(touch)
+	await process_frame
+	_check(not level.hud.enemy_details.visible, "toucher ailleurs la ferme")
+	await _free(level)
+
+	var button := Button.new()
+	_check(not GameSettings.confirm_touch(button) and GameSettings.confirm_touch(button),
+		"un bouton à fiche (niveau, amélioration) agit au second toucher")
+	GameSettings.set_touch_mode(false)
+	_check(GameSettings.confirm_touch(button), "et tout de suite à la souris")
+	button.free()
+	level = await _spawn_level(LEVEL_01)
+	_check(level.hud.shop_hint.text == Hud.MOUSE_HINT, "le rappel revient à la souris")
+	await _free(level)
 
 
 func _test_tower_info_panels() -> void:

@@ -4,6 +4,10 @@ extends Node2D
 ## pose à la souris, affichage de la portée des tours survolées et sélection
 ## d'une tour posée pour voir sa fiche. Vise aussi les pouvoirs qui se lancent sur la
 ## carte (Météores, Renforts) : leur zone suit la souris jusqu'au clic.
+## Au tactile (GameSettings.is_touch_mode), rien ne se survole : le premier toucher sur
+## une case montre l'aperçu de la tour (et si elle peut s'y poser), un second toucher sur
+## la même case la pose. Un pouvoir visé se lance là où l'on touche. Toucher la carte
+## hors d'une tour ferme la fiche ouverte.
 
 ## Émis quand la tour sélectionnée change (null = aucune).
 signal selection_changed(data: TowerData)
@@ -22,16 +26,32 @@ var selected_power: Power
 
 var _hovered_tower: Tower
 var _mouse_position := Vector2.ZERO
+## Case touchée une première fois au tactile, en attente du second toucher (NO_CELL = aucune).
+var touch_cell := NO_CELL
+## « Touchez encore pour poser », au-dessus de l'aperçu, au tactile.
+var touch_hint: Label
+
+const NO_CELL := Vector2i(-1000, -1000)
 
 @onready var preview: PlacementPreview = $PlacementPreview
 
 
 func _ready() -> void:
 	preview.visible = false
+	touch_hint = Label.new()
+	touch_hint.add_theme_font_size_override(&"font_size", 16)
+	touch_hint.add_theme_color_override(&"font_outline_color", Color(0, 0, 0, 0.9))
+	touch_hint.add_theme_constant_override(&"outline_size", 6)
+	touch_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	touch_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	touch_hint.z_index = 10
+	touch_hint.visible = false
+	add_child(touch_hint)
 
 
 func select(data: TowerData) -> void:
 	selected_tower = data
+	_set_touch_cell(NO_CELL)
 	if data:
 		select_power(null)
 		inspect(null)
@@ -76,6 +96,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		refresh()
 	elif event is InputEventMouseButton and event.pressed:
 		var cell := level.map.world_to_cell(_to_world(event.position))
+		var touch := GameSettings.is_touch_mode() or event.device == InputEvent.DEVICE_ID_EMULATION
 		if selected_power and event.button_index == MOUSE_BUTTON_LEFT:
 			if level.map.is_cell_in_grid(cell):
 				level.use_power(selected_power, _to_world(event.position))
@@ -83,7 +104,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif selected_power and event.button_index == MOUSE_BUTTON_RIGHT:
 			select_power(null)
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and selected_tower and touch and cell != touch_cell:
+			# Premier toucher : l'aperçu se cale sur la case, sans rien poser.
+			_set_touch_cell(cell if level.map.is_cell_in_grid(cell) else NO_CELL)
+			_update_hover(_to_world(event.position))
+			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and selected_tower:
+			_set_touch_cell(NO_CELL)
 			var placed := level.place_tower(cell, selected_tower)
 			# Maj + clic garde la tour sélectionnée pour en poser plusieurs.
 			if placed and not event.shift_pressed:
@@ -93,6 +120,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and level.map.get_occupant(cell) is Tower:
 			inspect(level.map.get_occupant(cell))
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and touch and inspected_tower:
+			inspect(null)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_RIGHT and selected_tower:
 			select(null)
@@ -105,6 +135,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			inspect(null)
 		get_viewport().set_input_as_handled()
+
+
+## Arme (ou désarme, avec NO_CELL) le second toucher, et place son rappel.
+func _set_touch_cell(cell: Vector2i) -> void:
+	touch_cell = cell
+	touch_hint.visible = cell != NO_CELL and selected_tower != null
+	if not touch_hint.visible:
+		return
+	var can_place := level.can_place_tower(cell, selected_tower)
+	touch_hint.text = "Touchez encore pour poser" if can_place else "Impossible ici"
+	touch_hint.add_theme_color_override(&"font_color", Color(0.6, 1.0, 0.65) if can_place else Color(1.0, 0.5, 0.5))
+	touch_hint.reset_size()
+	var center := level.map.cell_to_world(cell)
+	touch_hint.global_position = center - Vector2(touch_hint.size.x / 2.0, Tower.SIZE / 2.0 + touch_hint.size.y + 4.0)
 
 
 ## Position dans le monde d'un point de l'écran.

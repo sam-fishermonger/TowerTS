@@ -146,7 +146,10 @@ func _build_page(root: Control, page_index: int) -> void:
 		button.size = Vector2(_get_node_width(perk), NODE_SIZE.y)
 		button.position = get_node_position(perk) - Vector2(button.size.x / 2.0, 0)
 		button.add_theme_font_size_override("font_size", 15)
-		button.pressed.connect(buy.bind(perk))
+		# Au tactile, le premier toucher montre la fiche de l'amélioration, le second l'achète.
+		button.pressed.connect(func() -> void:
+			if GameSettings.confirm_touch(button):
+				buy(perk))
 		button.mouse_entered.connect(_show_info.bind(perk))
 		button.focus_entered.connect(_show_info.bind(perk))
 		var icon_paths: Array[String] = []
