@@ -21,6 +21,11 @@ extends Resource
 ## Son joué à chaque tir.
 @export var attack_sound: AudioStream
 
+## Tour posée qui porte ces statistiques (son identifiant d'instance, 0 = aucune) : les
+## coups qu'elles donnent lui sont comptés dans les statistiques de fin de niveau. Pas
+## exporté : une copie (duplicate()) repart de 0.
+var source_tower_id := 0
+
 @export_group("Projectile")
 ## Scène du projectile tiré (tours à projectiles seulement).
 @export var projectile_scene: PackedScene

@@ -1,6 +1,6 @@
 extends Control
 ## Écran titre : reprend la campagne, ouvre la sélection des mondes et des niveaux,
-## l'arbre des améliorations, le lexique (tours, monstres, mondes) ou les options, ou quitte le jeu. Derrière le menu, une partie se
+## l'arbre des améliorations, le lexique (tours, monstres, mondes), les succès ou les options, ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
 ## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
 ## améliorations et spécialisations.
@@ -8,6 +8,7 @@ extends Control
 const PERK_TREE_SCREEN := "res://scenes/ui/perk_tree_screen.tscn"
 const WORLD_SELECT_SCREEN := "res://scenes/ui/world_select_screen.tscn"
 const LEXICON_SCREEN := "res://scenes/ui/lexicon_screen.tscn"
+const ACHIEVEMENTS_SCREEN := "res://scenes/ui/achievements_screen.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## Agrandissement d'un bouton survolé ou qui a le focus.
@@ -34,6 +35,7 @@ var _konami_label: Label
 @onready var perks_button: Button = %PerksButton
 @onready var worlds_button: Button = %WorldsButton
 @onready var lexicon_button: Button = %LexiconButton
+@onready var achievements_button: Button = %AchievementsButton
 @onready var options_button: Button = %OptionsButton
 @onready var quit_button: Button = %QuitButton
 @onready var reset_button: Button = %ResetButton
@@ -51,6 +53,7 @@ func _ready() -> void:
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
+	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
 	options_button.pressed.connect(open_options)
 	quit_button.pressed.connect(get_tree().quit)
 	# Quitter n'a pas de sens dans un navigateur.
@@ -62,7 +65,7 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, worlds_button, perks_button, lexicon_button, options_button, quit_button]:
+	for button in [play_button, worlds_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
 	play_button.grab_focus()
@@ -173,6 +176,10 @@ func _refresh() -> void:
 	if endless_available > 0:
 		perks_button.text += "  ·  ∞ %d" % endless_available
 	reset_button.visible = any_won
+	# Les objectifs remplis par la progression (arbre, étoiles, code Konami) se débloquent ici.
+	Achievements.check_progress()
+	var unlocked := Achievements.get_unlocked_count()
+	achievements_button.text = "Succès  ·  %d / %d" % [unlocked, Achievements.LIST.size()] if unlocked > 0 else "Succès"
 
 
 ## Le panneau grandit en apparaissant, puis les lignes du menu s'affichent en cascade.
