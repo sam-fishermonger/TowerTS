@@ -1,9 +1,12 @@
 [gd_resource type="FontVariation" load_steps=4 format=3]
 
-[ext_resource type="FontFile" path="res://assets/fonts/Rajdhani_SemiBold.ttf" id="1_texte"]
+[ext_resource type="FontFile" path="res://assets/fonts/Oxanium.ttf" id="1_titres"]
 [ext_resource type="FontFile" path="res://assets/fonts/OpenSans_SemiBold.woff2" id="2_secours"]
 [ext_resource type="FontFile" path="res://assets/fonts/symboles.ttf" id="3_symboles"]
 
 [resource]
-base_font = ExtResource("1_texte")
+base_font = ExtResource("1_titres")
 fallbacks = Array[Font]([ExtResource("2_secours"), ExtResource("3_symboles")])
+variation_opentype = {
+2003265652: 700
+}

@@ -17,13 +17,7 @@ var _bars: Control
 func _init() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.05, 0.05, 0.88)
-	style.border_color = EnemyData.BOSS_COLOR
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
-	style.content_margin_left = 14
-	style.content_margin_right = 14
+	var style := UiStyle.panel(EnemyData.BOSS_COLOR, 14.0, SIDE_LEFT, Color(0.08, 0.05, 0.05, 0.88))
 	style.content_margin_top = 6
 	style.content_margin_bottom = 8
 	add_theme_stylebox_override(&"panel", style)

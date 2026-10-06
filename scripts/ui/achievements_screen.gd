@@ -39,9 +39,7 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override(&"font_size", 40)
 	title.add_theme_color_override(&"font_color", TITLE_COLOR)
-	title.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.6))
-	title.add_theme_constant_override(&"shadow_offset_x", 3)
-	title.add_theme_constant_override(&"shadow_offset_y", 3)
+	UiStyle.style_title(title)
 	add_child(title)
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 16.0
@@ -63,14 +61,8 @@ func _build() -> void:
 	bar.show_percentage = false
 	bar.max_value = total
 	bar.value = unlocked
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Achievements.COLOR
-	fill.set_corner_radius_all(6)
-	var back := StyleBoxFlat.new()
-	back.bg_color = Color(1, 1, 1, 0.12)
-	back.set_corner_radius_all(6)
-	bar.add_theme_stylebox_override(&"fill", fill)
-	bar.add_theme_stylebox_override(&"background", back)
+	bar.add_theme_stylebox_override(&"fill", UiStyle.bar_fill(Achievements.COLOR))
+	bar.add_theme_stylebox_override(&"background", UiStyle.bar_background(Achievements.COLOR))
 	header.add_child(bar)
 
 	var scroll := ScrollContainer.new()
@@ -115,12 +107,9 @@ func _card(definition: Dictionary) -> PanelContainer:
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.custom_minimum_size.y = 84.0
 	card.tooltip_text = definition.description
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.09, 0.05, 0.95) if unlocked else Color(0.07, 0.08, 0.08, 0.9)
-	style.border_color = Color(color, 0.9 if unlocked else 0.35)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(10)
+	var style := UiStyle.panel(Color(color, 0.9 if unlocked else 0.35), 10.0)
+	if unlocked:
+		style.bg_color = Color(0.1, 0.1, 0.07, 0.95)
 	card.add_theme_stylebox_override(&"panel", style)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 12)
@@ -133,7 +122,6 @@ func _card(definition: Dictionary) -> PanelContainer:
 	badge_style.bg_color = Color(color, 0.22 if unlocked else 0.08)
 	badge_style.border_color = color
 	badge_style.set_border_width_all(2)
-	badge_style.set_corner_radius_all(28)
 	badge.add_theme_stylebox_override(&"panel", badge_style)
 	var icon := _label(definition.icon if unlocked else "?", 26, color)
 	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

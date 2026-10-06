@@ -29,6 +29,7 @@ window/stretch/mode="canvas_items"
 
 [gui]
 
+theme/custom="res://resources/ui/theme.tres"
 theme/custom_font="res://assets/fonts/police_interface.tres"
 
 [rendering]

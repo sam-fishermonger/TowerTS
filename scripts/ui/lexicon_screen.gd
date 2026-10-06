@@ -277,9 +277,7 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override(&"font_size", 40)
 	title.add_theme_color_override(&"font_color", TITLE_COLOR)
-	title.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.6))
-	title.add_theme_constant_override(&"shadow_offset_x", 3)
-	title.add_theme_constant_override(&"shadow_offset_y", 3)
+	UiStyle.style_title(title)
 	add_child(title)
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 20.0
@@ -326,8 +324,7 @@ func _build() -> void:
 
 	var detail_panel := PanelContainer.new()
 	detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_detail_style = _panel_style(Color(0.5, 0.5, 0.5))
-	_detail_style.border_width_top = 6
+	_detail_style = UiStyle.panel(Color(0.5, 0.5, 0.5), 16.0, SIDE_TOP)
 	detail_panel.add_theme_stylebox_override(&"panel", _detail_style)
 	body.add_child(detail_panel)
 	var detail_scroll := ScrollContainer.new()
@@ -382,12 +379,7 @@ func _build() -> void:
 
 
 func _panel_style(border: Color) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.09, 0.08, 0.92)
-	style.border_color = border
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(16)
+	var style := UiStyle.panel(border, 16.0)
 	return style
 
 

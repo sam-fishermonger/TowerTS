@@ -45,7 +45,10 @@ var _beside := false
 func _ready() -> void:
 	visible = false
 	# Chaque fiche a son propre style, teinté selon la tour affichée.
-	add_theme_stylebox_override("panel", get_theme_stylebox("panel").duplicate())
+	var style := UiStyle.panel(Color(0.5, 0.5, 0.5), 0.0, SIDE_TOP, Color(0.03, 0.06, 0.09, 0.95))
+	style.shadow_color = Color(0, 0, 0, 0.4)
+	style.shadow_size = 6
+	add_theme_stylebox_override("panel", style)
 	close_button.pressed.connect(close_requested.emit)
 	upgrade_button.pressed.connect(func() -> void: upgrade_requested.emit(tower))
 	sell_button.pressed.connect(func() -> void: sell_requested.emit(tower))

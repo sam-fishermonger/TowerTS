@@ -40,12 +40,7 @@ func _ready() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.09, 0.12, 0.97)
-	style.border_color = GOLD
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(28)
+	var style := UiStyle.panel(UiStyle.ACCENT, 28.0, SIDE_TOP, Color(0.03, 0.06, 0.09, 0.97))
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 	var column := VBoxContainer.new()
@@ -179,16 +174,6 @@ func _slider(volume: float) -> HSlider:
 	slider.value = volume * 100.0
 	slider.custom_minimum_size = Vector2(260, ROW_HEIGHT)
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var track := StyleBoxFlat.new()
-	track.bg_color = Color(1, 1, 1, 0.15)
-	track.set_corner_radius_all(4)
-	track.content_margin_top = 4.0
-	track.content_margin_bottom = 4.0
-	slider.add_theme_stylebox_override(&"slider", track)
-	var filled := track.duplicate() as StyleBoxFlat
-	filled.bg_color = GOLD.darkened(0.15)
-	slider.add_theme_stylebox_override(&"grabber_area", filled)
-	slider.add_theme_stylebox_override(&"grabber_area_highlight", filled)
 	return slider
 
 

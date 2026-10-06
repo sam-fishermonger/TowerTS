@@ -141,11 +141,7 @@ func _ready() -> void:
 	enemy_details = DetailPopup.new(270.0)
 	add_child(enemy_details)
 	# Fond plus opaque que celui du thème : les statistiques se lisent mieux sans la carte derrière.
-	var end_style := StyleBoxFlat.new()
-	end_style.bg_color = Color(0.07, 0.08, 0.08, 0.94)
-	end_style.border_color = Color(1, 1, 1, 0.15)
-	end_style.set_border_width_all(2)
-	end_style.set_corner_radius_all(12)
+	var end_style := UiStyle.panel(Color(UiStyle.ACCENT, 0.6), 0.0, SIDE_TOP, Color(0.03, 0.06, 0.09, 0.95))
 	end_panel.add_theme_stylebox_override(&"panel", end_style)
 	end_stats = EndStats.new()
 	end_stats.visible = false
@@ -479,13 +475,7 @@ func show_achievement(definition: Dictionary) -> void:
 		return
 	var toast := PanelContainer.new()
 	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.07, 0.04, 0.92)
-	style.border_color = Achievements.COLOR
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.content_margin_left = 16.0
-	style.content_margin_right = 16.0
+	var style := UiStyle.panel(Achievements.COLOR, 16.0, SIDE_LEFT, Color(0.08, 0.07, 0.04, 0.92))
 	style.content_margin_top = 8.0
 	style.content_margin_bottom = 8.0
 	toast.add_theme_stylebox_override(&"panel", style)
@@ -564,25 +554,7 @@ func setup_conquest(worker_cost: int, stone_cost: Callable) -> void:
 	recruit_button.focus_mode = Control.FOCUS_NONE
 	recruit_button.add_theme_font_size_override("font_size", 13)
 	# Bordure aux couleurs des ouvriers : le bouton se détache de la barre du haut.
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.22, 0.17, 0.08)
-	normal.border_color = Color(Worker.COLOR, 0.7)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(6)
-	normal.content_margin_left = 10.0
-	normal.content_margin_right = 10.0
-	normal.content_margin_top = 2.0
-	normal.content_margin_bottom = 2.0
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.32, 0.25, 0.1)
-	hover.border_color = Worker.COLOR
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.12, 0.12, 0.12)
-	disabled.border_color = Color(1, 1, 1, 0.15)
-	recruit_button.add_theme_stylebox_override("normal", normal)
-	recruit_button.add_theme_stylebox_override("hover", hover)
-	recruit_button.add_theme_stylebox_override("pressed", hover)
-	recruit_button.add_theme_stylebox_override("disabled", disabled)
+	UiStyle.style_button(recruit_button, Worker.COLOR, 12.0, 12.0)
 	recruit_button.pressed.connect(recruit_requested.emit)
 	box.add_child(recruit_button)
 	tower_shop.stone_cost = stone_cost
@@ -612,12 +584,7 @@ func show_challenge_rules(rules: Array[String]) -> void:
 	wave_label.add_sibling(score_label)
 	set_score(0)
 	challenge_rules = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.07, 0.06, 0.88)
-	style.border_color = Progress.ENDLESS_STAR_COLOR
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(12)
-	style.set_content_margin_all(18)
+	var style := UiStyle.panel(Progress.ENDLESS_STAR_COLOR, 18.0, SIDE_TOP)
 	challenge_rules.add_theme_stylebox_override("panel", style)
 	challenge_rules.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var column := VBoxContainer.new()

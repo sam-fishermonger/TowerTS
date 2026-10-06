@@ -24,28 +24,7 @@ func setup(value: Power, key: String) -> void:
 	tooltip_text = "%s (touche %s)\n%s\n%s" % [power.display_name, key_text, power.description,
 		"\n".join(power.get_stats_lines())]
 	# Même cadre que les cases de la barre d'achat, à la couleur du pouvoir.
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.11, 0.12, 0.15)
-	normal.set_border_width_all(2)
-	normal.border_color = Color(power.color, 0.45)
-	normal.set_corner_radius_all(6)
-	normal.content_margin_left = ICON_SIZE + 12.0
-	normal.content_margin_right = 10.0
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.15, 0.16, 0.2)
-	hover.border_color = power.color
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = power.color.darkened(0.6)
-	pressed.set_border_width_all(3)
-	pressed.border_color = power.color.lightened(0.3)
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.border_color = Color(1, 1, 1, 0.1)
-	for style_name in ["normal", "focus"]:
-		add_theme_stylebox_override(style_name, normal)
-	add_theme_stylebox_override("hover", hover)
-	add_theme_stylebox_override("pressed", pressed)
-	add_theme_stylebox_override("hover_pressed", pressed)
-	add_theme_stylebox_override("disabled", disabled)
+	UiStyle.apply_styles(self, UiStyle.slot_styles(power.color, ICON_SIZE + 12.0, 10.0))
 	add_theme_color_override("font_color", power.color.lightened(0.35))
 	add_theme_color_override("font_hover_color", power.color.lightened(0.5))
 	add_theme_color_override("font_pressed_color", Color.WHITE)

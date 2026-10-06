@@ -173,6 +173,16 @@ Chaque biome a ses **tuiles** (`assets/sprites/tiles/<biome>.png`, une planche d
 
 La carte (`GameMap`) prend les tuiles du monde de son niveau (`tileset` de `resources/worlds/*.tres`) et les pose en deux calques `TileMapLayer` sous le chemin ; un niveau peut en choisir d'autres dans sa propriété `tileset`, ou régler `decal_density` et `path_detail_spacing`. Le tirage dépend du niveau : la carte est la même à chaque partie. Les tuiles sont dessinées par `tools/generate_tilesets.py` (Python 3, Pillow et numpy) : modifier le script puis le relancer réécrit les planches (`python3 tools/generate_tilesets.py undead` ne réécrit que celle d'un biome).
 
+## Interface
+
+Toute l'interface suit un même style, « console tactique » : fonds ardoise translucides, liserés cyan, angles vifs et boutons inclinés, texte en Rajdhani et titres en Oxanium. Il est défini dans `scripts/ui/ui_style.gd` : le thème global du projet (`resources/ui/theme.tres`) et les styles posés par le code (cases de la barre d'achat, cartes des mondes, fiches, succès...) en viennent tous, en gardant chacun sa couleur d'accent (celle de la tour, du monde ou de l'état). Après une modification de `ui_style.gd`, regénérer le thème :
+
+```
+godot --headless --path . -s res://tools/generate_theme.gd
+```
+
+Pour donner la police des titres à un Label d'une scène, mettre `TitreEcran` dans sa propriété « Theme Type Variation ».
+
 ## Sons
 
 Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).

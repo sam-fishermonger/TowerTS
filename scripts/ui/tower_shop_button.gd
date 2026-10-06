@@ -81,22 +81,9 @@ func _add_label(parent: Control, text_value: String, font_size: int, color: Colo
 	return label
 
 
-## Fond sombre ; bordure de la couleur de la tour au survol, épaisse quand elle est choisie.
+## Case droite au liseré de la couleur de la tour (voir UiStyle.slot_styles()).
 func _apply_styles() -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.11, 0.12, 0.15)
-	normal.set_border_width_all(2)
-	normal.border_color = Color(1, 1, 1, 0.12)
-	normal.set_corner_radius_all(6)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.15, 0.16, 0.2)
-	hover.border_color = data.color
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = data.color.darkened(0.6)
-	pressed.set_border_width_all(3)
-	pressed.border_color = data.color.lightened(0.3)
-	add_theme_stylebox_override("normal", normal)
-	add_theme_stylebox_override("hover", hover)
-	add_theme_stylebox_override("pressed", pressed)
-	add_theme_stylebox_override("hover_pressed", pressed)
-	add_theme_stylebox_override("disabled", normal)
+	var styles := UiStyle.slot_styles(data.color)
+	# Grisée faute d'or, la case garde son cadre (c'est son contenu qui pâlit).
+	styles[&"disabled"] = styles[&"normal"]
+	UiStyle.apply_styles(self, styles)

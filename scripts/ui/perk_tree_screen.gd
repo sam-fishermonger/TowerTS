@@ -261,27 +261,27 @@ func _style_button(button: Button, perk: Perk) -> void:
 	else:
 		status = "Verrouillé"
 	button.text = "%s\n%s" % [perk.display_name, status]
-	for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:
-		var style := StyleBoxFlat.new()
-		style.bg_color = color.darkened(0.55 if owned else 0.8)
-		if style_name == "hover":
-			style.bg_color = style.bg_color.lightened(0.12)
-		style.border_color = color if style_name != "focus" else Color.WHITE
-		style.set_border_width_all(3 if owned or style_name == "focus" else 2)
-		style.set_corner_radius_all(8)
-		style.draw_center = style_name != "focus"
-		# Place pour l'image de la tour (ou des deux tours d'un croisement) à gauche.
-		if perk.is_crossing():
-			style.content_margin_left = CROSSING_ICON_SIZE * 1.6 + 10.0
-		elif not perk.get_tower_path().is_empty() or not perk.unlocks_power.is_empty():
-			style.content_margin_left = TOWER_ICON_SIZE + 12.0
-		button.add_theme_stylebox_override(style_name, style)
+	# Place pour l'image de la tour (ou des deux tours d'un croisement) à gauche.
+	var margin_left := 12.0
+	if perk.is_crossing():
+		margin_left = CROSSING_ICON_SIZE * 1.6 + 10.0
+	elif not perk.get_tower_path().is_empty() or not perk.unlocks_power.is_empty():
+		margin_left = TOWER_ICON_SIZE + 12.0
+	var styles := UiStyle.button_styles(color, margin_left, 12.0)
+	# Une amélioration acquise garde un fond teinté de sa couleur.
+	for style_name: StringName in [&"normal", &"hover", &"disabled"]:
+		var style: StyleBoxFlat = styles[style_name]
+		style.border_color = Color(color, 1.0 if owned else 0.7)
+		if owned:
+			style.bg_color = color.darkened(0.7 if style_name != &"hover" else 0.6)
+	for style_name: StringName in styles:
+		button.add_theme_stylebox_override(style_name, styles[style_name])
 	for icon in button.get_children():
 		icon.modulate.a = 1.0 if owned or Perks.is_unlocked(perk) else 0.4
 	button.add_theme_color_override("font_color", color.lightened(0.35))
 	button.add_theme_color_override("font_hover_color", color.lightened(0.5))
 	button.add_theme_color_override("font_focus_color", color.lightened(0.35))
-	button.add_theme_color_override("font_pressed_color", color.lightened(0.35))
+	button.add_theme_color_override("font_pressed_color", UiStyle.TEXT_PRESSED_COLOR)
 
 
 func _state_color(perk: Perk) -> Color:
