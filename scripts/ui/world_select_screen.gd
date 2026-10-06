@@ -85,7 +85,7 @@ func _build_difficulty_buttons() -> void:
 		button.add_theme_font_size_override(&"font_size", 18)
 		for color_name in [&"font_pressed_color", &"font_hover_pressed_color"]:
 			button.add_theme_color_override(color_name, Difficulty.COLORS[d])
-		button.tooltip_text = Difficulty.describe(d)
+		button.tooltip_text = "%s %s" % [Difficulty.describe(d), Difficulty.describe_tower_limit(d)]
 		button.pressed.connect(set_difficulty.bind(d))
 		difficulty_bar.add_child(button)
 
@@ -98,8 +98,9 @@ func _refresh() -> void:
 			+ "vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les "
 			+ "spécialisations des tours, dans Améliorations.") % [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
 	else:
-		mode_hint.text = ("%s : %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau "
-			+ "avec 3 étoiles ouvre son mode infini.") % [Difficulty.NAMES[difficulty], Difficulty.describe(difficulty)]
+		mode_hint.text = ("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau "
+			+ "avec 3 étoiles ouvre son mode infini.") % [Difficulty.NAMES[difficulty], Difficulty.describe(difficulty),
+			Difficulty.describe_tower_limit(difficulty)]
 	for card in worlds_box.get_children():
 		worlds_box.remove_child(card)
 		card.queue_free()

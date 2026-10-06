@@ -120,9 +120,13 @@ func _refresh() -> void:
 	name_label.add_theme_color_override("font_color", data.color.lightened(0.3))
 	close_button.visible = placed
 	description_label.text = data.description
-	# Spécialisations achetées avec les étoiles infinies : déjà comptées dans les statistiques.
+	# Spécialisations (étoiles infinies) et croisements achetés : déjà comptés dans les statistiques.
 	for specialization in data.get_specializations():
-		description_label.text += "\nSpécialisation : %s" % specialization.display_name
+		description_label.text += "\n%s : %s" % ["Croisement" if specialization.crossing else "Spécialisation",
+			specialization.display_name]
+	if placed and tower.is_boosted():
+		description_label.text += "\nRenforcée par une Bobine : +%d %% de dégâts, +%d %% de cadence" % [
+			roundi(tower.boost_damage * 100.0), roundi(tower.boost_fire_rate * 100.0)]
 	description_label.text = description_label.text.strip_edges()
 	description_label.visible = not description_label.text.is_empty()
 
@@ -130,7 +134,7 @@ func _refresh() -> void:
 	var stats := tower.stats if placed else data.get_stats_at_level(1)
 	var next: TowerData = null
 	if placed and tower.can_upgrade():
-		next = data.get_stats_at_level(level + 1)
+		next = tower.get_stats_at_level(level + 1)
 	_fill_stats(stats, next)
 
 	if placed:
@@ -180,11 +184,23 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 	for child in stats_grid.get_children():
 		stats_grid.remove_child(child)
 		child.queue_free()
-	_add_stat("Dégâts", _format(stats.damage), _format(next.damage) if next else "")
-	_add_stat("Cadence", "%s tirs/s" % _format(stats.fire_rate, 2),
-		"%s tirs/s" % _format(next.fire_rate, 2) if next else "")
-	_add_stat("Dégâts/s", _format(stats.get_dps()), _format(next.get_dps()) if next else "")
+	if stats.is_support():
+		# Bobine : pas de tir, seulement le bonus donné aux tours voisines.
+		_add_stat("Dégâts", "+%d %%" % roundi(stats.boost_damage * 100.0),
+			"+%d %%" % roundi(next.boost_damage * 100.0) if next else "")
+		_add_stat("Cadence", "+%d %%" % roundi(stats.boost_fire_rate * 100.0),
+			"+%d %%" % roundi(next.boost_fire_rate * 100.0) if next else "")
+	else:
+		_add_stat("Dégâts", _format(stats.damage), _format(next.damage) if next else "")
+		_add_stat("Cadence", "%s tirs/s" % _format(stats.fire_rate, 2),
+			"%s tirs/s" % _format(next.fire_rate, 2) if next else "")
+		_add_stat("Dégâts/s", _format(stats.get_dps()), _format(next.get_dps()) if next else "")
 	_add_stat("Portée", _format(stats.attack_range), _format(next.attack_range) if next else "")
+	if stats.chain_count > 0:
+		_add_stat("Rebonds", "%d, -%d %%" % [stats.chain_count, roundi((1.0 - stats.chain_falloff) * 100.0)],
+			"%d, -%d %%" % [next.chain_count, roundi((1.0 - next.chain_falloff) * 100.0)] if next else "")
+	if stats.knockback > 0.0:
+		_add_stat("Recul", _format(stats.knockback), _format(next.knockback) if next else "")
 	if stats.beam_ramp_max > 1.0:
 		_add_stat("Montée", "x%s en %s s" % [_format(stats.beam_ramp_max), _format(stats.beam_ramp_time)],
 			"x%s en %s s" % [_format(next.beam_ramp_max), _format(next.beam_ramp_time)] if next else "")
@@ -194,7 +210,7 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 		_add_stat("Nuage", "%s, %s s" % [_format(stats.cloud_radius), _format(stats.cloud_duration)],
 			"%s, %s s" % [_format(next.cloud_radius), _format(next.cloud_duration)] if next else "")
 	if stats.dot_damage > 0.0:
-		var dot_name := "Poison" if stats.cloud_radius > 0.0 else "Brûlure"
+		var dot_name := "Poison" if stats.cloud_radius > 0.0 or stats.dot_is_poison else "Brûlure"
 		_add_stat(dot_name, "%s/s, %s s" % [_format(stats.dot_damage), _format(stats.dot_duration)],
 			"%s/s, %s s" % [_format(next.dot_damage), _format(next.dot_duration)] if next else "")
 	if stats.armor_piercing:

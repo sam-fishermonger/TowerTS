@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Bobine : enroulement de cuivre vu de dessus, cœur lumineux (ne tourne pas). -->
+  <circle cx="32" cy="32" r="21" fill="#4a2410"/>
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#e08a3c" stroke-width="3.5"/>
+  <circle cx="32" cy="32" r="13" fill="none" stroke="#f2a85a" stroke-width="3.5"/>
+  <circle cx="32" cy="32" r="8" fill="none" stroke="#ffc477" stroke-width="3.5"/>
+  <circle cx="32" cy="32" r="4" fill="#fff1c9"/>
+  <path d="M32 11 L32 3 M32 53 L32 61 M11 32 L3 32 M53 32 L61 32" stroke="#ffd58f" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="32" cy="3" r="2.5" fill="#fff1c9"/>
+  <circle cx="32" cy="61" r="2.5" fill="#fff1c9"/>
+  <circle cx="3" cy="32" r="2.5" fill="#fff1c9"/>
+  <circle cx="61" cy="32" r="2.5" fill="#fff1c9"/>
+</svg>

@@ -128,6 +128,15 @@ for i, m in enumerate(melody * 2):
         add(gain(note(hz(m), beat * 0.9, tri, 1, 0.01, beat * 0.8), 0.22), i * beat)
 files.append(write("music", music, 0.7))
 
+# Tours ajoutées après la musique (pour ne pas changer le tirage des sons précédents)
+crackle = gain(highpass(shaped_noise(0.16, 9000, 0.0005, 0.15), 2500), 0.8)
+files.append(write("arc_zap", mix(crackle, gain(sweep(2400, 700, 0.12, square, d=0.12), 0.25),
+    gain(delay(highpass(shaped_noise(0.08, 9000, 0.0005, 0.07), 3000), 0.05), 0.6)), 0.55))
+files.append(write("coil_hum", mix(gain(note(hz(-24), 0.3, square, 1, 0.02, 0.28), 0.4),
+    gain(note(hz(-12), 0.3, tri, 1, 0.02, 0.28), 0.6)), 0.4))
+files.append(write("magnet_pulse", mix(sweep(900, 140, 0.35, math.sin, a=0.01, d=0.34, curve=0.6),
+    gain(sweep(450, 70, 0.35, tri, a=0.01, d=0.34), 0.5)), 0.6))
+
 os.makedirs(DEST, exist_ok=True)
 for f in files:
     name = os.path.basename(f)[:-4]

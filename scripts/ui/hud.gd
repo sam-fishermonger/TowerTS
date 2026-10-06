@@ -19,6 +19,8 @@ signal tower_details_closed
 signal pause_toggled
 ## Émis quand le joueur choisit une vitesse de jeu (bouton, ou V pour passer à la suivante).
 signal game_speed_selected(speed: float)
+## Émis quand le joueur valide son choix de tours au lancement du niveau (TowerPicker).
+signal towers_chosen(types: Array[TowerData])
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
@@ -30,6 +32,8 @@ var _gold := 0
 var _damage_tween: Tween
 ## Dernier contenu affiché dans l'aperçu de vague, pour ne le refaire que s'il change.
 var _wave_preview_text := ""
+## Choix des tours au lancement du niveau (null s'il n'y en a pas, ou une fois validé).
+var tower_picker: TowerPicker
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -77,7 +81,7 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if not key.pressed or key.echo or end_panel.visible:
+	if not key.pressed or key.echo or end_panel.visible or tower_picker:
 		return
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
@@ -107,12 +111,34 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 		speed_button.tooltip_text = "Vitesse %s (V : vitesse suivante)" % speed_text
 		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
 		speed_buttons.add_child(speed_button)
-	tower_shop.setup(tower_types)
-	# Avec les tours débloquées dans l'arbre, la barre d'achat prend la place du rappel des commandes.
-	shop_hint.visible = tower_types.size() <= 7
+	set_tower_types(tower_types)
 	tower_shop.tower_selected.connect(tower_selected.emit)
 	tower_shop.tower_hovered.connect(_on_shop_button_hovered)
 	tower_shop.hover_ended.connect(shop_info.close)
+
+
+## Remplit la barre d'achat (après le choix des tours, s'il y en a un).
+func set_tower_types(tower_types: Array[TowerData]) -> void:
+	tower_shop.setup(tower_types)
+	tower_shop.set_gold(_gold)
+	# Avec les tours débloquées dans l'arbre, la barre d'achat prend la place du rappel des commandes.
+	shop_hint.visible = tower_types.size() <= 7
+
+
+## Ouvre le choix des tours, par-dessus tout le reste, jusqu'à ce que le joueur valide.
+func show_tower_picker(available: Array[TowerData], limit: int, selected: Array[TowerData],
+		difficulty_name: String) -> void:
+	tower_picker = TowerPicker.new()
+	add_child(tower_picker)
+	tower_picker.setup(available, limit, selected, difficulty_name)
+	tower_picker.confirmed.connect(_on_towers_chosen)
+	tower_picker.menu_requested.connect(menu_requested.emit)
+
+
+func _on_towers_chosen(types: Array[TowerData]) -> void:
+	tower_picker.queue_free()
+	tower_picker = null
+	towers_chosen.emit(types)
 
 
 ## Passe à la vitesse suivante (après la dernière, on revient à la première).

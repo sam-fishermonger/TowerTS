@@ -59,6 +59,8 @@ extends Resource
 ## Brûlure ou poison ajouté aux coups : dégâts par seconde et secondes en plus.
 @export var dot_damage_bonus := 0.0
 @export var dot_duration_bonus := 0.0
+## La brûlure ajoutée est un poison (nom affiché dans la fiche de la tour).
+@export var dot_is_poison := false
 ## Les coups ignorent l'armure.
 @export var armor_piercing := false
 ## Multiplicateur de la montée en puissance du Rayon.
@@ -67,6 +69,20 @@ extends Resource
 @export var cloud_duration_bonus := 0.0
 ## Secondes ajoutées au brouillage des boucliers.
 @export var shield_jam_bonus := 0.0
+## Ralentissement donné à une tour qui ne ralentit pas (1 = aucun) et sa durée.
+@export_range(0.1, 1.0) var added_slow_factor := 1.0
+@export var added_slow_duration := 0.0
+## Secondes ajoutées au blocage des soins.
+@export var heal_block_bonus := 0.0
+
+@export_group("Croisement")
+## Croisement de deux tours : `specializes_tower` reçoit les effets de cette amélioration,
+## et la seconde tour ceux de `partner_effect` (une autre amélioration, dont
+## `specializes_tower` est la seconde tour). Chacune prend un effet de l'autre.
+## (Resource et pas Perk : un Perk dans Perk empêcherait Godot de libérer le script.)
+@export var partner_effect: Resource
+## Effet d'un croisement (la fiche de la tour l'appelle « Croisement » et pas « Spécialisation »).
+@export var crossing := false
 
 
 ## Tour débloquée par cette amélioration (TowerData), ou null. (Resource et pas
@@ -77,6 +93,16 @@ func get_unlocked_tower() -> Resource:
 
 func is_specialization() -> bool:
 	return not specializes_tower.is_empty()
+
+
+## Croisement de deux tours (voir partner_effect).
+func is_crossing() -> bool:
+	return crossing
+
+
+## Chemin de la seconde tour d'un croisement, ou "".
+func get_partner_tower_path() -> String:
+	return partner_effect.specializes_tower if partner_effect else ""
 
 
 ## Chemin de la tour montrée dans la case de l'amélioration (débloquée ou spécialisée), ou "".
@@ -94,11 +120,16 @@ func apply_specialization(stats) -> void:
 	if dot_damage_bonus > 0.0:
 		stats.dot_damage += dot_damage_bonus
 		stats.dot_duration = maxf(stats.dot_duration, 0.0) + dot_duration_bonus
+		stats.dot_is_poison = stats.dot_is_poison or dot_is_poison
 	stats.armor_piercing = stats.armor_piercing or armor_piercing
 	stats.beam_ramp_max *= beam_ramp_multiplier
 	stats.cloud_radius *= cloud_radius_multiplier
 	stats.cloud_duration += cloud_duration_bonus
 	stats.shield_jam_duration += shield_jam_bonus
+	if added_slow_factor < 1.0:
+		stats.slow_factor = minf(stats.slow_factor, added_slow_factor)
+		stats.slow_duration = maxf(stats.slow_duration, added_slow_duration)
+	stats.heal_block_duration += heal_block_bonus
 
 
 ## Ajoute les bonus de cette amélioration à `total` (modifié sur place) : les

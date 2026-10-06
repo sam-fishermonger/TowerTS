@@ -54,15 +54,21 @@ static func get_unlocked_towers() -> Array[Resource]:
 	return result
 
 
-## Spécialisations achetées pour une tour (chemin de sa TowerData), dans l'ordre de l'arbre.
+## Spécialisations et croisements achetés pour une tour (chemin de sa TowerData), dans
+## l'ordre de l'arbre. Pour la seconde tour d'un croisement, c'est son effet
+## (partner_effect) qui est dans la liste.
 static func get_specializations(tower_path: String) -> Array[Perk]:
 	var owned := get_owned_ids()
 	var result: Array[Perk] = []
 	if tower_path.is_empty():
 		return result
 	for perk in TREE.perks:
-		if perk.specializes_tower == tower_path and owned.has(perk.id):
+		if not owned.has(perk.id):
+			continue
+		if perk.specializes_tower == tower_path:
 			result.append(perk)
+		elif perk.get_partner_tower_path() == tower_path:
+			result.append(perk.partner_effect)
 	return result
 
 

@@ -22,6 +22,9 @@ const HEALTH: Array[float] = [0.7, 1.0, 1.35, 1.75]
 const ENEMY_COUNT: Array[float] = [0.75, 1.0, 1.25, 1.5]
 ## Multiplicateur de la vitesse des monstres.
 const SPEED: Array[float] = [0.9, 1.0, 1.1, 1.2]
+## Nombre de tours différentes qu'on peut prendre dans un niveau : avec plus de tours
+## débloquées, on choisit lesquelles au lancement du niveau.
+const TOWER_LIMITS: Array[int] = [9, 8, 6, 5]
 
 
 ## Difficulté choisie par le joueur.
@@ -31,6 +34,11 @@ static func get_current() -> int:
 
 static func set_current(difficulty: int) -> void:
 	Progress.set_setting(SETTING, clampi(difficulty, 0, COUNT - 1))
+
+
+## « 6 tours différentes au plus par niveau. »
+static func describe_tower_limit(difficulty: int) -> String:
+	return "%d tours différentes au plus par niveau." % TOWER_LIMITS[difficulty]
 
 
 ## Effets d'une difficulté, en une phrase : « Monstres 35 % plus résistants, 25 % plus

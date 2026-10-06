@@ -47,6 +47,9 @@ extends Resource
 @export var dot_damage := 0.0
 ## Durée de la brûlure ou du poison, en secondes.
 @export var dot_duration := 0.0
+## C'est un poison et pas une brûlure (nom affiché dans la fiche ; les tours à nuage
+## empoisonnent toujours).
+@export var dot_is_poison := false
 ## Les coups ignorent l'armure.
 @export var armor_piercing := false
 ## Multiplicateur des dégâts infligés aux boucliers d'énergie.
@@ -67,6 +70,25 @@ extends Resource
 @export_group("Flammes")
 ## Ouverture du cône de flammes, en degrés (Lance-flammes).
 @export var cone_angle := 50.0
+
+@export_group("Arc")
+## Rebonds de l'arc électrique après la première cible (Arc électrique).
+@export var chain_count := 0
+## Distance maximale d'un rebond, d'un ennemi au suivant.
+@export var chain_range := 110.0
+## Multiplicateur des dégâts à chaque rebond.
+@export_range(0.1, 1.0) var chain_falloff := 0.8
+
+@export_group("Soutien")
+## Bonus de dégâts donné aux tours à portée (Bobine) : 0.25 = +25 %.
+@export var boost_damage := 0.0
+## Bonus de cadence donné aux tours à portée (Bobine).
+@export var boost_fire_rate := 0.0
+
+@export_group("Recul")
+## Pixels dont les ennemis touchés reculent sur leur chemin (Électroaimant). Les gros
+## ennemis reculent moins (voir Enemy.push_back).
+@export var knockback := 0.0
 
 @export_group("Améliorations")
 ## Améliorations achetables, dans l'ordre : la tour posée est au niveau 1,
@@ -122,6 +144,11 @@ func scale_stats(damage_multiplier: float, range_multiplier: float, fire_rate_mu
 	fire_rate *= fire_rate_multiplier
 	if slow_factor < 1.0:
 		slow_duration += slow_duration_bonus
+
+
+## Tour de soutien : elle renforce les tours voisines (Bobine).
+func is_support() -> bool:
+	return boost_damage > 0.0 or boost_fire_rate > 0.0
 
 
 ## Dégâts directs par seconde sur une cible (sans la brûlure ou le poison, la montée

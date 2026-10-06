@@ -13,6 +13,9 @@ const HEAL_TEXT_COLOR := Color(0.45, 1.0, 0.55)
 ## Méta du moteur posée juste avant d'ouvrir un niveau en mode infini (voir open()) :
 ## le niveau la lit et l'efface à son lancement.
 const ENDLESS_META := &"level_endless"
+## Réglage (Progress) qui garde le dernier choix de tours (chemins des TowerData) : il est
+## coché d'avance au lancement du niveau suivant.
+const TOWER_CHOICE_SETTING := "tower_choice"
 
 @export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
@@ -50,6 +53,14 @@ var is_endless := false
 ## Difficulté de la partie (Difficulty) : celle choisie par le joueur, lue au lancement,
 ## sauf en mode infini et pour la partie de l'écran titre, toujours en Moyen.
 var difficulty := Difficulty.DEFAULT
+## Tours différentes qu'on peut prendre dans ce niveau (0 = pas de limite : partie de
+## l'écran titre). Avec plus de tours disponibles, le joueur les choisit au lancement.
+var tower_limit := 0
+## Toutes les tours disponibles : celles du niveau, puis celles débloquées dans l'arbre.
+## tower_types ne garde que celles choisies.
+var available_tower_types: Array[TowerData] = []
+## Le choix des tours est ouvert : pas de vague tant qu'il n'est pas validé.
+var is_choosing_towers := false
 
 var _wave_bonus_paid := -1
 ## Mode infini : record de vagues du niveau au lancement de la partie.
@@ -97,12 +108,21 @@ func _ready() -> void:
 	for data in Perks.get_unlocked_towers():
 		if not types.has(data):
 			types.append(data)
-	tower_types = types
+	available_tower_types = types
+	tower_limit = 0 if is_demo else Difficulty.TOWER_LIMITS[difficulty]
+	is_choosing_towers = tower_limit > 0 and types.size() > tower_limit
+	if is_choosing_towers:
+		tower_types = []
+	else:
+		tower_types = types
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
 	var title := "%s  ·  Mode infini" % level_name if is_endless \
 		else "%s  ·  %s" % [level_name, Difficulty.NAMES[difficulty]]
 	hud.setup(title, tower_types, game_speeds)
+	if is_choosing_towers:
+		hud.show_tower_picker(types, tower_limit, get_default_tower_choice(), Difficulty.NAMES[difficulty])
+		hud.towers_chosen.connect(choose_towers)
 	if is_demo:
 		hud.visible = false
 		hud.process_mode = Node.PROCESS_MODE_DISABLED
@@ -171,6 +191,41 @@ func get_stars() -> int:
 
 # --- Tours ------------------------------------------------------------------
 
+## Tours cochées d'avance dans le choix des tours : celles du dernier choix qui sont
+## disponibles, complétées dans l'ordre (tours du niveau d'abord) jusqu'à la limite.
+func get_default_tower_choice() -> Array[TowerData]:
+	var last: PackedStringArray = Progress.get_setting(TOWER_CHOICE_SETTING, PackedStringArray())
+	var result: Array[TowerData] = []
+	for data in available_tower_types:
+		if last.has(data.resource_path) and result.size() < tower_limit:
+			result.append(data)
+	for data in available_tower_types:
+		if not result.has(data) and result.size() < tower_limit:
+			result.append(data)
+	return result
+
+
+## Valide le choix des tours : elles seules vont dans la barre d'achat, et la partie
+## peut commencer. Renvoie false si le choix n'est pas valable (vide, trop de tours, ou
+## une tour non disponible).
+func choose_towers(types: Array[TowerData]) -> bool:
+	if not is_choosing_towers or types.is_empty() or types.size() > tower_limit \
+			or types.any(func(data: TowerData) -> bool: return not available_tower_types.has(data)):
+		return false
+	is_choosing_towers = false
+	tower_types = types.duplicate()
+	if hud.tower_picker:
+		hud.tower_picker.queue_free()
+		hud.tower_picker = null
+	hud.set_tower_types(tower_types)
+	if not is_demo:
+		var paths := PackedStringArray()
+		for data in tower_types:
+			paths.append(data.resource_path)
+		Progress.set_setting(TOWER_CHOICE_SETTING, paths)
+	return true
+
+
 func select_tower(data: TowerData) -> void:
 	if is_over and data:
 		return
@@ -194,6 +249,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	map.occupy(cell, tower)
 	gold -= data.get_cost()
 	Sound.play(&"build")
+	refresh_boosts()
 	return tower
 
 
@@ -210,6 +266,7 @@ func upgrade_tower(tower: Tower) -> bool:
 	tower.upgrade()
 	gold -= cost
 	Sound.play(&"upgrade")
+	refresh_boosts()
 	return true
 
 
@@ -226,7 +283,43 @@ func sell_tower(tower: Tower) -> int:
 	tower.despawn()
 	gold += value
 	Sound.play(&"sell")
+	refresh_boosts()
 	return value
+
+
+## Tours posées sur la carte (sans celles qui viennent d'être vendues).
+func get_towers() -> Array[Tower]:
+	var result: Array[Tower] = []
+	for node in towers.get_children():
+		var tower := node as Tower
+		if tower and tower.is_alive:
+			result.append(tower)
+	return result
+
+
+## Recalcule le bonus que chaque tour reçoit des Bobines à sa portée : celui de la plus
+## forte (les Bobines ne s'additionnent pas). À appeler quand une tour est posée,
+## améliorée ou vendue.
+func refresh_boosts() -> void:
+	var all := get_towers()
+	var coils: Array[CoilTower] = []
+	for tower in all:
+		if tower is CoilTower:
+			coils.append(tower)
+			tower.boosted_towers.clear()
+	for tower in all:
+		var best: CoilTower = null
+		for coil in coils:
+			if coil.can_boost(tower) and (best == null or coil.stats.boost_damage + coil.stats.boost_fire_rate
+					> best.stats.boost_damage + best.stats.boost_fire_rate):
+				best = coil
+		if best:
+			best.boosted_towers.append(tower)
+			tower.set_boost(best.stats.boost_damage, best.stats.boost_fire_rate)
+		else:
+			tower.set_boost(0.0, 0.0)
+	for coil in coils:
+		coil.queue_redraw()
 
 
 ## Ouvre la fiche d'une tour posée (null = la fermer).
@@ -257,7 +350,8 @@ func set_game_speed(speed: float) -> void:
 # --- Vagues et ennemis ----------------------------------------------------
 
 func can_start_next_wave() -> bool:
-	return not is_over and not is_paused and not spawner.is_spawning and spawner.has_next_wave()
+	return not is_over and not is_paused and not is_choosing_towers and not spawner.is_spawning \
+		and spawner.has_next_wave()
 
 
 func start_next_wave() -> void:

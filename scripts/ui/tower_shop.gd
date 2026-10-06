@@ -31,6 +31,9 @@ func _ready() -> void:
 
 
 func setup(tower_types: Array[TowerData]) -> void:
+	for child in get_children():
+		remove_child(child)
+		child.queue_free()
 	var separation := get_theme_constant("separation")
 	var slot_width := clampf(floorf(MAX_WIDTH / maxi(tower_types.size(), 1)) - separation,
 		MIN_SLOT_WIDTH, TowerShopButton.SLOT_SIZE.x)

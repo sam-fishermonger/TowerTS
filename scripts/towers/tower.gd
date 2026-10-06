@@ -33,6 +33,10 @@ var stats: TowerData
 ## Case de la carte occupée par la tour.
 var cell := Vector2i.ZERO
 var target_mode := TargetMode.FIRST
+## Bonus de dégâts et de cadence donnés par la Bobine la plus forte à portée (0 = aucun).
+## Le niveau les recalcule quand une tour est posée, améliorée ou vendue.
+var boost_damage := 0.0
+var boost_fire_rate := 0.0
 
 ## Nœud qui reçoit ce que la tour crée en jeu (projectiles, effets). Par défaut, son parent.
 var projectile_container: Node
@@ -48,7 +52,30 @@ var _aim_angle := -PI / 2.0
 
 
 func _ready() -> void:
-	stats = data.get_stats_at_level(level)
+	stats = get_stats_at_level(level)
+
+
+## Statistiques de la tour à un niveau donné, avec le bonus de Bobine qu'elle reçoit.
+func get_stats_at_level(at_level: int) -> TowerData:
+	var result := data.get_stats_at_level(at_level)
+	result.damage *= 1.0 + boost_damage
+	result.dot_damage *= 1.0 + boost_damage
+	result.fire_rate *= 1.0 + boost_fire_rate
+	return result
+
+
+## Change le bonus reçu d'une Bobine (0 et 0 = aucun) et recalcule les statistiques.
+func set_boost(damage_bonus: float, fire_rate_bonus: float) -> void:
+	if is_equal_approx(damage_bonus, boost_damage) and is_equal_approx(fire_rate_bonus, boost_fire_rate):
+		return
+	boost_damage = damage_bonus
+	boost_fire_rate = fire_rate_bonus
+	stats = get_stats_at_level(level)
+	queue_redraw()
+
+
+func is_boosted() -> bool:
+	return boost_damage > 0.0 or boost_fire_rate > 0.0
 
 
 ## La cible est gardée tant qu'elle reste à portée, sauf pour le Franc-tireur, qui la
@@ -118,7 +145,7 @@ func upgrade() -> bool:
 	if not can_upgrade():
 		return false
 	level += 1
-	stats = data.get_stats_at_level(level)
+	stats = get_stats_at_level(level)
 	queue_redraw()
 	upgraded.emit(self)
 	return true
