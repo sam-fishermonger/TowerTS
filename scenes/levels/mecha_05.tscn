@@ -65,9 +65,18 @@ count = 8
 interval = 0.7
 start_delay = 4.0
 
+[sub_resource type="Resource" id="Group_w2_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_sentinelle")
+count = 1
+interval = 2.0
+start_delay = 4.4
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2"), SubResource("Group_w2_elite")])
 bonus_gold = 20
 
 [sub_resource type="Resource" id="Group_w3_1"]
@@ -113,9 +122,18 @@ interval = 0.7
 start_delay = 8.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w4_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_porte_drones")
+count = 1
+interval = 2.0
+start_delay = 6.1
+path_index = 1
+elite = true
+
 [sub_resource type="Resource" id="Wave_4"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_3"), SubResource("Group_w4_elite")])
 bonus_gold = 30
 
 [sub_resource type="Resource" id="Group_w5_1"]
@@ -223,9 +241,18 @@ count = 27
 interval = 0.35
 start_delay = 12.0
 
+[sub_resource type="Resource" id="Group_w8_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chenillard")
+count = 1
+interval = 2.0
+start_delay = 10.6
+path_index = 1
+elite = true
+
 [sub_resource type="Resource" id="Wave_8"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3"), SubResource("Group_w8_4")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3"), SubResource("Group_w8_4"), SubResource("Group_w8_elite")])
 bonus_gold = 0
 
 [node name="Mecha05" instance=ExtResource("1_level")]

@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Chenillard"
+description = "Char lent au blindage très épais : il faut de gros coups, ou les ignorer."
 max_health = 280.0
 armor = 8.0
 speed = 40.0

@@ -8,6 +8,9 @@ signal damaged(enemy: Enemy, amount: float)
 signal reached_end(enemy: Enemy)
 ## Émis quand un soigneur rend des points de vie à cet ennemi.
 signal healed(enemy: Enemy, amount: float)
+## Émis quand l'ennemi appelle des renforts (EnemyData.summon_enemy) : le niveau les
+## fait apparaître derrière lui.
+signal summoned(enemy: Enemy)
 
 const GROUP := "enemies"
 const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
@@ -50,6 +53,9 @@ var _slow_time_left := 0.0
 ## Direction de la marche (angle), pour orienter l'image.
 var _heading := 0.0
 var _heal_cooldown := 0.0
+var _summon_cooldown := 0.0
+## Temps écoulé, pour l'aura qui pulse autour des élites et des boss.
+var _aura_time := 0.0
 var _heal_pulse_left := 0.0
 ## Brûlure ou poison en cours : dégâts par seconde, temps restant, couleur.
 var _dot_damage := 0.0
@@ -82,6 +88,7 @@ func _ready() -> void:
 	if data.max_shield > 0.0:
 		health.shield_changed.connect(func(_shield: float, _max: float) -> void: queue_redraw())
 	_heal_cooldown = data.heal_interval
+	_summon_cooldown = data.summon_interval
 	health_bar.width = data.radius * 2.0
 	health_bar.position = Vector2(0, -data.radius - 8.0)
 	_path_length = path.curve.get_baked_length()
@@ -106,6 +113,14 @@ func _process(delta: float) -> void:
 			queue_redraw()
 	if data.heal_amount > 0.0:
 		_update_healing(delta)
+	if data.summon_enemy and data.summon_count > 0:
+		_summon_cooldown -= delta
+		if _summon_cooldown <= 0.0:
+			_summon_cooldown += data.summon_interval
+			summoned.emit(self)
+	if data.is_elite or data.is_boss:
+		_aura_time += delta
+		queue_redraw()
 	progress += get_speed() * delta
 	if progress >= _path_length:
 		despawn()
@@ -238,6 +253,7 @@ func _update_healing(delta: float) -> void:
 	if patients.is_empty():
 		return
 	_heal_cooldown = data.heal_interval
+	_summon_cooldown = data.summon_interval
 	_heal_pulse_left = HEAL_PULSE_DURATION
 	for enemy in patients:
 		var amount := enemy.health.heal(data.heal_amount)
@@ -267,6 +283,8 @@ func _on_health_depleted() -> void:
 
 
 func _draw() -> void:
+	if data.is_elite or data.is_boss:
+		_draw_aura()
 	if _heal_pulse_left > 0.0:
 		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
 		draw_arc(Vector2.ZERO, lerpf(data.radius, data.heal_radius, t), 0.0, TAU, 48,
@@ -303,3 +321,14 @@ func _draw() -> void:
 		for i in data.split_count:
 			var offset := Vector2.from_angle(TAU * i / data.split_count - PI / 2.0) * data.radius * 0.45
 			draw_circle(offset, data.radius * 0.28, data.split_into.color.darkened(0.15))
+
+
+## Aura dorée qui pulse autour d'un élite, rouge et dorée autour d'un boss.
+func _draw_aura() -> void:
+	var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
+	var color := EnemyData.BOSS_COLOR if data.is_boss else EnemyData.ELITE_COLOR
+	var aura_radius := data.radius * (1.25 + 0.08 * pulse)
+	draw_circle(Vector2.ZERO, aura_radius, Color(color, 0.12 + 0.1 * pulse))
+	draw_arc(Vector2.ZERO, aura_radius, 0.0, TAU, 40, Color(color, 0.55 + 0.3 * pulse), 2.5 if data.is_boss else 2.0)
+	if data.is_boss:
+		draw_arc(Vector2.ZERO, aura_radius + 5.0, 0.0, TAU, 40, Color(EnemyData.ELITE_COLOR, 0.35 * pulse), 1.5)

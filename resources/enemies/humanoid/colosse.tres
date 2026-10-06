@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Colosse"
+description = "Géant en armure lourde, lent et très résistant."
 max_health = 450.0
 armor = 3.0
 speed = 36.0

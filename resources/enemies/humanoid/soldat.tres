@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Soldat"
+description = "Le fantassin de base de la Cité."
 max_health = 70.0
 speed = 70.0
 reward = 8

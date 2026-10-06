@@ -15,6 +15,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="e_shell"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="e_slime"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="e_tank"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/reine.tres" id="99_boss"]
 
 [sub_resource type="Curve2D" id="Curve2D_SpiralPath"]
 _data = {
@@ -94,9 +95,18 @@ count = 11
 interval = 1.2
 start_delay = 4.0
 
+[sub_resource type="Resource" id="Group_w4_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_tank")
+count = 1
+interval = 2.0
+start_delay = 8.0
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_4"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_elite")])
 bonus_gold = 30
 
 [sub_resource type="Resource" id="Group_w5_1"]
@@ -158,9 +168,18 @@ count = 42
 interval = 0.25
 start_delay = 10.0
 
+[sub_resource type="Resource" id="Group_w7_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_giant")
+count = 1
+interval = 2.0
+start_delay = 10.1
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_7"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_elite")])
 bonus_gold = 45
 
 [sub_resource type="Resource" id="Group_w8_1"]
@@ -203,9 +222,18 @@ count = 56
 interval = 0.2
 start_delay = 10.0
 
+[sub_resource type="Resource" id="Group_w9_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_shell")
+count = 2
+interval = 2.0
+start_delay = 10.5
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_9"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3"), SubResource("Group_w9_elite")])
 bonus_gold = 55
 
 [sub_resource type="Resource" id="Group_w10_1"]
@@ -236,9 +264,18 @@ count = 56
 interval = 0.2
 start_delay = 14.0
 
+[sub_resource type="Resource" id="Group_w10_boss"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("99_boss")
+count = 1
+interval = 1.0
+start_delay = 16.1
+path_index = 0
+health_multiplier = 1.5
+
 [sub_resource type="Resource" id="Wave_10"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w10_1"), SubResource("Group_w10_2"), SubResource("Group_w10_3"), SubResource("Group_w10_4")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w10_1"), SubResource("Group_w10_2"), SubResource("Group_w10_3"), SubResource("Group_w10_4"), SubResource("Group_w10_boss")])
 bonus_gold = 0
 
 [node name="Level06" instance=ExtResource("1_level")]

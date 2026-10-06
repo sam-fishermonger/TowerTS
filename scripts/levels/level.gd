@@ -123,6 +123,7 @@ func _ready() -> void:
 	if is_choosing_towers:
 		hud.show_tower_picker(types, tower_limit, get_default_tower_choice(), Difficulty.NAMES[difficulty])
 		hud.towers_chosen.connect(choose_towers)
+	hud.enemy_speed_multiplier = spawner.speed_multiplier
 	if is_demo:
 		hud.visible = false
 		hud.process_mode = Node.PROCESS_MODE_DISABLED
@@ -390,6 +391,9 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
 	enemy.healed.connect(_on_enemy_healed)
+	enemy.summoned.connect(_on_enemy_summoned)
+	if enemy.data.is_boss:
+		hud.track_boss(enemy)
 
 
 func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
@@ -427,6 +431,14 @@ func _split(enemy: Enemy) -> void:
 	for i in data.split_count:
 		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0),
 			enemy.health_multiplier)
+
+
+## Renforts appelés par un ennemi (un boss) : ils apparaissent en file derrière lui.
+func _on_enemy_summoned(enemy: Enemy) -> void:
+	var data := enemy.data
+	for i in data.summon_count:
+		spawner.spawn(data.summon_enemy, enemy.path,
+			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.health_multiplier)
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
@@ -538,5 +550,7 @@ func _process(_delta: float) -> void:
 func _refresh_wave_ui() -> void:
 	hud.set_next_wave_available(can_start_next_wave())
 	if not is_over:
-		var next_wave: WaveData = spawner.get_wave(spawner.current_wave + 1) if spawner.has_next_wave() else null
-		hud.show_next_wave(next_wave, get_early_call_bonus())
+		var next_index := spawner.current_wave + 1
+		var next_wave: WaveData = spawner.get_wave(next_index) if spawner.has_next_wave() else null
+		hud.show_next_wave(next_wave, get_early_call_bonus(), next_index + 1,
+			get_wave_bonus(next_index) if next_wave else 0)

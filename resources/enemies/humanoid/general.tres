@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/soldat.tres" id="2_summon"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/humanoid/general.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Le Général"
+description = "Le chef de la Cité, en exosquelette : il soigne ses troupes autour de lui et appelle des Soldats en renfort."
+max_health = 4200.0
+armor = 4.0
+speed = 28.0
+reward = 170
+damage = 10
+color = Color(0.75, 0.2, 0.2, 1)
+radius = 30.0
+texture = ExtResource("9_texture")
+heal_amount = 30.0
+heal_radius = 150.0
+heal_interval = 3.0
+summon_enemy = ExtResource("2_summon")
+summon_count = 3
+summon_interval = 6.0
+is_boss = true

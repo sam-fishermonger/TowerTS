@@ -38,6 +38,9 @@ const COUVEUSE := preload("res://resources/enemies/insectoid/couveuse.tres")
 const SENTINELLE := preload("res://resources/enemies/mecha/sentinelle.tres")
 const SOLDAT := preload("res://resources/enemies/humanoid/soldat.tres")
 const MEDECIN := preload("res://resources/enemies/humanoid/medecin.tres")
+const REINE := preload("res://resources/enemies/insectoid/reine.tres")
+const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
+const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -104,6 +107,10 @@ func _run() -> void:
 	await _test_difficulties()
 	await _test_specializations()
 	await _test_konami_code()
+	await _test_elites()
+	await _test_bosses()
+	await _test_detail_windows()
+	await _test_lexicon()
 	await _test_biome_tiles()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
@@ -210,6 +217,7 @@ func _test_title_screen() -> void:
 	_check(title.get_node("%PlayButton") is Button, "le bouton Jouer existe")
 	_check(title.get_node("%PlayButton").has_focus(), "le bouton Jouer a le focus")
 	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
+	_check(title.get_node("%LexiconButton").text == "Lexique", "le bouton Lexique existe")
 	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	await _free(title)
@@ -1666,7 +1674,7 @@ func _test_worlds() -> void:
 			for wave in level.get_node("WaveSpawner").waves:
 				for group in wave.groups:
 					seen[group.enemy] = true
-					if not world.enemies.has(group.enemy):
+					if not world.enemies.has(group.enemy) and not world.bosses.has(group.enemy):
 						foreign.append(group.enemy.display_name)
 			level.free()
 		_check(foreign.is_empty(), "%s : seulement les monstres du biome %s" % [world.display_name, foreign])
@@ -1797,11 +1805,13 @@ func _test_difficulties() -> void:
 	_check(Difficulty.get_current() == Difficulty.MOYEN, "Moyen par défaut")
 	_check(Difficulty.describe(Difficulty.DIFFICILE) == "Monstres 35 % plus résistants, 25 % plus nombreux et 10 % plus rapides.",
 		"chaque difficulté décrit ses effets")
+	# Les boss ne comptent pas : il n'y en a toujours qu'un (vérifié plus bas).
 	var counts := func(level: Level) -> Array:
 		var result := []
 		for wave in level.spawner.waves:
 			for group in wave.groups:
-				result.append(group.count)
+				if not group.enemy.is_boss:
+					result.append(group.count)
 		return result
 	var level := await _spawn_level(LEVEL_03)
 	var normal: Array = counts.call(level)
@@ -1814,6 +1824,9 @@ func _test_difficulties() -> void:
 	var hard: Array = counts.call(level)
 	var expected := normal.map(func(c: int) -> int: return ceili(c * 1.25))
 	_check(hard == expected, "Difficile : 25 %% de monstres en plus dans chaque groupe (%s)" % [hard])
+	var boss_group: SpawnGroup = level.spawner.waves[-1].groups.filter(
+		func(g: SpawnGroup) -> bool: return g.enemy.is_boss)[0]
+	_check(boss_group.count == 1, "mais toujours un seul boss")
 	_check(is_equal_approx(level.spawner.waves[0].health_multiplier, 1.35), "et 35 % de vie en plus")
 	_check(level.hud.level_label.text.ends_with("Difficile"), "le nom du niveau affiche la difficulté")
 	var enemy := level.spawner.spawn(SCARABEE, level.map.get_enemy_path(0), 0.0, level.spawner.waves[0].health_multiplier)
@@ -1987,6 +2000,146 @@ func _test_konami_code() -> void:
 	_check(not title._konami_label.visible, "les pastilles disparaissent une fois le code entré")
 	await _free(title)
 	Progress.reset_campaign()
+
+
+func _test_elites() -> void:
+	print("Élites")
+	var elite := SCARABEE.make_elite()
+	_check(elite.is_elite and elite.display_name == "Scarabée élite" and not SCARABEE.is_elite,
+		"la version élite est une copie nommée « élite »")
+	_check(is_equal_approx(elite.max_health, SCARABEE.max_health * 3.0) and elite.reward == SCARABEE.reward * 4
+		and elite.damage == SCARABEE.damage + 2 and elite.radius > SCARABEE.radius, "vie x3, or x4, 2 vies de plus, plus gros")
+	var sentinel := SENTINELLE.make_elite()
+	_check(is_equal_approx(sentinel.max_shield, SENTINELLE.max_shield * 3.0), "le bouclier est aussi multiplié")
+	_check(REINE.make_elite() == REINE, "un boss n'a pas de version élite")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	var missing := []
+	for path in campaign.levels:
+		var level: Level = load(path).instantiate()
+		var elites := 0
+		for wave in level.get_node("WaveSpawner").waves:
+			for group in wave.groups:
+				if group.elite:
+					elites += group.count
+		if elites == 0:
+			missing.append(path.get_file())
+		level.free()
+	_check(missing.is_empty(), "chaque niveau a au moins un élite %s" % [missing])
+	# Un élite apparaît avec la vie de la difficulté en plus de la sienne, et rapporte plus.
+	Difficulty.set_current(Difficulty.DIFFICILE)
+	var level := await _spawn_level(LEVEL_03)
+	var group := SpawnGroup.new()
+	group.enemy = SCARABEE
+	group.elite = true
+	var enemy := level.spawner.spawn(group.get_enemy(), level.map.get_enemy_path(0), 100.0,
+		level.spawner.waves[0].health_multiplier)
+	_check(enemy.data.is_elite and is_equal_approx(enemy.health.max_health, SCARABEE.max_health * 3.0 * 1.35),
+		"vie d'un élite en Difficile : x3 puis +35 %% (%d)" % enemy.health.max_health)
+	var gold := level.gold
+	enemy.take_damage(100000.0, true)
+	_check(level.gold == gold + level.get_enemy_reward(elite), "il rapporte l'or d'un élite")
+	_check(level.hud.wave_preview_label.get_parsed_text().contains("ÉLITE") == level.spawner.waves[0].groups.any(
+		func(g: SpawnGroup) -> bool: return g.elite), "l'aperçu de vague signale les élites")
+	await _free(level)
+	Difficulty.set_current(Difficulty.MOYEN)
+
+
+func _test_bosses() -> void:
+	print("Boss")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	for world in campaign.worlds:
+		var boss_levels := []
+		for i in world.levels.size():
+			var level: Level = load(world.levels[i]).instantiate()
+			var waves: Array[WaveData] = level.get_node("WaveSpawner").waves
+			for wave in waves:
+				if wave.groups.any(func(g: SpawnGroup) -> bool: return g.enemy.is_boss):
+					boss_levels.append(i + 1)
+					_check(wave == waves[-1] and wave.groups.filter(func(g: SpawnGroup) -> bool: return g.enemy.is_boss)
+						.all(func(g: SpawnGroup) -> bool: return g.count == 1 and world.bosses.has(g.enemy)),
+						"%s : le boss arrive seul, à la dernière vague" % level.level_name)
+			level.free()
+		_check(boss_levels == [3, 6], "%s : un boss tous les 3 niveaux (%s)" % [world.display_name, boss_levels])
+	var level := await _spawn_level(LEVEL_03)
+	var boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 300.0)
+	await process_frame
+	_check(level.hud.boss_bar.visible and level.hud.boss_bar.get_boss() == boss, "la vie du boss s'affiche en haut")
+	var before := get_nodes_in_group(Enemy.GROUP).size()
+	var elapsed := 0.0
+	while elapsed < REINE.summon_interval + 0.5:
+		elapsed += await _step()
+	var larvae := get_nodes_in_group(Enemy.GROUP).filter(func(e: Enemy) -> bool: return e.data == LARVE)
+	_check(get_nodes_in_group(Enemy.GROUP).size() >= before + REINE.summon_count and larvae.size() >= REINE.summon_count
+		and larvae.all(func(e: Enemy) -> bool: return e.progress < boss.progress),
+		"la Reine pond %d Larves derrière elle" % REINE.summon_count)
+	boss.take_damage(1000000.0, true)
+	await process_frame
+	_check(not level.hud.boss_bar.visible, "la barre disparaît avec le boss")
+	await _free(level)
+	_check(GENERAL.heal_amount > 0.0 and GENERAL.summon_enemy == SOLDAT, "le Général soigne et appelle des Soldats")
+
+
+func _test_detail_windows() -> void:
+	print("Fenêtres de détail")
+	var level := await _spawn_level(LEVEL_03)
+	var hud := level.hud
+	await process_frame
+	hud.show_wave_details()
+	_check(hud.wave_details.visible and hud.wave_details.get_text().contains("Vague 1")
+		and hud.wave_details.get_text().contains("Larve") and hud.wave_details.get_text().contains("Vie 60"),
+		"fenêtre de la prochaine vague : monstres et statistiques")
+	_check(hud.wave_preview.mouse_filter == Control.MOUSE_FILTER_STOP, "elle s'ouvre au survol de l'aperçu")
+	var enemy := _add_still_enemy(level, GENERAL, 0, 400.0)
+	enemy.take_damage(100.0, true)
+	hud.show_enemy_details(enemy)
+	var text := hud.enemy_details.get_text()
+	_check(hud.enemy_details.visible and text.contains("Le Général") and text.contains("BOSS")
+		and text.contains("Vie :  %d / %d" % [GENERAL.max_health - 100, GENERAL.max_health]) and text.contains("Soigne"),
+		"fenêtre du monstre sous la souris : nom, rang, vie restante, capacités")
+	var play_area := hud.get_play_area()
+	_check(play_area.grow(1.0).encloses(hud.enemy_details.get_global_rect()), "elle reste sur la carte")
+	enemy.despawn()
+	hud.show_enemy_details(enemy)
+	_check(not hud.enemy_details.visible, "elle se ferme quand le monstre disparaît")
+	await _free(level)
+	var screen := await _spawn_world_select()
+	var details: String = screen.get_level_details(LEVEL_03.resource_path)
+	_check(details.contains("V7") and details.contains("BOSS") and details.contains("ÉLITE")
+		and details.contains("Reine de la Ruche"), "sélection des mondes : vagues du niveau, élites et boss")
+	screen.show_level_details(LEVEL_01.resource_path)
+	_check(screen.level_details.visible and screen.level_details.get_text().contains("V5"),
+		"la fenêtre s'ouvre à côté du bouton du niveau")
+	screen.set_difficulty(Difficulty.CAUCHEMAR)
+	_check(screen.get_level_details(LEVEL_03.resource_path) != details
+		and screen.get_level_details(LEVEL_03.resource_path).contains("Cauchemar"), "elle suit la difficulté choisie")
+	screen.set_difficulty(Difficulty.MOYEN)
+	await _free(screen)
+
+
+func _test_lexicon() -> void:
+	print("Lexique")
+	var screen := LEXICON_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	var towers: Array = screen.get_entry_buttons()
+	var tower_files := Array(ResourceLoader.list_directory("res://resources/towers/")).filter(
+		func(f: String) -> bool: return f.ends_with(".tres"))
+	_check(towers.size() == tower_files.size() and screen.detail_text.get_parsed_text().contains("Prix"),
+		"onglet Tours : les %d tours, la première affichée" % tower_files.size())
+	towers[-1].pressed.emit()
+	_check(screen.detail_text.get_parsed_text().contains("arbre des améliorations"),
+		"une tour des mondes dit où la débloquer")
+	screen.show_tab(1)
+	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
+	_check(names.size() == 20 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth")),
+		"onglet Monstres : les élites, les 16 monstres et les 3 boss")
+	var general: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.contains("Général"))[0]
+	general.pressed.emit()
+	_check(screen.detail_text.get_parsed_text().contains("Soldats en renfort"), "la fiche d'un boss donne ses capacités")
+	screen.show_tab(2)
+	_check(screen.get_entry_buttons().size() == 3 and screen.detail_text.get_parsed_text().contains("Reine de la Ruche"),
+		"onglet Mondes : un par monde, avec ses monstres et son boss")
+	await _free(screen)
 
 
 func _test_biome_tiles() -> void:

@@ -7,6 +7,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Porte-drones"
+description = "Transport blindé qui libère 3 Drones quand il est détruit."
 max_health = 220.0
 armor = 3.0
 speed = 45.0

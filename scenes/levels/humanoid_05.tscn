@@ -74,9 +74,18 @@ interval = 0.7
 start_delay = 4.0
 path_index = 2
 
+[sub_resource type="Resource" id="Group_w2_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_garde")
+count = 1
+interval = 2.0
+start_delay = 9.0
+path_index = 1
+elite = true
+
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2"), SubResource("Group_w2_elite")])
 bonus_gold = 20
 
 [sub_resource type="Resource" id="Group_w3_1"]
@@ -165,9 +174,18 @@ count = 4
 interval = 2.0
 start_delay = 8.0
 
+[sub_resource type="Resource" id="Group_w5_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_medecin")
+count = 1
+interval = 2.0
+start_delay = 12.0
+path_index = 0
+elite = true
+
 [sub_resource type="Resource" id="Wave_5"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_w5_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_w5_3"), SubResource("Group_w5_elite")])
 bonus_gold = 35
 
 [sub_resource type="Resource" id="Group_w6_1"]
@@ -280,9 +298,18 @@ interval = 2.0
 start_delay = 16.0
 path_index = 2
 
+[sub_resource type="Resource" id="Group_w8_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_colosse")
+count = 1
+interval = 2.0
+start_delay = 18.1
+path_index = 1
+elite = true
+
 [sub_resource type="Resource" id="Wave_8"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3"), SubResource("Group_w8_4"), SubResource("Group_w8_5")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3"), SubResource("Group_w8_4"), SubResource("Group_w8_5"), SubResource("Group_w8_elite")])
 bonus_gold = 0
 
 [node name="Humanoid05" instance=ExtResource("1_level")]

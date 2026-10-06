@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Larve"
+description = "La larve de base de la Ruche : ni rapide ni résistante, mais elle arrive en nombre."
 max_health = 60.0
 speed = 70.0
 reward = 8

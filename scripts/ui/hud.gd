@@ -2,6 +2,8 @@ class_name Hud
 extends CanvasLayer
 ## Interface du niveau : or, vies et vague en haut ; barre d'achat des tours, pause,
 ## vitesse et réglages du son en bas ; fiches des tours et écran de fin.
+## Au survol, des fenêtres de détail : celle de la prochaine vague (sur son aperçu) et
+## celle du monstre sous la souris. La vie des boss en jeu s'affiche en haut de la carte.
 
 ## Émis quand le joueur choisit une tour à placer (null = aucune).
 signal tower_selected(data: TowerData)
@@ -34,6 +36,20 @@ var _damage_tween: Tween
 var _wave_preview_text := ""
 ## Choix des tours au lancement du niveau (null s'il n'y en a pas, ou une fois validé).
 var tower_picker: TowerPicker
+## Prochaine vague annoncée (null = plus de vague), son numéro et son bonus.
+var _next_wave: WaveData
+var _next_wave_number := 0
+var _next_wave_bonus := 0
+## Multiplicateur de la vitesse des monstres (difficulté), pour les fenêtres de détail.
+var enemy_speed_multiplier := 1.0
+## Fenêtre de détail de la prochaine vague, au survol de son aperçu.
+var wave_details: DetailPopup
+## Fenêtre de détail du monstre sous la souris.
+var enemy_details: DetailPopup
+## Monstre décrit par enemy_details, ou null.
+var hovered_enemy: Enemy
+## Vie des boss en jeu, en haut de la carte.
+var boss_bar: BossBar
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -77,6 +93,18 @@ func _ready() -> void:
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
+	boss_bar = BossBar.new()
+	add_child(boss_bar)
+	move_child(boss_bar, wave_preview.get_index())
+	wave_details = DetailPopup.new(400.0)
+	add_child(wave_details)
+	enemy_details = DetailPopup.new(270.0)
+	add_child(enemy_details)
+	# L'aperçu de vague prend la souris pour ouvrir sa fenêtre de détail.
+	wave_preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	wave_preview.mouse_default_cursor_shape = Control.CURSOR_HELP
+	wave_preview.mouse_entered.connect(show_wave_details)
+	wave_preview.mouse_exited.connect(wave_details.close)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -179,16 +207,28 @@ func set_next_wave_available(available: bool) -> void:
 
 
 ## Affiche la composition de la prochaine vague (null = plus de vague) et, si elle
-## est positive, la prime pour la lancer avant d'avoir vidé la carte.
-func show_next_wave(wave: WaveData, early_bonus := 0) -> void:
+## est positive, la prime pour la lancer avant d'avoir vidé la carte. `wave_number`
+## (à partir de 1) et `wave_bonus` (or versé quand elle est repoussée) servent à sa
+## fenêtre de détail.
+func show_next_wave(wave: WaveData, early_bonus := 0, wave_number := 0, wave_bonus := 0) -> void:
+	var wave_changed := wave != _next_wave
+	_next_wave = wave
+	_next_wave_number = wave_number
+	_next_wave_bonus = wave_bonus
+	if wave_changed and wave_details.visible:
+		if wave:
+			show_wave_details()
+		else:
+			wave_details.close()
 	var text := ""
 	if wave:
-		var counts := {}
-		for group in wave.groups:
-			counts[group.enemy] = counts.get(group.enemy, 0) + group.count
 		var parts: Array[String] = []
-		for enemy: EnemyData in counts:
-			parts.append("[color=#%s]●[/color] %d %s" % [enemy.color.to_html(false), counts[enemy], enemy.display_name])
+		for entry in wave.get_summary():
+			var enemy: EnemyData = entry.enemy
+			var part := "[color=#%s]●[/color] %d %s" % [enemy.color.to_html(false), entry.count,
+				EnemyData.plural(enemy.display_name, entry.count)]
+			var tag := EnemyInfo.rank_tag(enemy, entry.elite)
+			parts.append(part + (" " + tag if not tag.is_empty() else ""))
 		text = "[color=#ffffff99]Prochaine vague :[/color]  " + "   ".join(parts)
 		if early_bonus > 0:
 			text += "\n[color=#ffd54d]Lancer maintenant : +%d or[/color]" % early_bonus
@@ -259,6 +299,9 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 	# Plus de tour à poser : la barre d'achat ne réagit plus (ni clic ni fiche au survol).
 	tower_shop.lock()
 	shop_info.close()
+	wave_details.close()
+	enemy_details.close()
+	hovered_enemy = null
 	tower_details.close()
 	wave_preview.visible = false
 	if can_continue:
@@ -293,3 +336,84 @@ func _on_shop_button_hovered(button: TowerShopButton) -> void:
 	# L'aperçu s'ouvre au-dessus de la barre d'achat, sur la carte.
 	shop_info.bounds = get_play_area()
 	shop_info.show_tower_type(button.data, _gold, button.get_global_rect())
+
+
+# --- Fenêtres de détail -------------------------------------------------------
+
+## Fenêtre de détail de la prochaine vague, sous son aperçu : chaque sorte de monstre
+## avec sa vie (difficulté comprise), sa vitesse, son or et ses capacités.
+func show_wave_details() -> void:
+	if not _next_wave or end_panel.visible:
+		wave_details.close()
+		return
+	var lines: Array[String] = []
+	lines.append("[b]Vague %d[/b]   [color=%s]Bonus : +%d or[/color]" % [_next_wave_number, EnemyInfo.GOLD_HEX,
+		_next_wave_bonus])
+	for entry in _next_wave.get_summary():
+		var data: EnemyData = entry.enemy.make_elite() if entry.elite else entry.enemy
+		lines.append("")
+		lines.append("%s  %s  [color=%s]x %d[/color]" % [EnemyInfo.icon(data, 32), EnemyInfo.title(data),
+			EnemyInfo.MUTED, entry.count])
+		lines.append(EnemyInfo.summary_line(data, entry.health, enemy_speed_multiplier))
+		for ability in data.get_abilities():
+			lines.append("[color=#c8e6c8]• %s[/color]" % ability)
+	wave_details.bounds = get_play_area()
+	wave_details.show_text("\n".join(lines), wave_preview.get_global_rect(), Color(0.95, 0.85, 0.45),
+		DetailPopup.Side.BELOW)
+
+
+func _process(_delta: float) -> void:
+	_update_hovered_enemy()
+
+
+## Monstre sous la souris : sa fenêtre de détail le suit, avec sa vie restante.
+func _update_hovered_enemy() -> void:
+	show_enemy_details(_find_enemy_under_mouse() if visible and not end_panel.visible else null)
+
+
+## Fenêtre de détail d'un monstre en jeu, à côté de lui (null = la fermer).
+func show_enemy_details(enemy: Enemy) -> void:
+	hovered_enemy = enemy
+	if not is_instance_valid(enemy) or not enemy.is_alive:
+		hovered_enemy = null
+		enemy_details.close()
+		return
+	var center := enemy.get_global_transform_with_canvas().origin
+	var radius := enemy.data.radius * 1.3
+	var text := "%s  %s\n%s" % [EnemyInfo.icon(enemy.data, 32), EnemyInfo.title(enemy.data),
+		EnemyInfo.stats(enemy.data, enemy.health_multiplier, enemy.speed_multiplier, enemy.health.health,
+		enemy.health.shield)]
+	enemy_details.bounds = get_play_area()
+	var border := EnemyData.BOSS_COLOR if enemy.data.is_boss \
+		else EnemyData.ELITE_COLOR if enemy.data.is_elite else enemy.data.color
+	enemy_details.show_text(text, Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0), border)
+
+
+## Monstre en jeu le plus proche de la souris, si elle est dessus (sur la carte).
+func _find_enemy_under_mouse() -> Enemy:
+	var mouse := get_viewport().get_mouse_position()
+	if not get_play_area().has_point(mouse) or wave_preview.get_global_rect().has_point(mouse):
+		return null
+	var best: Enemy = null
+	var best_distance := INF
+	for node in get_tree().get_nodes_in_group(Enemy.GROUP):
+		var enemy := node as Enemy
+		if not enemy or not enemy.is_alive or not enemy.is_node_ready():
+			continue
+		var distance := enemy.get_global_transform_with_canvas().origin.distance_to(mouse)
+		if distance <= enemy.data.radius * 1.3 + 4.0 and distance < best_distance:
+			best = enemy
+			best_distance = distance
+	return best
+
+
+## Suit un boss qui vient d'apparaître : sa vie s'affiche en haut de la carte.
+func track_boss(enemy: Enemy) -> void:
+	boss_bar.track(enemy)
+	_place_boss_bar.call_deferred()
+
+
+func _place_boss_bar() -> void:
+	boss_bar.reset_size()
+	var screen := get_viewport().get_visible_rect().size
+	boss_bar.position = Vector2((screen.x - boss_bar.size.x) / 2.0, top_bar.get_global_rect().end.y + 8.0)

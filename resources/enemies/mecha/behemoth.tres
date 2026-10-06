@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/enemies/mecha/drone.tres" id="2_summon"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/mecha/behemoth.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Béhémoth"
+description = "Forteresse mécanique de la Fonderie : un blindage épais, un énorme bouclier d'énergie, et des Drones qui décollent de ses flancs."
+max_health = 3500.0
+armor = 6.0
+speed = 22.0
+reward = 170
+damage = 10
+color = Color(0.6, 0.5, 0.4, 1)
+radius = 30.0
+texture = ExtResource("9_texture")
+max_shield = 900.0
+shield_regen = 70.0
+summon_enemy = ExtResource("2_summon")
+summon_count = 2
+summon_interval = 6.0
+is_boss = true

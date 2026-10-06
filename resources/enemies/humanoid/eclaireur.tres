@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Éclaireur"
+description = "Coureur léger et très rapide."
 max_health = 40.0
 speed = 135.0
 reward = 6

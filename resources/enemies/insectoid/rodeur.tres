@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_data")
 display_name = "Rôdeur"
+description = "Petit xénomorphe très rapide et fragile, qui passe entre les tirs lents."
 max_health = 35.0
 speed = 130.0
 reward = 6
