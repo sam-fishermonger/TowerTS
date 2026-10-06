@@ -14,6 +14,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/mecha/drone.tres" id="e_drone"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/porte_drones.tres" id="e_porte_drones"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/sentinelle.tres" id="e_sentinelle"]
+[ext_resource type="Resource" path="res://resources/enemies/mecha/chasseur.tres" id="e_chasseur"]
 
 [sub_resource type="Curve2D" id="Curve2D_Path0"]
 _data = {
@@ -76,9 +77,17 @@ count = 16
 interval = 1.0
 start_delay = 0.0
 
+[sub_resource type="Resource" id="Group_new_3_0"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chasseur")
+count = 6
+interval = 1.2
+start_delay = 3.0
+path_index = 1
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_new_3_0")])
 bonus_gold = 25
 
 [sub_resource type="Resource" id="Group_w4_1"]
@@ -140,9 +149,16 @@ count = 34
 interval = 0.35
 start_delay = 8.0
 
+[sub_resource type="Resource" id="Group_new_5_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chasseur")
+count = 10
+interval = 1.0
+start_delay = 4.0
+
 [sub_resource type="Resource" id="Wave_5"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_w5_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_w5_3"), SubResource("Group_new_5_1")])
 bonus_gold = 35
 
 [sub_resource type="Resource" id="Group_w6_1"]
@@ -204,9 +220,17 @@ count = 52
 interval = 0.35
 start_delay = 8.0
 
+[sub_resource type="Resource" id="Group_new_7_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chasseur")
+count = 12
+interval = 0.9
+start_delay = 4.0
+path_index = 1
+
 [sub_resource type="Resource" id="Wave_7"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_new_7_2")])
 bonus_gold = 0
 
 [node name="Mecha02" instance=ExtResource("1_level")]

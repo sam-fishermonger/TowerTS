@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/mecha/spectre.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Spectre"
+description = "Robot d'infiltration à camouflage optique et bouclier : les tours ne le voient que s'il passe près d'une tour qui détecte."
+max_health = 110.0
+speed = 80.0
+reward = 15
+damage = 2
+color = Color(0.42, 0.4, 0.55, 1)
+radius = 13.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.1
+stealthy = true
+max_shield = 70.0
+shield_regen = 25.0

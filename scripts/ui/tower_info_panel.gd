@@ -213,6 +213,12 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 		var dot_name := "Poison" if stats.cloud_radius > 0.0 or stats.dot_is_poison else "Brûlure"
 		_add_stat(dot_name, "%s/s, %s s" % [_format(stats.dot_damage), _format(stats.dot_duration)],
 			"%s/s, %s s" % [_format(next.dot_damage), _format(next.dot_duration)] if next else "")
+	if not stats.hits_air:
+		_add_stat("Volants", "hors d'atteinte", "")
+	elif stats.air_damage_multiplier != 1.0:
+		_add_stat("Volants", "x%s dégâts" % _format(stats.air_damage_multiplier), "")
+	if stats.detects_stealth():
+		_add_stat("Détection", _format(stats.detection_range), _format(next.detection_range) if next else "")
 	if stats.armor_piercing:
 		_add_stat("Armure", "ignorée", "")
 	if stats.shield_damage_multiplier != 1.0:

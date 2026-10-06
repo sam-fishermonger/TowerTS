@@ -135,6 +135,12 @@ func show_tower(data: TowerData) -> void:
 			"%s/s pendant %s s, sous l'armure" % [_num(data.dot_damage), _num(data.dot_duration)]))
 	if data.cloud_radius > 0.0:
 		lines.append(_line("Nuage", "rayon %s, %s s" % [_num(data.cloud_radius), _num(data.cloud_duration)]))
+	if not data.hits_air:
+		lines.append(_line("Volants", "hors d'atteinte (tir au sol)"))
+	elif data.air_damage_multiplier != 1.0:
+		lines.append(_line("Volants", "x%s dégâts" % _num(data.air_damage_multiplier)))
+	if data.detects_stealth():
+		lines.append(_line("Détection", "révèle les furtifs dans un rayon de %s" % _num(data.detection_range)))
 	if data.armor_piercing:
 		lines.append(_line("Armure", "ignorée"))
 	if data.shield_damage_multiplier != 1.0:

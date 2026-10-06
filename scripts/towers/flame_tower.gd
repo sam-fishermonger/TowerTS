@@ -20,7 +20,7 @@ func _process(delta: float) -> void:
 func get_enemies_in_cone(angle: float) -> Array[Enemy]:
 	var result: Array[Enemy] = []
 	var half_angle := deg_to_rad(stats.cone_angle) / 2.0
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range, stats):
 		var to_enemy := enemy.global_position - global_position
 		# Un ennemi sur la tour elle-même est toujours touché.
 		if to_enemy.length() < 1.0 or absf(angle_difference(angle, to_enemy.angle())) <= half_angle:

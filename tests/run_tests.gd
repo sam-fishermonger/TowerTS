@@ -40,6 +40,8 @@ const SOLDAT := preload("res://resources/enemies/humanoid/soldat.tres")
 const MEDECIN := preload("res://resources/enemies/humanoid/medecin.tres")
 const REINE := preload("res://resources/enemies/insectoid/reine.tres")
 const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
+const FRELON := preload("res://resources/enemies/insectoid/frelon.tres")
+const MANTE := preload("res://resources/enemies/insectoid/mante.tres")
 const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
 const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
 const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
@@ -107,6 +109,8 @@ func _run() -> void:
 	await _test_arc_tower()
 	await _test_coil_tower()
 	await _test_magnet_tower()
+	await _test_flying_enemies()
+	await _test_stealthy_enemies()
 	await _test_crossings_in_tree()
 	await _test_tower_choice()
 	await _test_worlds()
@@ -1874,6 +1878,102 @@ func _test_magnet_tower() -> void:
 	await _free(level)
 
 
+func _test_flying_enemies() -> void:
+	print("Monstres volants : trajet qui coupe les virages, tours qui tirent au sol ou en l'air")
+	var level := await _spawn_level(LEVEL_01)
+	var path := level.map.get_enemy_path(0)
+	var flight := Enemy.get_flight_curve(path)
+	var last := path.curve.point_count - 1
+	_check(flight.get_baked_length() < path.curve.get_baked_length() * 0.85
+			and flight.get_point_position(0) == path.curve.get_point_position(0)
+			and flight.get_point_position(flight.point_count - 1) == path.curve.get_point_position(last),
+		"le volant part de l'entrée, arrive à la base et coupe les virages (%d px contre %d)"
+			% [flight.get_baked_length(), path.curve.get_baked_length()])
+	_check(Enemy.get_flight_curve(path) == flight, "le trajet de vol est calculé une fois par chemin")
+	var walker := _add_still_enemy(level, FRELON, 0, 0.0)
+	walker.set_process(true)
+	var elapsed := 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(walker.progress > 0.0 and walker.z_index > 0, "il avance, au-dessus des tours et des autres monstres")
+	walker.despawn()
+
+	var mortar := _place_test_tower(level, MORTAR)
+	mortar.set_process(false)
+	var at := mortar.global_position + Vector2(70, 0)
+	var flier := _add_enemy_at(level, FRELON, at)
+	_check(mortar.find_target() == null, "le Mortier ne vise pas un volant")
+	var larve := _add_enemy_at(level, LARVE, at)
+	_check(mortar.find_target() == larve, "mais vise un monstre au sol")
+	var shell := Projectile.new()
+	shell.stats = mortar.stats
+	shell.global_position = at
+	level.add_child(shell)
+	shell._hit_all_in_radius(mortar.stats.splash_radius)
+	_check(flier.health.health == FRELON.max_health and larve.health.health < LARVE.max_health,
+		"son explosion épargne le volant au-dessus de la cible")
+	shell.free()
+	larve.despawn()
+
+	var gatling := _place_near(level, GATLING, level.map.world_to_cell(mortar.global_position))
+	gatling.set_process(false)
+	var near := _add_enemy_at(level, FRELON, gatling.global_position + Vector2(40, 0))
+	_check(gatling.find_target() != null, "la Mitrailleuse vise les volants")
+	var dealt := near.hit(10.0, gatling.stats)
+	_check(is_equal_approx(dealt, 15.0), "et leur fait 50 %% de dégâts en plus (%s)" % dealt)
+	_check(not FRELON.get_abilities().is_empty() and FRELON.get_abilities()[0].begins_with("Volant"),
+		"sa capacité « Volant » est décrite")
+	await _free(level)
+
+	var flying_level := await _spawn_level(LEVEL_02)
+	var preview: PathPreview = flying_level.get_node("PathPreview")
+	_check(not preview._flight_paths.is_empty(), "l'aperçu du trajet montre aussi le vol des volants du niveau")
+	await _free(flying_level)
+
+
+## Pose une tour sur la case libre la plus proche de `around` (au plus 2 cases autour).
+func _place_near(level: Level, data: TowerData, around: Vector2i) -> Tower:
+	level.gold = 100000
+	for radius in range(1, 3):
+		for dy in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				var tower := level.place_tower(around + Vector2i(dx, dy), data)
+				if tower:
+					return tower
+	return null
+
+
+func _test_stealthy_enemies() -> void:
+	print("Monstres furtifs : invisibles sauf près d'une tour qui détecte")
+	var level := await _spawn_level(LEVEL_01)
+	var cannon := _place_test_tower(level, CANNON)
+	cannon.set_process(false)
+	var mante := _add_enemy_at(level, MANTE, cannon.global_position + Vector2(60, 0))
+	mante._update_detection()
+	_check(not mante.is_revealed() and mante.modulate.a < 1.0, "un furtif est caché, à demi transparent")
+	_check(cannon.find_target() == null, "le Canon ne le voit pas")
+	_check(not cannon.stats.detects_stealth() and SNIPER.detects_stealth() and MARKSMAN.detects_stealth()
+			and COIL.detects_stealth(), "Sniper, Franc-tireur et Bobine détectent les furtifs, pas le Canon")
+	var frost := _place_near(level, FROST, level.map.world_to_cell(cannon.global_position))
+	frost.set_process(false)
+	var hidden := _add_enemy_at(level, MANTE, frost.global_position + Vector2(40, 0))
+	hidden._update_detection()
+	_check(not hidden.is_revealed() and frost.find_target() != null,
+		"l'onde du Givre, qui ne vise pas, part quand même sur un furtif caché")
+	hidden.despawn()
+	var sniper := _place_near(level, SNIPER, level.map.world_to_cell(cannon.global_position))
+	sniper.set_process(false)
+	_check(sniper.is_in_group(Enemy.DETECTOR_GROUP), "le Sniper posé détecte autour de lui")
+	mante._update_detection()
+	_check(mante.is_revealed() and mante.modulate.a == 1.0, "le furtif à portée de détection est révélé")
+	_check(cannon.find_target() == mante, "et le Canon peut alors le viser")
+	sniper.despawn()
+	await process_frame
+	mante._update_detection()
+	_check(not mante.is_revealed(), "il redevient invisible quand le Sniper n'est plus là")
+	await _free(level)
+
+
 func _test_crossings_in_tree() -> void:
 	print("Arbre des améliorations : croisements de tours")
 	var tree := Perks.TREE
@@ -2536,8 +2636,9 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 20 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth")),
-		"onglet Monstres : les élites, les 16 monstres et les 3 boss")
+	_check(names.size() == 26 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+			and names.has("Frelon") and names.has("Infiltré"),
+		"onglet Monstres : les élites, les 22 monstres (dont les volants et les furtifs) et les 3 boss")
 	var general: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.contains("Général"))[0]
 	general.pressed.emit()
 	_check(screen.detail_text.get_parsed_text().contains("Soldats en renfort"), "la fiche d'un boss donne ses capacités")

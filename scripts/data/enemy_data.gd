@@ -33,6 +33,14 @@ const BOSS_COLOR := Color(1.0, 0.35, 0.3)
 ## Taille de l'image par rapport au rayon (pour les images avec beaucoup de marge).
 @export var sprite_scale := 1.0
 
+@export_group("Déplacement")
+## Volant : survole le chemin en coupant les virages (Enemy.get_flight_curve()), hors
+## d'atteinte des tours qui tirent au sol (TowerData.hits_air).
+@export var flying := false
+## Furtif : invisible, et donc pas visé par les tours, sauf à portée de détection d'une
+## tour qui en a une (TowerData.detection_range). Les dégâts de zone le touchent quand même.
+@export var stealthy := false
+
 @export_group("Division")
 ## Ennemi qui apparaît à sa place quand il est détruit (aucun si vide).
 @export var split_into: EnemyData
@@ -98,6 +106,10 @@ func get_abilities() -> Array[String]:
 	if is_elite:
 		result.append("Élite : vie x%s, %d fois plus d'or." % [str(ELITE_HEALTH).trim_suffix(".0"),
 			roundi(ELITE_REWARD)])
+	if flying:
+		result.append("Volant : survole le chemin en coupant les virages. Mortier, Lance-flammes et nuages ne l'atteignent pas.")
+	if stealthy:
+		result.append("Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même.")
 	if armor > 0.0:
 		result.append("Armure : chaque coup perd %s dégâts (au moins 1 passe)." % str(armor).trim_suffix(".0"))
 	if max_shield > 0.0:

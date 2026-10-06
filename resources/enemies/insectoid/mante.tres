@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/insectoid/mante.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Mante"
+description = "Insecte furtif à la couleur des feuilles : invisible pour les tours, sauf près d'une tour qui détecte."
+max_health = 120.0
+armor = 3.0
+speed = 72.0
+reward = 14
+damage = 2
+color = Color(0.45, 0.72, 0.3, 1)
+radius = 13.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.2
+stealthy = true
