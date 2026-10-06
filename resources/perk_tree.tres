@@ -51,7 +51,7 @@ script = ExtResource("2_perk")
 id = "artilleur"
 display_name = "Maître artilleur"
 description = "Toutes les tours font encore 20 % de dégâts en plus."
-cost = 14
+cost = 12
 requires = Array[Resource]([SubResource("Perk_rouages")])
 column = 0.5
 row = 3
@@ -116,7 +116,7 @@ script = ExtResource("2_perk")
 id = "coffres"
 display_name = "Coffres pleins"
 description = "Chaque partie commence avec encore 100 or de plus."
-cost = 13
+cost = 11
 requires = Array[Resource]([SubResource("Perk_tresorier"), SubResource("Perk_brocanteur")])
 column = 2.5
 row = 3
@@ -159,7 +159,7 @@ script = ExtResource("2_perk")
 id = "citadelle"
 display_name = "Citadelle"
 description = "10 vies de plus au début de chaque partie."
-cost = 12
+cost = 10
 requires = Array[Resource]([SubResource("Perk_infirmerie"), SubResource("Perk_douves")])
 column = 4.5
 row = 2
@@ -479,10 +479,120 @@ specializes_tower = "res://resources/towers/teargas.tres"
 dot_damage_bonus = 10.0
 dot_duration_bonus = 2.0
 
+[sub_resource type="Resource" id="Perk_pouvoir_meteores"]
+script = ExtResource("2_perk")
+id = "pouvoir_meteores"
+display_name = "Pluie de météores"
+description = "Nouveau pouvoir : une pluie de 6 météores sur la zone visée, 80 dégâts chacun autour de son point de chute. Se recharge en 40 s."
+cost = 3
+column = 18.5
+row = 0
+unlocks_power = "res://resources/powers/meteors.tres"
+
+[sub_resource type="Resource" id="Perk_meteores_battante"]
+script = ExtResource("2_perk")
+id = "meteores_battante"
+display_name = "Pluie battante"
+description = "Météores : 50 % de dégâts en plus."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_pouvoir_meteores")])
+column = 18.0
+row = 1
+improves_power = "res://resources/powers/meteors.tres"
+power_strength_multiplier = 1.5
+
+[sub_resource type="Resource" id="Perk_meteores_cometes"]
+script = ExtResource("2_perk")
+id = "meteores_cometes"
+display_name = "Comètes"
+description = "Météores : se rechargent 30 % plus vite."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_pouvoir_meteores")])
+column = 19.0
+row = 1
+improves_power = "res://resources/powers/meteors.tres"
+power_cooldown_multiplier = 0.7
+
+[sub_resource type="Resource" id="Perk_pouvoir_gel"]
+script = ExtResource("2_perk")
+id = "pouvoir_gel"
+display_name = "Gel"
+description = "Nouveau pouvoir : gèle sur place pendant 3 s tous les ennemis de la carte (les boss ralentissent de moitié). Se recharge en 55 s."
+cost = 3
+required_world = 1
+column = 20.5
+row = 0
+unlocks_power = "res://resources/powers/freeze.tres"
+
+[sub_resource type="Resource" id="Perk_gel_blizzard"]
+script = ExtResource("2_perk")
+id = "gel_blizzard"
+display_name = "Blizzard"
+description = "Gel : dure 2 s de plus."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_pouvoir_gel")])
+column = 20.0
+row = 1
+improves_power = "res://resources/powers/freeze.tres"
+power_duration_bonus = 2.0
+
+[sub_resource type="Resource" id="Perk_gel_engelures"]
+script = ExtResource("2_perk")
+id = "gel_engelures"
+display_name = "Engelures"
+description = "Gel : les ennemis gelés subissent 30 % de dégâts en plus."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_pouvoir_gel")])
+column = 21.0
+row = 1
+improves_power = "res://resources/powers/freeze.tres"
+power_vulnerability_bonus = 0.3
+
+[sub_resource type="Resource" id="Perk_pouvoir_renforts"]
+script = ExtResource("2_perk")
+id = "pouvoir_renforts"
+display_name = "Renforts"
+description = "Nouveau pouvoir : 3 soldats prennent position sur le chemin pendant 20 s. Chacun arrête un ennemi et le combat. Se recharge en 45 s."
+cost = 4
+required_world = 2
+column = 22.5
+row = 0
+unlocks_power = "res://resources/powers/reinforcements.tres"
+
+[sub_resource type="Resource" id="Perk_renforts_veterans"]
+script = ExtResource("2_perk")
+id = "renforts_veterans"
+display_name = "Vétérans"
+description = "Renforts : les soldats ont 50 % de vie et de dégâts en plus."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_pouvoir_renforts")])
+column = 22.0
+row = 1
+improves_power = "res://resources/powers/reinforcements.tres"
+power_strength_multiplier = 1.5
+
+[sub_resource type="Resource" id="Perk_renforts_escouade"]
+script = ExtResource("2_perk")
+id = "renforts_escouade"
+display_name = "Escouade"
+description = "Renforts : 2 soldats de plus."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_pouvoir_renforts")])
+column = 23.0
+row = 1
+improves_power = "res://resources/powers/reinforcements.tres"
+power_count_bonus = 2
+
 [resource]
 script = ExtResource("1_tree")
-branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle"])
-branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1)])
-branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2])
-page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations"])
-perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas")])
+branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts"])
+branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1)])
+branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
+page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations", "Pouvoirs"])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade")])

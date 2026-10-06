@@ -84,6 +84,22 @@ extends Resource
 ## Effet d'un croisement (la fiche de la tour l'appelle « Croisement » et pas « Spécialisation »).
 @export var crossing := false
 
+@export_group("Pouvoirs")
+## Pouvoir actif (chemin de sa ressource Power) débloqué en jeu.
+@export_file("*.tres") var unlocks_power := ""
+## Pouvoir (chemin de sa ressource Power) que cette amélioration renforce, avec les
+## champs de ce groupe.
+@export_file("*.tres") var improves_power := ""
+## Multiplicateur des dégâts du pouvoir (et de la vie de ses soldats).
+@export var power_strength_multiplier := 1.0
+@export var power_cooldown_multiplier := 1.0
+## Secondes ajoutées à la durée du pouvoir (gel, soldats).
+@export var power_duration_bonus := 0.0
+## Météores ou soldats en plus.
+@export var power_count_bonus := 0
+## Dégâts subis en plus par un ennemi gelé (0.3 = +30 %).
+@export var power_vulnerability_bonus := 0.0
+
 
 ## Tour débloquée par cette amélioration (TowerData), ou null. (Resource et pas
 ## TowerData pour la même raison : ce script ne doit pas dépendre de TowerData.)
@@ -103,6 +119,21 @@ func is_crossing() -> bool:
 ## Chemin de la seconde tour d'un croisement, ou "".
 func get_partner_tower_path() -> String:
 	return partner_effect.specializes_tower if partner_effect else ""
+
+
+## Chemin du pouvoir montré dans la case de l'amélioration (débloqué ou renforcé), ou "".
+func get_power_path() -> String:
+	return unlocks_power if not unlocks_power.is_empty() else improves_power
+
+
+## Renforce un pouvoir (Power, modifié sur place ; pas de type pour ne pas dépendre de Power).
+func apply_to_power(power) -> void:
+	power.damage *= power_strength_multiplier
+	power.health *= power_strength_multiplier
+	power.cooldown *= power_cooldown_multiplier
+	power.duration += power_duration_bonus
+	power.count += power_count_bonus
+	power.vulnerability += power_vulnerability_bonus
 
 
 ## Chemin de la tour montrée dans la case de l'amélioration (débloquée ou spécialisée), ou "".

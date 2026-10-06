@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Power" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/power.gd" id="1_power"]
+
+[resource]
+script = ExtResource("1_power")
+id = "meteors"
+display_name = "Météores"
+description = "Une pluie de météores s'abat sur la zone visée : chacun explose et blesse tous les ennemis autour de lui."
+kind = 0
+color = Color(1, 0.55, 0.2, 1)
+cooldown = 40.0
+damage = 80.0
+count = 6
+radius = 70.0
+splash_radius = 46.0

@@ -3,7 +3,7 @@ extends Control
 ## colonne, et une amélioration se débloque quand celles qui la précèdent sont achetées.
 ## Les branches sont réparties en pages, avec un onglet par page : les bonus, puis les
 ## tours des mondes, dont chaque branche s'ouvre avec son monde, puis les spécialisations
-## des tours.
+## des tours, puis les pouvoirs actifs.
 ## Les étoiles gagnées sur les niveaux paient les achats, et les étoiles infinies (mode
 ## infini) les spécialisations ; « Réinitialiser » les rend toutes.
 
@@ -159,6 +159,15 @@ func _build_page(root: Control, page_index: int) -> void:
 			icon_paths.append(perk.get_partner_tower_path())
 		# Un croisement montre ses deux tours, un peu plus petites et l'une sur l'autre.
 		var icon_size := TOWER_ICON_SIZE if icon_paths.size() < 2 else CROSSING_ICON_SIZE
+		# La case qui débloque un pouvoir montre son image (pas celles qui le renforcent :
+		# elles sont rangées sous lui).
+		if not perk.unlocks_power.is_empty():
+			var power_icon := PowerIcon.new()
+			power_icon.power = load(perk.unlocks_power)
+			power_icon.size = Vector2.ONE * (TOWER_ICON_SIZE - 6.0)
+			power_icon.position = Vector2(9.0, (NODE_SIZE.y - power_icon.size.y) / 2.0)
+			power_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			button.add_child(power_icon)
 		for i in icon_paths.size():
 			var icon := TowerIcon.new()
 			icon.data = load(icon_paths[i])
@@ -183,10 +192,16 @@ func _add_label(parent: Control, text_value: String, font_size: int, color: Colo
 
 ## La page se paie en étoiles infinies (spécialisations).
 func is_endless_page(page_index: int) -> bool:
-	for perk in Perks.TREE.get_page_perks(page_index):
-		if perk.paid_with_endless_stars:
-			return true
-	return false
+	var perks := Perks.TREE.get_page_perks(page_index)
+	return not perks.is_empty() and perks.all(func(perk: Perk) -> bool: return perk.paid_with_endless_stars)
+
+
+## La page se paie dans les deux monnaies (pouvoirs : étoiles, puis leurs renforts en
+## étoiles infinies).
+func is_mixed_page(page_index: int) -> bool:
+	var perks := Perks.TREE.get_page_perks(page_index)
+	return not is_endless_page(page_index) \
+		and perks.any(func(perk: Perk) -> bool: return perk.paid_with_endless_stars)
 
 
 func _refresh() -> void:
@@ -197,6 +212,9 @@ func _refresh() -> void:
 		"∞ " if endless else "", available, spent, "s" if spent > 1 else "",
 		"toutes les spécialisations" if endless else "arbre complet", Perks.TREE.get_total_cost(endless)]
 	stars_label.add_theme_color_override("font_color", ENDLESS_COLOR if endless else STARS_COLOR)
+	if is_mixed_page(page):
+		stars_label.text = "★ %d à dépenser   ·   ∞ ★ %d à dépenser" % [Perks.get_available_stars(),
+			Perks.get_available_stars(true)]
 	refund_button.disabled = Perks.get_owned_ids().is_empty()
 	for perk in Perks.TREE.perks:
 		_style_button(get_button(perk), perk)
@@ -209,7 +227,8 @@ func _refresh() -> void:
 
 ## Les cases d'une tour (débloquée ou spécialisée) sont plus larges : elles montrent son image.
 func _get_node_width(perk: Perk) -> float:
-	return TOWER_NODE_WIDTH if not perk.get_tower_path().is_empty() else NODE_SIZE.x
+	return TOWER_NODE_WIDTH if not perk.get_tower_path().is_empty() or not perk.unlocks_power.is_empty() \
+		else NODE_SIZE.x
 
 
 ## « Finir La Ruche pour l'ouvrir » si la branche attend un monde pas encore débloqué.
@@ -248,7 +267,7 @@ func _style_button(button: Button, perk: Perk) -> void:
 		# Place pour l'image de la tour (ou des deux tours d'un croisement) à gauche.
 		if perk.is_crossing():
 			style.content_margin_left = CROSSING_ICON_SIZE * 1.6 + 10.0
-		elif not perk.get_tower_path().is_empty():
+		elif not perk.get_tower_path().is_empty() or not perk.unlocks_power.is_empty():
 			style.content_margin_left = TOWER_ICON_SIZE + 12.0
 		button.add_theme_stylebox_override(style_name, style)
 	for icon in button.get_children():
@@ -275,6 +294,14 @@ func _show_info(perk: Perk) -> void:
 		info_description.text = ("Les étoiles infinies, gagnées en mode infini (ouvert sur chaque niveau gagné avec "
 			+ "3 étoiles), donnent à une tour un atout de plus, dans toutes les parties.")
 		info_status.text = "Survoler une spécialisation pour la voir, cliquer pour l'acheter."
+		info_status.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+		return
+	if perk == null and is_mixed_page(page):
+		info_name.text = "Pouvoirs"
+		info_description.text = ("Des pouvoirs à lancer en pleine partie, avec leur bouton en haut de l'écran ou "
+			+ "leur touche, puis à laisser se recharger. Ils s'achètent avec des étoiles, et se renforcent avec "
+			+ "des étoiles infinies.")
+		info_status.text = "Survoler un pouvoir pour le voir, cliquer pour l'acheter."
 		info_status.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 		return
 	if perk == null:
