@@ -443,10 +443,7 @@ func _rebuild_waves() -> void:
 
 func _make_wave_row(index: int) -> Control:
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0.3)
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(10)
+	var style := UiStyle.panel(Color(UiStyle.ACCENT, 0.35), 10.0)
 	panel.add_theme_stylebox_override("panel", style)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)

@@ -43,15 +43,9 @@ func _build() -> void:
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.07, 0.06, 0.85)
-	style.border_color = Color(SCORE_COLOR, 0.5)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(18)
+	var style := UiStyle.panel(Color(SCORE_COLOR, 0.6), 28.0, SIDE_TOP)
 	style.content_margin_left = 44.0
 	style.content_margin_right = 44.0
-	style.content_margin_top = 28.0
-	style.content_margin_bottom = 28.0
 	panel.add_theme_stylebox_override("panel", style)
 	center.add_child(panel)
 	var column := VBoxContainer.new()
@@ -59,7 +53,7 @@ func _build() -> void:
 	column.custom_minimum_size.x = 760.0
 	panel.add_child(column)
 
-	_add_label(column, "Défi du jour", 44, SCORE_COLOR, true)
+	UiStyle.style_title(_add_label(column, "Défi du jour", 44, SCORE_COLOR, true))
 	_add_label(column, _capitalized(challenge.get_date_text()),
 		20, MUTED_COLOR, true)
 	_add_label(column, challenge.get_level_title(), 28, TITLE_COLOR, true)

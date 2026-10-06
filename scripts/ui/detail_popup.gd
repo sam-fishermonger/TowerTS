@@ -24,12 +24,7 @@ func _init(width := 320.0) -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 10
-	_style = StyleBoxFlat.new()
-	_style.bg_color = Color(0.08, 0.09, 0.12, 0.96)
-	_style.border_color = Color(0.5, 0.5, 0.5)
-	_style.set_border_width_all(2)
-	_style.set_corner_radius_all(8)
-	_style.set_content_margin_all(12)
+	_style = UiStyle.panel(Color(0.5, 0.5, 0.5), 12.0, SIDE_LEFT, Color(0.03, 0.06, 0.09, 0.96))
 	_style.shadow_color = Color(0, 0, 0, 0.45)
 	_style.shadow_size = 8
 	add_theme_stylebox_override(&"panel", _style)

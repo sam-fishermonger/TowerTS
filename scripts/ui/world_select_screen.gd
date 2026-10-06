@@ -148,13 +148,7 @@ func _make_card(world_index: int) -> Control:
 	card.name = "World%d" % (world_index + 1)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.07, 0.09, 0.08, 0.92)
-	style.border_color = world.color if unlocked else world.color.darkened(0.6)
-	style.set_border_width_all(2)
-	style.border_width_top = 6
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(16)
+	var style := UiStyle.panel(world.color if unlocked else world.color.darkened(0.6), 16.0, SIDE_TOP)
 	card.add_theme_stylebox_override(&"panel", style)
 
 	var column := VBoxContainer.new()
