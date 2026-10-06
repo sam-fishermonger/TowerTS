@@ -26,13 +26,11 @@ const MUSIC_BUS := &"Music"
 const SFX_BUS := &"Sfx"
 ## Nombre de sons joués en même temps, au plus.
 const VOICES := 16
+## Méta du moteur qui coupe les effets sonores (voir set_effects_muted).
+const EFFECTS_MUTED_META := &"sound_effects_muted"
 ## Un même son n'est pas rejoué avant ce délai (en secondes réelles) : une
 ## Mitrailleuse ou un Rayon ne saturent pas le mixage, même en x3.
 const MIN_REPEAT_DELAY := 0.06
-
-## Coupe les effets sonores (pas la musique) sans toucher au réglage du joueur :
-## la partie simulée derrière l'écran titre (TitleDemo) joue en silence.
-static var effects_muted := false
 
 var _voices: Array[AudioStreamPlayer] = []
 var _next_voice := 0
@@ -72,7 +70,7 @@ static func play(sound_name: StringName, volume_db := 0.0) -> void:
 ## Joue un son quelconque (par exemple celui d'une tour, défini dans ses données).
 static func play_stream(stream: AudioStream, volume_db := 0.0) -> void:
 	var player := get_player()
-	if player and stream and not effects_muted and player._can_play():
+	if player and stream and not are_effects_muted() and player._can_play():
 		player._play_stream(stream, volume_db)
 
 
@@ -81,6 +79,16 @@ static func play_music() -> void:
 	var player := get_player()
 	if player and player._can_play() and not player._music_player.playing:
 		player._start_music()
+
+
+## Coupe les effets sonores (pas la musique) sans toucher au réglage du joueur :
+## la partie simulée derrière l'écran titre (TitleDemo) joue en silence.
+static func set_effects_muted(muted: bool) -> void:
+	Engine.set_meta(EFFECTS_MUTED_META, muted)
+
+
+static func are_effects_muted() -> bool:
+	return Engine.get_meta(EFFECTS_MUTED_META, false)
 
 
 static func is_music_enabled() -> bool:

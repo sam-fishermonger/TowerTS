@@ -43,7 +43,6 @@ var _level_path := ""
 var _time := 0.0
 var _think_timer := 0.0
 var _wave_timer := 0.0
-var _end_timer := 0.0
 ## Prochain achat prévu : une tour à poser, ou une tour posée à améliorer.
 var _planned_tower: TowerData
 var _planned_upgrade: Tower
@@ -62,11 +61,11 @@ func _init() -> void:
 
 
 func _enter_tree() -> void:
-	Sound.effects_muted = true
+	Sound.set_effects_muted(true)
 
 
 func _exit_tree() -> void:
-	Sound.effects_muted = false
+	Sound.set_effects_muted(false)
 
 
 func _ready() -> void:
@@ -83,10 +82,10 @@ func start_level(path: String) -> void:
 	level = (load(path) as PackedScene).instantiate()
 	level.is_demo = true
 	level.starting_gold *= STARTING_GOLD_MULTIPLIER
+	level.game_over.connect(_on_level_over.unbind(1))
 	_viewport.add_child(level)
 	_think_timer = 0.0
 	_wave_timer = 0.0
-	_end_timer = 0.0
 	_planned_tower = null
 	_planned_upgrade = null
 	_path_points = _sample_paths(level.map)
@@ -99,9 +98,6 @@ func _process(delta: float) -> void:
 	if level == null:
 		return
 	if level.is_over:
-		_end_timer += delta
-		if _end_timer >= END_DELAY and _end_timer - delta < END_DELAY:
-			_fade_to_next_level()
 		return
 	_think_timer += delta
 	if _think_timer >= THINK_INTERVAL:
@@ -120,8 +116,10 @@ func _move_camera() -> void:
 		map_top + visible_size.y / 2.0)
 
 
-func _fade_to_next_level() -> void:
+## Fin de partie : on laisse voir le résultat un moment, puis un autre niveau prend la suite.
+func _on_level_over() -> void:
 	var tween := create_tween()
+	tween.tween_interval(END_DELAY)
 	tween.tween_property(self, "modulate:a", 0.0, FADE_DURATION)
 	tween.tween_callback(func() -> void: start_level(_pick_level()))
 	tween.tween_property(self, "modulate:a", 1.0, FADE_DURATION)
@@ -130,7 +128,8 @@ func _fade_to_next_level() -> void:
 ## Un niveau de la campagne au hasard, différent du précédent.
 func _pick_level() -> String:
 	var levels := CAMPAIGN.levels
-	levels.erase(_level_path)
+	if levels.size() > 1:
+		levels.erase(_level_path)
 	return levels[_rng.randi() % levels.size()]
 
 
@@ -200,7 +199,7 @@ func _launch_waves(delta: float) -> void:
 		_wave_timer = 0.0
 		return
 	var first_wave := level.spawner.current_wave < 0
-	if not first_wave and not get_tree().get_nodes_in_group(Enemy.GROUP).is_empty():
+	if not first_wave and get_tree().get_node_count_in_group(Enemy.GROUP) > 0:
 		_wave_timer = 0.0
 		return
 	_wave_timer += delta

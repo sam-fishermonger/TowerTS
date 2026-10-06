@@ -17,11 +17,6 @@ extends Resource
 
 ## Applique l'amélioration aux statistiques données (modifiées sur place).
 func apply_to(stats: TowerData) -> void:
-	stats.damage *= damage_multiplier
-	stats.dot_damage *= damage_multiplier
-	stats.attack_range *= range_multiplier
-	stats.fire_rate *= fire_rate_multiplier
+	stats.scale_stats(damage_multiplier, range_multiplier, fire_rate_multiplier, slow_duration_bonus)
 	stats.splash_radius *= splash_radius_multiplier
 	stats.cloud_radius *= cloud_radius_multiplier
-	if stats.slow_factor < 1.0:
-		stats.slow_duration += slow_duration_bonus

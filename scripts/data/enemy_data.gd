@@ -29,7 +29,8 @@ extends Resource
 ## Bouclier d'énergie : il encaisse les coups avant les points de vie, sans armure
 ## (0 = pas de bouclier).
 @export var max_shield := 0.0
-## Points de bouclier rechargés par seconde, après 2 secondes sans être touché.
+## Points de bouclier rechargés par seconde, après HealthComponent.shield_regen_delay
+## secondes sans être touché.
 @export var shield_regen := 0.0
 
 @export_group("Soin")

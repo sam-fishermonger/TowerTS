@@ -222,7 +222,7 @@ func _test_title_demo() -> void:
 	var level := demo.level
 	_check(level != null and level.is_demo and not level.hud.visible, "un niveau tourne derrière le menu, sans HUD")
 	_check(not title.get_node("%DemoLabel").text.is_empty(), "le niveau simulé est affiché")
-	_check(Sound.effects_muted, "la démo ne joue pas de sons")
+	_check(Sound.are_effects_muted(), "la démo ne joue pas de sons")
 	var elapsed := 0.0
 	while elapsed < 10.0:
 		elapsed += await _step()
@@ -246,7 +246,7 @@ func _test_title_demo() -> void:
 		elapsed += await _step()
 	_check(demo.level != level and demo.level.scene_file_path != finished_path, "un autre niveau prend la suite")
 	await _free(title)
-	_check(not Sound.effects_muted, "les sons reviennent en quittant l'écran titre")
+	_check(not Sound.are_effects_muted(), "les sons reviennent en quittant l'écran titre")
 
 
 func _spawn_world_select() -> Control:
@@ -597,7 +597,7 @@ func _test_tower_upgrade_in_level() -> void:
 		elapsed += await _step()
 		if level.projectiles.get_child_count() > 0:
 			projectile = level.projectiles.get_child(0)
-	_check(projectile != null and is_equal_approx(projectile.damage, tower.stats.damage),
+	_check(projectile != null and is_equal_approx(projectile.stats.damage, tower.stats.damage),
 		"les projectiles infligent les dégâts améliorés")
 	await _free(level)
 
@@ -949,13 +949,19 @@ func _test_pause_and_game_speed() -> void:
 
 	level._end_game(false)
 	_check(Engine.time_scale == 1.0, "la fin de partie remet la vitesse à x1")
+	level.select_tower(CANNON)
+	_check(level.placer.selected_tower == null
+		and hud.tower_shop.get_children().all(func(b: Button) -> bool: return b.disabled),
+		"plus de tour à choisir après la fin de partie")
 	_check(hud.pause_button.disabled, "pause indisponible après la fin de partie")
 	level.set_paused(false)
 	_check(paused, "la pause de fin de partie ne peut pas être levée")
 	hud.speed_buttons.get_child(2).pressed.emit()
+	var old_vignette := hud.damage_flash.material
 	await _free(level)
 	level = await _spawn_level(LEVEL_01)
 	_check(Engine.time_scale == 1.0, "un nouveau niveau repart en x1")
+	_check(level.hud.damage_flash.material != old_vignette, "chaque niveau a son propre voile rouge")
 	await _free(level)
 
 
@@ -1405,6 +1411,17 @@ func _test_marksman() -> void:
 	tower.set_target_mode(Tower.TargetMode.STRONGEST)
 	_check(tower.find_target() == medecin, "quelle que soit la règle de ciblage")
 	_check(CANNON.get_stats_at_level(1).prefers_healers == false, "les autres tours n'ont pas cette priorité")
+	# Un Médecin qui arrive à portée fait lâcher la cible en cours au moment de tirer.
+	tower.set_target_mode(Tower.TargetMode.FIRST)
+	medecin.visible = false
+	medecin.remove_from_group(Enemy.GROUP)
+	tower._target = tower.find_target()
+	_check(tower._target == ahead, "(sans Médecin, il vise le soldat)")
+	medecin.add_to_group(Enemy.GROUP)
+	medecin.visible = true
+	tower._cooldown = 0.0
+	tower._process(0.0)
+	_check(tower._target == medecin, "il change de cible quand un Médecin arrive à portée")
 	# Le Médecin touché ne soigne plus, et le soldat touché ne peut plus être soigné.
 	var patient := _add_still_enemy(level, SOLDAT, 0, 300.0 + MEDECIN.heal_radius * 0.5)
 	patient.take_damage(40.0)

@@ -38,7 +38,7 @@ var _wave_preview_text := ""
 ## Barre d'achat, en bas à gauche.
 @onready var tower_shop: TowerShop = %TowerShop
 ## Rappel des commandes, à côté de la barre d'achat.
-@onready var shop_hint: Label = $BottomBar/Margin/Row/Hint
+@onready var shop_hint: Label = %Hint
 @onready var next_wave_button: Button = %NextWaveButton
 @onready var end_panel: PanelContainer = %EndPanel
 @onready var end_title: Label = %EndTitle
@@ -52,7 +52,7 @@ var _wave_preview_text := ""
 @onready var pause_button: Button = %PauseButton
 @onready var speed_buttons: HBoxContainer = %SpeedButtons
 @onready var audio_toggles: AudioToggles = %AudioToggles
-@onready var top_bar: Control = $TopBar
+@onready var top_bar: Control = %TopBar
 @onready var bottom_bar: Control = %BottomBar
 @onready var pause_overlay: ColorRect = %PauseOverlay
 ## Composition de la prochaine vague et bonus pour la lancer en avance.
@@ -97,13 +97,14 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	level_label.text = level_name
 	for speed in game_speeds:
 		var speed_button := Button.new()
-		speed_button.text = "x%s" % str(speed).trim_suffix(".0")
+		var speed_text := "x%s" % str(speed).trim_suffix(".0")
+		speed_button.text = speed_text
 		speed_button.toggle_mode = true
 		speed_button.button_group = _speed_group
 		speed_button.focus_mode = Control.FOCUS_NONE
 		speed_button.custom_minimum_size = Vector2(36, 0)
 		speed_button.set_meta("speed", speed)
-		speed_button.tooltip_text = "Vitesse x%s (V : vitesse suivante)" % str(speed).trim_suffix(".0")
+		speed_button.tooltip_text = "Vitesse %s (V : vitesse suivante)" % speed_text
 		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
 		speed_buttons.add_child(speed_button)
 	tower_shop.setup(tower_types)
@@ -228,6 +229,8 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 	pause_button.disabled = true
 	for button: Button in speed_buttons.get_children():
 		button.disabled = true
+	# Plus de tour à poser : la barre d'achat ne réagit plus (ni clic ni fiche au survol).
+	tower_shop.lock()
 	shop_info.close()
 	tower_details.close()
 	wave_preview.visible = false

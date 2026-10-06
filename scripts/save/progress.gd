@@ -97,7 +97,9 @@ static func reset_campaign() -> void:
 	_save(config)
 
 
-## Le fichier est relu à chaque fois : il est minuscule et lu rarement (écran titre, fin de partie).
+## Le fichier est relu à chaque fois : il est minuscule. L'arbre des améliorations le relit
+## une centaine de fois par rafraîchissement (quelques millisecondes), ce qui reste acceptable
+## pour un écran de menu ; en jeu, il n'est lu qu'au lancement et en fin de partie.
 static func _load() -> ConfigFile:
 	var config := ConfigFile.new()
 	# Pas de fichier au premier lancement : on part d'une progression vide.

@@ -127,6 +127,8 @@ func get_stars() -> int:
 # --- Tours ------------------------------------------------------------------
 
 func select_tower(data: TowerData) -> void:
+	if is_over and data:
+		return
 	placer.select(data)
 
 
@@ -159,9 +161,11 @@ func can_upgrade_tower(tower: Tower) -> bool:
 func upgrade_tower(tower: Tower) -> bool:
 	if not can_upgrade_tower(tower):
 		return false
-	gold -= tower.get_upgrade_cost()
+	var cost := tower.get_upgrade_cost()
+	tower.upgrade()
+	gold -= cost
 	Sound.play(&"upgrade")
-	return tower.upgrade()
+	return true
 
 
 ## Vend la tour : elle quitte la carte et rend une partie de son prix.
@@ -193,8 +197,8 @@ func set_paused(value: bool) -> void:
 	is_paused = value
 	get_tree().paused = value
 	hud.set_paused(value)
-	# Le niveau ne se met plus à jour pendant la pause : on rafraîchit le bouton de vague tout de suite.
-	hud.set_next_wave_available(can_start_next_wave())
+	# Le niveau ne se met plus à jour pendant la pause : on rafraîchit la vague tout de suite.
+	_refresh_wave_ui()
 
 
 func set_game_speed(speed: float) -> void:
@@ -296,7 +300,7 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 
 
 func _alive_enemy_count() -> int:
-	return get_tree().get_nodes_in_group(Enemy.GROUP).size()
+	return get_tree().get_node_count_in_group(Enemy.GROUP)
 
 
 func _check_wave_cleared() -> void:
@@ -379,6 +383,10 @@ func _refresh_hud() -> void:
 
 func _process(_delta: float) -> void:
 	# Le bouton et l'aperçu de vague dépendent du spawner et des ennemis en jeu, qui évoluent en continu.
+	_refresh_wave_ui()
+
+
+func _refresh_wave_ui() -> void:
 	hud.set_next_wave_available(can_start_next_wave())
 	if not is_over:
 		var next_wave: WaveData = spawner.waves[spawner.current_wave + 1] if spawner.has_next_wave() else null

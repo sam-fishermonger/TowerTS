@@ -22,6 +22,8 @@ const SLOT_KEYPAD_KEYS: Array[Key] = [KEY_KP_1, KEY_KP_2, KEY_KP_3, KEY_KP_4, KE
 
 var _group := ButtonGroup.new()
 var _gold := 0
+## Barre verrouillée (fin de partie) : toutes les cases sont grisées.
+var _locked := false
 
 
 func _ready() -> void:
@@ -57,11 +59,20 @@ func set_selected(data: TowerData) -> void:
 	refresh()
 
 
+## Grise toutes les cases pour de bon (fin de partie) : plus de choix ni de fiche au survol.
+func lock() -> void:
+	_locked = true
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for button: TowerShopButton in get_children():
+		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	refresh()
+
+
 ## Remet à jour les prix (ils dépendent de l'arbre des améliorations) et les cases grisées.
 func refresh() -> void:
 	for button: TowerShopButton in get_children():
 		var cost := button.data.get_cost()
-		button.disabled = cost > _gold and not button.button_pressed
+		button.disabled = _locked or (cost > _gold and not button.button_pressed)
 		button.set_price(cost, cost <= _gold)
 
 

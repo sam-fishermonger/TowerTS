@@ -6,8 +6,7 @@ extends Projectile
 
 
 func _impact(_hit: Enemy) -> void:
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.cloud_radius):
-		_hit_enemy(enemy)
+	_hit_all_in_radius(stats.cloud_radius)
 	var cloud := GasCloud.new()
 	cloud.stats = stats
 	get_parent().add_child(cloud)

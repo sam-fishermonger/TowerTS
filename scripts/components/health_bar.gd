@@ -1,7 +1,7 @@
 class_name HealthBar
 extends Node2D
-## Barre de vie au-dessus d'une entité, affichée seulement après le premier dégât,
-## avec au-dessus la barre du bouclier d'énergie s'il y en a un.
+## Barre de vie au-dessus d'une entité, affichée seulement tant qu'elle est blessée
+## (vie ou bouclier entamés), avec au-dessus la barre du bouclier d'énergie s'il y en a un.
 
 const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
 
