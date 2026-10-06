@@ -24,3 +24,18 @@ extends Resource
 @export var split_into: EnemyData
 ## Nombre d'ennemis qui apparaissent à sa mort.
 @export var split_count := 0
+
+@export_group("Bouclier")
+## Bouclier d'énergie : il encaisse les coups avant les points de vie, sans armure
+## (0 = pas de bouclier).
+@export var max_shield := 0.0
+## Points de bouclier rechargés par seconde, après 2 secondes sans être touché.
+@export var shield_regen := 0.0
+
+@export_group("Soin")
+## Points de vie rendus à chaque soin aux ennemis blessés autour de lui (0 = ne soigne pas).
+@export var heal_amount := 0.0
+## Portée du soin, en pixels.
+@export var heal_radius := 120.0
+## Secondes entre deux soins.
+@export var heal_interval := 2.0

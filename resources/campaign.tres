@@ -1,7 +1,11 @@
 [gd_resource type="Resource" script_class="Campaign" format=3]
 
 [ext_resource type="Script" path="res://scripts/data/campaign.gd" id="1_campaign"]
+[ext_resource type="Script" path="res://scripts/data/world.gd" id="2_world"]
+[ext_resource type="Resource" path="res://resources/worlds/insectoid.tres" id="3_insectoid"]
+[ext_resource type="Resource" path="res://resources/worlds/mecha.tres" id="4_mecha"]
+[ext_resource type="Resource" path="res://resources/worlds/humanoid.tres" id="5_humanoid"]
 
 [resource]
 script = ExtResource("1_campaign")
-levels = Array[String](["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn", "res://scenes/levels/level_03.tscn", "res://scenes/levels/level_04.tscn", "res://scenes/levels/level_05.tscn", "res://scenes/levels/level_06.tscn"])
+worlds = Array[ExtResource("2_world")]([ExtResource("3_insectoid"), ExtResource("4_mecha"), ExtResource("5_humanoid")])

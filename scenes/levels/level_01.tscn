@@ -7,9 +7,9 @@
 [ext_resource type="Resource" path="res://resources/towers/sniper.tres" id="8_sniper"]
 [ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="9_wave_data"]
 [ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="10_spawn_group"]
-[ext_resource type="Resource" path="res://resources/enemies/slime.tres" id="11_slime"]
-[ext_resource type="Resource" path="res://resources/enemies/runner.tres" id="12_runner"]
-[ext_resource type="Resource" path="res://resources/enemies/tank.tres" id="13_tank"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="11_slime"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/rodeur.tres" id="12_runner"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="13_tank"]
 
 [sub_resource type="Curve2D" id="Curve2D_path"]
 _data = {
@@ -114,7 +114,7 @@ groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w5_1"), SubRes
 bonus_gold = 0
 
 [node name="Level01" instance=ExtResource("1_level")]
-level_name = "Niveau 1"
+level_name = "Niveau 1-1"
 tower_types = Array[ExtResource("5_tower_data")]([ExtResource("6_cannon"), ExtResource("7_gatling"), ExtResource("8_sniper")])
 
 [node name="EnemyPath" type="Path2D" parent="Map"]

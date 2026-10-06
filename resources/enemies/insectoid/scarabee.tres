@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/insectoid/scarabee.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Scarabée"
+max_health = 110.0
+armor = 6.0
+speed = 60.0
+reward = 14
+damage = 2
+color = Color(0.2, 0.65, 0.58, 1)
+radius = 14.0
+texture = ExtResource("9_texture")

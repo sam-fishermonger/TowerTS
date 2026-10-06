@@ -6,8 +6,14 @@ signal died(enemy: Enemy)
 ## Émis à chaque coup reçu, avec les dégâts réellement subis (après armure).
 signal damaged(enemy: Enemy, amount: float)
 signal reached_end(enemy: Enemy)
+## Émis quand un soigneur rend des points de vie à cet ennemi.
+signal healed(enemy: Enemy, amount: float)
 
 const GROUP := "enemies"
+const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
+const HEAL_COLOR := Color(0.45, 1.0, 0.55)
+## Durée de l'onde verte dessinée autour d'un soigneur quand il soigne.
+const HEAL_PULSE_DURATION := 0.5
 
 @export var data: EnemyData
 
@@ -21,6 +27,8 @@ var _slow_factor := 1.0
 var _slow_time_left := 0.0
 ## Direction de la marche (angle), pour orienter l'image.
 var _heading := 0.0
+var _heal_cooldown := 0.0
+var _heal_pulse_left := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -38,8 +46,11 @@ static func get_alive_in_radius(tree: SceneTree, center: Vector2, radius: float)
 
 func _ready() -> void:
 	add_to_group(GROUP)
-	health.setup(data.max_health, data.armor)
+	health.setup(data.max_health, data.armor, data.max_shield, data.shield_regen)
 	health.depleted.connect(_on_health_depleted)
+	if data.max_shield > 0.0:
+		health.shield_changed.connect(func(_shield: float, _max: float) -> void: queue_redraw())
+	_heal_cooldown = data.heal_interval
 	health_bar.width = data.radius * 2.0
 	health_bar.position = Vector2(0, -data.radius - 8.0)
 	_path_length = path.curve.get_baked_length()
@@ -52,6 +63,8 @@ func _process(delta: float) -> void:
 		if _slow_time_left <= 0.0:
 			_slow_factor = 1.0
 			queue_redraw()
+	if data.heal_amount > 0.0:
+		_update_healing(delta)
 	progress += get_speed() * delta
 	if progress >= _path_length:
 		despawn()
@@ -93,6 +106,29 @@ func apply_slow(factor: float, duration: float) -> void:
 	queue_redraw()
 
 
+## Soigneur : soigne régulièrement les autres ennemis blessés à sa portée.
+func _update_healing(delta: float) -> void:
+	if _heal_pulse_left > 0.0:
+		_heal_pulse_left -= delta
+		queue_redraw()
+	_heal_cooldown -= delta
+	if _heal_cooldown > 0.0:
+		return
+	var patients: Array[Enemy] = []
+	for enemy in get_alive_in_radius(get_tree(), global_position, data.heal_radius):
+		if enemy != self and enemy.health.health < enemy.health.max_health:
+			patients.append(enemy)
+	# Personne à soigner : il réessaie à l'image suivante, sans attendre.
+	if patients.is_empty():
+		return
+	_heal_cooldown = data.heal_interval
+	_heal_pulse_left = HEAL_PULSE_DURATION
+	for enemy in patients:
+		var amount := enemy.health.heal(data.heal_amount)
+		if amount > 0.0:
+			enemy.healed.emit(enemy, amount)
+
+
 func _update_position() -> void:
 	var point := path.curve.sample_baked(progress)
 	global_position = path.to_global(point)
@@ -110,6 +146,14 @@ func _on_health_depleted() -> void:
 
 
 func _draw() -> void:
+	if _heal_pulse_left > 0.0:
+		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
+		draw_arc(Vector2.ZERO, lerpf(data.radius, data.heal_radius, t), 0.0, TAU, 48,
+			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0)
+	if data.max_shield > 0.0 and health.shield > 0.0:
+		var ratio := health.shield / data.max_shield
+		draw_circle(Vector2.ZERO, data.radius * 1.45, Color(SHIELD_COLOR, 0.12 + 0.12 * ratio))
+		draw_arc(Vector2.ZERO, data.radius * 1.45, 0.0, TAU, 32, Color(SHIELD_COLOR, 0.35 + 0.45 * ratio), 2.0)
 	if data.texture:
 		# L'image déborde un peu du rayon de collision (ombre, pattes).
 		var size := data.radius * 2.6 * data.sprite_scale

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/enemies/mecha/drone.tres" id="2_split"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/mecha/porte_drones.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Porte-drones"
+max_health = 220.0
+armor = 3.0
+speed = 45.0
+reward = 8
+damage = 3
+color = Color(0.38, 0.47, 0.54, 1)
+radius = 19.0
+texture = ExtResource("9_texture")
+split_into = ExtResource("2_split")
+split_count = 3
