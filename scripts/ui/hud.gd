@@ -196,7 +196,10 @@ func play_damage_effect(lives_lost: int) -> void:
 
 ## Écran de fin. Après une victoire, `stars` (1 à 3) s'affiche, avec « Nouveau record »
 ## si c'est le meilleur résultat obtenu sur ce niveau.
-func show_end_screen(victory: bool, can_continue := false, stars := 0, new_record := false) -> void:
+## `unlocked_world` : nom du monde qu'ouvre cette victoire (le niveau suivant est alors
+## le premier d'un nouveau monde), "" sinon.
+func show_end_screen(victory: bool, can_continue := false, stars := 0, new_record := false,
+		unlocked_world := "") -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"
 	end_stars.visible = victory and stars > 0
 	end_stars.text = Progress.star_text(stars)
@@ -204,6 +207,9 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 		else "Les ennemis ont atteint votre base."
 	if new_record:
 		end_message.text += "\nNouveau record !"
+	if not unlocked_world.is_empty():
+		end_message.text += "\nNouveau monde débloqué : %s" % unlocked_world
+	next_level_button.text = "Monde suivant" if not unlocked_world.is_empty() else "Niveau suivant"
 	next_level_button.visible = can_continue
 	end_panel.visible = true
 	set_paused(false)

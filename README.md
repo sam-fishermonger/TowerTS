@@ -25,8 +25,9 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
 - En bas à droite : **Pause** (ou **Espace**) fige la partie (on peut toujours poser, améliorer et vendre des tours, mais pas lancer de vague), et **x1 / x2 / x3** (ou les touches **1, 2, 3**, aussi sur le pavé numérique et en AZERTY) règlent la vitesse du jeu. Les vitesses proposées se changent dans la propriété `game_speeds` du niveau.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
-- La progression est enregistrée : chaque niveau gagné débloque le suivant, et l'écran titre affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche) repart de zéro.
-- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée). Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte plus d'étoiles que la campagne n'en rapporte : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+- La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
+- La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
+- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée). Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte 26 étoiles (la campagne en rapporte 54) : au début il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
 
@@ -38,18 +39,40 @@ Les tours, les ennemis, les rochers et la base sont des images SVG dans `assets/
 
 Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).
 
-## Niveaux
+## Mondes et monstres
 
-| Niveau | Carte | Tours | Vagues |
-|---|---|---|---|
-| 1 | Un chemin en zigzag | Canon, Mitrailleuse, Sniper | 5 |
-| 2 | Deux entrées (nord et sud) qui se rejoignent, rochers où l'on ne peut pas construire | + Mortier (explosion de zone), Givre (onde qui ralentit) | 6, avec la Carapace (ennemi blindé : les petits dégâts rebondissent) |
-| 3 | Un long chemin en serpentin dans un marais | + Rayon (rayon continu dont les dégâts montent jusqu'à x3 sur la même cible) | 7, avec le Slime géant (se divise en 3 Slimes à sa mort) |
-| 4 | Le carrefour : un chemin qui se recoupe lui-même, deux allées parallèles | Les 6 | 8 |
-| 5 | Le canyon : trois entrées (ouest, sud et nord) qui se rejoignent au centre | Les 6 | 8, réparties sur les trois entrées |
-| 6 | La spirale : le chemin tourne jusqu'à la base, au centre de la carte | Les 6 | 10 |
+Chaque monde a ses monstres, rangés dans `resources/enemies/<biome>/` avec leur image dans `assets/sprites/enemies/<biome>/`. Les rôles se répondent d'un monde à l'autre (un ennemi de base, un rapide, un blindé, un qui se divise, un gros), et chaque biome a sa spécialité.
 
-Les niveaux se suivent dans l'ordre de `resources/campaign.tres` : pour ajouter un niveau, il suffit de l'y ajouter.
+| Monde | Monstres | Spécialité |
+|---|---|---|
+| 1. La Ruche (insectoïdes) | Larve, Rôdeur (rapide), Scarabée (carapace : les petits dégâts rebondissent), Ravageur (gros), Couveuse (éclate en 3 Larves) | Les essaims et les ennemis qui se divisent |
+| 2. La Fonderie (mecha) | Drone (rapide), Sentinelle, Chenillard (très blindé), Porte-drones (libère 3 Drones), Titan (énorme) | **Bouclier d'énergie** (Sentinelle, Titan) : il encaisse les coups en premier, sans armure, et se recharge après 2 secondes sans être touché. Une barre bleue s'affiche au-dessus de la barre de vie. |
+| 3. La Cité (humanoïdes) | Soldat, Éclaireur (rapide), Garde (bouclier anti-émeute : armure), Médecin, Transport de troupes (libère 4 Soldats), Colosse (énorme) | **Soin** (Médecin) : il rend régulièrement des points de vie aux ennemis blessés autour de lui (onde et « +N » verts). Mieux vaut l'abattre en premier. |
+
+Le bouclier et le soin se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier** et **Soin**) : n'importe quel ennemi peut en avoir.
+
+| Niveau | Carte | Vagues |
+|---|---|---|
+| 1-1 | Un chemin en zigzag (Canon, Mitrailleuse, Sniper) | 5 |
+| 1-2 | Deux entrées (nord et sud) qui se rejoignent, + Mortier et Givre | 6, avec le Scarabée |
+| 1-3 | Un long chemin en serpentin dans un marais, + Rayon | 7, avec la Couveuse |
+| 1-4 | Le carrefour : un chemin qui se recoupe lui-même | 8 |
+| 1-5 | Le canyon : trois entrées (ouest, sud et nord) | 8 |
+| 1-6 | La spirale : la base est au centre de la carte | 10 |
+| 2-1 | La chaîne de montage : trois allers-retours | 6 |
+| 2-2 | Deux convoyeurs (ouest et sud-ouest) qui se rejoignent | 7, avec le Porte-drones |
+| 2-3 | Le puits : on entre par le nord, en créneaux | 7 |
+| 2-4 | La fonderie à l'envers : de l'est vers l'ouest | 8, avec le Titan |
+| 2-5 | Deux chemins qui se croisent deux fois | 8 |
+| 2-6 | Le cœur : une boucle autour de la base, et une entrée à l'est | 10 |
+| 3-1 | Les faubourgs | 6 |
+| 3-2 | Le boulevard en escalier | 7, avec le Médecin |
+| 3-3 | La place : entrées au nord et au sud | 7, avec le Transport de troupes |
+| 3-4 | Le pont : un chemin qui se recoupe trois fois | 8, avec le Colosse |
+| 3-5 | Les trois avenues : ouest, nord et sud | 8 |
+| 3-6 | Le palais : un long détour et une entrée au sud | 10 |
+
+À partir du niveau 1-4, les 6 tours sont disponibles. Les mondes et leurs niveaux se suivent dans l'ordre de `resources/campaign.tres`, qui liste les mondes (`resources/worlds/*.tres` : nom, description, couleur, monstres montrés et niveaux) : pour ajouter un niveau, il suffit de l'ajouter à son monde.
 
 ## Tests
 
@@ -65,7 +88,7 @@ Les objets de jeu héritent de quelques classes de base, et chaque scène ne con
 
 ```
 Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : is_alive, despawn()
-├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement, division à la mort
+├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement, division à la mort, soin
 ├── Tower                    scripts/towers/tower.gd      ciblage + cadence ; _attack() et _draw_body() à redéfinir
 │   ├── ProjectileTower      tire le projectile défini dans TowerData (Canon, Mitrailleuse, Sniper, Mortier)
 │   ├── PulseTower           onde qui frappe et ralentit tout ce qui est à portée (Givre)
@@ -73,7 +96,7 @@ Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : 
 └── Projectile               scripts/projectiles/         tête chercheuse, un seul ennemi touché
     └── ExplosiveProjectile  dégâts de zone à l'impact
 
-Composants                   scripts/components/          HealthComponent (vie, armure), HealthBar
+Composants                   scripts/components/          HealthComponent (vie, armure, bouclier), HealthBar
 Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin
 ├── TowerShop                barre d'achat : une case TowerShopButton (TowerIcon, nom, prix) par tour
 ├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
@@ -84,7 +107,7 @@ Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin 
 └── WaveSpawner              fait apparaître les ennemis sur les chemins de la carte
 ```
 
-`scenes/levels/level.tscn` est la scène de base de tous les niveaux. Les niveaux (`level_01.tscn` à `level_06.tscn`) en héritent et n'ajoutent que leurs données : chemins, rochers, couleurs, tours disponibles et vagues. La base est dessinée au bout du premier chemin. Pour créer un nouveau niveau : **Scène > Nouvelle scène héritée** depuis `level.tscn`, ajouter un ou plusieurs `Path2D` sous `Map`, puis remplir les vagues du `WaveSpawner`.
+`scenes/levels/level.tscn` est la scène de base de tous les niveaux. Les niveaux (`level_01.tscn` à `level_06.tscn` pour La Ruche, `mecha_01.tscn` à `mecha_06.tscn` et `humanoid_01.tscn` à `humanoid_06.tscn`) en héritent et n'ajoutent que leurs données : chemins, rochers, couleurs, tours disponibles et vagues. La base est dessinée au bout du premier chemin. Pour créer un nouveau niveau : **Scène > Nouvelle scène héritée** depuis `level.tscn`, ajouter un ou plusieurs `Path2D` sous `Map`, puis remplir les vagues du `WaveSpawner`.
 
 Une nouvelle tour se crée sans code si elle réutilise un comportement existant (un `.tres` `TowerData` qui pointe vers `projectile_tower.tscn` ou `pulse_tower.tscn`), ou en sous-classant `Tower` pour un nouveau comportement.
 
@@ -92,7 +115,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 
 ```
 project.godot        Configuration du projet
-scenes/ui/           Écran titre (scène de démarrage), arbre des améliorations, HUD, fiches et boutons du son
+scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower et PulseTower
@@ -102,9 +125,9 @@ scripts/entities/    Classe de base Entity
 scripts/components/  Composants réutilisables (santé, barre de vie)
 scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
-scripts/data/        Ressources de données : EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
+scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
 scripts/save/        Progression enregistrée (Progress) et améliorations permanentes achetées (Perks)
-resources/           Statistiques des ennemis et des tours, améliorations comprises (.tres, modifiables dans l'inspecteur)
+resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites
 assets/audio/        Musiques et effets sonores

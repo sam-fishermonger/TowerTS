@@ -9,6 +9,7 @@ const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
 const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
 const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
+const HEAL_TEXT_COLOR := Color(0.45, 1.0, 0.55)
 
 @export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
@@ -94,6 +95,15 @@ func get_next_level() -> String:
 
 func has_next_level() -> bool:
 	return not get_next_level().is_empty()
+
+
+## Nom du monde suivant si ce niveau est le dernier de son monde, "" sinon.
+func get_next_world_name() -> String:
+	if not campaign or not has_next_level():
+		return ""
+	var world := campaign.world_index_of(scene_file_path)
+	var next_world := campaign.world_index_of(get_next_level())
+	return campaign.worlds[next_world].display_name if next_world != world else ""
 
 
 ## Étoiles méritées si la partie était gagnée maintenant.
@@ -223,12 +233,18 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 	enemy.damaged.connect(_on_enemy_damaged)
 	enemy.died.connect(_on_enemy_died)
 	enemy.reached_end.connect(_on_enemy_reached_end)
+	enemy.healed.connect(_on_enemy_healed)
 
 
 func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
 	# Petit décalage pour que les coups rapprochés ne se superposent pas.
 	var offset := Vector2(randf_range(-8.0, 8.0), -enemy.data.radius - 12.0)
 	_show_floating_text(str(roundi(amount)), DAMAGE_TEXT_COLOR, enemy.global_position + offset, 13)
+
+
+func _on_enemy_healed(enemy: Enemy, amount: float) -> void:
+	var offset := Vector2(randf_range(-8.0, 8.0), -enemy.data.radius - 12.0)
+	_show_floating_text("+%d" % roundi(amount), HEAL_TEXT_COLOR, enemy.global_position + offset, 13)
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
@@ -293,7 +309,8 @@ func _end_game(victory: bool) -> void:
 	inspect_tower(null)
 	var stars := get_stars() if victory else 0
 	var new_record := victory and Progress.record_victory(scene_file_path, stars)
-	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record)
+	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record,
+		get_next_world_name() if victory else "")
 	is_paused = false
 	Engine.time_scale = 1.0
 	Sound.play(&"victory" if victory else &"defeat")

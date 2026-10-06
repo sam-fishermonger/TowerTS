@@ -62,6 +62,14 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 28
 text = "Jouer"
 
+[node name="WorldsButton" type="Button" parent="Center/Menu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Mondes"
+
 [node name="PerksButton" type="Button" parent="Center/Menu"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(260, 44)
@@ -70,11 +78,6 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Améliorations"
 
-[node name="LevelButtons" type="HBoxContainer" parent="Center/Menu"]
-unique_name_in_owner = true
-layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 12
 
 [node name="AudioToggles" parent="Center/Menu" instance=ExtResource("9_audio")]
 unique_name_in_owner = true
@@ -103,7 +106,7 @@ offset_bottom = -12.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 0.4)
-text = "Prototype v0.2"
+text = "Prototype v0.3"
 horizontal_alignment = 2
 
 [node name="ResetButton" type="Button" parent="."]
@@ -126,4 +129,4 @@ unique_name_in_owner = true
 title = "Effacer la progression"
 ok_button_text = "Effacer"
 cancel_button_text = "Annuler"
-dialog_text = "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le niveau 1 restera débloqué."
+dialog_text = "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le premier niveau de La Ruche restera débloqué."

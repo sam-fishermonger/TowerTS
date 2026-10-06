@@ -10,11 +10,11 @@
 [ext_resource type="Resource" path="res://resources/towers/mortar.tres" id="t3_mortar"]
 [ext_resource type="Resource" path="res://resources/towers/frost.tres" id="t4_frost"]
 [ext_resource type="Resource" path="res://resources/towers/beam.tres" id="t5_beam"]
-[ext_resource type="Resource" path="res://resources/enemies/giant_slime.tres" id="e_giant"]
-[ext_resource type="Resource" path="res://resources/enemies/runner.tres" id="e_runner"]
-[ext_resource type="Resource" path="res://resources/enemies/shell.tres" id="e_shell"]
-[ext_resource type="Resource" path="res://resources/enemies/slime.tres" id="e_slime"]
-[ext_resource type="Resource" path="res://resources/enemies/tank.tres" id="e_tank"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/couveuse.tres" id="e_giant"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/rodeur.tres" id="e_runner"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="e_shell"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="e_slime"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="e_tank"]
 
 [sub_resource type="Curve2D" id="Curve2D_CrossPath"]
 _data = {
@@ -190,7 +190,7 @@ groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubReso
 bonus_gold = 0
 
 [node name="Level04" instance=ExtResource("1_level")]
-level_name = "Niveau 4"
+level_name = "Niveau 1-4"
 starting_gold = 200
 starting_lives = 20
 tower_types = Array[ExtResource("2_tower_data")]([ExtResource("t0_cannon"), ExtResource("t1_gatling"), ExtResource("t2_sniper"), ExtResource("t3_mortar"), ExtResource("t4_frost"), ExtResource("t5_beam")])

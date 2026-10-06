@@ -10,11 +10,11 @@
 [ext_resource type="Resource" path="res://resources/towers/beam.tres" id="8_beam"]
 [ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="9_wave_data"]
 [ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="10_spawn_group"]
-[ext_resource type="Resource" path="res://resources/enemies/slime.tres" id="11_slime"]
-[ext_resource type="Resource" path="res://resources/enemies/runner.tres" id="12_runner"]
-[ext_resource type="Resource" path="res://resources/enemies/tank.tres" id="13_tank"]
-[ext_resource type="Resource" path="res://resources/enemies/shell.tres" id="14_shell"]
-[ext_resource type="Resource" path="res://resources/enemies/giant_slime.tres" id="15_giant"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="11_slime"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/rodeur.tres" id="12_runner"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="13_tank"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="14_shell"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/couveuse.tres" id="15_giant"]
 
 [sub_resource type="Curve2D" id="Curve2D_path"]
 _data = {
@@ -185,7 +185,7 @@ groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w7_1"), SubRes
 bonus_gold = 0
 
 [node name="Level03" instance=ExtResource("1_level")]
-level_name = "Niveau 3"
+level_name = "Niveau 1-3"
 starting_gold = 250
 starting_lives = 20
 tower_types = Array[ExtResource("2_tower_data")]([ExtResource("3_cannon"), ExtResource("4_gatling"), ExtResource("5_sniper"), ExtResource("6_mortar"), ExtResource("7_frost"), ExtResource("8_beam")])

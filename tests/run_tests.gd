@@ -6,12 +6,15 @@ extends SceneTree
 
 const TITLE_SCREEN := preload("res://scenes/ui/title_screen.tscn")
 const PERK_TREE_SCREEN := preload("res://scenes/ui/perk_tree_screen.tscn")
+const WORLD_SELECT_SCREEN := preload("res://scenes/ui/world_select_screen.tscn")
 const LEVEL_01 := preload("res://scenes/levels/level_01.tscn")
 const LEVEL_02 := preload("res://scenes/levels/level_02.tscn")
 const LEVEL_03 := preload("res://scenes/levels/level_03.tscn")
 const LEVEL_04 := preload("res://scenes/levels/level_04.tscn")
 const LEVEL_05 := preload("res://scenes/levels/level_05.tscn")
 const LEVEL_06 := preload("res://scenes/levels/level_06.tscn")
+const MECHA_01 := preload("res://scenes/levels/mecha_01.tscn")
+const HUMANOID_01 := preload("res://scenes/levels/humanoid_01.tscn")
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const CANNON := preload("res://resources/towers/cannon.tres")
 const SNIPER := preload("res://resources/towers/sniper.tres")
@@ -19,9 +22,12 @@ const GATLING := preload("res://resources/towers/gatling.tres")
 const MORTAR := preload("res://resources/towers/mortar.tres")
 const FROST := preload("res://resources/towers/frost.tres")
 const BEAM := preload("res://resources/towers/beam.tres")
-const SLIME := preload("res://resources/enemies/slime.tres")
-const SHELL := preload("res://resources/enemies/shell.tres")
-const GIANT_SLIME := preload("res://resources/enemies/giant_slime.tres")
+const LARVE := preload("res://resources/enemies/insectoid/larve.tres")
+const SCARABEE := preload("res://resources/enemies/insectoid/scarabee.tres")
+const COUVEUSE := preload("res://resources/enemies/insectoid/couveuse.tres")
+const SENTINELLE := preload("res://resources/enemies/mecha/sentinelle.tres")
+const SOLDAT := preload("res://resources/enemies/humanoid/soldat.tres")
+const MEDECIN := preload("res://resources/enemies/humanoid/medecin.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -68,6 +74,9 @@ func _run() -> void:
 	await _test_level_03_map()
 	await _test_splitting_enemy()
 	await _test_beam_tower()
+	await _test_shielded_enemy()
+	await _test_healer_enemy()
+	await _test_worlds()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
 	await _test_levels_04_to_06_with_earned_gold()
@@ -164,19 +173,33 @@ func _place_defense(level: Level, cells: Array, types: Array) -> int:
 
 
 func _test_title_screen() -> void:
-	print("Écran titre")
+	print("Écran titre et sélection des mondes")
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
 	_check(title.get_node("%PlayButton") is Button, "le bouton Jouer existe")
 	_check(title.get_node("%PlayButton").has_focus(), "le bouton Jouer a le focus")
-	var buttons: Array[Node] = title.get_node("%LevelButtons").get_children()
-	_check(buttons.size() == title.CAMPAIGN.size(), "un bouton par niveau de la campagne")
-	_check(not buttons[0].disabled and buttons[1].disabled and buttons[1].text.ends_with("Verrouillé"),
-		"au départ, seul le niveau 1 est débloqué")
+	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	await _free(title)
+	var screen := await _spawn_world_select()
+	_check(screen.get_node("%Worlds").get_child_count() == 3, "une carte par monde")
+	var first := screen.get_level_button(LEVEL_01.resource_path)
+	var second := screen.get_level_button(LEVEL_02.resource_path)
+	_check(not first.disabled and first.has_focus() and second.disabled and second.text.ends_with("Verrouillé"),
+		"au départ, seul le niveau 1-1 est débloqué, et il a le focus")
+	_check(screen.get_level_button(MECHA_01.resource_path).disabled
+		and screen.get_card(1).find_child("LockedHint", true, false) != null, "La Fonderie est verrouillée")
+	_check(screen.get_card(0).find_child("LockedHint", true, false) == null, "La Ruche est ouverte")
+	await _free(screen)
+
+
+func _spawn_world_select() -> Control:
+	var screen := WORLD_SELECT_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	return screen
 
 
 func _test_progress() -> void:
@@ -194,16 +217,21 @@ func _test_progress() -> void:
 	var saved := ConfigFile.new()
 	_check(saved.load(Progress.get_save_path()) == OK and saved.get_value("stars", LEVEL_01.resource_path) == 2,
 		"la progression est enregistrée sur le disque")
+	var screen := await _spawn_world_select()
+	_check(screen.get_level_button(LEVEL_01.resource_path).text == "1-1\n★★☆"
+		and not screen.get_level_button(LEVEL_02.resource_path).disabled,
+		"la sélection montre les étoiles et le niveau débloqué")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 18", "la carte du monde compte ses étoiles")
+	await _free(screen)
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	var buttons: Array[Node] = title.get_node("%LevelButtons").get_children()
-	_check(buttons[0].text == "Niveau 1\n★★☆" and not buttons[1].disabled, "l'écran titre montre les étoiles et le niveau débloqué")
 	_check(title.get_node("%PlayButton").text == "Continuer", "le bouton devient Continuer")
+	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 54"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
-	buttons = title.get_node("%LevelButtons").get_children()
-	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and buttons[1].disabled, "Effacer la progression reverrouille les niveaux")
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and not Progress.is_unlocked(campaign, 1),
+		"Effacer la progression reverrouille les niveaux")
 	await _free(title)
 
 
@@ -274,7 +302,7 @@ func _test_perks_in_level() -> void:
 	var tower := level.place_tower(Vector2i(2, 4), CANNON)
 	_check(tower != null and level.gold == 155, "la pose coûte le prix réduit")
 	_check(tower.get_sell_value() == roundi(45 * 0.85), "Brocanteur : la vente rend 85 %")
-	_check(level.get_enemy_reward(SLIME) == roundi(SLIME.reward * 1.2), "Pillage : +20 % d'or par ennemi")
+	_check(level.get_enemy_reward(LARVE) == roundi(LARVE.reward * 1.2), "Pillage : +20 % d'or par ennemi")
 	level.lives = 20
 	level.spawner.current_wave = 0
 	level._check_wave_cleared()
@@ -348,6 +376,22 @@ func _test_health_component() -> void:
 	_check(health.is_depleted() and health.health == 0.0, "les points de vie ne passent pas sous 0")
 	health.take_damage(10.0)
 	_check(depleted[0] == 1, "le signal depleted n'est émis qu'une fois")
+	await _free(health)
+
+	health = HealthComponent.new()
+	root.add_child(health)
+	health.setup(50.0, 5.0, 20.0, 10.0)
+	_check(is_equal_approx(health.take_damage(8.0), 8.0) and health.shield == 12.0 and health.health == 50.0,
+		"le bouclier encaisse le coup en entier, sans armure")
+	_check(is_equal_approx(health.take_damage(20.0), 12.0 + 3.0) and health.shield == 0.0 and health.health == 47.0,
+		"le reste du coup passe sur les points de vie, avec l'armure")
+	health._process(1.0)
+	_check(health.shield == 0.0, "le bouclier ne se recharge pas juste après un coup")
+	health._process(1.5)
+	_check(is_equal_approx(health.shield, 15.0), "puis il se recharge quand l'entité n'est plus touchée")
+	health._process(1.0)
+	_check(health.shield == 20.0, "sans dépasser son maximum")
+	_check(is_equal_approx(health.heal(10.0), 3.0) and health.health == 50.0, "un soin ne dépasse pas les points de vie maximum")
 	await _free(health)
 
 
@@ -432,7 +476,7 @@ func _test_tower_upgrade_in_level() -> void:
 	_check(not tower.can_upgrade() and not level.upgrade_tower(tower) and level.gold == 430,
 		"impossible de dépasser le niveau maximal")
 	# La tour tire avec ses statistiques améliorées.
-	_add_still_enemy(level, SLIME, 0, 224.0)
+	_add_still_enemy(level, LARVE, 0, 224.0)
 	var projectile: Projectile = null
 	var elapsed := 0.0
 	while projectile == null and elapsed < 5.0:
@@ -559,12 +603,12 @@ func _test_target_modes() -> void:
 	var level := await _spawn_level(LEVEL_01)
 	level.gold = 1000
 	var tower := level.place_tower(Vector2i(2, 4), SNIPER)
-	var tough: EnemyData = SLIME.duplicate()
+	var tough: EnemyData = LARVE.duplicate()
 	tough.max_health = 500.0
 	# Trois ennemis immobiles à portée : en tête, en queue, et le plus résistant au milieu.
-	var ahead := _add_still_enemy(level, SLIME, 0, 260.0)
+	var ahead := _add_still_enemy(level, LARVE, 0, 260.0)
 	var strong := _add_still_enemy(level, tough, 0, 200.0)
-	var behind := _add_still_enemy(level, SLIME, 0, 120.0)
+	var behind := _add_still_enemy(level, LARVE, 0, 120.0)
 	_check(tower.target_mode == Tower.TargetMode.FIRST and tower.find_target() == ahead,
 		"par défaut, la tour vise l'ennemi le plus avancé")
 	tower.set_target_mode(Tower.TargetMode.LAST)
@@ -629,23 +673,23 @@ func _test_level_02_uses_both_paths() -> void:
 func _test_enemy_slow_and_armor() -> void:
 	print("Ennemis : ralentissement et armure")
 	var level := await _spawn_level(LEVEL_02)
-	var slime := _add_still_enemy(level, SLIME, 0, 100.0)
-	_check(slime.global_position.is_equal_approx(Vector2(68, 160)), "l'ennemi est placé sur son chemin")
-	slime.apply_slow(0.5, 1.0)
-	_check(is_equal_approx(slime.get_speed(), SLIME.speed * 0.5), "le ralentissement réduit la vitesse")
-	slime.apply_slow(0.8, 3.0)
-	_check(is_equal_approx(slime.get_speed(), SLIME.speed * 0.5), "le ralentissement le plus fort l'emporte")
-	slime.set_process(true)
+	var larve := _add_still_enemy(level, LARVE, 0, 100.0)
+	_check(larve.global_position.is_equal_approx(Vector2(68, 160)), "l'ennemi est placé sur son chemin")
+	larve.apply_slow(0.5, 1.0)
+	_check(is_equal_approx(larve.get_speed(), LARVE.speed * 0.5), "le ralentissement réduit la vitesse")
+	larve.apply_slow(0.8, 3.0)
+	_check(is_equal_approx(larve.get_speed(), LARVE.speed * 0.5), "le ralentissement le plus fort l'emporte")
+	larve.set_process(true)
 	var elapsed := 0.0
-	while slime.is_slowed() and elapsed < 10.0:
+	while larve.is_slowed() and elapsed < 10.0:
 		elapsed += await _step()
-	_check(is_equal_approx(slime.get_speed(), SLIME.speed), "la vitesse revient à la normale")
+	_check(is_equal_approx(larve.get_speed(), LARVE.speed), "la vitesse revient à la normale")
 	Engine.time_scale = 1.0
-	var shell := _add_still_enemy(level, SHELL, 1, 100.0)
-	shell.take_damage(GATLING.damage)
-	_check(is_equal_approx(shell.health.health, SHELL.max_health - 1.0), "la mitrailleuse rebondit sur la carapace")
-	shell.take_damage(SNIPER.damage)
-	_check(is_equal_approx(shell.health.health, SHELL.max_health - 1.0 - (SNIPER.damage - SHELL.armor)),
+	var scarabee := _add_still_enemy(level, SCARABEE, 1, 100.0)
+	scarabee.take_damage(GATLING.damage)
+	_check(is_equal_approx(scarabee.health.health, SCARABEE.max_health - 1.0), "la mitrailleuse rebondit sur la carapace")
+	scarabee.take_damage(SNIPER.damage)
+	_check(is_equal_approx(scarabee.health.health, SCARABEE.max_health - 1.0 - (SNIPER.damage - SCARABEE.armor)),
 		"le sniper perce la carapace")
 	await _free(level)
 
@@ -655,8 +699,8 @@ func _test_explosive_projectile() -> void:
 	var level := await _spawn_level(LEVEL_02)
 	var group: Array[Enemy] = []
 	for offset in [0.0, 20.0, 40.0]:
-		group.append(_add_still_enemy(level, SLIME, 0, 200.0 + offset))
-	var far := _add_still_enemy(level, SLIME, 0, 400.0)
+		group.append(_add_still_enemy(level, LARVE, 0, 200.0 + offset))
+	var far := _add_still_enemy(level, LARVE, 0, 400.0)
 	var projectile: Projectile = MORTAR.projectile_scene.instantiate()
 	projectile.setup(group[1], MORTAR)
 	level.projectiles.add_child(projectile)
@@ -664,28 +708,28 @@ func _test_explosive_projectile() -> void:
 	var elapsed := 0.0
 	while is_instance_valid(projectile) and elapsed < 10.0:
 		elapsed += await _step()
-	var all_hit := group.all(func(e: Enemy) -> bool: return e.health.health == SLIME.max_health - MORTAR.damage)
+	var all_hit := group.all(func(e: Enemy) -> bool: return e.health.health == LARVE.max_health - MORTAR.damage)
 	_check(all_hit, "l'explosion touche tous les ennemis dans son rayon")
-	_check(far.health.health == SLIME.max_health, "un ennemi hors du rayon n'est pas touché")
+	_check(far.health.health == LARVE.max_health, "un ennemi hors du rayon n'est pas touché")
 	await _free(level)
 
 
 func _test_damage_and_death_feedback() -> void:
 	print("Dégâts affichés, or gagné et tache au sol")
 	var level := await _spawn_level(LEVEL_02)
-	var shell := _add_still_enemy(level, SHELL, 1, 100.0)
-	level._on_enemy_spawned(shell)
-	_check(is_equal_approx(shell.take_damage(SNIPER.damage), SNIPER.damage - SHELL.armor),
+	var scarabee := _add_still_enemy(level, SCARABEE, 1, 100.0)
+	level._on_enemy_spawned(scarabee)
+	_check(is_equal_approx(scarabee.take_damage(SNIPER.damage), SNIPER.damage - SCARABEE.armor),
 		"take_damage renvoie les dégâts après armure")
 	var texts := level.effects.get_children().filter(func(n: Node) -> bool: return n is FloatingText)
-	_check(texts.size() == 1 and texts[0].text == str(roundi(SNIPER.damage - SHELL.armor)),
+	_check(texts.size() == 1 and texts[0].text == str(roundi(SNIPER.damage - SCARABEE.armor)),
 		"les dégâts réellement subis s'affichent au-dessus de l'ennemi")
 	var gold_before := level.gold
-	var death_position := shell.global_position
-	shell.take_damage(10000.0)
-	_check(level.gold == gold_before + SHELL.reward, "la mort rapporte la prime")
+	var death_position := scarabee.global_position
+	scarabee.take_damage(10000.0)
+	_check(level.gold == gold_before + SCARABEE.reward, "la mort rapporte la prime")
 	var gold_texts := level.effects.get_children().filter(
-		func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % SHELL.reward)
+		func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % SCARABEE.reward)
 	_check(gold_texts.size() == 1, "le gain de pièces s'affiche à la mort")
 	_check(level.stains.get_child_count() == 1 and level.stains.get_child(0).global_position == death_position,
 		"une tache reste au sol à l'endroit de la mort")
@@ -708,32 +752,32 @@ func _test_pulse_tower() -> void:
 	# Case (4, 2) : juste sous le chemin nord, entre x = 192 et 320.
 	var tower := level.place_tower(Vector2i(4, 2), FROST)
 	_check(tower is PulseTower, "la tour de givre est une PulseTower")
-	var near := _add_still_enemy(level, SLIME, 0, 290.0)
-	var other := _add_still_enemy(level, SLIME, 0, 320.0)
-	var far := _add_still_enemy(level, SLIME, 0, 30.0)
+	var near := _add_still_enemy(level, LARVE, 0, 290.0)
+	var other := _add_still_enemy(level, LARVE, 0, 320.0)
+	var far := _add_still_enemy(level, LARVE, 0, 30.0)
 	await process_frame
 	await process_frame
 	_check(near.is_slowed() and other.is_slowed(), "l'onde ralentit tous les ennemis à portée")
-	_check(near.health.health < SLIME.max_health and other.health.health < SLIME.max_health, "l'onde inflige des dégâts")
-	_check(not far.is_slowed() and far.health.health == SLIME.max_health, "un ennemi hors de portée n'est pas touché")
+	_check(near.health.health < LARVE.max_health and other.health.health < LARVE.max_health, "l'onde inflige des dégâts")
+	_check(not far.is_slowed() and far.health.health == LARVE.max_health, "un ennemi hors de portée n'est pas touché")
 	await _free(level)
 
 
 func _test_lives_lost_feedback() -> void:
 	print("Effet de perte de vies")
 	var level := await _spawn_level(LEVEL_01)
-	var enemy := _add_still_enemy(level, SLIME, 0, 0.0)
+	var enemy := _add_still_enemy(level, LARVE, 0, 0.0)
 	level._on_enemy_spawned(enemy)
 	var material := level.hud.damage_flash.material as ShaderMaterial
 	_check(material.get_shader_parameter("intensity") == 0.0, "pas de voile rouge au départ")
 	enemy.reached_end.emit(enemy)
 	await process_frame
-	_check(level.lives == level.starting_lives - SLIME.damage, "le joueur perd des vies")
+	_check(level.lives == level.starting_lives - LARVE.damage, "le joueur perd des vies")
 	_check(material.get_shader_parameter("intensity") > 0.3, "un voile rouge apparaît")
 	_check(level.hud.lives_label.scale.x > 1.0, "le compteur de vies grossit")
 	var texts := level.effects.get_children().filter(func(n: Node) -> bool: return n is FloatingText)
-	_check(texts.any(func(t: FloatingText) -> bool: return t.text == "-%d" % SLIME.damage),
-		"« -%d » s'affiche à la sortie" % SLIME.damage)
+	_check(texts.any(func(t: FloatingText) -> bool: return t.text == "-%d" % LARVE.damage),
+		"« -%d » s'affiche à la sortie" % LARVE.damage)
 	_check(get_root().get_visible_rect().has_point(texts[0].position), "le texte reste dans l'écran")
 	for i in 60:
 		await process_frame
@@ -814,7 +858,7 @@ func _count_hits(tower_data: TowerData, speed: float, game_seconds: float) -> in
 	level.gold = 10000
 	var tower := level.place_tower(Vector2i(2, 4), tower_data)
 	level.upgrade_tower(tower)
-	var target_data: EnemyData = SLIME.duplicate()
+	var target_data: EnemyData = LARVE.duplicate()
 	target_data.max_health = 1e9
 	var enemy := _add_still_enemy(level, target_data, 0, 0.0)
 	enemy.global_position = tower.global_position + Vector2(40, 0)
@@ -864,7 +908,7 @@ func _test_wave_preview_and_early_call() -> void:
 	var level := await _spawn_level(LEVEL_02)
 	var hud := level.hud
 	await process_frame
-	_check(hud.wave_preview.visible and hud.wave_preview_label.get_parsed_text().contains("12 Slime"),
+	_check(hud.wave_preview.visible and hud.wave_preview_label.get_parsed_text().contains("12 Larve"),
 		"l'aperçu annonce la première vague (%s)" % hud.wave_preview_label.get_parsed_text())
 	_check(level.get_early_call_bonus() == 0 and not hud.wave_preview_label.get_parsed_text().contains("maintenant"),
 		"pas de prime quand la carte est vide")
@@ -972,11 +1016,11 @@ func _test_level_03_map() -> void:
 	_check(level.spawner.waves.size() == 7, "7 vagues définies")
 	_check(level.tower_types.size() == 6 and level.tower_types.has(BEAM), "6 types de tours, dont le Rayon")
 	_check(level.get_next_level() == LEVEL_04.resource_path, "le niveau 4 suit")
-	var uses_giant := false
+	var uses_couveuse := false
 	for wave in level.spawner.waves:
 		for group in wave.groups:
-			uses_giant = uses_giant or group.enemy == GIANT_SLIME
-	_check(uses_giant, "les vagues contiennent des Slimes géants")
+			uses_couveuse = uses_couveuse or group.enemy == COUVEUSE
+	_check(uses_couveuse, "les vagues contiennent des Couveuses")
 	for cell in level.map.blocked_cells:
 		_check(not level.map.is_cell_on_path(cell), "le rocher %s est hors du chemin" % cell)
 	_check(level.map.is_cell_on_path(Vector2i(10, 1)) and level.map.is_cell_on_path(Vector2i(10, 4))
@@ -985,24 +1029,108 @@ func _test_level_03_map() -> void:
 
 
 func _test_splitting_enemy() -> void:
-	print("Slime géant : se divise à sa mort")
+	print("Couveuse : se divise à sa mort")
 	var level := await _spawn_level(LEVEL_03)
-	var giant := level.spawner.spawn(GIANT_SLIME, level.map.get_enemy_path(0), 400.0)
+	var couveuse := level.spawner.spawn(COUVEUSE, level.map.get_enemy_path(0), 400.0)
 	var spawned: Array[Enemy] = []
 	level.spawner.enemy_spawned.connect(func(enemy: Enemy) -> void: spawned.append(enemy))
 	var gold_before := level.gold
-	giant.take_damage(1e9)
-	_check(spawned.size() == GIANT_SLIME.split_count and spawned.all(func(e: Enemy) -> bool: return e.data == SLIME),
-		"%d Slimes apparaissent à sa mort" % GIANT_SLIME.split_count)
+	couveuse.take_damage(1e9)
+	_check(spawned.size() == COUVEUSE.split_count and spawned.all(func(e: Enemy) -> bool: return e.data == LARVE),
+		"%d Larves apparaissent à sa mort" % COUVEUSE.split_count)
 	_check(spawned.all(func(e: Enemy) -> bool: return e.progress <= 400.0 and e.progress > 300.0),
 		"ils apparaissent à sa place, en file sur le chemin")
-	_check(level.gold == gold_before + GIANT_SLIME.reward, "le Slime géant rapporte sa prime")
+	_check(level.gold == gold_before + COUVEUSE.reward, "la Couveuse rapporte sa prime")
 	for enemy in spawned:
 		enemy.take_damage(1e9)
-	_check(level.gold == gold_before + GIANT_SLIME.reward + SLIME.reward * GIANT_SLIME.split_count,
-		"chaque petit Slime rapporte aussi la sienne")
+	_check(level.gold == gold_before + COUVEUSE.reward + LARVE.reward * COUVEUSE.split_count,
+		"chaque Larve rapporte aussi la sienne")
 	_check(get_nodes_in_group(Enemy.GROUP).is_empty(), "plus aucun ennemi : les petits ne se divisent pas")
 	await _free(level)
+
+
+func _test_shielded_enemy() -> void:
+	print("Sentinelle : bouclier d'énergie qui se recharge")
+	var level := await _spawn_level(MECHA_01)
+	var sentinelle := _add_still_enemy(level, SENTINELLE, 0, 200.0)
+	_check(sentinelle.health.shield == SENTINELLE.max_shield, "la Sentinelle arrive avec son bouclier plein")
+	_check(is_equal_approx(sentinelle.take_damage(GATLING.damage), GATLING.damage)
+		and sentinelle.health.health == SENTINELLE.max_health, "le bouclier encaisse la mitrailleuse, sans armure")
+	sentinelle.take_damage(SENTINELLE.max_shield)
+	_check(sentinelle.health.shield == 0.0 and sentinelle.health.health < SENTINELLE.max_health,
+		"une fois le bouclier vidé, les coups passent sur les points de vie")
+	var elapsed := 0.0
+	while sentinelle.health.shield < SENTINELLE.max_shield and elapsed < 10.0:
+		elapsed += await _step()
+	_check(sentinelle.health.shield == SENTINELLE.max_shield and elapsed > sentinelle.health.shield_regen_delay,
+		"le bouclier se recharge après quelques secondes sans être touché (%.1f s)" % elapsed)
+	await _free(level)
+
+
+func _test_healer_enemy() -> void:
+	print("Médecin : soigne les ennemis blessés autour de lui")
+	var level := await _spawn_level(HUMANOID_01)
+	var medecin := _add_still_enemy(level, MEDECIN, 0, 300.0)
+	var close := _add_still_enemy(level, SOLDAT, 0, 300.0 + MEDECIN.heal_radius * 0.5)
+	var far := _add_still_enemy(level, SOLDAT, 0, 300.0 + MEDECIN.heal_radius * 3.0)
+	level._on_enemy_spawned(close)
+	close.take_damage(40.0)
+	far.take_damage(40.0)
+	medecin.take_damage(40.0)
+	# Seul le Médecin avance dans le temps (les soldats restent immobiles, à distance fixe).
+	medecin.data = MEDECIN.duplicate()
+	medecin.data.speed = 0.0
+	medecin.set_process(true)
+	var elapsed := 0.0
+	while close.health.health < SOLDAT.max_health and elapsed < MEDECIN.heal_interval * 4.0:
+		elapsed += await _step()
+	_check(close.health.health == SOLDAT.max_health, "le soldat blessé à côté est soigné")
+	_check(far.health.health == SOLDAT.max_health - 40.0, "pas celui qui est trop loin")
+	_check(medecin.health.health == MEDECIN.max_health - 40.0, "le Médecin ne se soigne pas lui-même")
+	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text.begins_with("+")
+		and n.color == Level.HEAL_TEXT_COLOR), "le soin s'affiche en vert")
+	await _free(level)
+
+
+func _test_worlds() -> void:
+	print("Mondes : trois biomes de 6 niveaux, débloqués l'un après l'autre")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_check(campaign.worlds.size() == 3 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 6),
+		"3 mondes de 6 niveaux")
+	_check(campaign.size() == 18 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
+	_check(campaign.get_next(LEVEL_06.resource_path) == MECHA_01.resource_path, "après le niveau 1-6 vient le 2-1")
+	_check(campaign.get_next(campaign.worlds[2].levels[5]) == "", "le niveau 3-6 est le dernier")
+	# Chaque monde n'envoie que ses propres monstres.
+	for w in campaign.worlds.size():
+		var world := campaign.worlds[w]
+		var foreign := []
+		var seen := {}
+		for path in world.levels:
+			var level: Level = load(path).instantiate()
+			for wave in level.get_node("WaveSpawner").waves:
+				for group in wave.groups:
+					seen[group.enemy] = true
+					if not world.enemies.has(group.enemy):
+						foreign.append(group.enemy.display_name)
+			level.free()
+		_check(foreign.is_empty(), "%s : seulement les monstres du biome %s" % [world.display_name, foreign])
+		_check(world.enemies.all(func(e: EnemyData) -> bool: return seen.has(e) and e.texture != null),
+			"%s : chacun de ses monstres apparaît, avec son image" % world.display_name)
+	_check(not Progress.is_world_unlocked(campaign, 1), "La Fonderie est verrouillée au départ")
+	for path in campaign.worlds[0].levels:
+		Progress.record_victory(path, 1)
+	_check(Progress.is_world_unlocked(campaign, 1) and not Progress.is_world_unlocked(campaign, 2),
+		"finir La Ruche ouvre La Fonderie, pas encore La Cité")
+	_check(Progress.get_next_to_play(campaign) == MECHA_01.resource_path, "Continuer ouvre le niveau 2-1")
+	Progress.reset_campaign()
+	# Fin du dernier niveau d'un monde : le bouton annonce le monde suivant.
+	var level := await _spawn_level(LEVEL_06)
+	_check(level.get_next_world_name() == "La Fonderie", "le niveau 1-6 ouvre La Fonderie")
+	level._end_game(true)
+	_check(level.hud.next_level_button.visible and level.hud.next_level_button.text == "Monde suivant"
+		and level.hud.end_message.text.contains("La Fonderie"), "l'écran de victoire annonce le nouveau monde")
+	await _free(level)
+	Progress.reset_campaign()
 
 
 func _test_beam_tower() -> void:
@@ -1011,7 +1139,7 @@ func _test_beam_tower() -> void:
 	level.gold = 1000
 	var tower: BeamTower = level.place_tower(Vector2i(4, 2), BEAM)
 	_check(tower is BeamTower, "le Rayon vient de sa scène")
-	var target_data: EnemyData = SLIME.duplicate()
+	var target_data: EnemyData = LARVE.duplicate()
 	target_data.max_health = 1e9
 	var enemy := _add_still_enemy(level, target_data, 0, 0.0)
 	enemy.global_position = tower.global_position + Vector2(60, 0)
@@ -1033,8 +1161,8 @@ func _test_beam_tower() -> void:
 	while other_hits.is_empty():
 		await _step()
 	_check(other_hits[0] < BEAM.damage * 1.2, "une nouvelle cible repart des dégâts de base")
-	var shell := _add_still_enemy(level, SHELL, 0, 0.0)
-	_check(is_equal_approx(shell.take_damage(BEAM.damage), 1.0), "l'armure de la Carapace absorbe un coup de base")
+	var scarabee := _add_still_enemy(level, SCARABEE, 0, 0.0)
+	_check(is_equal_approx(scarabee.take_damage(BEAM.damage), 1.0), "l'armure du Scarabée absorbe un coup de base")
 	await _free(level)
 
 
@@ -1064,7 +1192,7 @@ func _check_build_order_balance(scene: PackedScene, build_order: Array) -> void:
 func _test_levels_04_to_06_maps() -> void:
 	print("Niveaux 4 à 6 : cartes")
 	var expected := [
-		[LEVEL_04, "Niveau 4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 6", 1, 10, null],
+		[LEVEL_04, "Niveau 1-4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 1-5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 1-6", 1, 10, MECHA_01],
 	]
 	for item: Array in expected:
 		var level := await _spawn_level(item[0])

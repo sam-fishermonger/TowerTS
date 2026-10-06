@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="World" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/world.gd" id="1_world"]
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="2_enemy_data"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="e0_larve"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/rodeur.tres" id="e1_rodeur"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="e2_scarabee"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="e3_ravageur"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/couveuse.tres" id="e4_couveuse"]
+
+[resource]
+script = ExtResource("1_world")
+display_name = "La Ruche"
+description = "Insectoïdes et xénomorphes : des essaims rapides,\ndes carapaces et des couveuses qui éclatent en larves."
+color = Color(0.62, 0.42, 0.75, 1)
+enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_larve"), ExtResource("e1_rodeur"), ExtResource("e2_scarabee"), ExtResource("e3_ravageur"), ExtResource("e4_couveuse")])
+levels = Array[String](["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn", "res://scenes/levels/level_03.tscn", "res://scenes/levels/level_04.tscn", "res://scenes/levels/level_05.tscn", "res://scenes/levels/level_06.tscn"])
