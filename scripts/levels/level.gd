@@ -40,6 +40,10 @@ const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 ## du bonus de vague, sans dépasser `interest_cap`.
 @export_range(0.0, 0.5) var interest_rate := 0.05
 @export var interest_cap := 25
+## Mode Conquête (prototype, voir Conquest) : les tours coûtent aussi de la pierre, minée
+## par des ouvriers qui les bâtissent, et les vagues partent seules. Comme les niveaux de
+## l'éditeur, il ne compte ni pour la progression ni pour les succès.
+@export var conquest_mode := false
 
 var gold := 0:
 	set(value):
@@ -91,6 +95,8 @@ var unlocked_achievements: Array[String] = []
 ## l'écran titre), et les secondes de recharge restantes de chacun (0 = prêt).
 var powers: Array[Power] = []
 var power_cooldowns: Array[float] = []
+## Mode Conquête : ses ouvriers, sa pierre et ses rochers (null hors de ce mode).
+var conquest: Conquest
 
 var _wave_bonus_paid := -1
 ## Ennemis tombés qui vont se relever (EnemyData.revive_count) : la vague n'est pas
@@ -149,7 +155,7 @@ func _enter_tree() -> void:
 ## Les succès comptent dans les parties de la campagne, du mode infini et du défi, mais
 ## pas dans la partie de l'écran titre ni dans les niveaux de l'éditeur.
 func counts_achievements() -> bool:
-	return not is_demo and custom_level.is_empty()
+	return not is_demo and custom_level.is_empty() and conquest == null
 
 
 func _ready() -> void:
@@ -177,6 +183,12 @@ func _ready() -> void:
 	if is_endless:
 		_endless_record_before = Progress.get_endless_waves(scene_file_path)
 	placer.level = self
+	if conquest_mode and not is_demo:
+		conquest = Conquest.new()
+		conquest.name = "Conquest"
+		add_child(conquest)
+		move_child(conquest, towers.get_index() + 1)
+		conquest.setup(self)
 	# Les tours débloquées dans l'arbre des améliorations s'ajoutent à celles du niveau.
 	var types := tower_types.duplicate()
 	for data in Perks.get_unlocked_towers():
@@ -200,6 +212,10 @@ func _ready() -> void:
 	hud.setup(title, tower_types, game_speeds)
 	if not custom_level.is_empty():
 		hud.set_menu_button_text("Retour à l'éditeur")
+	if conquest:
+		hud.setup_conquest(Conquest.WORKER_COST, Conquest.stone_cost)
+		hud.recruit_requested.connect(conquest.recruit)
+		conquest.changed.connect(_refresh_hud)
 	if is_choosing_towers:
 		hud.show_tower_picker(types, tower_limit, get_default_tower_choice(), Difficulty.NAMES[difficulty])
 		hud.towers_chosen.connect(choose_towers)
@@ -259,7 +275,8 @@ func _exit_tree() -> void:
 
 ## Niveau proposé après une victoire ("" = dernier niveau).
 func get_next_level() -> String:
-	return campaign.get_next(scene_file_path) if campaign and not challenge and custom_level.is_empty() else ""
+	return campaign.get_next(scene_file_path) if campaign and not challenge and custom_level.is_empty() \
+		and not conquest_mode else ""
 
 
 func has_next_level() -> bool:
@@ -334,7 +351,8 @@ func select_tower(data: TowerData) -> void:
 
 
 func can_place_tower(cell: Vector2i, data: TowerData) -> bool:
-	return data != null and not is_over and map.is_cell_buildable(cell) and gold >= data.get_cost()
+	return data != null and not is_over and map.is_cell_buildable(cell) and gold >= data.get_cost() \
+		and (conquest == null or conquest.can_afford(data))
 
 
 ## Place une tour sur la case si c'est possible. Renvoie la tour, ou null.
@@ -352,8 +370,20 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	gold -= data.get_cost()
 	stats.on_tower_placed(tower)
 	Sound.play(&"build")
+	if conquest:
+		# En Conquête, la tour n'est qu'un chantier : les ouvriers vont la bâtir.
+		conquest.start_site(tower)
 	refresh_boosts()
 	return tower
+
+
+## Mode Conquête : un chantier vient d'être fini, la tour entre en jeu.
+func on_tower_built(tower: Tower) -> void:
+	Sound.play(&"upgrade")
+	_show_floating_text("Tour bâtie", Color(0.6, 1.0, 0.65), tower.global_position + Vector2(0, -32), 14)
+	refresh_boosts()
+	if placer.inspected_tower == tower:
+		hud.show_tower_details(tower)
 
 
 func can_upgrade_tower(tower: Tower) -> bool:
@@ -383,6 +413,8 @@ func sell_tower(tower: Tower) -> int:
 	if placer.inspected_tower == tower:
 		inspect_tower(null)
 	map.release(tower.cell)
+	if conquest:
+		conquest.refund(tower)
 	stats.on_tower_sold(tower, value)
 	_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
 	tower.despawn()
@@ -481,7 +513,7 @@ func refresh_boosts() -> void:
 	var all := get_towers()
 	var coils: Array[CoilTower] = []
 	for tower in all:
-		if tower is CoilTower:
+		if tower is CoilTower and tower.is_built():
 			coils.append(tower)
 			tower.boosted_towers.clear()
 	for tower in all:
@@ -706,6 +738,8 @@ func _check_wave_cleared() -> void:
 	_count_kills()
 	if not spawner.has_next_wave():
 		_end_game(true)
+	elif conquest:
+		conquest.on_wave_cleared()
 
 
 func _end_game(victory: bool) -> void:
@@ -725,7 +759,7 @@ func _end_game(victory: bool) -> void:
 		var best_before := Progress.get_daily_score(challenge.date_key)
 		var new_record := Progress.record_daily(challenge.date_key, score)
 		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0)
-	elif not custom_level.is_empty():
+	elif not custom_level.is_empty() or conquest:
 		hud.show_end_screen(victory, false, get_stars() if victory else 0)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
@@ -828,6 +862,9 @@ func _refresh_hud() -> void:
 		return
 	hud.update_stats(gold, lives, spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count(),
 		get_interest() if interest_rate > 0.0 else -1)
+	if conquest:
+		hud.update_conquest(conquest.stone, conquest.get_workers().size(), Conquest.MAX_WORKERS,
+			conquest.wave_countdown, conquest.can_recruit())
 
 
 func _process(delta: float) -> void:

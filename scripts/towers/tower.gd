@@ -45,6 +45,10 @@ var upgrades_locked := false
 ## Le niveau les recalcule quand une tour est posée, améliorée ou vendue.
 var boost_damage := 0.0
 var boost_fire_rate := 0.0
+## Avancement du chantier (mode Conquête), de 0 à 1 : tant qu'il n'est pas à 1, la tour
+## n'est qu'un chantier que les ouvriers bâtissent. Elle ne tire pas, ne s'améliore pas
+## et ne détecte pas les furtifs.
+var build_progress := 1.0
 
 ## Nœud qui reçoit ce que la tour crée en jeu (projectiles, effets). Par défaut, son parent.
 var projectile_container: Node
@@ -67,7 +71,7 @@ func _ready() -> void:
 ## celles qui détectent les furtifs si elle en est capable.
 func _refresh_stats() -> void:
 	stats = get_stats_at_level(level)
-	if stats.detects_stealth():
+	if stats.detects_stealth() and is_built():
 		add_to_group(Enemy.DETECTOR_GROUP)
 	elif is_in_group(Enemy.DETECTOR_GROUP):
 		remove_from_group(Enemy.DETECTOR_GROUP)
@@ -120,7 +124,33 @@ func _process(delta: float) -> void:
 
 
 func can_upgrade() -> bool:
-	return not upgrades_locked and level < data.get_max_level()
+	return not upgrades_locked and is_built() and level < data.get_max_level()
+
+
+func is_built() -> bool:
+	return build_progress >= 1.0
+
+
+## La tour devient un chantier (mode Conquête) : elle ne fera rien avant d'être bâtie.
+func start_construction() -> void:
+	build_progress = 0.0
+	set_process(false)
+	_refresh_stats()
+	queue_redraw()
+
+
+## Fait avancer le chantier (part de la construction, 1 = toute). Renvoie true si la tour
+## vient d'être terminée.
+func advance_construction(amount: float) -> bool:
+	if is_built():
+		return false
+	build_progress = minf(build_progress + amount, 1.0)
+	queue_redraw()
+	if not is_built():
+		return false
+	set_process(true)
+	_refresh_stats()
+	return true
 
 
 ## Prix de la prochaine amélioration, ou -1 si la tour est au niveau maximal.
@@ -138,6 +168,9 @@ func get_total_cost() -> int:
 
 ## Or rendu si la tour est vendue.
 func get_sell_value() -> int:
+	# Un chantier pas fini est remboursé en entier.
+	if not is_built():
+		return data.get_cost()
 	return roundi(get_total_cost() * (SELL_RATIO + Perks.get_bonuses().sell_ratio_bonus))
 
 
@@ -243,6 +276,9 @@ func _draw() -> void:
 ## les effets propres au type de tour.
 func _draw_body() -> void:
 	var half := SIZE / 2.0
+	if not is_built():
+		_draw_construction()
+		return
 	if data.turret_texture:
 		# La tourelle grossit un peu à chaque amélioration.
 		draw_sprite(self, data, Vector2.ZERO, SIZE, TURRET_SCALE + 0.1 * (level - 1), _aim_angle)
@@ -255,6 +291,25 @@ func _draw_body() -> void:
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -4), center + Vector2(4, 0),
 			center + Vector2(0, 4), center + Vector2(-4, 0)]), Color(1, 0.85, 0.3))
 	_draw_effects()
+
+
+## Chantier : la tour en transparence dans un échafaudage, et un arc doré qui se remplit
+## avec l'avancement.
+func _draw_construction() -> void:
+	var half := SIZE / 2.0
+	var ghost := Color(1, 1, 1, 0.35)
+	if data.turret_texture:
+		draw_sprite(self, data, Vector2.ZERO, SIZE, TURRET_SCALE, -PI / 2.0, ghost)
+	else:
+		draw_rect(Rect2(-half, -half, SIZE, SIZE), Color(data.color.darkened(0.35), 0.35))
+	var wood := Color(0.72, 0.52, 0.3)
+	draw_rect(Rect2(-half, -half, SIZE, SIZE), wood, false, 2.0)
+	draw_line(Vector2(-half, -half), Vector2(half, half), Color(wood, 0.7), 1.5)
+	draw_line(Vector2(half, -half), Vector2(-half, half), Color(wood, 0.7), 1.5)
+	var radius := SIZE * 0.62
+	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(0, 0, 0, 0.45), 5.0)
+	if build_progress > 0.0:
+		draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
 
 
 ## Cercle en pointillés : la portée de détection des furtifs.

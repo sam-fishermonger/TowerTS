@@ -51,6 +51,7 @@ const BELL := preload("res://resources/towers/bell.tres")
 const CHEVALIER := preload("res://resources/enemies/undead/chevalier.tres")
 const SQUELETTE := preload("res://resources/enemies/undead/squelette.tres")
 const LICHE := preload("res://resources/enemies/undead/liche.tres")
+const CONQUEST_01 := preload("res://scenes/levels/conquest_01.tscn")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -130,6 +131,8 @@ func _run() -> void:
 	await _test_bosses()
 	await _test_necropolis()
 	await _test_level_editor()
+	await _test_conquest()
+	await _test_conquest_victory()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -239,12 +242,29 @@ func _test_title_screen() -> void:
 	await process_frame
 	_check(title.get_node("%PlayButton") is Button, "le bouton Jouer existe")
 	_check(title.get_node("%PlayButton").has_focus(), "le bouton Jouer a le focus")
-	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%LexiconButton").text == "Lexique", "le bouton Lexique existe")
+	_check(title.get_main_buttons().all(func(b: Button) -> bool: return b.visible)
+		and title.get_play_buttons().all(func(b: Button) -> bool: return not b.visible),
+		"le menu principal ne montre que Jouer, Améliorations, Lexique, Succès, Options et Quitter")
+	title.get_node("%PlayButton").pressed.emit()
+	_check(title.is_play_menu_open() and title.get_play_buttons().all(func(b: Button) -> bool: return b.visible)
+		and not title.get_node("%PerksButton").visible and title.get_node("%CampaignButton").has_focus(),
+		"Jouer ouvre le choix du mode, Campagne a le focus")
+	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%DailyButton").text == "Défi du jour", "le bouton Défi du jour existe")
 	_check(title.get_node("%EditorButton").text == "Éditeur de niveau", "le bouton Éditeur de niveau existe")
-	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
+	_check(title.get_node("%ConquestButton").text == "Conquête", "le bouton Conquête existe")
+	_check(title.get_node("%CampaignButton").text == "Campagne" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
+	var cancel := InputEventAction.new()
+	cancel.action = &"ui_cancel"
+	cancel.pressed = true
+	Input.parse_input_event(cancel)
+	await process_frame
+	_check(not title.is_play_menu_open() and title.get_node("%PlayButton").has_focus(), "Échap revient au menu principal")
+	title.get_node("%PlayButton").pressed.emit()
+	title.get_node("%BackButton").pressed.emit()
+	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible, "Retour aussi")
 	await _free(title)
 	await _test_title_demo()
 	var screen := await _spawn_world_select()
@@ -327,7 +347,7 @@ func _test_progress() -> void:
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(title.get_node("%PlayButton").text == "Continuer", "le bouton devient Continuer")
+	_check(title.get_node("%CampaignButton").text == "Continuer", "le bouton Campagne devient Continuer")
 	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 288"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
@@ -2494,7 +2514,7 @@ func _test_konami_code() -> void:
 	var announced := false
 	for child in title.get_children():
 		announced = announced or (child is Label and child.text.contains("Konami"))
-	_check(title.get_node("%PlayButton").text == "Continuer" and announced, "l'écran titre se met à jour et l'annonce")
+	_check(title.get_node("%CampaignButton").text == "Continuer" and announced, "l'écran titre se met à jour et l'annonce")
 	Progress.reset_campaign()
 	# Flèches du pavé numérique, et A lu à sa place sur le clavier (le Q d'un AZERTY).
 	var events := [[KEY_KP_8, KEY_KP_8], [KEY_KP_8, KEY_KP_8], [KEY_DOWN, KEY_DOWN], [KEY_DOWN, KEY_DOWN],
@@ -3295,4 +3315,101 @@ func _test_level_editor() -> void:
 	_check(Progress.get_total_stars(Level.EMPTY_LEVEL) == stars_before
 		and Achievements.get_unlocked_count() == achievements_before,
 		"ni étoiles ni succès dans un niveau de l'éditeur")
+	await _free(level)
+
+
+func _test_conquest() -> void:
+	print("Mode Conquête : pierre, ouvriers et chantiers")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	_check(conquest != null and conquest.stone == Conquest.STARTING_STONE
+		and conquest.get_workers().size() == Conquest.STARTING_WORKERS, "pierre et ouvriers de départ")
+	_check(level.hud.stone_label.text == "Pierre : %d" % Conquest.STARTING_STONE
+		and level.hud.workers_label.text == "Ouvriers : 3 / %d" % Conquest.MAX_WORKERS, "la barre du haut montre la pierre et les ouvriers")
+	_check(not level.counts_achievements() and not level.has_next_level(), "ni succès ni niveau suivant (prototype)")
+	var rock := Vector2i(17, 6)
+	_check(conquest.has_stone(rock) and not level.map.is_cell_buildable(rock), "les rochers de la carte sont des gisements")
+	_check(Conquest.stone_cost(CANNON) == 20 and Conquest.stone_cost(SNIPER) == 48, "les tours coûtent aussi de la pierre")
+	_check(level.hud.tower_shop.get_child(0).get_child(0).get_child(2).text == "50 or · 20 p",
+		"la barre d'achat affiche le prix en pierre")
+	_check(level.place_tower(Vector2i(16, 4), SNIPER) == null and level.gold == 150,
+		"pas de tour sans assez de pierre, même avec l'or")
+	var tower := level.place_tower(Vector2i(16, 7), CANNON)
+	_check(tower != null and not tower.is_built() and conquest.stone == 20 and level.gold == 100,
+		"une tour posée est un chantier, payé en or et en pierre")
+	_check(not level.can_upgrade_tower(tower) and not tower.is_processing(), "un chantier ne tire pas et ne s'améliore pas")
+	var elapsed := 0.0
+	while not tower.is_built() and elapsed < 20.0:
+		elapsed += await _step()
+	await _step()
+	var builders := conquest.get_workers().filter(func(worker: Worker) -> bool: return worker.site == tower).size()
+	_check(tower.is_built() and tower.is_processing() and elapsed < Conquest.build_time(CANNON),
+		"deux ouvriers bâtissent la tour plus vite qu'un seul (%.1f s)" % elapsed)
+	_check(level.can_upgrade_tower(tower) or level.gold < tower.get_upgrade_cost(), "la tour bâtie peut s'améliorer")
+	_check(builders == 0, "les bâtisseurs retournent à la mine")
+	var stone_before := conquest.stone
+	elapsed = 0.0
+	while conquest.stone <= stone_before and elapsed < 30.0:
+		elapsed += await _step()
+	_check(conquest.stone > stone_before and conquest.stone_mined > 0, "les ouvriers rapportent la pierre au QG")
+	_check(conquest.rocks.values().any(func(left: int) -> bool: return left < Conquest.ROCK_STONE),
+		"la pierre est prise dans un rocher")
+	_check(conquest.set_preferred_rock(Vector2i(12, 3)) and not conquest.set_preferred_rock(Vector2i(16, 4)),
+		"on désigne un rocher, pas une case vide")
+	_check(conquest.get_workers().filter(func(worker: Worker) -> bool: return worker.is_mining()) \
+		.all(func(worker: Worker) -> bool: return worker.rock_cell == Vector2i(12, 3)), "les mineurs vont au rocher désigné")
+	conquest.rocks[rock] = 2
+	_check(conquest.take_stone(rock, 3) == 2 and not conquest.has_stone(rock) and level.map.is_cell_buildable(rock),
+		"un rocher vidé disparaît et libère sa case")
+	level.gold = 100
+	var recruit := conquest.recruit()
+	_check(recruit != null and level.gold == 100 - Conquest.WORKER_COST and conquest.get_workers().size() == 4,
+		"recruter un ouvrier coûte de l'or")
+	_check(level.hud.workers_label.text == "Ouvriers : 4 / %d" % Conquest.MAX_WORKERS, "le compte des ouvriers suit")
+	conquest.stone = 50
+	var stone_now := conquest.stone
+	var site := level.place_tower(Vector2i(14, 7), CANNON)
+	_check(level.sell_tower(site) == CANNON.get_cost() and conquest.stone == stone_now,
+		"un chantier vendu rend tout son or et toute sa pierre")
+	# Un monstre au sol blesse l'ouvrier qui se trouve sur son passage.
+	var enemy := _add_still_enemy(level, LARVE, 0, 700.0)
+	elapsed = 0.0
+	while is_instance_valid(recruit) and recruit.is_alive and elapsed < 5.0:
+		recruit.global_position = enemy.global_position
+		elapsed += await _step()
+	_check(not is_instance_valid(recruit) and conquest.workers_lost == 1 and conquest.get_workers().size() == 3,
+		"un ouvrier touché par un monstre finit par tomber")
+	enemy.despawn()
+	_check(conquest.wave_countdown > 0.0 and level.hud.next_wave_button.text.begins_with("Vague dans"),
+		"le compte à rebours de la première vague s'affiche")
+	conquest.wave_countdown = 0.01
+	await _step()
+	_check(level.spawner.current_wave == 0 and conquest.wave_countdown < 0.0
+		and level.hud.next_wave_button.text == "Lancer la vague", "la vague part seule à la fin du compte à rebours")
+	await _free(level)
+
+
+func _test_conquest_victory() -> void:
+	print("Mode Conquête : partie complète")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	var build_order := [[Vector2i(14, 4), CANNON], [Vector2i(16, 2), GATLING], [Vector2i(14, 7), CANNON],
+		[Vector2i(11, 3), GATLING], [Vector2i(9, 6), CANNON], [Vector2i(16, 4), CANNON], [Vector2i(14, 2), GATLING],
+		[Vector2i(9, 2), CANNON], [Vector2i(5, 5), GATLING], [Vector2i(3, 3), CANNON]]
+	var bought := 0
+	var elapsed := 0.0
+	# Les vagues partent seules : le joueur construit dès qu'il peut, et recrute un ouvrier
+	# quand la pierre lui manque mais que l'or suffit.
+	while not level.is_over and elapsed < 900.0:
+		if bought < build_order.size():
+			var data: TowerData = build_order[bought][1]
+			if conquest.stone < Conquest.stone_cost(data) and level.gold >= data.get_cost() + Conquest.WORKER_COST \
+					and conquest.get_workers().size() < 5:
+				conquest.recruit()
+		while bought < build_order.size() and level.can_place_tower(build_order[bought][0], build_order[bought][1]):
+			level.place_tower(build_order[bought][0], build_order[bought][1])
+			bought += 1
+		elapsed += await _step()
+	_check(level.is_over and level.lives > 0, "la partie est gagnée (vies : %d, tours : %d, pierre minée : %d, ouvriers perdus : %d)"
+		% [level.lives, bought, conquest.stone_mined, conquest.workers_lost])
 	await _free(level)

@@ -1,6 +1,7 @@
 extends Control
-## Écran titre : reprend la campagne, ouvre la sélection des mondes et des niveaux,
-## le défi du jour, l'arbre des améliorations, le lexique (tours, monstres, mondes), les succès ou les options, ou quitte le jeu. Derrière le menu, une partie se
+## Écran titre. « Jouer » ouvre le choix du mode : reprendre la campagne, la sélection des
+## mondes et des niveaux, le défi du jour, le mode Conquête ou l'éditeur de niveau. Le menu
+## principal ouvre aussi l'arbre des améliorations, le lexique (tours, monstres, mondes), les succès ou les options, ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
 ## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
 ## améliorations et spécialisations.
@@ -11,6 +12,8 @@ const LEXICON_SCREEN := "res://scenes/ui/lexicon_screen.tscn"
 const DAILY_CHALLENGE_SCREEN := "res://scenes/ui/daily_challenge_screen.tscn"
 const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 const ACHIEVEMENTS_SCREEN := "res://scenes/ui/achievements_screen.tscn"
+## Niveau du mode Conquête (prototype : un seul niveau).
+const CONQUEST_LEVEL := "res://scenes/levels/conquest_01.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## Agrandissement d'un bouton survolé ou qui a le focus.
@@ -34,9 +37,13 @@ var _konami_progress := 0
 var _konami_label: Label
 
 @onready var play_button: Button = %PlayButton
+@onready var campaign_button: Button = %CampaignButton
+@onready var back_button: Button = %BackButton
+@onready var subtitle: Label = %Subtitle
 @onready var perks_button: Button = %PerksButton
 @onready var worlds_button: Button = %WorldsButton
 @onready var daily_button: Button = %DailyButton
+@onready var conquest_button: Button = %ConquestButton
 @onready var editor_button: Button = %EditorButton
 @onready var lexicon_button: Button = %LexiconButton
 @onready var achievements_button: Button = %AchievementsButton
@@ -53,10 +60,13 @@ var _konami_label: Label
 
 
 func _ready() -> void:
-	play_button.pressed.connect(func() -> void: open_level(Progress.get_next_to_play(CAMPAIGN)))
+	play_button.pressed.connect(show_play_menu.bind(true))
+	back_button.pressed.connect(show_play_menu.bind(false))
+	campaign_button.pressed.connect(func() -> void: open_level(Progress.get_next_to_play(CAMPAIGN)))
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
+	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(CONQUEST_LEVEL))
 	editor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
@@ -71,10 +81,41 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, worlds_button, daily_button, editor_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
+	for button in [play_button, campaign_button, worlds_button, daily_button, conquest_button, editor_button,
+			back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
 	play_button.grab_focus()
+
+
+## Boutons du menu principal, et ceux du choix du mode (sous « Jouer »).
+func get_main_buttons() -> Array[Button]:
+	return [play_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]
+
+
+func get_play_buttons() -> Array[Button]:
+	return [campaign_button, worlds_button, daily_button, conquest_button, editor_button, back_button]
+
+
+func is_play_menu_open() -> bool:
+	return campaign_button.visible
+
+
+## Ouvre le choix du mode (Jouer) ou revient au menu principal (Retour, Échap).
+func show_play_menu(open: bool) -> void:
+	for button in get_main_buttons():
+		button.visible = not open
+	quit_button.visible = not open and not OS.has_feature("web")
+	for button in get_play_buttons():
+		button.visible = open
+	subtitle.text = "Jouer" if open else "Tower Defense"
+	(campaign_button if open else play_button).grab_focus()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and is_play_menu_open():
+		show_play_menu(false)
+		get_viewport().set_input_as_handled()
 
 
 func _process(delta: float) -> void:
@@ -166,12 +207,12 @@ func open_level(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
 
-## Boutons qui dépendent de la progression : Jouer ou Continuer, étoiles gagnées et
+## Boutons qui dépendent de la progression : Campagne ou Continuer, étoiles gagnées et
 ## à dépenser, effacement.
 func _refresh() -> void:
 	var earned := Perks.get_earned_stars()
 	var any_won := earned > 0
-	play_button.text = "Continuer" if any_won else "Jouer"
+	campaign_button.text = "Continuer" if any_won else "Campagne"
 	worlds_button.text = "Mondes  ·  ★ %d / %d" % [earned, CAMPAIGN.size() * Progress.MAX_LEVEL_STARS] if any_won else "Mondes"
 	# Les étoiles non dépensées sont signalées sur le bouton de l'arbre.
 	var available := Perks.get_available_stars()
@@ -229,4 +270,4 @@ func _on_demo_level_started(level: Level) -> void:
 func _on_reset_confirmed() -> void:
 	Progress.reset_campaign()
 	_refresh()
-	play_button.grab_focus()
+	show_play_menu(false)

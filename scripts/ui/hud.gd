@@ -29,6 +29,8 @@ signal options_toggled(open: bool)
 signal towers_chosen(types: Array[TowerData])
 ## Émis quand le joueur choisit un pouvoir actif (bouton, ou touche A/Z/E en AZERTY).
 signal power_selected(power: Power)
+## Mode Conquête : émis quand le joueur recrute un ouvrier (bouton, ou touche R).
+signal recruit_requested
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
@@ -37,6 +39,8 @@ const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 ## Rappel des commandes à côté de la barre d'achat, à la souris et au tactile.
 const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
 const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
+## Mode Conquête : ce qui change, devant le rappel des commandes.
+const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher : y envoyer les mineurs  ·  R : recruter un ouvrier"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
 ## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
@@ -78,6 +82,11 @@ var power_buttons: Array[PowerButton] = []
 var score_label: Label
 ## … et règles, au milieu de la carte jusqu'à la première vague.
 var challenge_rules: PanelContainer
+## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
+## hors de ce mode).
+var stone_label: Label
+var workers_label: Label
+var recruit_button: Button
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -168,6 +177,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		pause_toggled.emit()
 	elif code == KEY_V:
 		_select_next_speed()
+	elif code == KEY_R and recruit_button:
+		if not recruit_button.disabled:
+			recruit_requested.emit()
 	elif slot >= 0:
 		tower_shop.toggle_slot(slot)
 	else:
@@ -525,6 +537,69 @@ func _on_shop_button_hovered(button: TowerShopButton) -> void:
 	shop_info.show_tower_type(button.data, _gold, button.get_global_rect())
 
 
+# --- Mode Conquête ----------------------------------------------------------------
+
+## Ajoute la pierre, les ouvriers et le bouton de recrutement à la barre du haut, et le
+## prix en pierre aux cases de la barre d'achat (`stone_cost` : TowerData -> int).
+func setup_conquest(worker_cost: int, stone_cost: Callable) -> void:
+	stone_label = Label.new()
+	stone_label.custom_minimum_size.x = 100.0
+	stone_label.add_theme_color_override("font_color", Conquest.STONE_COLOR)
+	stone_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	stone_label.tooltip_text = "Pierre : minée par les ouvriers dans les rochers et rapportée au QG.\n" \
+		+ "Chaque tour en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs."
+	wave_label.add_sibling(stone_label)
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 0)
+	stone_label.add_sibling(box)
+	workers_label = Label.new()
+	workers_label.add_theme_color_override("font_color", Worker.COLOR)
+	workers_label.add_theme_font_size_override("font_size", 13)
+	workers_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(workers_label)
+	recruit_button = Button.new()
+	recruit_button.text = "Recruter · %d or (R)" % worker_cost
+	recruit_button.tooltip_text = "Un ouvrier de plus, au QG : il mine la pierre et bâtit les tours."
+	recruit_button.focus_mode = Control.FOCUS_NONE
+	recruit_button.add_theme_font_size_override("font_size", 13)
+	# Bordure aux couleurs des ouvriers : le bouton se détache de la barre du haut.
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.22, 0.17, 0.08)
+	normal.border_color = Color(Worker.COLOR, 0.7)
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(6)
+	normal.content_margin_left = 10.0
+	normal.content_margin_right = 10.0
+	normal.content_margin_top = 2.0
+	normal.content_margin_bottom = 2.0
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.32, 0.25, 0.1)
+	hover.border_color = Worker.COLOR
+	var disabled := normal.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color(0.12, 0.12, 0.12)
+	disabled.border_color = Color(1, 1, 1, 0.15)
+	recruit_button.add_theme_stylebox_override("normal", normal)
+	recruit_button.add_theme_stylebox_override("hover", hover)
+	recruit_button.add_theme_stylebox_override("pressed", hover)
+	recruit_button.add_theme_stylebox_override("disabled", disabled)
+	recruit_button.pressed.connect(recruit_requested.emit)
+	box.add_child(recruit_button)
+	tower_shop.stone_cost = stone_cost
+	next_wave_button.tooltip_text = "Les vagues partent seules à la fin du compte à rebours. " \
+		+ "Les lancer avant rapporte la prime habituelle."
+
+
+## Pierre, ouvriers (sur le maximum), secondes avant la prochaine vague (négatif : pas
+## de compte à rebours) et si l'on peut recruter.
+func update_conquest(stone: int, workers: int, max_workers: int, countdown: float, can_recruit: bool) -> void:
+	stone_label.text = "Pierre : %d" % stone
+	workers_label.text = "Ouvriers : %d / %d" % [workers, max_workers]
+	recruit_button.disabled = not can_recruit or end_panel.visible
+	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else "Vague dans %d s" % ceili(countdown)
+	tower_shop.set_stone(stone)
+
+
 # --- Défi du jour -------------------------------------------------------------
 
 ## Affiche les règles du défi au milieu de la carte (jusqu'à la première vague) et le
@@ -636,6 +711,8 @@ func show_wave_details() -> void:
 func _process(_delta: float) -> void:
 	_update_hovered_enemy()
 	var hint := TOUCH_HINT if GameSettings.is_touch_mode() else MOUSE_HINT
+	if recruit_button:
+		hint = CONQUEST_HINT + "  ·  " + hint
 	if shop_hint.text != hint:
 		shop_hint.text = hint
 

@@ -118,6 +118,15 @@ func get_occupant(cell: Vector2i) -> Node:
 	return _occupants.get(cell)
 
 
+## Retire le rocher d'une case (mode Conquête : il a été miné) : la case devient
+## constructible.
+func remove_rock(cell: Vector2i) -> void:
+	_blocked.erase(cell)
+	blocked_cells.erase(cell)
+	_obstacles.erase(cell)
+	queue_redraw()
+
+
 # --- Chemins ----------------------------------------------------------------
 
 ## Chemin d'index donné, ou le premier si l'index n'existe pas.
@@ -138,6 +147,16 @@ func get_closest_path_point(world_position: Vector2) -> Vector2:
 				best = global_point
 				best_distance = distance
 	return best
+
+
+## Base du joueur (repère global), au bout du premier chemin : sur sa dernière case s'il
+## finit dans la carte, sinon une case avant la sortie de l'écran.
+func get_base_position() -> Vector2:
+	var points := _local_points(paths[0])
+	var base := points[points.size() - 1]
+	if not is_cell_in_grid(world_to_cell(to_global(base))):
+		base -= (base - points[points.size() - 2]).normalized() * cell_size
+	return to_global(base)
 
 
 # --- Décor ------------------------------------------------------------------
@@ -241,12 +260,7 @@ func _draw() -> void:
 			draw_texture_rect_region(texture, Rect2(-size / 2.0, size), _tile_region(Vector2i(detail.tile, OBSTACLE_ROW)))
 		draw_set_transform(Vector2.ZERO)
 	if not paths.is_empty():
-		# Base du joueur au bout du premier chemin : sur la dernière case s'il finit
-		# dans la carte, sinon une case avant la sortie de l'écran.
-		var points := _local_points(paths[0])
-		var base := points[points.size() - 1]
-		if not is_cell_in_grid(world_to_cell(to_global(base))):
-			base -= (base - points[points.size() - 2]).normalized() * cell_size
+		var base := to_local(get_base_position())
 		draw_texture_rect(BASE_TEXTURE, Rect2(base - Vector2(32, 48), Vector2(64, 96)), false)
 
 

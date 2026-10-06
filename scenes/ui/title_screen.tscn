@@ -99,6 +99,7 @@ text = "TowerTS"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.85, 0.8, 1)
 theme_override_font_sizes/font_size = 24
@@ -117,8 +118,18 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 28
 text = "Jouer"
 
+[node name="CampaignButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(260, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 28
+text = "Campagne"
+
 [node name="WorldsButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(260, 44)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -127,19 +138,40 @@ text = "Mondes"
 
 [node name="DailyButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(260, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Défi du jour"
 
+[node name="ConquestButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+tooltip_text = "Prototype : récolte de pierre, ouvriers et tours en chantier."
+theme_override_font_sizes/font_size = 22
+text = "Conquête"
+
 [node name="EditorButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(260, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Éditeur de niveau"
+
+[node name="BackButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Retour"
 
 [node name="PerksButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
