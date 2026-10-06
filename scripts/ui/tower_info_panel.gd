@@ -135,13 +135,13 @@ func _refresh() -> void:
 	name_label.text = data.display_name
 	name_label.add_theme_color_override("font_color", data.color.lightened(0.3))
 	close_button.visible = placed
-	description_label.text = data.description
+	description_label.text = tr(data.description)
 	# Spécialisations (étoiles infinies) et croisements achetés : déjà comptés dans les statistiques.
 	for specialization in data.get_specializations():
-		description_label.text += "\n%s : %s" % ["Croisement" if specialization.crossing else "Spécialisation",
-			specialization.display_name]
+		description_label.text += "\n" + (tr("Croisement : %s") if specialization.crossing
+			else tr("Spécialisation : %s")) % tr(specialization.display_name)
 	if placed and tower.is_boosted():
-		description_label.text += "\nRenforcée par une Bobine : +%d %% de dégâts, +%d %% de cadence" % [
+		description_label.text += "\n" + tr("Renforcée par une Bobine : +%d %% de dégâts, +%d %% de cadence") % [
 			roundi(tower.boost_damage * 100.0), roundi(tower.boost_fire_rate * 100.0)]
 	description_label.text = description_label.text.strip_edges()
 	description_label.visible = not description_label.text.is_empty()
@@ -154,18 +154,18 @@ func _refresh() -> void:
 	_fill_stats(stats, next)
 
 	if placed:
-		level_label.text = "Niv. %d / %d" % [level, data.get_max_level()]
+		level_label.text = tr("Niv. %d / %d") % [level, data.get_max_level()]
 		level_label.visible = true
 		footer_label.visible = false
 		actions.visible = true
-		sell_button.text = "Vendre  ·  %d or" % tower.get_sell_value()
+		sell_button.text = tr("Vendre  ·  %d or") % tower.get_sell_value()
 		target_button.visible = tower.uses_target_mode()
-		target_button.text = "Cible : %s" % Tower.TARGET_MODE_NAMES[tower.target_mode]
+		target_button.text = tr("Cible : %s") % tr(Tower.TARGET_MODE_NAMES[tower.target_mode])
 	else:
 		level_label.visible = false
-		var footer := "Prix : %d or" % data.get_cost()
+		var footer := tr("Prix : %d or") % data.get_cost()
 		if data.upgrades.size() > 0:
-			footer += "   ·   %d amélioration%s" % [data.upgrades.size(), "s" if data.upgrades.size() > 1 else ""]
+			footer += "   ·   " + tr_n("%d amélioration", "%d améliorations", data.upgrades.size()) % data.upgrades.size()
 		footer_label.text = footer
 		footer_label.visible = true
 		actions.visible = false
@@ -213,8 +213,8 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 			"+%d %%" % roundi(next.boost_fire_rate * 100.0) if next else "")
 	else:
 		_add_stat("Dégâts", _format(stats.damage), _format(next.damage) if next else "")
-		_add_stat("Cadence", "%s tirs/s" % _format(stats.fire_rate, 2),
-			"%s tirs/s" % _format(next.fire_rate, 2) if next else "")
+		_add_stat("Cadence", tr("%s tirs/s") % _format(stats.fire_rate, 2),
+			tr("%s tirs/s") % _format(next.fire_rate, 2) if next else "")
 		_add_stat("Dégâts/s", _format(stats.get_dps()), _format(next.get_dps()) if next else "")
 	_add_stat("Portée", _format(stats.attack_range), _format(next.attack_range) if next else "")
 	if stats.chain_count > 0:
@@ -223,8 +223,8 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 	if stats.knockback > 0.0:
 		_add_stat("Recul", _format(stats.knockback), _format(next.knockback) if next else "")
 	if stats.beam_ramp_max > 1.0:
-		_add_stat("Montée", "x%s en %s s" % [_format(stats.beam_ramp_max), _format(stats.beam_ramp_time)],
-			"x%s en %s s" % [_format(next.beam_ramp_max), _format(next.beam_ramp_time)] if next else "")
+		_add_stat("Montée", tr("x%s en %s s") % [_format(stats.beam_ramp_max), _format(stats.beam_ramp_time)],
+			tr("x%s en %s s") % [_format(next.beam_ramp_max), _format(next.beam_ramp_time)] if next else "")
 	if stats.splash_radius > 0.0:
 		_add_stat("Explosion", _format(stats.splash_radius), _format(next.splash_radius) if next else "")
 	if stats.cloud_radius > 0.0:
@@ -237,14 +237,14 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 	if not stats.hits_air:
 		_add_stat("Volants", "hors d'atteinte", "")
 	elif stats.air_damage_multiplier != 1.0:
-		_add_stat("Volants", "x%s dégâts" % _format(stats.air_damage_multiplier), "")
+		_add_stat("Volants", tr("x%s dégâts") % _format(stats.air_damage_multiplier), "")
 	if stats.detects_stealth():
 		_add_stat("Détection", _format(stats.detection_range), _format(next.detection_range) if next else "")
 	if stats.armor_piercing:
 		_add_stat("Armure", "ignorée", "")
 	if stats.shield_damage_multiplier != 1.0:
-		_add_stat("Boucliers", "x%s dégâts" % _format(stats.shield_damage_multiplier),
-			"x%s dégâts" % _format(next.shield_damage_multiplier) if next else "")
+		_add_stat("Boucliers", tr("x%s dégâts") % _format(stats.shield_damage_multiplier),
+			tr("x%s dégâts") % _format(next.shield_damage_multiplier) if next else "")
 	if stats.shield_jam_duration > 0.0:
 		_add_stat("Brouillés", "%s s" % _format(stats.shield_jam_duration),
 			"%s s" % _format(next.shield_jam_duration) if next else "")

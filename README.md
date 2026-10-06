@@ -289,7 +289,9 @@ Pour écrire un texte traduisible :
 - **Changement de langue** : un nœud qui compose ses textes les recalcule dans `_notification(NOTIFICATION_TRANSLATION_CHANGED)` (voir `title_screen.gd`), les textes fixes suivent seuls.
 - Un texte qui ne doit pas être traduit (le nom d'une langue, un nom propre) : `auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED`.
 
-`python3 tools/textes_a_traduire.py` liste les textes marqués (`tr()` dans les scripts, textes des scènes) qui manquent dans `en.po` ; avec `--ajouter`, il les y ajoute avec un `msgstr` vide, à remplir. Les tests échouent tant qu'une entrée de `en.po` n'a pas de traduction.
+`python3 tools/textes_a_traduire.py` liste les textes marqués (`tr()` dans les scripts, textes des scènes) qui manquent dans `en.po` ; avec `--ajouter`, il les y ajoute avec un `msgstr` vide, à remplir. Les tests échouent tant qu'une entrée de `en.po` n'a pas de traduction, et la CI lance aussi ce script.
+
+Les noms des monstres se mettent au pluriel par `EnemyData.plural()` (règles anglaises comprises : Larvae, Mummies), et les nombres à virgule s'écrivent avec `GameSettings.decimal()` (« 1,5 » en français, « 1.5 » en anglais).
 
 ## Tests
 

@@ -155,36 +155,37 @@ func get_level_title() -> String:
 	if world < 0:
 		return level_path.get_file().get_basename()
 	var number := CAMPAIGN.worlds[world].levels.find(level_path) + 1
-	return "Niveau %d-%d  ·  %s" % [world + 1, number, CAMPAIGN.worlds[world].display_name]
+	return tr("Niveau %d-%d  ·  %s") % [world + 1, number, tr(CAMPAIGN.worlds[world].display_name)]
 
 
-## « mardi 6 octobre 2026 ».
+## « mardi 6 octobre 2026 » (l'anglais change l'ordre : des noms plutôt que des %).
 func get_date_text() -> String:
 	var parts := date_key.split("-")
 	if parts.size() != 3:
 		return date_key
 	var unix := Time.get_unix_time_from_datetime_string(date_key)
 	var weekday: int = Time.get_date_dict_from_unix_time(unix).weekday
-	return "%s %d %s %s" % [WEEKDAYS[weekday], parts[2].to_int(), MONTHS[clampi(parts[1].to_int() - 1, 0, 11)],
-		parts[0]]
+	return tr("{weekday} {day} {month} {year}").format({weekday = tr(WEEKDAYS[weekday]), day = parts[2].to_int(),
+		month = tr(MONTHS[clampi(parts[1].to_int() - 1, 0, 11)]), year = parts[0]})
 
 
 ## Règles, une ligne chacune : tours imposées d'abord.
 func describe_rules() -> Array[String]:
 	var names := PackedStringArray()
 	for data in get_towers():
-		names.append(data.display_name)
-	var towers := ", ".join(names.slice(0, -1)) + " et " + names[-1] if names.size() > 1 else ", ".join(names)
-	var result: Array[String] = ["%s : %s." % ["Deux tours seulement" if has_rule(DEUX_TOURS) else "Tours imposées",
-		towers]]
+		names.append(tr(data.display_name))
+	var towers := ", ".join(names.slice(0, -1)) + tr(" et ") + names[-1] if names.size() > 1 else ", ".join(names)
+	var result: Array[String] = [(tr("Deux tours seulement : %s.") if has_rule(DEUX_TOURS) else tr("Tours imposées : %s."))
+		% towers]
 	for rule in rules:
 		if rule != DEUX_TOURS:
-			result.append("%s : %s" % [RULE_NAMES[rule], RULE_TEXTS[rule].left(1).to_lower() + RULE_TEXTS[rule].substr(1)])
-	result.append("Sans l'arbre des améliorations : tout le monde joue avec les mêmes tours.")
+			var text := tr(RULE_TEXTS[rule])
+			result.append(tr("%s : %s") % [tr(RULE_NAMES[rule]), text.left(1).to_lower() + text.substr(1)])
+	result.append(tr("Sans l'arbre des améliorations : tout le monde joue avec les mêmes tours."))
 	return result
 
 
 ## Comment se calcule le score, en une phrase.
 static func describe_score() -> String:
-	return "Score : %d points par pièce d'or que rapporte un monstre détruit, %d par vague repoussée, %d par vie gardée à la victoire." \
+	return TranslationServer.translate("Score : %d points par pièce d'or que rapporte un monstre détruit, %d par vague repoussée, %d par vie gardée à la victoire.") \
 		% [POINTS_PER_GOLD, POINTS_PER_WAVE, POINTS_PER_LIFE]

@@ -13,7 +13,11 @@ var data: TowerData
 ## Touche qui choisit la case ("" = aucune).
 var hotkey := ""
 
+var _name_label: Label
 var _price_label: Label
+## Prix affiché, en or et en pierre (négatif : pas de pierre), refait au changement de langue.
+var _cost := 0
+var _stone := -1
 
 
 func _init(tower_data: TowerData = null) -> void:
@@ -39,9 +43,9 @@ func _ready() -> void:
 	icon_view.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	icon_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(icon_view)
-	var name_label := _add_label(column, data.display_name, _fit_font_size(data.display_name, 13),
+	_name_label = _add_label(column, data.display_name, _fit_font_size(tr(data.display_name), 13),
 		data.color.lightened(0.35))
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_price_label = _add_label(column, "", 12, TowerInfoPanel.PRICE_COLOR)
 	set_price(data.get_cost(), true)
 	if not hotkey.is_empty():
@@ -63,11 +67,24 @@ func _fit_font_size(text_value: String, max_size: int) -> int:
 ## Affiche le prix, en rouge et la case grisée s'il dépasse l'or disponible (ou la
 ## pierre, en mode Conquête : `stone` positif).
 func set_price(cost: int, affordable: bool, stone := -1) -> void:
+	_cost = cost
+	_stone = stone
 	if _price_label == null:
 		return
-	_price_label.text = "%d or" % cost if stone < 0 else "%d or · %d p" % [cost, stone]
+	_refresh_price_text()
 	_price_label.add_theme_color_override("font_color", TowerInfoPanel.PRICE_COLOR if affordable else TowerInfoPanel.TOO_EXPENSIVE_COLOR)
 	modulate.a = 1.0 if affordable or button_pressed else UNAFFORDABLE_ALPHA
+
+
+func _refresh_price_text() -> void:
+	_price_label.text = tr("%d or") % _cost if _stone < 0 else tr("%d or · %d p") % [_cost, _stone]
+
+
+## Changement de langue : le nom (traduit seul) peut demander une autre taille, et le prix se réécrit.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_name_label.add_theme_font_size_override("font_size", _fit_font_size(tr(data.display_name), 13))
+		_refresh_price_text()
 
 
 func _add_label(parent: Control, text_value: String, font_size: int, color: Color) -> Label:

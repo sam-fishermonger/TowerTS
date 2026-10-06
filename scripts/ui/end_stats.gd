@@ -17,6 +17,9 @@ var summary := {}
 var type_rows: Array[LevelStats.TypeRecord] = []
 var best_label: Label
 var achievements_label: Label
+## Partie affichée, pour refaire le panneau au changement de langue (menu Options).
+var _stats: LevelStats
+var _achievement_ids: Array[String] = []
 
 
 func _init() -> void:
@@ -26,6 +29,8 @@ func _init() -> void:
 
 ## Remplit le panneau avec les statistiques d'une partie et les succès débloqués.
 func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
+	_stats = stats
+	_achievement_ids = achievement_ids
 	for child in get_children():
 		remove_child(child)
 		child.queue_free()
@@ -35,9 +40,9 @@ func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
 	if stats.elite_kills > 0 or stats.boss_kills > 0:
 		var details: Array[String] = []
 		if stats.elite_kills > 0:
-			details.append("%d élite%s" % [stats.elite_kills, "s" if stats.elite_kills > 1 else ""])
+			details.append(tr_n("%d élite", "%d élites", stats.elite_kills) % stats.elite_kills)
 		if stats.boss_kills > 0:
-			details.append("%d boss" % stats.boss_kills)
+			details.append(tr_n("%d boss", "%d boss", stats.boss_kills) % stats.boss_kills)
 		kills += " (%s)" % ", ".join(details)
 	summary = {
 		"Durée": LevelStats.format_duration(stats.duration),
@@ -72,11 +77,11 @@ func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
 	add_child(best_row)
 	if best:
 		best_row.add_child(_icon(best.data))
-		best_label = _label("%s  niv. %d%s" % [best.data.display_name, best.level, "  (vendue)" if best.sold else ""],
-			16, best.data.color.lightened(0.35))
+		var best_text := tr("%s  niv. %d  (vendue)") if best.sold else tr("%s  niv. %d")
+		best_label = _label(best_text % [tr(best.data.display_name), best.level], 16, best.data.color.lightened(0.35))
 		best_row.add_child(best_label)
-		best_row.add_child(_label("%s dégâts · %d destruction%s" % [LevelStats.format_number(best.damage),
-			best.kills, "s" if best.kills > 1 else ""], 15, MUTED))
+		best_row.add_child(_label(tr_n("%s dégâts · %d destruction", "%s dégâts · %d destructions",
+			LevelStats.plural_count(best.kills)) % [LevelStats.format_number(best.damage), best.kills], 15, MUTED))
 	else:
 		best_label = _label("Aucune tour n'a infligé de dégâts.", 15, MUTED)
 		best_row.add_child(best_label)
@@ -108,16 +113,21 @@ func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
 				13, MUTED))
 
 	if not achievement_ids.is_empty():
-		_add_title("Succès débloqué%s" % ("s" if achievement_ids.size() > 1 else ""), Achievements.COLOR)
+		_add_title(tr_n("Succès débloqué", "Succès débloqués", achievement_ids.size()), Achievements.COLOR)
 		var names: Array[String] = []
 		for id in achievement_ids:
 			var definition := Achievements.get_definition(id)
 			# Espaces insécables : un succès ne se coupe pas en fin de ligne.
-			names.append(("%s %s" % [definition.icon, definition.name]).replace(" ", "\u00a0"))
+			names.append(("%s %s" % [definition.icon, tr(definition.name)]).replace(" ", "\u00a0"))
 		achievements_label = _label("   ".join(names), 15, Achievements.COLOR)
 		achievements_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		achievements_label.custom_minimum_size.x = 420.0
 		add_child(achievements_label)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and _stats:
+		setup(_stats, _achievement_ids)
 
 
 func _add_title(text: String, color := TITLE_COLOR) -> void:

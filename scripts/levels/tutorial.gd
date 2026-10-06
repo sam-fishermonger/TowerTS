@@ -377,9 +377,7 @@ func _build_ui() -> void:
 
 
 func _show_step(step: Dictionary) -> void:
-	var touch := GameSettings.is_touch_mode() and step.has("touch_text")
-	_text.text = step.touch_text if touch else step.text
-	_counter.text = tr("TUTORIEL  ·  %d / %d") % [current + 1, steps.size()]
+	_show_step_texts(step)
 	_next_button.visible = step.get("next", false)
 	bubble.visible = true
 	bubble.reset_size()
@@ -388,6 +386,23 @@ func _show_step(step: Dictionary) -> void:
 	var tween := bubble.create_tween().set_ignore_time_scale()
 	tween.tween_property(bubble, "modulate:a", 1.0, 0.25)
 	Sound.play(&"upgrade", -8.0)
+
+
+func _show_step_texts(step: Dictionary) -> void:
+	var touch := GameSettings.is_touch_mode() and step.has("touch_text")
+	_text.text = step.touch_text if touch else step.text
+	_counter.text = tr("TUTORIEL  ·  %d / %d") % [current + 1, steps.size()]
+
+
+## Langue changée dans les Options (ouvertes en jeu) : les textes des étapes et de la
+## bulle sont refaits dans la nouvelle langue.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and bubble != null:
+		_build_steps()
+		_skip_button.text = tr("Passer le tutoriel")
+		_next_button.text = tr("Suivant")
+		if current >= 0 and current < steps.size():
+			_show_step_texts(steps[current])
 
 
 func _process(delta: float) -> void:

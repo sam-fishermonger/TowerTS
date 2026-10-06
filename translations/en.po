@@ -80,6 +80,9 @@ msgstr "Konami code: everything is unlocked!"
 msgid "Démo"
 msgstr "Demo"
 
+msgid "Tutoriel  ·  conseillé"
+msgstr "Tutorial  ·  recommended"
+
 # --- Mondes --------------------------------------------------------------------
 
 msgid "La Ruche"
@@ -132,6 +135,2055 @@ msgstr "Close"
 msgid "Tournez l'appareil\npour jouer à l'horizontale."
 msgstr "Turn your device\nto play in landscape."
 
+# --- Tours, monstres, mondes, améliorations et pouvoirs --------------------------
+
+msgid "Aviateur"
+msgstr "Aviator"
+
+msgid "Soldat à réacteur dorsal et gilet blindé, qui saute par-dessus les défenses en ligne droite."
+msgstr "Soldier with a jetpack and an armored vest, who leaps over the defenses in a straight line."
+
+msgid "Colosse"
+msgstr "Colossus"
+
+msgid "Géant en armure lourde, lent et très résistant."
+msgstr "Giant in heavy armor, slow and very tough."
+
+msgid "Éclaireur"
+msgstr "Scout"
+
+msgid "Coureur léger et très rapide."
+msgstr "Light and very fast runner."
+
+msgid "Garde"
+msgstr "Guard"
+
+msgid "Bouclier anti-émeute : une armure solide contre les petits coups."
+msgstr "Riot shield: solid armor against small hits."
+
+msgid "Le Général"
+msgstr "The General"
+
+msgid "Le chef de la Cité, en exosquelette : il soigne ses troupes autour de lui et appelle des Soldats en renfort."
+msgstr "The leader of the City, in an exoskeleton: he heals his troops around him and calls in Soldiers as reinforcements."
+
+msgid "Infiltré"
+msgstr "Infiltrator"
+
+msgid "Espion en tenue sombre, invisible pour les tours sauf près d'une tour qui détecte."
+msgstr "Spy in dark clothing, invisible to towers except near a tower that detects."
+
+msgid "Médecin"
+msgstr "Medic"
+
+msgid "Soigne régulièrement les ennemis blessés autour de lui : à abattre en premier."
+msgstr "Regularly heals wounded enemies around him: take him down first."
+
+msgid "Soldat"
+msgstr "Soldier"
+
+msgid "Le fantassin de base de la Cité."
+msgstr "The basic foot soldier of the City."
+
+msgid "Transport de troupes"
+msgstr "Troop Carrier"
+
+msgid "Véhicule blindé qui libère 4 Soldats quand il est détruit."
+msgstr "Armored vehicle that releases 4 Soldiers when destroyed."
+
+msgid "Couveuse"
+msgstr "Brooder"
+
+msgid "Poche à œufs : à sa mort, elle éclate en 3 Larves, sur place."
+msgstr "Egg sac: when it dies, it bursts into 3 Larvae on the spot."
+
+msgid "Frelon"
+msgstr "Hornet"
+
+msgid "Insecte volant qui file droit vers la base au-dessus du chemin. Seules les tours qui tirent en l'air l'atteignent."
+msgstr "Flying insect that heads straight for the base above the path. Only towers that can shoot into the air can reach it."
+
+msgid "Larve"
+msgstr "Larva"
+
+msgid "La larve de base de la Ruche : ni rapide ni résistante, mais elle arrive en nombre."
+msgstr "The basic larva of the Hive: neither fast nor tough, but it comes in numbers."
+
+msgid "Mante"
+msgstr "Mantis"
+
+msgid "Insecte furtif à la couleur des feuilles : invisible pour les tours, sauf près d'une tour qui détecte."
+msgstr "Stealthy insect the color of leaves: invisible to towers, except near a tower that detects."
+
+msgid "Ravageur"
+msgstr "Ravager"
+
+msgid "Gros xénomorphe lent et coriace, qui coûte 3 vies s'il passe."
+msgstr "Big, slow and tough xenomorph that costs 3 lives if it gets through."
+
+msgid "Reine de la Ruche"
+msgstr "Hive Queen"
+
+msgid "La mère de toute la Ruche, gonflée d'œufs : elle pond des Larves en marchant. Il faut l'abattre avant qu'elle n'atteigne la base."
+msgstr "The mother of the whole Hive, swollen with eggs: she lays Larvae as she walks. She must be taken down before she reaches the base."
+
+msgid "Rôdeur"
+msgstr "Prowler"
+
+msgid "Petit xénomorphe très rapide et fragile, qui passe entre les tirs lents."
+msgstr "Small, very fast and fragile xenomorph that slips between slow shots."
+
+msgid "Scarabée"
+msgstr "Beetle"
+
+msgid "Carapace épaisse : les petits dégâts (Mitrailleuse) rebondissent presque tous."
+msgstr "Thick carapace: small hits (Gatling) almost all bounce off."
+
+msgid "Béhémoth"
+msgstr "Behemoth"
+
+msgid "Forteresse mécanique de la Fonderie : un blindage épais, un énorme bouclier d'énergie, et des Drones qui décollent de ses flancs."
+msgstr "Mechanical fortress of the Foundry: thick armor, a huge energy shield, and Drones taking off from its flanks."
+
+msgid "Chasseur"
+msgstr "Fighter"
+
+msgid "Aéronef de combat protégé par un bouclier, qui survole les défenses en ligne droite."
+msgstr "Combat aircraft protected by a shield, flying over the defenses in a straight line."
+
+msgid "Chenillard"
+msgstr "Crawler"
+
+msgid "Char lent au blindage très épais : il faut de gros coups, ou les ignorer."
+msgstr "Slow tank with very thick armor: it takes big hits, or ignore it."
+
+msgid "Drone"
+msgstr "Drone"
+
+msgid "Petit drone très rapide, mais fragile, qui file au ras du sol en suivant le chemin."
+msgstr "Small, very fast but fragile drone that skims the ground along the path."
+
+msgid "Porte-drones"
+msgstr "Drone Carrier"
+
+msgid "Transport blindé qui libère 3 Drones quand il est détruit."
+msgstr "Armored transport that releases 3 Drones when destroyed."
+
+msgid "Sentinelle"
+msgstr "Sentinel"
+
+msgid "Robot de garde protégé par un bouclier d'énergie qui se recharge."
+msgstr "Guard robot protected by a recharging energy shield."
+
+msgid "Spectre"
+msgstr "Specter"
+
+msgid "Robot d'infiltration à camouflage optique et bouclier : les tours ne le voient que s'il passe près d'une tour qui détecte."
+msgstr "Infiltration robot with optical camouflage and a shield: towers only see it when it passes near a tower that detects."
+
+msgid "Titan"
+msgstr "Titan"
+
+msgid "Robot de combat énorme : blindage et bouclier d'énergie. 5 vies s'il passe."
+msgstr "Huge combat robot: armor and energy shield. 5 lives if it gets through."
+
+msgid "Abomination"
+msgstr "Abomination"
+
+msgid "Une masse de chair recousue, énorme et lente."
+msgstr "A mass of stitched-up flesh, huge and slow."
+
+msgid "Asticot"
+msgstr "Maggot"
+
+msgid "Petit ver pâle, libéré par les Charognes."
+msgstr "Small pale worm, released by Carrions."
+
+msgid "Charogne"
+msgstr "Carrion"
+
+msgid "Un cadavre boursouflé : à sa mort, il libère 4 Asticots."
+msgstr "A bloated corpse: when it dies, it releases 4 Maggots."
+
+msgid "Chevalier noir"
+msgstr "Black Knight"
+
+msgid "Un chevalier mort en armure : il encaisse les coups, et se relève une fois quand on l'abat."
+msgstr "A dead knight in armor: he soaks up hits, and rises again once when struck down."
+
+msgid "Goule"
+msgstr "Ghoul"
+
+msgid "Rapide et affamée, elle court à quatre pattes."
+msgstr "Fast and hungry, it runs on all fours."
+
+msgid "La Liche"
+msgstr "The Lich"
+
+msgid "La reine de la Nécropole : elle relève des Squelettes en marchant, et se relève elle-même une fois si on ne la consacre pas."
+msgstr "The queen of the Necropolis: she raises Skeletons as she walks, and rises again herself once unless she is consecrated."
+
+msgid "Momie"
+msgstr "Mummy"
+
+msgid "Momifiée et coriace : elle se relève une fois avec plus de la moitié de sa vie."
+msgstr "Mummified and tough: it rises again once with more than half its health."
+
+msgid "Squelette"
+msgstr "Skeleton"
+
+msgid "Un mort qui marche, en os et en rancune : l'ennemi de base de la Nécropole."
+msgstr "A walking dead made of bone and spite: the basic enemy of the Necropolis."
+
+msgid "Poudre fine"
+msgstr "Fine Powder"
+
+msgid "Toutes les tours font 10 % de dégâts en plus."
+msgstr "All towers deal 10% more damage."
+
+msgid "Longue-vue"
+msgstr "Spyglass"
+
+msgid "Toutes les tours tirent 10 % plus loin."
+msgstr "All towers shoot 10% farther."
+
+msgid "Givre mordant"
+msgstr "Biting Frost"
+
+msgid "Les ralentissements durent 1 seconde de plus."
+msgstr "Slows last 1 second longer."
+
+msgid "Rouages huilés"
+msgstr "Oiled Gears"
+
+msgid "Toutes les tours tirent 15 % plus vite."
+msgstr "All towers shoot 15% faster."
+
+msgid "Maître artilleur"
+msgstr "Master Gunner"
+
+msgid "Toutes les tours font encore 20 % de dégâts en plus."
+msgstr "All towers deal another 20% more damage."
+
+msgid "Trésor de guerre"
+msgstr "War Chest"
+
+msgid "Chaque partie commence avec 50 or de plus."
+msgstr "Every game starts with 50 more gold."
+
+msgid "Pillage"
+msgstr "Plunder"
+
+msgid "Les ennemis détruits rapportent 20 % d'or en plus."
+msgstr "Destroyed enemies give 20% more gold."
+
+msgid "Architecte"
+msgstr "Architect"
+
+msgid "Les tours et leurs améliorations coûtent 10 % moins cher."
+msgstr "Towers and their upgrades cost 10% less."
+
+msgid "Trésorier"
+msgstr "Treasurer"
+
+msgid "Le bonus de fin de vague est augmenté de 50 %."
+msgstr "The end-of-wave bonus is increased by 50%."
+
+msgid "Brocanteur"
+msgstr "Junk Dealer"
+
+msgid "Vendre une tour rend 85 % de son prix au lieu de 70 %."
+msgstr "Selling a tower refunds 85% of its price instead of 70%."
+
+msgid "Coffres pleins"
+msgstr "Full Coffers"
+
+msgid "Chaque partie commence avec encore 100 or de plus."
+msgstr "Every game starts with another 100 more gold."
+
+msgid "Remparts"
+msgstr "Ramparts"
+
+msgid "5 vies de plus au début de chaque partie."
+msgstr "5 more lives at the start of every game."
+
+msgid "Infirmerie"
+msgstr "Infirmary"
+
+msgid "Chaque vague repoussée rend 1 vie perdue."
+msgstr "Every wave repelled restores 1 lost life."
+
+msgid "Douves"
+msgstr "Moat"
+
+msgid "Citadelle"
+msgstr "Citadel"
+
+msgid "10 vies de plus au début de chaque partie."
+msgstr "10 more lives at the start of every game."
+
+msgid "Lance-flammes"
+msgstr "Flamethrower"
+
+msgid "Nouvelle tour : un jet de flammes en cône qui brûle tout un essaim. La brûlure passe sous les carapaces des Scarabées."
+msgstr "New tower: a cone of flames that burns a whole swarm. The burn gets under Beetle carapaces."
+
+msgid "Pesticide"
+msgstr "Pesticide"
+
+msgid "Nouvelle tour : des grenades qui laissent un nuage de poison sur le chemin. Les larves d'une Couveuse naissent dedans."
+msgstr "New tower: grenades that leave a cloud of poison on the path. A Brooder's larvae hatch inside it."
+
+msgid "Brouilleur IEM"
+msgstr "EMP Jammer"
+
+msgid "Nouvelle tour : une onde qui fait 5 fois plus de dégâts aux boucliers d'énergie et les empêche de se recharger."
+msgstr "New tower: a wave that deals 5 times more damage to energy shields and stops them from recharging."
+
+msgid "Perforateur"
+msgstr "Railgun"
+
+msgid "Nouvelle tour : un tir qui traverse tous les ennemis alignés en ignorant leur armure, contre les Chenillards et les Titans."
+msgstr "New tower: a shot that goes through every lined-up enemy, ignoring their armor, against Crawlers and Titans."
+
+msgid "Franc-tireur"
+msgstr "Marksman"
+
+msgid "Nouvelle tour : un tireur qui abat les Médecins en premier. Un ennemi touché ne peut plus être soigné, ni soigner."
+msgstr "New tower: a shooter who takes down Medics first. An enemy hit can no longer be healed, nor heal."
+
+msgid "Lacrymogène"
+msgstr "Tear Gas"
+
+msgid "Nouvelle tour : des grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur."
+msgstr "New tower: grenades whose cloud slows enemies and prevents any healing inside."
+
+msgid "Arc électrique"
+msgstr "Electric Arc"
+
+msgid "Croisement du Pesticide et du Perforateur : la décharge du Perforateur, qui se propage comme un nuage. Débloque l'Arc électrique, un éclair qui rebondit d'ennemi en ennemi."
+msgstr "Crossover of Pesticide and Railgun: the Railgun's discharge, spreading like a cloud. Unlocks the Electric Arc, a lightning bolt that bounces from enemy to enemy."
+
+msgid "Bobine"
+msgstr "Coil"
+
+msgid "Croisement du Perforateur et du Lacrymogène : les bobines du Perforateur, qui se diffusent comme le gaz. Débloque la Bobine, qui renforce les tours autour d'elle."
+msgstr "Crossover of Railgun and Tear Gas: the Railgun's coils, diffusing like the gas. Unlocks the Coil, which empowers the towers around it."
+
+msgid "Électroaimant"
+msgstr "Electromagnet"
+
+msgid "Croisement de l'Arc électrique et de la Bobine : un électroaimant. Débloque l'Électroaimant, dont l'onde fait reculer les ennemis sur leur chemin."
+msgstr "Crossover of Electric Arc and Coil: an electromagnet. Unlocks the Electromagnet, whose wave pushes enemies back along their path."
+
+msgid "Nuage ionisé"
+msgstr "Ionized Cloud"
+
+msgid "Les nuages du Pesticide brouillent les boucliers d'énergie : ils ne se rechargent plus pendant 2,5 s."
+msgstr "Pesticide clouds jam energy shields: they stop recharging for 2.5 s."
+
+msgid "Le Pesticide et l'Arc électrique s'échangent un effet. L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie, qui ne se rechargent plus pendant 2,5 s."
+msgstr "Pesticide and Electric Arc swap an effect. The Arc poisons what it hits (8 damage/s for 2 s, through armor), and Pesticide clouds jam energy shields, which stop recharging for 2.5 s."
+
+msgid "Gaz sous tension"
+msgstr "Charged Gas"
+
+msgid "Le Lacrymogène tire 20 % plus loin et 25 % plus vite."
+msgstr "Tear Gas shoots 20% farther and 25% faster."
+
+msgid "Le Lacrymogène et la Bobine s'échangent un effet. La Bobine ralentit de 25 % les ennemis à sa portée et les empêche d'être soignés, comme le gaz, et le Lacrymogène est renforcé comme par une Bobine : il tire 20 % plus loin et 25 % plus vite."
+msgstr "Tear Gas and Coil swap an effect. The Coil slows enemies in its range by 25% and prevents them from being healed, like the gas, and Tear Gas is boosted as if by a Coil: it shoots 20% farther and 25% faster."
+
+msgid "Balles perforantes"
+msgstr "Piercing Rounds"
+
+msgid "Mitrailleuse : ses balles ignorent l'armure des Scarabées, des Gardes et des Chenillards."
+msgstr "Gatling: its bullets ignore the armor of Beetles, Guards and Crawlers."
+
+msgid "Tir en pleine tête"
+msgstr "Headshot"
+
+msgid "Sniper : 40 % de dégâts et 10 % de portée en plus."
+msgstr "Sniper: 40% more damage and 10% more range."
+
+msgid "Lunette thermique"
+msgstr "Thermal Scope"
+
+msgid "Franc-tireur : tire 35 % plus vite."
+msgstr "Marksman: shoots 35% faster."
+
+msgid "Surcharge"
+msgstr "Overload"
+
+msgid "Perforateur : 40 % de dégâts en plus."
+msgstr "Railgun: 40% more damage."
+
+msgid "Boulets lourds"
+msgstr "Heavy Cannonballs"
+
+msgid "Canon : 35 % de dégâts et 10 % de portée en plus."
+msgstr "Cannon: 35% more damage and 10% more range."
+
+msgid "Obus incendiaires"
+msgstr "Incendiary Shells"
+
+msgid "Mortier : ses explosions brûlent, 8 dégâts par seconde pendant 2 s, sous l'armure."
+msgstr "Mortar: its explosions burn, 8 damage per second for 2 s, through armor."
+
+msgid "Napalm"
+msgstr "Napalm"
+
+msgid "Lance-flammes : brûlure de 8 dégâts par seconde en plus, qui dure 1,5 s de plus."
+msgstr "Flamethrower: burn deals 8 more damage per second and lasts 1.5 s longer."
+
+msgid "Nuage tenace"
+msgstr "Lingering Cloud"
+
+msgid "Pesticide : nuage 30 % plus large, qui dure 2 s de plus."
+msgstr "Pesticide: cloud 30% wider, lasting 2 s longer."
+
+msgid "Zéro absolu"
+msgstr "Absolute Zero"
+
+msgid "Givre : ralentit 30 % plus fort, et 1 s de plus."
+msgstr "Frost: slows 30% harder, and 1 s longer."
+
+msgid "Focalisation"
+msgstr "Focus"
+
+msgid "Rayon : sa montée en puissance va jusqu'à x4,5 au lieu de x3."
+msgstr "Beam: its power ramp goes up to x4.5 instead of x3."
+
+msgid "Surtension"
+msgstr "Power Surge"
+
+msgid "Brouilleur IEM : 50 % de dégâts en plus, et les boucliers restent brouillés 2 s de plus."
+msgstr "EMP Jammer: 50% more damage, and shields stay jammed 2 s longer."
+
+msgid "Gaz suffocant"
+msgstr "Choking Gas"
+
+msgid "Lacrymogène : son nuage empoisonne aussi, 10 dégâts par seconde, sous l'armure."
+msgstr "Tear Gas: its cloud also poisons, 10 damage per second, through armor."
+
+msgid "Pluie de météores"
+msgstr "Meteor Shower"
+
+msgid "Nouveau pouvoir : une pluie de 6 météores sur la zone visée, 80 dégâts chacun autour de son point de chute. Se recharge en 40 s."
+msgstr "New power: a shower of 6 meteors on the targeted area, 80 damage each around its impact point. Recharges in 40 s."
+
+msgid "Pluie battante"
+msgstr "Downpour"
+
+msgid "Météores : 50 % de dégâts en plus."
+msgstr "Meteors: 50% more damage."
+
+msgid "Comètes"
+msgstr "Comets"
+
+msgid "Météores : se rechargent 30 % plus vite."
+msgstr "Meteors: recharge 30% faster."
+
+msgid "Gel"
+msgstr "Freeze"
+
+msgid "Nouveau pouvoir : gèle sur place pendant 3 s tous les ennemis de la carte (les boss ralentissent de moitié). Se recharge en 55 s."
+msgstr "New power: freezes every enemy on the map in place for 3 s (bosses are slowed by half). Recharges in 55 s."
+
+msgid "Blizzard"
+msgstr "Blizzard"
+
+msgid "Gel : dure 2 s de plus."
+msgstr "Freeze: lasts 2 s longer."
+
+msgid "Engelures"
+msgstr "Frostbite"
+
+msgid "Gel : les ennemis gelés subissent 30 % de dégâts en plus."
+msgstr "Freeze: frozen enemies take 30% more damage."
+
+msgid "Renforts"
+msgstr "Reinforcements"
+
+msgid "Nouveau pouvoir : 3 soldats prennent position sur le chemin pendant 20 s. Chacun arrête un ennemi et le combat. Se recharge en 45 s."
+msgstr "New power: 3 soldiers take position on the path for 20 s. Each one stops an enemy and fights it. Recharges in 45 s."
+
+msgid "Vétérans"
+msgstr "Veterans"
+
+msgid "Renforts : les soldats ont 50 % de vie et de dégâts en plus."
+msgstr "Reinforcements: soldiers have 50% more health and damage."
+
+msgid "Escouade"
+msgstr "Squad"
+
+msgid "Renforts : 2 soldats de plus."
+msgstr "Reinforcements: 2 more soldiers."
+
+msgid "Encensoir"
+msgstr "Censer"
+
+msgid "Nouvelle tour : des braises sacrées qui explosent, brûlent et consacrent les morts. Un ennemi consacré ne peut plus se relever (Chevalier noir, Momie, la Liche)."
+msgstr "New tower: sacred embers that explode, burn and consecrate the dead. A consecrated enemy can no longer rise again (Black Knight, Mummy, the Lich)."
+
+msgid "Cloche funèbre"
+msgstr "Funeral Bell"
+
+msgid "Nouvelle tour : elle sonne le glas, et son onde étourdit tous les ennemis à portée, boss compris."
+msgstr "New tower: it tolls the knell, and its wave stuns every enemy in range, bosses included."
+
+msgid "Tours"
+msgstr "Towers"
+
+msgid "Or"
+msgstr "Gold"
+
+msgid "Vies"
+msgstr "Lives"
+
+msgid "Précision"
+msgstr "Precision"
+
+msgid "Zone"
+msgstr "Area"
+
+msgid "Contrôle"
+msgstr "Control"
+
+msgid "Météores"
+msgstr "Meteors"
+
+msgid "Bonus"
+msgstr "Bonus"
+
+msgid "Tours des mondes"
+msgstr "World towers"
+
+msgid "Spécialisations"
+msgstr "Specializations"
+
+msgid "Pouvoirs"
+msgstr "Powers"
+
+msgid "Gèle sur place tous les ennemis de la carte. Les boss ne font que ralentir de moitié."
+msgstr "Freezes every enemy on the map in place. Bosses are only slowed by half."
+
+msgid "Une pluie de météores s'abat sur la zone visée : chacun explose et blesse tous les ennemis autour de lui."
+msgstr "A shower of meteors falls on the targeted area: each one explodes and hurts every enemy around it."
+
+msgid "Des soldats prennent position sur le chemin, au plus près du point visé. Chacun arrête un ennemi et le combat, jusqu'à tomber ou repartir. Les boss ne s'arrêtent pas, mais les soldats les frappent au passage."
+msgstr "Soldiers take position on the path, as close as possible to the targeted point. Each one stops an enemy and fights it, until it falls or leaves. Bosses don't stop, but soldiers hit them as they pass."
+
+msgid "Éclair instantané qui rebondit d'ennemi en ennemi (3 rebonds, un quart de dégâts en moins à chaque fois). Les boucliers d'énergie prennent 50 % de dégâts en plus."
+msgstr "Instant lightning bolt that bounces from enemy to enemy (3 bounces, a quarter less damage each time). Energy shields take 50% more damage."
+
+msgid "Rayon"
+msgstr "Beam"
+
+msgid "Rayon continu qui brûle de plus en plus fort tant qu'il reste sur la même cible (jusqu'à 3 fois plus). Idéal contre les gros ennemis, mais l'armure absorbe ses petits coups."
+msgstr "Continuous beam that burns harder and harder as long as it stays on the same target (up to 3 times more). Ideal against big enemies, but armor absorbs its small hits."
+
+msgid "Sonne le glas : son onde étourdit tous les ennemis à portée pendant 0,7 s. Les boss aussi."
+msgstr "Tolls the knell: its wave stuns every enemy in range for 0.7 s. Bosses too."
+
+msgid "Canon"
+msgstr "Cannon"
+
+msgid "Tour polyvalente et bon marché. Tire des boulets à tête chercheuse."
+msgstr "Cheap all-round tower. Fires homing cannonballs."
+
+msgid "Lance des braises sacrées qui explosent, brûlent et consacrent les morts : un ennemi touché ne peut plus se relever pendant 4 s."
+msgstr "Throws sacred embers that explode, burn and consecrate the dead: an enemy hit can no longer rise again for 4 s."
+
+msgid "Ne tire pas : les tours tout autour d'elle (les 8 cases voisines) font 25 % de dégâts en plus et tirent 15 % plus vite. Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte."
+msgstr "Doesn't shoot: the towers all around it (the 8 neighboring tiles) deal 25% more damage and shoot 15% faster. Several Coils don't stack: a tower keeps the bonus of the strongest."
+
+msgid "Crache un jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous les carapaces."
+msgstr "Spits a cone-shaped jet of flames that hits a whole swarm and sets it on fire. The burn gets under carapaces."
+
+msgid "Givre"
+msgstr "Frost"
+
+msgid "Émet une onde glacée qui blesse légèrement et ralentit tous les ennemis à portée."
+msgstr "Emits an icy wave that slightly hurts and slows every enemy in range."
+
+msgid "Mitrailleuse"
+msgstr "Gatling"
+
+msgid "Mitraille à très haute cadence. Redoutable contre les nuées d'ennemis légers, inefficace contre les blindés."
+msgstr "Fires at a very high rate. Deadly against swarms of light enemies, useless against armored ones."
+
+msgid "Onde électromagnétique qui touche tout ce qui est à portée : 5 fois plus de dégâts sur les boucliers d'énergie, qui ne se rechargent plus pendant 4 s."
+msgstr "Electromagnetic wave that hits everything in range: 5 times more damage to energy shields, which stop recharging for 4 s."
+
+msgid "Onde magnétique qui fait reculer tous les ennemis à portée sur leur chemin. Les gros reculent moins, et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s."
+msgstr "Magnetic wave that pushes every enemy in range back along their path. Big ones are pushed back less, and an enemy that was just pushed back can't be pushed again for 1.5 s."
+
+msgid "Abat les soigneurs en premier. Un ennemi touché ne peut plus être soigné, ni soigner les autres, pendant 4 s."
+msgstr "Takes down healers first. An enemy hit can no longer be healed, nor heal others, for 4 s."
+
+msgid "Mortier"
+msgstr "Mortar"
+
+msgid "Lance des obus qui explosent à l'impact et touchent tous les ennemis dans la zone."
+msgstr "Fires shells that explode on impact and hit every enemy in the area."
+
+msgid "Lance des grenades de poison qui laissent un nuage sur le chemin. Le poison passe sous les carapaces, et les larves d'une Couveuse naissent dedans."
+msgstr "Throws poison grenades that leave a cloud on the path. Poison gets under carapaces, and a Brooder's larvae hatch inside it."
+
+msgid "Tir instantané qui traverse tous les ennemis alignés jusqu'au bout de sa portée, en ignorant leur armure."
+msgstr "Instant shot that goes through every lined-up enemy to the end of its range, ignoring their armor."
+
+msgid "Sniper"
+msgstr "Sniper"
+
+msgid "Très longue portée et gros dégâts par tir, mais cadence lente. Perce les carapaces."
+msgstr "Very long range and big damage per shot, but a slow rate of fire. Pierces carapaces."
+
+msgid "Lance des grenades lacrymogènes : le nuage ralentit tout ce qui le traverse, et personne n'y est soigné."
+msgstr "Throws tear gas grenades: the cloud slows everything going through it, and no one gets healed inside."
+
+msgid "Humanoïdes : des soldats, des gardes à bouclier, et des médecins qui soignent leurs alliés."
+msgstr "Humanoids: soldiers, shield guards, and medics who heal their allies."
+
+msgid "Insectoïdes et xénomorphes : des essaims rapides, des carapaces et des couveuses qui éclatent en larves."
+msgstr "Insectoids and xenomorphs: fast swarms, carapaces and brooders that burst into larvae."
+
+msgid "Mecha : des robots blindés, des drones, et des boucliers d'énergie qui se rechargent."
+msgstr "Mecha: armored robots, drones, and energy shields that recharge."
+
+msgid "Morts-vivants : des squelettes, des charognes pleines d'asticots, et des morts qui se relèvent."
+msgstr "Undead: skeletons, carrions full of maggots, and dead that rise again."
+
+msgid "Conquête · La Carrière"
+msgstr "Conquest · The Quarry"
+
+msgid "Tutoriel"
+msgstr "Tutorial"
+
+# --- Niveaux ---------------------------------------------------------------------
+
+msgid "Niveau 1-1"
+msgstr "Level 1-1"
+
+msgid "Niveau 1-2"
+msgstr "Level 1-2"
+
+msgid "Niveau 1-3"
+msgstr "Level 1-3"
+
+msgid "Niveau 1-4"
+msgstr "Level 1-4"
+
+msgid "Niveau 1-5"
+msgstr "Level 1-5"
+
+msgid "Niveau 1-6"
+msgstr "Level 1-6"
+
+msgid "Niveau 2-1"
+msgstr "Level 2-1"
+
+msgid "Niveau 2-2"
+msgstr "Level 2-2"
+
+msgid "Niveau 2-3"
+msgstr "Level 2-3"
+
+msgid "Niveau 2-4"
+msgstr "Level 2-4"
+
+msgid "Niveau 2-5"
+msgstr "Level 2-5"
+
+msgid "Niveau 2-6"
+msgstr "Level 2-6"
+
+msgid "Niveau 3-1"
+msgstr "Level 3-1"
+
+msgid "Niveau 3-2"
+msgstr "Level 3-2"
+
+msgid "Niveau 3-3"
+msgstr "Level 3-3"
+
+msgid "Niveau 3-4"
+msgstr "Level 3-4"
+
+msgid "Niveau 3-5"
+msgstr "Level 3-5"
+
+msgid "Niveau 3-6"
+msgstr "Level 3-6"
+
+msgid "Niveau 4-1"
+msgstr "Level 4-1"
+
+msgid "Niveau 4-2"
+msgstr "Level 4-2"
+
+msgid "Niveau 4-3"
+msgstr "Level 4-3"
+
+msgid "Niveau 4-4"
+msgstr "Level 4-4"
+
+msgid "Niveau 4-5"
+msgstr "Level 4-5"
+
+msgid "Niveau 4-6"
+msgstr "Level 4-6"
+
+# --- Partie : HUD, fiches, barre d'achat, fin de niveau, difficultés -------------
+
+msgid "Niveau"
+msgstr "Level"
+
+msgid "Or : 0"
+msgstr "Gold: 0"
+
+msgid "Intérêts : +0"
+msgstr "Interest: +0"
+
+msgid "Vies : 0"
+msgstr "Lives: 0"
+
+msgid "Vague : 0 / 0"
+msgstr "Wave: 0 / 0"
+
+msgid "Or : %d"
+msgstr "Gold: %d"
+
+msgid "Intérêts : +%d"
+msgstr "Interest: +%d"
+
+msgid "Vies : %d"
+msgstr "Lives: %d"
+
+msgid "Vague : %d / %s"
+msgstr "Wave: %d / %s"
+
+msgid "Lancer la vague"
+msgstr "Send wave"
+
+msgid "Prochaine vague"
+msgstr "Next wave"
+
+msgid "Prochaine vague :"
+msgstr "Next wave:"
+
+msgid "Lancer maintenant : +%d or"
+msgstr "Send now: +%d gold"
+
+msgid "Lancer maintenant rapporte %d or"
+msgstr "Sending it now earns %d gold"
+
+msgid "Vague %d"
+msgstr "Wave %d"
+
+msgid "Bonus : +%d or"
+msgstr "Bonus: +%d gold"
+
+msgid "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
+msgstr "Left click: place the tower  ·  Shift + click: place several  ·  Right click / Esc: cancel  ·  Click a placed tower: details, upgrade, sell and target  ·  1 to 0: pick a tower  ·  Space: pause  ·  V: speed"
+
+msgid "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
+msgstr "Tap a tower in the bar, then tap a free tile twice to place it  ·  Tap it again in the bar to cancel  ·  Tap a placed tower for its card, an enemy for its own  ·  An aimed power lands where you tap"
+
+msgid "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  R : recruter un ouvrier  ·  B : bâtiments"
+msgstr "Conquest: towers also cost stone and workers build them  ·  Click a rock or a vein: send the miners there  ·  R: recruit a worker  ·  B: buildings"
+
+msgid "Pause"
+msgstr "Pause"
+
+msgid "Reprendre"
+msgstr "Resume"
+
+msgid "Vous pouvez poser, améliorer et vendre des tours pendant la pause."
+msgstr "You can place, upgrade and sell towers while paused."
+
+msgid "Vitesse %s (V : vitesse suivante)"
+msgstr "Speed %s (V: next speed)"
+
+msgid "Chaque fois que la carte est vidée, l'or gardé rapporte %d %% d'intérêts (%d or au plus), avant le bonus de vague."
+msgstr "Each time the map is cleared, the gold you kept earns %d%% interest (%d gold at most), before the wave bonus."
+
+msgid "Victoire !"
+msgstr "Victory!"
+
+msgid "Défaite"
+msgstr "Defeat"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Niveau suivant"
+msgstr "Next level"
+
+msgid "Monde suivant"
+msgstr "Next world"
+
+msgid "Rejouer"
+msgstr "Play again"
+
+msgid "Menu principal"
+msgstr "Main menu"
+
+msgid "Retour à l'éditeur"
+msgstr "Back to the editor"
+
+msgid "Toutes les vagues ont été repoussées."
+msgstr "All waves were held off."
+
+msgid "Les ennemis ont atteint votre base."
+msgstr "The enemies reached your base."
+
+msgid "Nouveau record !"
+msgstr "New record!"
+
+msgid "Nouveau monde débloqué : %s"
+msgstr "New world unlocked: %s"
+
+msgid "Fin de la partie"
+msgstr "Game over"
+
+msgid "%d vague repoussée."
+msgid_plural "%d vagues repoussées."
+msgstr[0] "%d wave held off."
+msgstr[1] "%d waves held off."
+
+msgid "Une étoile infinie toutes les %d vagues au-delà de celles du niveau."
+msgstr "One infinite star every %d waves beyond the level's own."
+
+msgid "Succès débloqué : %s"
+msgstr "Achievement unlocked: %s"
+
+msgid "Défi réussi !"
+msgstr "Challenge complete!"
+
+msgid "Défi perdu"
+msgstr "Challenge failed"
+
+msgid "%d points"
+msgstr "%d points"
+
+msgid "Meilleur score du jour : %d"
+msgstr "Today's best score: %d"
+
+msgid "Un nouveau défi demain."
+msgstr "A new challenge tomorrow."
+
+msgid "Score : %d"
+msgstr "Score: %d"
+
+msgid "Pierre : %d"
+msgstr "Stone: %d"
+
+msgid "Ouvriers : %d / %d"
+msgstr "Workers: %d / %d"
+
+msgid "Recruter · %d or (R)"
+msgstr "Recruit · %d gold (R)"
+
+msgid "Vague dans %d s"
+msgstr "Wave in %d s"
+
+msgid "Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte la prime habituelle."
+msgstr "Waves start on their own when the countdown ends. Sending them early earns the usual bonus."
+
+msgid "%s  ·  Mode infini"
+msgstr "%s  ·  Endless mode"
+
+msgid "Défi du jour  ·  %s"
+msgstr "Daily challenge  ·  %s"
+
+msgid "Tour bâtie"
+msgstr "Tower built"
+
+msgid "Se relève !"
+msgstr "Rises again!"
+
+msgid "+%d intérêts"
+msgstr "+%d interest"
+
+msgid "Touchez encore pour poser"
+msgstr "Tap again to place"
+
+msgid "Impossible ici"
+msgstr "Can't place here"
+
+msgid "Facile"
+msgstr "Easy"
+
+msgid "Moyen"
+msgstr "Normal"
+
+msgid "Difficile"
+msgstr "Hard"
+
+msgid "Cauchemar"
+msgstr "Nightmare"
+
+msgid "%d tours différentes au plus par niveau."
+msgstr "At most %d different towers per level."
+
+msgid "Les monstres tels que le niveau les prévoit."
+msgstr "Enemies exactly as the level sets them."
+
+msgid "%d %% plus résistants"
+msgstr "%d%% tougher"
+
+msgid "%d %% moins résistants"
+msgstr "%d%% weaker"
+
+msgid "%d %% plus nombreux"
+msgstr "%d%% more numerous"
+
+msgid "%d %% moins nombreux"
+msgstr "%d%% fewer"
+
+msgid "%d %% plus rapides"
+msgstr "%d%% faster"
+
+msgid "%d %% moins rapides"
+msgstr "%d%% slower"
+
+msgid "%s et %s"
+msgstr "%s and %s"
+
+msgid "Monstres %s."
+msgstr "Enemies %s."
+
+msgid "Tour"
+msgstr "Tower"
+
+msgid "Niv. 1 / 3"
+msgstr "Lv. 1 / 3"
+
+msgid "Niv. %d / %d"
+msgstr "Lv. %d / %d"
+
+msgid "Description"
+msgstr "Description"
+
+msgid "Prix : 0 or"
+msgstr "Price: 0 gold"
+
+msgid "Prix : %d or"
+msgstr "Price: %d gold"
+
+msgid "%d amélioration"
+msgid_plural "%d améliorations"
+msgstr[0] "%d upgrade"
+msgstr[1] "%d upgrades"
+
+msgid "Changer l'ennemi visé en priorité"
+msgstr "Change which enemy is targeted first"
+
+msgid "Cible : Premier"
+msgstr "Target: First"
+
+msgid "Cible : %s"
+msgstr "Target: %s"
+
+msgid "Premier"
+msgstr "First"
+
+msgid "Dernier"
+msgstr "Last"
+
+msgid "Le plus fort"
+msgstr "Strongest"
+
+msgid "Le plus proche"
+msgstr "Closest"
+
+msgid "Améliorer"
+msgstr "Upgrade"
+
+msgid "Améliorer  ·  %d or"
+msgstr "Upgrade  ·  %d gold"
+
+msgid "Revendre la tour"
+msgstr "Sell the tower"
+
+msgid "Vendre"
+msgstr "Sell"
+
+msgid "Vendre  ·  %d or"
+msgstr "Sell  ·  %d gold"
+
+msgid "Pas d'amélioration (défi)"
+msgstr "No upgrades (challenge)"
+
+msgid "En construction"
+msgstr "Under construction"
+
+msgid "Niveau maximal"
+msgstr "Max level"
+
+msgid "Croisement : %s"
+msgstr "Crossing: %s"
+
+msgid "Spécialisation : %s"
+msgstr "Specialization: %s"
+
+msgid "Renforcée par une Bobine : +%d %% de dégâts, +%d %% de cadence"
+msgstr "Boosted by a Coil: +%d%% damage, +%d%% rate of fire"
+
+msgid "Dégâts"
+msgstr "Damage"
+
+msgid "Cadence"
+msgstr "Rate of fire"
+
+msgid "%s tirs/s"
+msgstr "%s shots/s"
+
+msgid "Dégâts/s"
+msgstr "Damage/s"
+
+msgid "Portée"
+msgstr "Range"
+
+msgid "Rebonds"
+msgstr "Bounces"
+
+msgid "Recul"
+msgstr "Knockback"
+
+msgid "Montée"
+msgstr "Ramp-up"
+
+msgid "x%s en %s s"
+msgstr "x%s in %s s"
+
+msgid "Explosion"
+msgstr "Explosion"
+
+msgid "Nuage"
+msgstr "Cloud"
+
+msgid "Poison"
+msgstr "Poison"
+
+msgid "Brûlure"
+msgstr "Burn"
+
+msgid "Volants"
+msgstr "Flying"
+
+msgid "hors d'atteinte"
+msgstr "out of reach"
+
+msgid "x%s dégâts"
+msgstr "x%s damage"
+
+msgid "Détection"
+msgstr "Detection"
+
+msgid "Armure"
+msgstr "Armor"
+
+msgid "ignorée"
+msgstr "ignored"
+
+msgid "Boucliers"
+msgstr "Shields"
+
+msgid "Brouillés"
+msgstr "Jammed"
+
+msgid "Anti-soin"
+msgstr "Anti-heal"
+
+msgid "Consacre"
+msgstr "Consecrates"
+
+msgid "Étourdit"
+msgstr "Stuns"
+
+msgid "Ralentit"
+msgstr "Slows"
+
+msgid "Pendant"
+msgstr "For"
+
+msgid "%d or"
+msgstr "%d gold"
+
+msgid "%d or · %d p"
+msgstr "%d gold · %d st"
+
+msgid "Choisir les tours"
+msgstr "Choose your towers"
+
+msgid "%s : %d tours différentes au plus dans ce niveau, sur les %d débloquées."
+msgstr "%s: at most %d different towers in this level, out of the %d unlocked."
+
+msgid "%d / %d tours choisies"
+msgstr "%d / %d towers chosen"
+
+msgid "Menu"
+msgstr "Menu"
+
+msgid "%s (touche %s)"
+msgstr "%s (key %s)"
+
+msgid "%d météores de %d dégâts"
+msgstr "%d meteors, %d damage each"
+
+msgid "Gel de %s s"
+msgstr "Freezes for %s s"
+
+msgid "+%d %% de dégâts subis"
+msgstr "+%d%% damage taken"
+
+msgid "%d soldats, %d vie, %d dégâts/s"
+msgstr "%d soldiers, %d health, %d damage/s"
+
+msgid "%s s sur le terrain"
+msgstr "%s s in the field"
+
+msgid "Recharge : %s s"
+msgstr "Cooldown: %s s"
+
+msgid "%s :"
+msgstr "%s:"
+
+msgid "Vie"
+msgstr "Health"
+
+msgid "Bouclier"
+msgstr "Shield"
+
+msgid "Vitesse"
+msgstr "Speed"
+
+msgid "[color=%s]-%d[/color] s'il atteint la base"
+msgstr "[color=%s]-%d[/color] if it reaches the base"
+
+msgid "Vie %d"
+msgstr "Health %d"
+
+msgid "Bouclier %d"
+msgstr "Shield %d"
+
+msgid "Armure %s"
+msgstr "Armor %s"
+
+msgid "Vitesse %d"
+msgstr "Speed %d"
+
+msgid "+%d or"
+msgstr "+%d gold"
+
+msgid "-%d vie"
+msgid_plural "-%d vies"
+msgstr[0] "-%d life"
+msgstr[1] "-%d lives"
+
+msgid "BOSS"
+msgstr "BOSS"
+
+msgid "ÉLITE"
+msgstr "ELITE"
+
+msgid "%s élite"
+msgstr "Elite %s"
+
+msgid "Boss : un seul par vague, sa vie s'affiche en haut de l'écran."
+msgstr "Boss: only one per wave, its health is shown at the top of the screen."
+
+msgid "Élite : vie x%s, %d fois plus d'or."
+msgstr "Elite: health x%s, %d times more gold."
+
+msgid "Volant : survole le chemin en coupant les virages. Mortier, Lance-flammes et nuages ne l'atteignent pas."
+msgstr "Flying: flies over the path, cutting corners. Mortars, Flamethrowers and clouds can't reach it."
+
+msgid "Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même."
+msgstr "Stealthy: towers only target it near a tower that detects (Sniper, Marksman, Coil). Waves and explosions still hit it."
+
+msgid "Armure : chaque coup perd %s dégâts (au moins 1 passe)."
+msgstr "Armor: each hit loses %s damage (at least 1 gets through)."
+
+msgid "Bouclier d'énergie de %d points, qui encaisse en premier et se recharge (%d/s)."
+msgstr "Energy shield of %d points, which takes hits first and recharges (%d/s)."
+
+msgid "Soigne de %d points les ennemis autour de lui, toutes les %s s."
+msgstr "Heals nearby enemies for %d points every %s s."
+
+msgid "Appelle %d %s en renfort toutes les %s s."
+msgstr "Calls in %d %s as reinforcements every %s s."
+
+msgid "Se relève une fois avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré."
+msgstr "Rises again once with %d%% of its health, %s s after dying, unless it was just consecrated."
+
+msgid "Se relève %d fois avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré."
+msgstr "Rises again %d times with %d%% of its health, %s s after dying, unless it was just consecrated."
+
+msgid "Libère %d %s à sa mort."
+msgstr "Releases %d %s when it dies."
+
+msgid "Statistiques"
+msgstr "Statistics"
+
+msgid "Durée"
+msgstr "Duration"
+
+msgid "Monstres détruits"
+msgstr "Enemies destroyed"
+
+msgid "Dégâts infligés"
+msgstr "Damage dealt"
+
+msgid "Vies perdues"
+msgstr "Lives lost"
+
+msgid "Or dépensé"
+msgstr "Gold spent"
+
+msgid "Or gagné"
+msgstr "Gold earned"
+
+msgid "Tours posées"
+msgstr "Towers placed"
+
+msgid "%d élite"
+msgid_plural "%d élites"
+msgstr[0] "%d elite"
+msgstr[1] "%d elites"
+
+msgid "%d boss"
+msgid_plural "%d boss"
+msgstr[0] "%d boss"
+msgstr[1] "%d bosses"
+
+msgid "Meilleure tour"
+msgstr "Best tower"
+
+msgid "%s  niv. %d"
+msgstr "%s  lv. %d"
+
+msgid "%s  niv. %d  (vendue)"
+msgstr "%s  lv. %d  (sold)"
+
+msgid "%s dégâts · %d destruction"
+msgid_plural "%s dégâts · %d destructions"
+msgstr[0] "%s damage · %d kill"
+msgstr[1] "%s damage · %d kills"
+
+msgid "Aucune tour n'a infligé de dégâts."
+msgstr "No tower dealt any damage."
+
+msgid "Dégâts par tour"
+msgstr "Damage by tower"
+
+msgid "Succès débloqué"
+msgid_plural "Succès débloqués"
+msgstr[0] "Achievement unlocked"
+msgstr[1] "Achievements unlocked"
+
+# --- Menus : lexique, arbre, mondes, succès, défi du jour ------------------------
+
+msgid "Monstres"
+msgstr "Monsters"
+
+msgid "Élites"
+msgstr "Elites"
+
+msgid "%s  ·  boss"
+msgstr "%s  ·  boss"
+
+msgid "Prix"
+msgstr "Price"
+
+msgid "rayon %s"
+msgstr "radius %s"
+
+msgid "-%d %% pendant %s s"
+msgstr "-%d%% for %s s"
+
+msgid "jusqu'à x%s en %s s"
+msgstr "up to x%s in %s s"
+
+msgid "%s/s pendant %s s, sous l'armure"
+msgstr "%s/s for %s s, through armor"
+
+msgid "rayon %s, %s s"
+msgstr "radius %s, %s s"
+
+msgid "hors d'atteinte (tir au sol)"
+msgstr "out of reach (ground fire only)"
+
+msgid "révèle les furtifs dans un rayon de %s"
+msgstr "reveals stealthy enemies within a radius of %s"
+
+msgid "Brouillage"
+msgstr "Jamming"
+
+msgid "%s s sans recharge du bouclier"
+msgstr "%s s without shield recharge"
+
+msgid "%s s : un ennemi touché ne peut plus se relever"
+msgstr "%s s: an enemy hit can no longer rise again"
+
+msgid "Cible"
+msgstr "Target"
+
+msgid "les soigneurs en premier"
+msgstr "healers first"
+
+msgid "Niveau %d  [color=%s](%d or)[/color] : %s"
+msgstr "Level %d  [color=%s](%d gold)[/color]: %s"
+
+msgid "[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]"
+msgstr "[color=%s]World tower: unlock it in the upgrade tree (%s, ★ %d).[/color]"
+
+msgid "[color=#73d9ff]Spécialisation « %s » (∞ %d) : %s[/color]"
+msgstr "[color=#73d9ff]Specialization \"%s\" (∞ %d): %s[/color]"
+
+msgid "[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]"
+msgstr "[color=%s]Difficulty changes its health, but only one boss ever comes at a time.[/color]"
+
+msgid "[color=%s]En élite : vie %d, +%d or, -%d vies.[/color]"
+msgstr "[color=%s]As an elite: %d health, +%d gold, -%d lives.[/color]"
+
+msgid "[color=%s]En élite : vie %d, +%d or, -%d vies (ceux qu'il libère restent normaux).[/color]"
+msgstr "[color=%s]As an elite: %d health, +%d gold, -%d lives (the ones it releases stay normal).[/color]"
+
+msgid "N'importe quel monstre peut arriver en élite : il est entouré d'une aura dorée, et son nom porte « élite »."
+msgstr "Any monster can show up as an elite: it has a golden aura, and its name says \"elite\"."
+
+msgid "Chaque niveau en a quelques-uns, annoncés dans l'aperçu de la vague."
+msgstr "Every level has a few, announced in the wave preview."
+
+msgid "Vie et bouclier"
+msgstr "Health and shield"
+
+msgid "Taille"
+msgstr "Size"
+
+msgid "+%d %%"
+msgstr "+%d%%"
+
+msgid "%d de plus s'il atteint la base"
+msgstr "%d more if it reaches the base"
+
+msgid "Un boss par monde, à la dernière vague des niveaux 3 et 6 (plus coriace au 6). Une aura rouge l'entoure, sa vie s'affiche en haut de l'écran, et il appelle des renforts en marchant."
+msgstr "One boss per world, in the last wave of levels 3 and 6 (tougher in 6). It has a red aura, its health shows at the top of the screen, and it calls in reinforcements as it walks."
+
+msgid "[color=%s]Monde %d  ·  %d niveaux[/color]"
+msgstr "[color=%s]World %d  ·  %d levels[/color]"
+
+msgid "[color=%s]Verrouillé : gagner le dernier niveau de %s pour l'ouvrir.[/color]"
+msgstr "[color=%s]Locked: win the last level of %s to open it.[/color]"
+
+msgid "Tours du monde"
+msgstr "World towers"
+
+msgid "%s : à débloquer dans l'arbre des améliorations."
+msgstr "%s: unlock them in the upgrade tree."
+
+msgid "Étoiles"
+msgstr "Stars"
+
+msgid "★ %d / %d (4 difficultés)"
+msgstr "★ %d / %d (4 difficulties)"
+
+msgid "%+d %% dégâts"
+msgstr "%+d%% damage"
+
+msgid "%+d %% portée"
+msgstr "%+d%% range"
+
+msgid "%+d %% cadence"
+msgstr "%+d%% rate of fire"
+
+msgid "%+d %% explosion"
+msgstr "%+d%% explosion"
+
+msgid "%+d %% nuage"
+msgstr "%+d%% cloud"
+
+msgid "+%s s de ralentissement"
+msgstr "+%s s of slow"
+
+msgid "★ %d à dépenser"
+msgstr "★ %d to spend"
+
+msgid "%d dépensées"
+msgstr "%d spent"
+
+msgid "%d dépensée"
+msgstr "%d spent"
+
+msgid "toutes les spécialisations : %d"
+msgstr "all specializations: %d"
+
+msgid "arbre complet : %d"
+msgstr "full tree: %d"
+
+msgid "Finir %s pour l'ouvrir"
+msgstr "Finish %s to open it"
+
+msgid "Acquis"
+msgstr "Owned"
+
+msgid "Verrouillé"
+msgstr "Locked"
+
+msgid "%s  ·  il manque %d étoiles infinies"
+msgstr "%s  ·  %d more endless stars needed"
+
+msgid "%s  ·  il manque %d étoile infinie"
+msgstr "%s  ·  %d more endless star needed"
+
+msgid "%s  ·  il manque %d étoiles"
+msgstr "%s  ·  %d more stars needed"
+
+msgid "%s  ·  il manque %d étoile"
+msgstr "%s  ·  %d more star needed"
+
+msgid "Verrouillé : finir %s pour ouvrir %s"
+msgstr "Locked: finish %s to open %s"
+
+msgid "Verrouillé : demande %s"
+msgstr "Locked: requires %s"
+
+msgid " et "
+msgstr " and "
+
+msgid "Cliquer pour acheter  ·  %s"
+msgstr "Click to buy  ·  %s"
+
+msgid "Les étoiles infinies, gagnées en mode infini (ouvert sur chaque niveau gagné avec 3 étoiles), donnent à une tour un atout de plus, dans toutes les parties."
+msgstr "Endless stars, earned in endless mode (open on every level won with 3 stars), give a tower an extra edge in every game."
+
+msgid "Survoler une spécialisation pour la voir, cliquer pour l'acheter."
+msgstr "Hover over a specialization to see it, click to buy it."
+
+msgid "Des pouvoirs à lancer en pleine partie, avec leur bouton en haut de l'écran ou leur touche, puis à laisser se recharger. Ils s'achètent avec des étoiles, et se renforcent avec des étoiles infinies."
+msgstr "Powers to cast mid-game, with their button at the top of the screen or their key, then let them recharge. They are bought with stars and boosted with endless stars."
+
+msgid "Survoler un pouvoir pour le voir, cliquer pour l'acheter."
+msgstr "Hover over a power to see it, click to buy it."
+
+msgid "Améliorations permanentes"
+msgstr "Permanent upgrades"
+
+msgid "Les étoiles gagnées sur les niveaux achètent des bonus pour toutes les parties."
+msgstr "Stars earned on levels buy bonuses for every game."
+
+msgid "Survoler une amélioration pour la voir, cliquer pour l'acheter."
+msgstr "Hover over an upgrade to see it, click to buy it."
+
+msgid "★ 0 à dépenser"
+msgstr "★ 0 to spend"
+
+msgid "Rend toutes les étoiles dépensées, pour composer un autre arbre."
+msgstr "Refunds all spent stars, to build a different tree."
+
+msgid "Réinitialiser l'arbre"
+msgstr "Reset tree"
+
+msgid "Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les spécialisations des tours, dans Améliorations."
+msgstr "Waves never stop and keep getting harder. One endless star every %d waves held past the level's own (%d per level): they buy tower specializations, in Upgrades."
+
+msgid "%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau avec 3 étoiles ouvre son mode infini."
+msgstr "%s: %s %s Each difficulty has its own stars (3 per level). Winning a level with 3 stars opens its endless mode."
+
+msgid "Monde %d"
+msgstr "World %d"
+
+msgid "Gagner le dernier niveau de %s pour débloquer ce monde."
+msgstr "Win the last level of %s to unlock this world."
+
+msgid "Gagner ce niveau avec 3 étoiles pour ouvrir son mode infini."
+msgstr "Win this level with 3 stars to open its endless mode."
+
+msgid "Record : %d vagues"
+msgstr "Record: %d waves"
+
+msgid "Record : %d vague"
+msgstr "Record: %d wave"
+
+msgid "Pas encore joué"
+msgstr "Not played yet"
+
+msgid "Étoiles des 4 difficultés"
+msgstr "Stars from all 4 difficulties"
+
+msgid "Mode infini"
+msgstr "Endless mode"
+
+msgid "[color=%s]%d vagues  ·  Or de départ : %d  ·  Vies : %d[/color]"
+msgstr "[color=%s]%d waves  ·  Starting gold: %d  ·  Lives: %d[/color]"
+
+msgid "[color=%s]V%d[/color]  %s"
+msgstr "[color=%s]W%d[/color]  %s"
+
+msgid "[color=%s]Puis les %d dernières vagues en boucle, de plus en plus dures.[/color]"
+msgstr "[color=%s]Then the last %d waves on a loop, harder and harder.[/color]"
+
+msgid "Choisir un monde"
+msgstr "Choose a world"
+
+msgid "Difficulté :"
+msgstr "Difficulty:"
+
+msgid "∞  Mode infini"
+msgstr "∞  Endless mode"
+
+msgid "%d / %d débloqués"
+msgstr "%d / %d unlocked"
+
+msgid "Débloqué le %02d/%02d/%d"
+msgstr "Unlocked on %02d/%02d/%d"
+
+msgid "Premier pas"
+msgstr "First Steps"
+
+msgid "Gagner un niveau."
+msgstr "Win a level."
+
+msgid "Sans une égratignure"
+msgstr "Not a Scratch"
+
+msgid "Gagner un niveau sans perdre de vie."
+msgstr "Win a level without losing a life."
+
+msgid "Sur le fil"
+msgstr "Close Call"
+
+msgid "Gagner un niveau avec une seule vie restante."
+msgstr "Win a level with only one life left."
+
+msgid "La Ruche nettoyée"
+msgstr "The Hive Cleared"
+
+msgid "Gagner les niveaux de La Ruche."
+msgstr "Win the levels of The Hive."
+
+msgid "La Fonderie éteinte"
+msgstr "The Foundry Shut Down"
+
+msgid "Gagner les niveaux de La Fonderie."
+msgstr "Win the levels of The Foundry."
+
+msgid "La Cité libérée"
+msgstr "The City Liberated"
+
+msgid "Gagner les niveaux de La Cité."
+msgstr "Win the levels of The City."
+
+msgid "La Nécropole apaisée"
+msgstr "The Necropolis at Rest"
+
+msgid "Gagner les niveaux de La Nécropole."
+msgstr "Win the levels of The Necropolis."
+
+msgid "Régicide"
+msgstr "Regicide"
+
+msgid "Vaincre la Reine de la Ruche."
+msgstr "Defeat the Hive Queen."
+
+msgid "Démolition"
+msgstr "Demolition"
+
+msgid "Vaincre le Béhémoth."
+msgstr "Defeat the Behemoth."
+
+msgid "Coup d'État"
+msgstr "Coup d'État"
+
+msgid "Vaincre le Général."
+msgstr "Defeat the General."
+
+msgid "Requiem"
+msgstr "Requiem"
+
+msgid "Vaincre la Liche."
+msgstr "Defeat the Lich."
+
+msgid "Commando"
+msgstr "Commando"
+
+msgid "Vaincre un boss avec 3 tours ou moins sur la carte."
+msgstr "Defeat a boss with 3 towers or fewer on the map."
+
+msgid "Minimaliste"
+msgstr "Minimalist"
+
+msgid "Gagner un niveau en posant 5 tours au plus."
+msgstr "Win a level placing 5 towers at most."
+
+msgid "Brut de pose"
+msgstr "No Frills"
+
+msgid "Gagner un niveau sans améliorer aucune tour."
+msgstr "Win a level without upgrading any tower."
+
+msgid "Monoculture"
+msgstr "Monoculture"
+
+msgid "Gagner un niveau avec un seul type de tour."
+msgstr "Win a level with a single tower type."
+
+msgid "Impatient"
+msgstr "Impatient"
+
+msgid "Lancer 5 vagues en avance dans une même partie."
+msgstr "Send 5 waves early in a single game."
+
+msgid "Gagner un niveau avec 1000 pièces d'or en poche."
+msgstr "Win a level with 1000 gold in your pocket."
+
+msgid "Cauchemar vaincu"
+msgstr "Nightmare Conquered"
+
+msgid "Gagner un niveau en Cauchemar."
+msgstr "Win a level on Nightmare."
+
+msgid "Infatigable"
+msgstr "Tireless"
+
+msgid "Repousser 30 vagues dans une partie du mode infini."
+msgstr "Hold off 30 waves in one endless mode game."
+
+msgid "Chasseur d'élites"
+msgstr "Elite Hunter"
+
+msgid "Détruire 50 monstres élites."
+msgstr "Destroy 50 elite monsters."
+
+msgid "Exterminateur"
+msgstr "Exterminator"
+
+msgid "Détruire 5000 monstres."
+msgstr "Destroy 5000 monsters."
+
+msgid "Constellation"
+msgstr "Constellation"
+
+msgid "Obtenir 100 étoiles."
+msgstr "Get 100 stars."
+
+msgid "Jardinier"
+msgstr "Gardener"
+
+msgid "Acheter 15 améliorations dans l'arbre."
+msgstr "Buy 15 upgrades in the tree."
+
+msgid "Niveau %d-%d  ·  %s"
+msgstr "Level %d-%d  ·  %s"
+
+msgid "{weekday} {day} {month} {year}"
+msgstr "{weekday}, {month} {day}, {year}"
+
+msgid "dimanche"
+msgstr "Sunday"
+
+msgid "lundi"
+msgstr "Monday"
+
+msgid "mardi"
+msgstr "Tuesday"
+
+msgid "mercredi"
+msgstr "Wednesday"
+
+msgid "jeudi"
+msgstr "Thursday"
+
+msgid "vendredi"
+msgstr "Friday"
+
+msgid "samedi"
+msgstr "Saturday"
+
+msgid "janvier"
+msgstr "January"
+
+msgid "février"
+msgstr "February"
+
+msgid "mars"
+msgstr "March"
+
+msgid "avril"
+msgstr "April"
+
+msgid "mai"
+msgstr "May"
+
+msgid "juin"
+msgstr "June"
+
+msgid "juillet"
+msgstr "July"
+
+msgid "août"
+msgstr "August"
+
+msgid "septembre"
+msgstr "September"
+
+msgid "octobre"
+msgstr "October"
+
+msgid "novembre"
+msgstr "November"
+
+msgid "décembre"
+msgstr "December"
+
+msgid "Deux tours seulement : %s."
+msgstr "Only two towers: %s."
+
+msgid "Tours imposées : %s."
+msgstr "Required towers: %s."
+
+msgid "%s : %s"
+msgstr "%s: %s"
+
+msgid "Sans l'arbre des améliorations : tout le monde joue avec les mêmes tours."
+msgstr "No upgrade tree: everyone plays with the same towers."
+
+msgid "Score : %d points par pièce d'or que rapporte un monstre détruit, %d par vague repoussée, %d par vie gardée à la victoire."
+msgstr "Score: %d points per gold coin earned from a destroyed monster, %d per wave held off, %d per life kept at victory."
+
+msgid "Monstres rapides"
+msgstr "Fast monsters"
+
+msgid "Monstres coriaces"
+msgstr "Tough monsters"
+
+msgid "Hordes"
+msgstr "Hordes"
+
+msgid "Bourse serrée"
+msgstr "Tight purse"
+
+msgid "Vies comptées"
+msgstr "Few lives"
+
+msgid "Sans amélioration"
+msgstr "No upgrades"
+
+msgid "Deux tours seulement"
+msgstr "Only two towers"
+
+msgid "Les monstres vont 30 % plus vite."
+msgstr "Monsters move 30% faster."
+
+msgid "Les monstres ont 35 % de vie (et de bouclier) en plus."
+msgstr "Monsters have 35% more health (and shield)."
+
+msgid "40 % de monstres en plus dans chaque groupe."
+msgstr "40% more monsters in each group."
+
+msgid "30 % d'or en moins au départ."
+msgstr "30% less starting gold."
+
+msgid "5 vies seulement."
+msgstr "Only 5 lives."
+
+msgid "Les tours ne s'améliorent pas."
+msgstr "Towers can't be upgraded."
+
+msgid "Deux tours imposées au lieu de quatre."
+msgstr "Two required towers instead of four."
+
+msgid "•  [b]%s[/b] : %s"
+msgstr "•  [b]%s[/b]: %s"
+
+msgid "•  [b]Sans l'arbre des améliorations[/b] : tout le monde joue avec les mêmes tours et les mêmes prix."
+msgstr "•  [b]No upgrade tree[/b]: everyone plays with the same towers and the same prices."
+
+msgid "Meilleur score aujourd'hui : %d"
+msgstr "Today's best score: %d"
+
+msgid "Pas encore joué aujourd'hui."
+msgstr "Not played yet today."
+
+msgid "%s : %d"
+msgstr "%s: %d"
+
+msgid "Record de tous les défis : %d (%s)"
+msgstr "All-time challenge record: %d (%s)"
+
+msgid "%d défis joués"
+msgstr "%d challenges played"
+
+msgid "%d défi joué"
+msgstr "%d challenge played"
+
+msgid "Derniers jours : %s"
+msgstr "Recent days: %s"
+
+msgid "{day} {month}"
+msgstr "{month_number}/{day}"
+
+# --- Éditeur de niveau et tutoriel -----------------------------------------------
+
+msgid "Nom du niveau"
+msgstr "Level name"
+
+msgid "Niveaux"
+msgstr "Levels"
+
+msgid "Carte"
+msgstr "Map"
+
+msgid "Vagues"
+msgstr "Waves"
+
+msgid "Monde"
+msgstr "World"
+
+msgid "Chemin"
+msgstr "Path"
+
+msgid "Rochers"
+msgstr "Rocks"
+
+msgid "Effacer le chemin"
+msgstr "Clear path"
+
+msgid "Enlever les rochers"
+msgstr "Remove rocks"
+
+msgid "Copiez le code d'un niveau pour le partager."
+msgstr "Copy a level's code to share it."
+
+msgid "Prêt à jouer."
+msgstr "Ready to play."
+
+msgid "Cliquez ou glissez pour prolonger le chemin, clic droit pour reculer."
+msgstr "Click or drag to extend the path, right-click to go back."
+
+msgid "Cliquez ou glissez pour poser ou enlever des rochers."
+msgstr "Click or drag to place or remove rocks."
+
+msgid "%d vague"
+msgid_plural "%d vagues"
+msgstr[0] "%d wave"
+msgstr[1] "%d waves"
+
+msgid "%d monstre"
+msgid_plural "%d monstres"
+msgstr[0] "%d monster"
+msgstr[1] "%d monsters"
+
+msgid "Le chemin part du bord de la carte : cliquez sur une case du bord."
+msgstr "The path starts at the edge of the map: click a tile on the edge."
+
+msgid "+ Ajouter une vague"
+msgstr "+ Add a wave"
+
+msgid "+ Groupe"
+msgstr "+ Group"
+
+msgid "Supprimer la vague"
+msgstr "Delete wave"
+
+msgid "Élite"
+msgstr "Elite"
+
+msgid "Retirer le groupe"
+msgstr "Remove group"
+
+msgid "+ Nouveau niveau"
+msgstr "+ New level"
+
+msgid "Code reçu"
+msgstr "Received code"
+
+msgid "Collez ici le code d'un niveau partagé (%s...)"
+msgstr "Paste a shared level's code here (%s...)"
+
+msgid "Importer"
+msgstr "Import"
+
+msgid "Jouable"
+msgstr "Playable"
+
+msgid "À finir"
+msgstr "Unfinished"
+
+msgid "Ouvert"
+msgstr "Opened"
+
+msgid "Ouvrir"
+msgstr "Open"
+
+msgid "Dupliquer"
+msgstr "Duplicate"
+
+msgid "Copier le code"
+msgstr "Copy code"
+
+msgid "Met le code du niveau dans le presse-papiers, pour le partager."
+msgstr "Puts the level's code on the clipboard, to share it."
+
+msgid "Confirmer ?"
+msgstr "Confirm?"
+
+msgid "Supprimer"
+msgstr "Delete"
+
+msgid "Copie de %s"
+msgstr "Copy of %s"
+
+msgid "Pas plus de %d niveaux : supprimez-en un d'abord."
+msgstr "No more than %d levels: delete one first."
+
+msgid "« %s » est supprimé."
+msgstr "\"%s\" was deleted."
+
+msgid "Code de « %s » copié : collez-le à qui vous voulez, il l'importe dans son éditeur."
+msgstr "Code for \"%s\" copied: paste it to anyone, and they can import it in their editor."
+
+msgid "Collez d'abord un code dans le champ."
+msgstr "Paste a code in the field first."
+
+msgid "Ce code n'est pas un niveau valide : vérifiez qu'il est copié en entier."
+msgstr "This code is not a valid level: make sure it was copied in full."
+
+msgid "« %s » est importé."
+msgstr "\"%s\" was imported."
+
+msgid "Niveau perso"
+msgstr "Custom level"
+
+msgid "Niveau incomplet."
+msgstr "Incomplete level."
+
+msgid "Tracez le chemin : il part du bord de la carte et va jusqu'à la base."
+msgstr "Draw the path: it starts at the edge of the map and goes to the base."
+
+msgid "Le chemin doit partir du bord de la carte."
+msgstr "The path must start at the edge of the map."
+
+msgid "Le chemin est mal formé."
+msgstr "The path is malformed."
+
+msgid "Le chemin ne doit pas se croiser."
+msgstr "The path must not cross itself."
+
+msgid "Ajoutez au moins une vague."
+msgstr "Add at least one wave."
+
+msgid "La vague %d est vide."
+msgstr "Wave %d is empty."
+
+msgid "Un groupe de la vague %d n'a pas de monstre."
+msgstr "A group in wave %d has no monster."
+
+msgid "Bienvenue ! Les monstres entrent à gauche et suivent le chemin jusqu'à votre [b]base[/b], à droite. Chacun qui l'atteint vous coûte des vies : à 0, la partie est perdue."
+msgstr "Welcome! Monsters come in on the left and follow the path to your [b]base[/b] on the right. Each one that reaches it costs you lives: at 0, the game is lost."
+
+msgid "Pour les arrêter, il faut des tours. Choisissez le [b]Canon[/b] dans la barre d'achat (ou touche 1). Survoler une case montre la fiche de la tour."
+msgstr "To stop them, you need towers. Pick the [b]Cannon[/b] in the shop bar (or press 1). Hovering over a tile shows the tower's details."
+
+msgid "Pour les arrêter, il faut des tours. Touchez le [b]Canon[/b] dans la barre d'achat."
+msgstr "To stop them, you need towers. Tap the [b]Cannon[/b] in the shop bar."
+
+msgid "Posez-le sur une case libre près du chemin, par exemple celle qui clignote. Le cercle montre sa portée. Clic droit ou Échap pour annuler."
+msgstr "Place it on a free tile near the path, for example the blinking one. The circle shows its range. Right-click or Esc to cancel."
+
+msgid "Touchez une case libre près du chemin, par exemple celle qui clignote, puis touchez-la encore pour poser la tour."
+msgstr "Tap a free tile near the path, for example the blinking one, then tap it again to place the tower."
+
+msgid "En haut, votre [b]or[/b] et vos [b]vies[/b]. L'encadré sous « Lancer la vague » annonce les monstres qui arrivent : survolez-le pour le détail de chacun."
+msgstr "At the top, your [b]gold[/b] and [b]lives[/b]. The box under \"Send wave\" shows the incoming monsters: hover over it for details on each one."
+
+msgid "Prêt ? Cliquez sur [b]Lancer la vague[/b]."
+msgstr "Ready? Click [b]Send wave[/b]."
+
+msgid "Prêt ? Touchez [b]Lancer la vague[/b]."
+msgstr "Ready? Tap [b]Send wave[/b]."
+
+msgid "Chaque monstre détruit rapporte de l'or. Survolez un monstre pour voir sa fiche. On peut poser des tours pendant la vague aussi."
+msgstr "Each monster destroyed earns gold. Hover over a monster to see its details. You can place towers during the wave too."
+
+msgid "Chaque monstre détruit rapporte de l'or. Touchez un monstre pour voir sa fiche. On peut poser des tours pendant la vague aussi."
+msgstr "Each monster destroyed earns gold. Tap a monster to see its details. You can place towers during the wave too."
+
+msgid "Vague repoussée ! Elle rapporte un bonus, et l'or gardé rapporte des [b]intérêts[/b] chaque fois que la carte est vidée : %d %%, %d or au plus. Épargner un peu paie."
+msgstr "Wave repelled! It earns a bonus, and the gold you keep earns [b]interest[/b] each time the map is cleared: %d%%, up to %d gold. Saving a little pays off."
+
+msgid "Cliquez sur votre Canon pour ouvrir sa [b]fiche[/b]."
+msgstr "Click your Cannon to open its [b]details[/b]."
+
+msgid "Touchez votre Canon pour ouvrir sa [b]fiche[/b]."
+msgstr "Tap your Cannon to open its [b]details[/b]."
+
+msgid "[b]Améliorez-le[/b] : les gains s'affichent en vert avant l'achat. Chaque tour a deux améliorations."
+msgstr "[b]Upgrade it[/b]: the gains show in green before you buy. Each tower has two upgrades."
+
+msgid "Le bouton [b]Cible[/b] choisit l'ennemi visé en priorité : le premier, le dernier, le plus fort ou le plus proche. [b]Vendre[/b] rend 70 % de ce que la tour a coûté."
+msgstr "The [b]Target[/b] button picks which enemy to aim at first: the first, the last, the strongest or the closest. [b]Sell[/b] gives back 70% of what the tower cost."
+
+msgid "La prochaine vague amène des [b]Frelons[/b] : ces volants survolent le chemin en coupant les virages, et certaines tours ne tirent pas en l'air. Posez une [b]Mitrailleuse[/b] (touche 2) près de la sortie."
+msgstr "The next wave brings [b]Hornets[/b]: these flying monsters fly over the path, cutting the corners, and some towers can't shoot at the air. Place a [b]Gatling[/b] (key 2) near the exit."
+
+msgid "La prochaine vague amène des [b]Frelons[/b] : ces volants survolent le chemin en coupant les virages, et certaines tours ne tirent pas en l'air. Posez une [b]Mitrailleuse[/b] près de la sortie."
+msgstr "The next wave brings [b]Hornets[/b]: these flying monsters fly over the path, cutting the corners, and some towers can't shoot at the air. Place a [b]Gatling[/b] near the exit."
+
+msgid "Lancez la vague suivante. Astuce : la lancer avant que la carte soit vide rapporte une prime, affichée sous l'encadré."
+msgstr "Send the next wave. Tip: sending it before the map is clear earns a bonus, shown under the box."
+
+msgid "Pendant une vague, [b]Pause[/b] (Espace) fige le jeu sans vous empêcher de construire, et [b]x2[/b], [b]x3[/b] (touche V) l'accélèrent."
+msgstr "During a wave, [b]Pause[/b] (Space) freezes the game but still lets you build, and [b]x2[/b], [b]x3[/b] (V key) speed it up."
+
+msgid "Pendant une vague, [b]Pause[/b] fige le jeu sans vous empêcher de construire, et [b]x2[/b], [b]x3[/b] l'accélèrent."
+msgstr "During a wave, [b]Pause[/b] freezes the game but still lets you build, and [b]x2[/b], [b]x3[/b] speed it up."
+
+msgid "Attention, des [b]Mantes[/b] arrivent ! Ces furtives sont invisibles pour les tours, sauf à portée d'une tour qui détecte, comme le [b]Sniper[/b] (l'œil violet et le cercle en pointillés). Posez-en un (touche 3)."
+msgstr "Watch out, [b]Mantises[/b] are coming! These stealthy monsters are invisible to towers, except within range of a tower that detects, like the [b]Sniper[/b] (the purple eye and the dotted circle). Place one (key 3)."
+
+msgid "Attention, des [b]Mantes[/b] arrivent ! Ces furtives sont invisibles pour les tours, sauf à portée d'une tour qui détecte, comme le [b]Sniper[/b] (l'œil violet et le cercle en pointillés). Posez-en un."
+msgstr "Watch out, [b]Mantises[/b] are coming! These stealthy monsters are invisible to towers, except within range of a tower that detects, like the [b]Sniper[/b] (the purple eye and the dotted circle). Place one."
+
+msgid "Lancez la vague. Une Mante repérée par le Sniper devient visible pour toutes les tours."
+msgstr "Send the wave. A Mantis spotted by the Sniper becomes visible to all towers."
+
+msgid "Les Mantes sont aussi blindées : chaque coup perd un peu de dégâts. Les gros coups du Sniper passent bien mieux l'armure."
+msgstr "Mantises are armored too: each hit loses a bit of damage. The Sniper's big hits get through armor much better."
+
+msgid "Dernière vague, la plus grosse, avec un [b]élite[/b] (aura dorée) ! Pour la tenir, voici un [b]pouvoir[/b] : le Gel. Dans la campagne, les pouvoirs s'achètent avec les étoiles, dans l'arbre des améliorations. Dépensez votre or (améliorations, nouvelles tours), puis lancez la vague."
+msgstr "Last wave, the biggest one, with an [b]elite[/b] (golden aura)! To hold it, here is a [b]power[/b]: Freeze. In the campaign, powers are bought with stars, in the upgrade tree. Spend your gold (upgrades, new towers), then send the wave."
+
+msgid "Quand les monstres s'approchent, cliquez sur [b]Gel[/b] (touche %s) : il fige tous les monstres un moment. Ensuite, il se recharge."
+msgstr "When the monsters get close, click [b]Freeze[/b] (key %s): it freezes all monsters for a moment. Then it recharges."
+
+msgid "Quand les monstres s'approchent, touchez [b]Gel[/b] : il fige tous les monstres un moment. Ensuite, il se recharge."
+msgstr "When the monsters get close, tap [b]Freeze[/b]: it freezes all monsters for a moment. Then it recharges."
+
+msgid "Bien joué ! Tenez jusqu'au bout pour finir le tutoriel. Vous pouvez encore améliorer vos tours ou en poser d'autres."
+msgstr "Well done! Hold out to the end to finish the tutorial. You can still upgrade your towers or place more."
+
+msgid "Tutoriel terminé : vous connaissez l'essentiel.\nLa campagne vous attend !"
+msgstr "Tutorial complete: you know the basics.\nThe campaign awaits!"
+
+msgid "Commencer la campagne"
+msgstr "Start the campaign"
+
+msgid "Passer le tutoriel"
+msgstr "Skip tutorial"
+
+msgid "Suivant"
+msgstr "Next"
+
+msgid "TUTORIEL  ·  %d / %d"
+msgstr "TUTORIAL  ·  %d / %d"
+
+# --- Mode Conquête ---------------------------------------------------------------
+
 msgid "+%d pierre"
 msgstr "+%d stone"
 
@@ -156,9 +2208,6 @@ msgstr "Demolish  ·  +%d gold"
 msgid "%d or · %d p · %d e"
 msgstr "%d gold · %d s · %d e"
 
-msgid "%d or · %d p"
-msgstr "%d gold · %d s"
-
 msgid "Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour l'arbre des améliorations."
 msgstr "Each difficulty has its own stars (3 per level), which also count for the upgrade tree."
 
@@ -168,23 +2217,14 @@ msgstr "Level %d  ·  %s"
 msgid "Pillards : %s"
 msgstr "Raiders: %s"
 
-msgid "★ %d / %d (4 difficultés)"
-msgstr "★ %d / %d (4 difficulties)"
-
 msgid "Gagner « %s » pour l'ouvrir."
 msgstr "Win “%s” to unlock it."
 
 msgid "Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus)."
 msgstr "Workers in play, out of the maximum: %d, plus %d per House built (%d at most)."
 
-msgid "Pierre : %d"
-msgstr "Stone: %d"
-
 msgid "Essence : %d"
 msgstr "Essence: %d"
-
-msgid "Ouvriers : %d / %d"
-msgstr "Workers: %d / %d"
 
 msgid "%s  ·  Conquête"
 msgstr "%s  ·  Conquest"
@@ -195,17 +2235,11 @@ msgstr "Conquest mode only: it never appears in the campaign."
 msgid "Pillards (mode Conquête)"
 msgstr "Raiders (Conquest mode)"
 
-msgid "Améliorer  ·  %d or"
-msgstr "Upgrade  ·  %d gold"
-
 msgid "Améliorer  ·  %d or  ·  %d essence"
 msgstr "Upgrade  ·  %d gold  ·  %d essence"
 
 msgid "Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades et casernes, et protégez votre économie des Pillards. Les vagues partent seules."
 msgstr "Gather stone and essence with your workers, build towers, depots, houses, barricades and barracks, and protect your economy from Raiders. Waves start on their own."
-
-msgid "Verrouillé"
-msgstr "Locked"
 
 msgid "Bâtiments"
 msgstr "Buildings"
@@ -293,3 +2327,80 @@ msgstr "Marauder"
 
 msgid "Pilleur de tombes"
 msgstr "Grave Robber"
+
+# --- Mode Conquête (suite) -------------------------------------------------------
+
+msgid "Pillard : quitte le chemin pour frapper les ouvriers et les bâtiments à portée (mode Conquête), puis y revient."
+msgstr "Raider: leaves the path to strike workers and buildings in range (Conquest mode), then returns to it."
+
+msgid "Ouvrier perdu"
+msgstr "Worker lost"
+
+msgid "Première pierre"
+msgstr "Cornerstone"
+
+msgid "Gagner un niveau de Conquête."
+msgstr "Win a Conquest level."
+
+msgid "Sécurité au travail"
+msgstr "Safety First"
+
+msgid "Gagner un niveau de Conquête sans perdre d'ouvrier."
+msgstr "Win a Conquest level without losing a worker."
+
+msgid "Contremaître"
+msgstr "Foreman"
+
+msgid "Avoir 12 ouvriers en même temps."
+msgstr "Have 12 workers at the same time."
+
+msgid "Carrier"
+msgstr "Quarryman"
+
+msgid "Miner 2000 pierres en Conquête."
+msgstr "Mine 2000 stone in Conquest."
+
+msgid "Conquérant"
+msgstr "Conqueror"
+
+msgid "Gagner tous les niveaux de Conquête."
+msgstr "Win every Conquest level."
+
+msgid "Pierre : minée par les ouvriers dans les rochers et rapportée au QG ou à un Dépôt.\nChaque tour et chaque bâtiment en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs."
+msgstr "Stone: mined from rocks by the workers and brought back to HQ or a Depot.\nEvery tower and building needs some, on top of gold. Click a rock to send the miners there."
+
+msgid "Essence : minée dans les filons de cristaux, ou tirée par un Extracteur posé dessus.\nElle paie les améliorations à partir du niveau 3 et la Caserne."
+msgstr "Essence: mined from crystal veins, or drawn by an Extractor built on top.\nIt pays for upgrades from level 3 and for the Barracks."
+
+msgid "Un ouvrier de plus, au QG : il mine la pierre et l'essence, et bâtit tours et bâtiments."
+msgstr "One more worker, at HQ: mines stone and essence, and builds towers and buildings."
+
+msgid "Dépôt, Maison, Extracteur, Barricade et Caserne : posés comme les tours, bâtis par les ouvriers."
+msgstr "Depot, House, Extractor, Barricade and Barracks: placed like towers, built by workers."
+
+msgid "Rapide et sans scrupules : il fond sur les ouvriers isolés et met le feu aux bâtiments avant de rejoindre la colonne."
+msgstr "Fast and ruthless: he swoops on lone workers and sets buildings on fire before rejoining the column."
+
+msgid "Fourmi géante dressée au pillage : elle quitte le chemin pour dévorer les ouvriers et ronger les bâtiments, puis y revient."
+msgstr "Giant ant trained for plunder: she leaves the path to devour workers and gnaw at buildings, then returns to it."
+
+msgid "Engin de ferraille qui sort du chemin pour démonter ouvriers et bâtiments, sous une carcasse blindée."
+msgstr "Scrap-metal machine that leaves the path to take apart workers and buildings, under an armored hull."
+
+msgid "Goule affamée qui quitte le chemin pour s'en prendre aux vivants qui travaillent, et aux murs qui les abritent."
+msgstr "Starving ghoul that leaves the path to go after the living at work, and the walls that shelter them."
+
+msgid "Conquête · La Mine de fer"
+msgstr "Conquest · The Iron Mine"
+
+msgid "Conquête · Les Faubourgs"
+msgstr "Conquest · The Outskirts"
+
+msgid "Conquête · Les Catacombes"
+msgstr "Conquest · The Catacombs"
+
+msgid "Conquête · Le Nid de la Reine"
+msgstr "Conquest · The Queen's Nest"
+
+msgid "%s : %s %s %s"
+msgstr "%s: %s %s %s"

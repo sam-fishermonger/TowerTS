@@ -214,13 +214,13 @@ func _refresh() -> void:
 	var endless := is_endless_page(page)
 	var available := Perks.get_available_stars(endless)
 	var spent := Perks.get_spent_stars(endless)
-	stars_label.text = "%s★ %d à dépenser   ·   %d dépensée%s   ·   %s : %d" % [
-		"∞ " if endless else "", available, spent, "s" if spent > 1 else "",
-		"toutes les spécialisations" if endless else "arbre complet", Perks.TREE.get_total_cost(endless)]
+	stars_label.text = "%s%s   ·   %s   ·   %s" % ["∞ " if endless else "", tr("★ %d à dépenser") % available,
+		(tr("%d dépensées") if spent > 1 else tr("%d dépensée")) % spent,
+		(tr("toutes les spécialisations : %d") if endless else tr("arbre complet : %d")) % Perks.TREE.get_total_cost(endless)]
 	stars_label.add_theme_color_override("font_color", ENDLESS_COLOR if endless else STARS_COLOR)
 	if is_mixed_page(page):
-		stars_label.text = "★ %d à dépenser   ·   ∞ ★ %d à dépenser" % [Perks.get_available_stars(),
-			Perks.get_available_stars(true)]
+		stars_label.text = "%s   ·   ∞ %s" % [tr("★ %d à dépenser") % Perks.get_available_stars(),
+			tr("★ %d à dépenser") % Perks.get_available_stars(true)]
 	refund_button.disabled = Perks.get_owned_ids().is_empty()
 	for perk in Perks.TREE.perks:
 		_style_button(get_button(perk), perk)
@@ -241,7 +241,7 @@ func _get_node_width(perk: Perk) -> float:
 func _get_branch_lock_text(branch: int) -> String:
 	for perk in Perks.TREE.perks:
 		if Perks.TREE.get_branch(perk) == branch and not Perks.is_world_unlocked(perk):
-			return "Finir %s pour l'ouvrir" % Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name
+			return tr("Finir %s pour l'ouvrir") % tr(Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name)
 	return ""
 
 
@@ -255,12 +255,12 @@ func _style_button(button: Button, perk: Perk) -> void:
 	var owned := Perks.is_owned(perk)
 	var status: String
 	if owned:
-		status = "Acquis"
+		status = tr("Acquis")
 	elif Perks.is_unlocked(perk):
 		status = _price_text(perk)
 	else:
-		status = "Verrouillé"
-	button.text = "%s\n%s" % [perk.display_name, status]
+		status = tr("Verrouillé")
+	button.text = "%s\n%s" % [tr(perk.display_name), status]
 	# Place pour l'image de la tour (ou des deux tours d'un croisement) à gauche.
 	var margin_left := 12.0
 	if perk.is_crossing():
@@ -320,24 +320,26 @@ func _show_info(perk: Perk) -> void:
 	info_description.text = perk.description
 	var available := Perks.get_available_stars(perk.paid_with_endless_stars)
 	var missing_count := perk.cost - available
-	var unit := "étoile" + ("s" if missing_count > 1 else "")
+	var missing_text: String
 	if perk.paid_with_endless_stars:
-		unit += " infinie" + ("s" if missing_count > 1 else "")
+		missing_text = tr("%s  ·  il manque %d étoiles infinies") if missing_count > 1 else tr("%s  ·  il manque %d étoile infinie")
+	else:
+		missing_text = tr("%s  ·  il manque %d étoiles") if missing_count > 1 else tr("%s  ·  il manque %d étoile")
 	if Perks.is_owned(perk):
 		info_status.text = "Acquis"
 	elif not Perks.is_world_unlocked(perk):
-		info_status.text = "Verrouillé : finir %s pour ouvrir %s" % [
-			Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name, Perks.get_required_world_name(perk)]
+		info_status.text = tr("Verrouillé : finir %s pour ouvrir %s") % [
+			tr(Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name), tr(Perks.get_required_world_name(perk))]
 	elif not Perks.is_unlocked(perk):
 		var missing: Array[String] = []
 		for required in perk.requires:
 			if not Perks.is_owned(required):
-				missing.append(required.display_name)
-		info_status.text = "Verrouillé : demande %s" % " et ".join(missing)
+				missing.append(tr(required.display_name))
+		info_status.text = tr("Verrouillé : demande %s") % tr(" et ").join(missing)
 	elif available >= perk.cost:
-		info_status.text = "Cliquer pour acheter  ·  %s" % _price_text(perk)
+		info_status.text = tr("Cliquer pour acheter  ·  %s") % _price_text(perk)
 	else:
-		info_status.text = "%s  ·  il manque %d %s" % [_price_text(perk), missing_count, unit]
+		info_status.text = missing_text % [_price_text(perk), missing_count]
 	info_status.add_theme_color_override("font_color", _state_color(perk))
 
 

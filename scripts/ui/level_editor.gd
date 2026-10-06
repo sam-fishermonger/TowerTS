@@ -113,7 +113,7 @@ func _build() -> void:
 	map_tab.pressed.connect(show_tab.bind(Tab.MAP))
 	waves_tab = _make_toggle("Vagues", tabs, top)
 	waves_tab.pressed.connect(show_tab.bind(Tab.WAVES))
-	top.add_child(_make_label("  Monde"))
+	top.add_child(_make_label("  " + tr("Monde")))
 	biome_option = OptionButton.new()
 	for name in CustomLevel.get_biome_names():
 		biome_option.add_item(name)
@@ -121,10 +121,10 @@ func _build() -> void:
 		data.biome = index
 		_refresh())
 	top.add_child(biome_option)
-	top.add_child(_make_label("  Or"))
+	top.add_child(_make_label("  " + tr("Or")))
 	gold_spin = _make_spin(CustomLevel.MIN_GOLD, CustomLevel.MAX_GOLD, 10, top)
 	gold_spin.value_changed.connect(func(value: float) -> void: data.gold = int(value))
-	top.add_child(_make_label("  Vies"))
+	top.add_child(_make_label("  " + tr("Vies")))
 	lives_spin = _make_spin(CustomLevel.MIN_LIVES, CustomLevel.MAX_LIVES, 1, top)
 	lives_spin.value_changed.connect(func(value: float) -> void: data.lives = int(value))
 
@@ -271,10 +271,10 @@ func _tool_hint() -> String:
 	if current_tab == Tab.LEVELS:
 		return tr("Copiez le code d'un niveau pour le partager.")
 	if current_tab == Tab.WAVES:
-		return "Prêt à jouer."
+		return tr("Prêt à jouer.")
 	if current_tool == EditTool.PATH:
-		return "Cliquez ou glissez pour prolonger le chemin, clic droit pour reculer."
-	return "Cliquez ou glissez pour poser ou enlever des rochers."
+		return tr("Cliquez ou glissez pour prolonger le chemin, clic droit pour reculer.")
+	return tr("Cliquez ou glissez pour poser ou enlever des rochers.")
 
 
 func _describe_waves(level: Dictionary) -> String:
@@ -542,9 +542,9 @@ func _make_group_row(wave: int, index: int) -> Control:
 		var enemy := enemy_choices[i]
 		var world := _world_of(campaign, enemy)
 		if world != previous_world:
-			option.add_separator(campaign.worlds[world].display_name)
+			option.add_separator(tr(campaign.worlds[world].display_name))
 			previous_world = world
-		option.add_item(enemy.display_name + ("  (boss)" if enemy.is_boss else ""), i)
+		option.add_item(tr(enemy.display_name) + ("  (boss)" if enemy.is_boss else ""), i)
 		if enemy.resource_path == group.enemy:
 			option.select(option.get_item_count() - 1)
 	row.add_child(option)
@@ -600,10 +600,10 @@ func _build_levels_view() -> void:
 	new_button.custom_minimum_size = Vector2(220, 44)
 	new_button.pressed.connect(new_level)
 	actions.add_child(new_button)
-	actions.add_child(_make_label("   Code reçu"))
+	actions.add_child(_make_label("   " + tr("Code reçu")))
 	import_edit = LineEdit.new()
 	import_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	import_edit.placeholder_text = "Collez ici le code d'un niveau partagé (%s...)" % CustomLevel.CODE_PREFIX
+	import_edit.placeholder_text = tr("Collez ici le code d'un niveau partagé (%s...)") % CustomLevel.CODE_PREFIX
 	import_edit.text_submitted.connect(func(text: String) -> void: import_code(text))
 	actions.add_child(import_edit)
 	var import_button := Button.new()
@@ -648,7 +648,7 @@ func _make_level_row(index: int) -> Control:
 	texts.add_child(name_label)
 	var biome_names := CustomLevel.get_biome_names()
 	var problem := CustomLevel.validate(level)
-	var summary := _make_label("%s  ·  %s  ·  %s" % [biome_names[int(level.biome)], _describe_waves(level),
+	var summary := _make_label("%s  ·  %s  ·  %s" % [tr(biome_names[int(level.biome)]), _describe_waves(level),
 		tr("Jouable") if problem.is_empty() else tr("À finir")])
 	summary.add_theme_font_size_override("font_size", 16)
 	summary.add_theme_color_override("font_color", HINT_COLOR if problem.is_empty() else ERROR_COLOR)

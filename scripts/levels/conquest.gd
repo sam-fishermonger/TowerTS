@@ -292,7 +292,7 @@ func _on_worker_killed(worker: Worker) -> void:
 	workers_lost += 1
 	level.stats.workers_lost += 1
 	Sound.play(&"lives_lost", -6.0)
-	_show_text("Ouvrier perdu", Color(1.0, 0.45, 0.4), worker.global_position + Vector2(0, -16), 14)
+	_show_text(tr("Ouvrier perdu"), Color(1.0, 0.45, 0.4), worker.global_position + Vector2(0, -16), 14)
 	changed.emit.call_deferred()
 
 

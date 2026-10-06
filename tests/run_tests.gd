@@ -629,6 +629,23 @@ func _test_language() -> void:
 	await process_frame
 	_check(GameSettings.get_language() == "fr" and worlds_button.text == "Mondes", "retour au français")
 	await _free(title)
+	# En jeu : les Options du HUD changent la langue, et le HUD refait ses textes composés.
+	var level: Level = LEVEL_01.instantiate()
+	root.add_child(level)
+	await process_frame
+	level.hud.open_options()
+	level.hud.options_menu.language_buttons[1].pressed.emit()
+	await process_frame
+	_check(level.hud.level_label.text.begins_with("Level 1-1") and level.hud.gold_label.text.begins_with("Gold: "),
+		"en jeu, le HUD passe en anglais : %s, %s" % [level.hud.level_label.text, level.hud.gold_label.text])
+	_check(EnemyData.plural("Momie", 3) == "Mummies" and EnemyData.plural("Larve", 2) == "Larvae",
+		"pluriels anglais des monstres")
+	level.hud.options_menu.language_buttons[0].pressed.emit()
+	await process_frame
+	_check(level.hud.level_label.text.begins_with("Niveau 1-1") and level.hud.gold_label.text.begins_with("Or : "),
+		"et revient au français")
+	level.hud.options_menu.close()
+	await _free(level)
 
 
 func _test_health_component() -> void:

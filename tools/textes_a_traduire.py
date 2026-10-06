@@ -38,13 +38,15 @@ def escape(text: str) -> str:
 
 
 def read_po(path: Path) -> set[str]:
-    """msgid du fichier .po (les msgid sur plusieurs lignes sont recollés)."""
+    """msgid et msgid_plural du fichier .po (ceux sur plusieurs lignes sont recollés)."""
     ids: set[str] = set()
     current: list[str] | None = None
     for line in path.read_text(encoding="utf-8").splitlines() + [""]:
         line = line.strip()
-        if line.startswith("msgid "):
-            current = [line[6:]]
+        if line.startswith(("msgid ", "msgid_plural ")):
+            if current is not None:
+                ids.add("".join(unescape(part.strip()[1:-1]) for part in current))
+            current = [line.split(" ", 1)[1]]
         elif line.startswith('"') and current is not None:
             current.append(line)
         else:

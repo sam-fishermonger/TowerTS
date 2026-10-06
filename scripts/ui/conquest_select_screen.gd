@@ -140,7 +140,7 @@ func _refresh() -> void:
 	var difficulty := Difficulty.get_current()
 	get_difficulty_button(difficulty).set_pressed_no_signal(true)
 	var stars_rule := tr("Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour l'arbre des améliorations.")
-	_hint.text = "%s : %s %s %s" % [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty),
+	_hint.text = tr("%s : %s %s %s") % [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty),
 		Difficulty.describe_tower_limit(difficulty), stars_rule]
 	for card in _cards.get_children():
 		_cards.remove_child(card)

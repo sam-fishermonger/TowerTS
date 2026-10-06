@@ -34,5 +34,9 @@ jobs:
       - name: Importer le projet
         run: ~/godot/godot --headless --import --path .
 
+      # Chaque texte marqué à traduire (tr(), textes des scènes) doit avoir sa traduction anglaise.
+      - name: Vérifier les traductions
+        run: python3 tools/textes_a_traduire.py
+
       - name: Lancer les tests
         run: ~/godot/godot --headless --fixed-fps 60 --path . -s res://tests/run_tests.gd

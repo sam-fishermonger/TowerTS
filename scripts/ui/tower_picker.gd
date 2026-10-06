@@ -47,8 +47,8 @@ func setup(available: Array[TowerData], tower_limit: int, selected: Array[TowerD
 	panel.add_child(column)
 
 	_add_label(column, "Choisir les tours", 28, Color(0.95, 0.85, 0.45))
-	_add_label(column, "%s : %d tours différentes au plus dans ce niveau, sur les %d débloquées." % [
-		difficulty_name, limit, available.size()], 16, Color(1, 1, 1, 0.75))
+	_add_label(column, tr("%s : %d tours différentes au plus dans ce niveau, sur les %d débloquées.") % [
+		tr(difficulty_name), limit, available.size()], 16, Color(1, 1, 1, 0.75))
 	var grid := GridContainer.new()
 	grid.columns = mini(COLUMNS, available.size())
 	grid.add_theme_constant_override("h_separation", 8)
@@ -127,7 +127,7 @@ func _refresh() -> void:
 		button.disabled = count >= limit and not button.button_pressed
 		button.set_price(button.data.get_cost(), true)
 		button.modulate.a = TowerShopButton.UNAFFORDABLE_ALPHA if button.disabled else 1.0
-	_count_label.text = "%d / %d tours choisies" % [count, limit]
+	_count_label.text = tr("%d / %d tours choisies") % [count, limit]
 	_count_label.add_theme_color_override("font_color",
 		Color(0.55, 0.95, 0.55) if count == limit else Color(1, 1, 1, 0.8))
 	_play_button.disabled = not can_confirm()

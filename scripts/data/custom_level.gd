@@ -79,7 +79,7 @@ const BIOME_COLORS: Array[Array] = [
 ## Niveau de départ de l'éditeur : un chemin en S et trois vagues de La Ruche.
 static func create_default() -> Dictionary:
 	return {
-		name = LEVEL_NAME,
+		name = default_name(),
 		biome = 0,
 		path = [Vector2i(0, 2), Vector2i(8, 2), Vector2i(8, 7), Vector2i(15, 7), Vector2i(15, 3), Vector2i(19, 3)],
 		rocks = [Vector2i(3, 5), Vector2i(12, 1), Vector2i(17, 8)],
@@ -126,7 +126,12 @@ static func save_all(levels: Array[Dictionary], current: int) -> void:
 ## Nom propre : sans espaces autour, raccourci, et celui par défaut s'il est vide.
 static func clean_name(text: Variant) -> String:
 	var result := str(text).strip_edges().left(MAX_NAME_LENGTH)
-	return result if not result.is_empty() else LEVEL_NAME
+	return result if not result.is_empty() else default_name()
+
+
+## Nom par défaut d'un niveau, dans la langue du jeu (il est enregistré tel quel).
+static func default_name() -> String:
+	return String(TranslationServer.translate(LEVEL_NAME))
 
 
 ## Nom libre dans la liste : « Nom », sinon « Nom (2) », « Nom (3) »...
@@ -374,10 +379,10 @@ static func validate(data: Dictionary) -> String:
 	for i in waves.size():
 		var groups: Array = waves[i].get("groups", [])
 		if groups.is_empty():
-			return "La vague %d est vide." % (i + 1)
+			return String(TranslationServer.translate("La vague %d est vide.")) % (i + 1)
 		for entry: Dictionary in groups:
 			if not ResourceLoader.exists(entry.get("enemy", "")) or int(entry.get("count", 0)) <= 0:
-				return "Un groupe de la vague %d n'a pas de monstre." % (i + 1)
+				return String(TranslationServer.translate("Un groupe de la vague %d n'a pas de monstre.")) % (i + 1)
 	return ""
 
 

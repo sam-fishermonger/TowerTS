@@ -118,6 +118,13 @@ static func set_language(code: String) -> void:
 	apply_language()
 
 
+## Nombre à virgule écrit selon la langue : « 1,5 » en français, « 1.5 » en anglais
+## (arrondi à step, sans « ,0 » inutile).
+static func decimal(value: float, step := 0.1) -> String:
+	var text := str(snappedf(value, step)).trim_suffix(".0")
+	return text.replace(".", ",") if get_language() == "fr" else text
+
+
 static func apply_language() -> void:
 	if TranslationServer.get_locale() != get_language():
 		TranslationServer.set_locale(get_language())
