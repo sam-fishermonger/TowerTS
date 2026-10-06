@@ -34,6 +34,8 @@ var lateral_offset := 0.0
 ## Multiplicateur de la vie et du bouclier (vagues du mode infini). À définir avant
 ## d'ajouter l'ennemi à l'arbre.
 var health_multiplier := 1.0
+## Multiplicateur de la vitesse (difficulté du niveau).
+var speed_multiplier := 1.0
 
 var _path_length := 0.0
 var _slow_factor := 1.0
@@ -103,7 +105,7 @@ func _process(delta: float) -> void:
 
 
 func get_speed() -> float:
-	return data.speed * _slow_factor
+	return data.speed * speed_multiplier * _slow_factor
 
 
 func is_slowed() -> bool:

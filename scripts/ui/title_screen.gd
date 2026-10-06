@@ -150,7 +150,7 @@ func _refresh() -> void:
 	var earned := Perks.get_earned_stars()
 	var any_won := earned > 0
 	play_button.text = "Continuer" if any_won else "Jouer"
-	worlds_button.text = "Mondes  ·  ★ %d / %d" % [earned, CAMPAIGN.size() * 3] if any_won else "Mondes"
+	worlds_button.text = "Mondes  ·  ★ %d / %d" % [earned, CAMPAIGN.size() * Progress.MAX_LEVEL_STARS] if any_won else "Mondes"
 	# Les étoiles non dépensées sont signalées sur le bouton de l'arbre.
 	var available := Perks.get_available_stars()
 	var endless_available := Perks.get_available_stars(true)

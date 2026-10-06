@@ -1,16 +1,19 @@
 class_name Progress
 extends RefCounted
 ## Progression du joueur, enregistrée sur le disque : étoiles obtenues sur chaque
-## niveau (0 = pas encore gagné), records du mode infini, améliorations permanentes
-## (voir Perks) et réglages. Un niveau est débloqué quand le précédent de la campagne a été gagné :
-## le premier niveau d'un monde s'ouvre en gagnant le dernier du monde précédent.
+## niveau dans chaque difficulté (0 = pas encore gagné), records du mode infini,
+## améliorations permanentes (voir Perks) et réglages. Un niveau est débloqué quand le
+## précédent de la campagne a été gagné, dans n'importe quelle difficulté : le premier
+## niveau d'un monde s'ouvre en gagnant le dernier du monde précédent.
 
 const DEFAULT_SAVE_PATH := "user://progress.cfg"
 ## Méta du moteur qui remplace le fichier de sauvegarde : les tests l'utilisent pour ne
 ## pas toucher à la vraie progression. (Pas de `static var` : Godot ne libère pas
 ## proprement les scripts qui en ont à la fermeture.)
 const SAVE_PATH_META := &"progress_save_path"
-## Étoiles à obtenir sur un niveau pour ouvrir son mode infini.
+## Étoiles qu'un niveau peut rapporter : 3 par difficulté.
+const MAX_LEVEL_STARS := 3 * Difficulty.COUNT
+## Étoiles à obtenir sur un niveau (dans une même difficulté) pour ouvrir son mode infini.
 const ENDLESS_UNLOCK_STARS := 3
 ## Mode infini : une étoile infinie toutes les ENDLESS_STAR_STEP vagues repoussées
 ## au-delà de celles du niveau, jusqu'à ENDLESS_MAX_STARS par niveau.
@@ -37,17 +40,41 @@ static func star_text(stars: int, total := 3) -> String:
 	return "★".repeat(stars) + "☆".repeat(maxi(total - stars, 0))
 
 
-## Meilleur nombre d'étoiles obtenu sur un niveau (0 s'il n'a jamais été gagné).
-static func get_stars(level_path: String) -> int:
-	return _load().get_value("stars", level_path, 0)
+## Section du fichier qui garde les étoiles d'une difficulté. Moyen garde « stars »,
+## celle d'avant les difficultés : les étoiles déjà gagnées comptent en Moyen.
+static func stars_section(difficulty: int) -> String:
+	return "stars" if difficulty == Difficulty.MOYEN else "stars_" + Difficulty.NAMES[difficulty].to_lower()
 
 
-## Enregistre une victoire. Seul le meilleur résultat est gardé ; renvoie true s'il est battu.
-static func record_victory(level_path: String, stars: int) -> bool:
+## Meilleur nombre d'étoiles obtenu sur un niveau dans une difficulté, ou sans
+## difficulté (-1), dans la meilleure (0 s'il n'a jamais été gagné).
+static func get_stars(level_path: String, difficulty := -1) -> int:
 	var config := _load()
-	if stars <= config.get_value("stars", level_path, 0):
+	if difficulty >= 0:
+		return config.get_value(stars_section(difficulty), level_path, 0)
+	var best := 0
+	for d in Difficulty.COUNT:
+		best = maxi(best, config.get_value(stars_section(d), level_path, 0))
+	return best
+
+
+## Étoiles obtenues sur un niveau, toutes difficultés confondues (MAX_LEVEL_STARS au plus).
+static func get_total_stars(level_path: String) -> int:
+	var config := _load()
+	var total := 0
+	for d in Difficulty.COUNT:
+		total += config.get_value(stars_section(d), level_path, 0)
+	return total
+
+
+## Enregistre une victoire dans une difficulté. Seul le meilleur résultat de chaque
+## difficulté est gardé ; renvoie true s'il est battu.
+static func record_victory(level_path: String, stars: int, difficulty := Difficulty.MOYEN) -> bool:
+	var config := _load()
+	var section := stars_section(difficulty)
+	if stars <= config.get_value(section, level_path, 0):
 		return false
-	config.set_value("stars", level_path, stars)
+	config.set_value(section, level_path, stars)
 	_save(config)
 	return true
 
@@ -57,7 +84,8 @@ static func endless_stars_for(extra_waves: int) -> int:
 	return clampi(floori(extra_waves / float(ENDLESS_STAR_STEP)), 0, ENDLESS_MAX_STARS)
 
 
-## Le mode infini d'un niveau s'ouvre quand il a été gagné avec 3 étoiles.
+## Le mode infini d'un niveau s'ouvre quand il a été gagné avec 3 étoiles (dans
+## n'importe quelle difficulté).
 static func is_endless_unlocked(level_path: String) -> bool:
 	return get_stars(level_path) >= ENDLESS_UNLOCK_STARS
 
@@ -96,13 +124,14 @@ static func get_world_endless_stars(world: World) -> int:
 	return total
 
 
-## Code Konami : tous les niveaux gagnés avec 3 étoiles (mondes et modes infinis
+## Code Konami : tous les niveaux gagnés avec 3 étoiles dans toutes les difficultés (mondes et modes infinis
 ## ouverts), toutes les étoiles infinies, et toutes les améliorations données.
 ## Les meilleurs résultats déjà obtenus sont gardés.
 static func unlock_all(levels: Array[String], perk_ids: PackedStringArray) -> void:
 	var config := _load()
 	for path in levels:
-		config.set_value("stars", path, 3)
+		for d in Difficulty.COUNT:
+			config.set_value(stars_section(d), path, 3)
 		config.set_value("endless_stars", path, ENDLESS_MAX_STARS)
 	config.set_value("perks", "owned", perk_ids)
 	_save(config)
@@ -117,11 +146,11 @@ static func is_world_unlocked(campaign: Campaign, world_index: int) -> bool:
 	return is_unlocked(campaign, campaign.first_level_index(world_index))
 
 
-## Étoiles obtenues sur les niveaux d'un monde.
+## Étoiles obtenues sur les niveaux d'un monde, toutes difficultés confondues.
 static func get_world_stars(world: World) -> int:
 	var total := 0
 	for path in world.levels:
-		total += get_stars(path)
+		total += get_total_stars(path)
 	return total
 
 
@@ -156,7 +185,10 @@ static func set_value(section: String, key: String, value: Variant) -> void:
 ## (les réglages sont gardés).
 static func reset_campaign() -> void:
 	var config := _load()
-	for section in ["stars", "endless_waves", "endless_stars", "perks"]:
+	var sections := ["endless_waves", "endless_stars", "perks"]
+	for d in Difficulty.COUNT:
+		sections.append(stars_section(d))
+	for section in sections:
 		if config.has_section(section):
 			config.erase_section(section)
 	_save(config)

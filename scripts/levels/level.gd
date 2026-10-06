@@ -47,6 +47,9 @@ var is_demo := false
 ## arrivent sans fin. La partie se termine quand les vies tombent à 0, et chaque vague
 ## repoussée compte pour le record et les étoiles infinies du niveau.
 var is_endless := false
+## Difficulté de la partie (Difficulty) : celle choisie par le joueur, lue au lancement,
+## sauf en mode infini et pour la partie de l'écran titre, toujours en Moyen.
+var difficulty := Difficulty.DEFAULT
 
 var _wave_bonus_paid := -1
 ## Mode infini : record de vagues du niveau au lancement de la partie.
@@ -78,6 +81,10 @@ func _ready() -> void:
 		is_endless = Engine.get_meta(ENDLESS_META)
 		Engine.remove_meta(ENDLESS_META)
 	spawner.endless = is_endless
+	if not is_endless and not is_demo:
+		difficulty = Difficulty.get_current()
+	if difficulty != Difficulty.MOYEN:
+		spawner.apply_difficulty(difficulty)
 	# La carte prend les tuiles du biome de son monde, si elle n'en a pas.
 	var world := campaign.world_index_of(scene_file_path) if campaign else -1
 	if world >= 0 and map.tileset == null:
@@ -93,7 +100,9 @@ func _ready() -> void:
 	tower_types = types
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
-	hud.setup("%s  ·  Mode infini" % level_name if is_endless else level_name, tower_types, game_speeds)
+	var title := "%s  ·  Mode infini" % level_name if is_endless \
+		else "%s  ·  %s" % [level_name, Difficulty.NAMES[difficulty]]
+	hud.setup(title, tower_types, game_speeds)
 	if is_demo:
 		hud.visible = false
 		hud.process_mode = Node.PROCESS_MODE_DISABLED
@@ -372,7 +381,7 @@ func _end_game(victory: bool) -> void:
 			get_waves_cleared() > _endless_record_before)
 	else:
 		var stars := get_stars() if victory else 0
-		var new_record := victory and Progress.record_victory(scene_file_path, stars)
+		var new_record := victory and Progress.record_victory(scene_file_path, stars, difficulty)
 		hud.show_end_screen(victory, victory and has_next_level(), stars, new_record,
 			get_next_world_name() if victory else "")
 	is_paused = false

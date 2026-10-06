@@ -66,12 +66,13 @@ static func get_specializations(tower_path: String) -> Array[Perk]:
 	return result
 
 
-## Étoiles gagnées sur tous les niveaux de la campagne (meilleur résultat de chacun), ou
+## Étoiles gagnées sur tous les niveaux de la campagne (meilleur résultat de chacun
+## dans chaque difficulté), ou
 ## avec `endless`, étoiles infinies gagnées en mode infini.
 static func get_earned_stars(endless := false) -> int:
 	var total := 0
 	for path in CAMPAIGN.levels:
-		total += Progress.get_endless_stars(path) if endless else Progress.get_stars(path)
+		total += Progress.get_endless_stars(path) if endless else Progress.get_total_stars(path)
 	return total
 
 
