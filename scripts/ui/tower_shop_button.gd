@@ -2,6 +2,7 @@ class_name TowerShopButton
 extends Button
 ## Case de la barre d'achat : image de la tour, nom et prix. Toutes les cases ont la
 ## même taille, quel que soit le nom. Enfoncée quand la tour est choisie pour être posée.
+## Le chiffre de sa touche (voir TowerShop) est rappelé en haut à gauche.
 
 const SLOT_SIZE := Vector2(92, 80)
 const ICON_SIZE := 40.0
@@ -9,6 +10,8 @@ const ICON_SIZE := 40.0
 const UNAFFORDABLE_ALPHA := 0.45
 
 var data: TowerData
+## Touche qui choisit la case ("" = aucune).
+var hotkey := ""
 
 var _price_label: Label
 
@@ -41,6 +44,9 @@ func _ready() -> void:
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_price_label = _add_label(column, "", 12, TowerInfoPanel.PRICE_COLOR)
 	set_price(data.get_cost(), true)
+	if not hotkey.is_empty():
+		var key_label := _add_label(self, hotkey, 11, Color(1, 1, 1, 0.55))
+		key_label.position = Vector2(5, 1)
 
 
 ## Taille de police (au plus `max_size`) pour que le nom tienne dans une case étroite

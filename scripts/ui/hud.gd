@@ -17,7 +17,7 @@ signal sell_requested(tower: Tower)
 signal tower_details_closed
 ## Émis quand le joueur met le jeu en pause ou le relance (bouton ou Espace).
 signal pause_toggled
-## Émis quand le joueur choisit une vitesse de jeu (bouton ou touches 1, 2, 3).
+## Émis quand le joueur choisit une vitesse de jeu (bouton, ou V pour passer à la suivante).
 signal game_speed_selected(speed: float)
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
@@ -38,7 +38,7 @@ var _wave_preview_text := ""
 ## Barre d'achat, en bas à gauche.
 @onready var tower_shop: TowerShop = %TowerShop
 ## Rappel des commandes, à côté de la barre d'achat.
-@onready var shop_hint: Label = $BottomBar/Margin/Row/Hint
+@onready var shop_hint: Label = %Hint
 @onready var next_wave_button: Button = %NextWaveButton
 @onready var end_panel: PanelContainer = %EndPanel
 @onready var end_title: Label = %EndTitle
@@ -52,7 +52,7 @@ var _wave_preview_text := ""
 @onready var pause_button: Button = %PauseButton
 @onready var speed_buttons: HBoxContainer = %SpeedButtons
 @onready var audio_toggles: AudioToggles = %AudioToggles
-@onready var top_bar: Control = $TopBar
+@onready var top_bar: Control = %TopBar
 @onready var bottom_bar: Control = %BottomBar
 @onready var pause_overlay: ColorRect = %PauseOverlay
 ## Composition de la prochaine vague et bonus pour la lancer en avance.
@@ -81,15 +81,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
-	var speed_index := -1
-	if code >= KEY_1 and code <= KEY_9:
-		speed_index = code - KEY_1
-	elif code >= KEY_KP_1 and code <= KEY_KP_9:
-		speed_index = code - KEY_KP_1
+	var slot := TowerShop.slot_for_key(code)
 	if code == KEY_SPACE or code == KEY_P:
 		pause_toggled.emit()
-	elif speed_index >= 0 and speed_index < speed_buttons.get_child_count():
-		speed_buttons.get_child(speed_index).pressed.emit()
+	elif code == KEY_V:
+		_select_next_speed()
+	elif slot >= 0:
+		tower_shop.toggle_slot(slot)
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -99,12 +97,14 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	level_label.text = level_name
 	for speed in game_speeds:
 		var speed_button := Button.new()
-		speed_button.text = "x%s" % str(speed).trim_suffix(".0")
+		var speed_text := "x%s" % str(speed).trim_suffix(".0")
+		speed_button.text = speed_text
 		speed_button.toggle_mode = true
 		speed_button.button_group = _speed_group
 		speed_button.focus_mode = Control.FOCUS_NONE
 		speed_button.custom_minimum_size = Vector2(36, 0)
 		speed_button.set_meta("speed", speed)
+		speed_button.tooltip_text = "Vitesse %s (V : vitesse suivante)" % speed_text
 		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
 		speed_buttons.add_child(speed_button)
 	tower_shop.setup(tower_types)
@@ -113,6 +113,15 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 	tower_shop.tower_selected.connect(tower_selected.emit)
 	tower_shop.tower_hovered.connect(_on_shop_button_hovered)
 	tower_shop.hover_ended.connect(shop_info.close)
+
+
+## Passe à la vitesse suivante (après la dernière, on revient à la première).
+func _select_next_speed() -> void:
+	var buttons := speed_buttons.get_children()
+	if buttons.is_empty():
+		return
+	var current := buttons.find(_speed_group.get_pressed_button())
+	(buttons[(current + 1) % buttons.size()] as Button).pressed.emit()
 
 
 func update_stats(gold: int, lives: int, wave: int, wave_count: int) -> void:
@@ -220,6 +229,8 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 	pause_button.disabled = true
 	for button: Button in speed_buttons.get_children():
 		button.disabled = true
+	# Plus de tour à poser : la barre d'achat ne réagit plus (ni clic ni fiche au survol).
+	tower_shop.lock()
 	shop_info.close()
 	tower_details.close()
 	wave_preview.visible = false

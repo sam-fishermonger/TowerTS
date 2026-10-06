@@ -19,11 +19,6 @@ func size() -> int:
 	return levels.size()
 
 
-## Position du niveau dans la campagne, ou -1 s'il n'en fait pas partie.
-func index_of(level_path: String) -> int:
-	return levels.find(level_path)
-
-
 ## Niveau qui suit celui donné (le premier du monde suivant pour le dernier d'un
 ## monde), ou "" pour le tout dernier niveau (ou un niveau hors campagne).
 func get_next(level_path: String) -> String:

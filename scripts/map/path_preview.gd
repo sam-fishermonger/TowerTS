@@ -48,9 +48,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	# delta suit Engine.time_scale : on revient au temps réel pour que x2 ou x3 n'accélère pas les flèches.
-	_time += delta / maxf(Engine.time_scale, 0.001)
+	var real_delta := delta / maxf(Engine.time_scale, 0.001)
+	_time += real_delta
 	if _fading:
-		modulate.a = maxf(modulate.a - delta / Engine.time_scale / fade_duration, 0.0)
+		modulate.a = maxf(modulate.a - real_delta / fade_duration, 0.0)
 		if modulate.a == 0.0:
 			queue_free()
 			return

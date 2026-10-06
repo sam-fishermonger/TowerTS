@@ -119,9 +119,11 @@ func _build_page(root: Control, page_index: int) -> void:
 	var perks := Perks.TREE.get_page_perks(page_index)
 	# On centre la page : sa largeur va de sa première colonne à la dernière, plus une case.
 	var width := 0.0
+	var node_width := 0.0
 	for perk in perks:
 		width = maxf(width, get_node_position(perk).x)
-	root.position.x = (get_viewport_rect().size.x - width - NODE_SIZE.x) / 2.0 + NODE_SIZE.x / 2.0
+		node_width = maxf(node_width, _get_node_width(perk))
+	root.position.x = (get_viewport_rect().size.x - width - node_width) / 2.0 + node_width / 2.0
 	var branches := Perks.TREE.get_page_branches(page_index)
 	for i in branches.size():
 		var branch := branches[i]
@@ -135,7 +137,7 @@ func _build_page(root: Control, page_index: int) -> void:
 		_lock_labels[branch] = lock
 	for perk in perks:
 		var button := Button.new()
-		button.size = Vector2(TOWER_NODE_WIDTH if not perk.unlocks_tower.is_empty() else NODE_SIZE.x, NODE_SIZE.y)
+		button.size = Vector2(_get_node_width(perk), NODE_SIZE.y)
 		button.position = get_node_position(perk) - Vector2(button.size.x / 2.0, 0)
 		button.add_theme_font_size_override("font_size", 15)
 		button.pressed.connect(buy.bind(perk))
@@ -176,6 +178,11 @@ func _refresh() -> void:
 	_show_info(shown_perk)
 	for root in _pages:
 		root.queue_redraw()
+
+
+## Les cases qui débloquent une tour sont plus larges : elles montrent son image.
+func _get_node_width(perk: Perk) -> float:
+	return TOWER_NODE_WIDTH if not perk.unlocks_tower.is_empty() else NODE_SIZE.x
 
 
 ## « Finir La Ruche pour l'ouvrir » si la branche attend un monde pas encore débloqué.

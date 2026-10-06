@@ -14,6 +14,9 @@ const TURRET_SCALE := 1.3
 ## Part de ce que la tour a coûté (pose et améliorations) rendue à la vente,
 ## sans compter l'arbre des améliorations.
 const SELL_RATIO := 0.7
+## Tirs au plus par image : une tour très rapide (ou un jeu qui rame en x3) peut devoir
+## tirer plusieurs fois dans la même image pour tenir sa cadence.
+const MAX_SHOTS_PER_FRAME := 4
 
 ## Ennemi visé en priorité parmi ceux à portée.
 enum TargetMode { FIRST, LAST, STRONGEST, CLOSEST }
@@ -48,9 +51,11 @@ func _ready() -> void:
 	stats = data.get_stats_at_level(level)
 
 
+## La cible est gardée tant qu'elle reste à portée, sauf pour le Franc-tireur, qui la
+## lâche au moment de tirer si un soigneur est passé à portée entre-temps.
 func _process(delta: float) -> void:
 	_cooldown -= delta
-	if not _is_valid_target(_target):
+	if not _is_valid_target(_target) or (_cooldown <= 0.0 and _should_switch_to_healer()):
 		_target = find_target()
 	if _target == null:
 		# Sans cible, la tour reste prête à tirer mais n'accumule pas de tirs d'avance.
@@ -58,11 +63,15 @@ func _process(delta: float) -> void:
 		return
 	_aim_angle = global_position.angle_to_point(_target.global_position)
 	queue_redraw()
-	if _cooldown <= 0.0:
+	# On garde le temps écoulé en trop, et on tire plusieurs fois si l'image a duré plus
+	# d'un tir : la cadence ne dépend ni des FPS ni de la vitesse de jeu.
+	var shots := 0
+	while _cooldown <= 0.0 and shots < MAX_SHOTS_PER_FRAME and _is_valid_target(_target):
 		_attack(_target)
-		Sound.play_stream(data.attack_sound)
-		# On garde le temps écoulé en trop : la cadence ne dépend ni des FPS ni de la vitesse de jeu.
 		_cooldown += 1.0 / stats.fire_rate
+		shots += 1
+	if shots > 0:
+		Sound.play_stream(data.attack_sound)
 
 
 func can_upgrade() -> bool:
@@ -116,7 +125,6 @@ func upgrade() -> bool:
 
 
 ## Ennemi à portée qui correspond le mieux à la règle de ciblage, ou null.
-## La cible est gardée tant qu'elle reste à portée.
 func find_target() -> Enemy:
 	var best: Enemy = null
 	var best_score := -INF
@@ -126,6 +134,10 @@ func find_target() -> Enemy:
 			best = enemy
 			best_score = score
 	return best
+
+
+func _should_switch_to_healer() -> bool:
+	return stats.prefers_healers and _target != null and _target.data.heal_amount <= 0.0
 
 
 ## Plus le score est grand, plus l'ennemi est prioritaire.

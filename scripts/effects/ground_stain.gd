@@ -22,12 +22,13 @@ func _ready() -> void:
 	rotation = rng.randf() * TAU
 
 
+## La tache est dessinée une seule fois ; seule sa transparence change ensuite.
 func _process(delta: float) -> void:
 	_age += delta
 	if _age >= DURATION:
 		queue_free()
 		return
-	queue_redraw()
+	modulate.a = get_alpha() / START_ALPHA
 
 
 func get_alpha() -> float:
@@ -35,6 +36,6 @@ func get_alpha() -> float:
 
 
 func _draw() -> void:
-	var stain := Color(color.darkened(0.45), get_alpha())
+	var stain := Color(color.darkened(0.45), START_ALPHA)
 	for blob in _blobs:
 		draw_circle(Vector2(blob.x, blob.y), blob.z, stain)

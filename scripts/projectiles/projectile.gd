@@ -4,21 +4,18 @@ extends Entity
 ## finit sa course jusqu'à sa dernière position connue puis disparaît.
 
 var target: Enemy
-var damage := 0.0
-var speed := 500.0
 var color := Color.WHITE
-## Statistiques de la tour qui a tiré : effets du coup (ralentissement, brûlure...).
+## Statistiques de la tour qui a tiré (au niveau de la tour) : dégâts, vitesse et effets
+## du coup (zone, ralentissement, brûlure...).
 var stats: TowerData
 
 var _destination := Vector2.ZERO
 
 
-func setup(new_target: Enemy, data: TowerData) -> void:
+func setup(new_target: Enemy, tower_stats: TowerData) -> void:
 	target = new_target
-	damage = data.damage
-	speed = data.projectile_speed
-	color = data.color.lightened(0.4)
-	stats = data
+	stats = tower_stats
+	color = tower_stats.color.lightened(0.4)
 	_destination = target.global_position
 
 
@@ -27,7 +24,7 @@ func _process(delta: float) -> void:
 	if target_alive:
 		_destination = target.global_position
 	var to_destination := _destination - global_position
-	var step := speed * delta
+	var step := stats.projectile_speed * delta
 	if to_destination.length() <= step:
 		global_position = _destination
 		_impact(target if target_alive else null)
@@ -43,7 +40,13 @@ func _impact(hit: Enemy) -> void:
 
 
 func _hit_enemy(enemy: Enemy) -> void:
-	enemy.hit(damage, stats)
+	enemy.hit(stats.damage, stats)
+
+
+## Touche tous les ennemis dans le rayon, autour du point d'impact (obus, grenades).
+func _hit_all_in_radius(radius: float) -> void:
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, radius):
+		_hit_enemy(enemy)
 
 
 func _draw() -> void:

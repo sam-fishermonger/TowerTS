@@ -98,15 +98,25 @@ func get_stats_at_level(level: int) -> TowerData:
 	for i in clampi(level - 1, 0, upgrades.size()):
 		upgrades[i].apply_to(stats)
 	var bonuses := Perks.get_bonuses()
-	stats.damage *= bonuses.damage_multiplier
-	stats.dot_damage *= bonuses.damage_multiplier
-	stats.attack_range *= bonuses.range_multiplier
-	stats.fire_rate *= bonuses.fire_rate_multiplier
-	if stats.slow_factor < 1.0:
-		stats.slow_duration += bonuses.slow_duration_bonus
+	stats.scale_stats(bonuses.damage_multiplier, bonuses.range_multiplier, bonuses.fire_rate_multiplier,
+		bonuses.slow_duration_bonus)
 	return stats
 
 
-## Dégâts par seconde sur une cible.
+## Bonus communs aux améliorations et à l'arbre des améliorations (modifiés sur place) :
+## les dégâts comptent aussi pour la brûlure ou le poison, et le ralentissement ne
+## s'allonge que pour les tours qui ralentissent.
+func scale_stats(damage_multiplier: float, range_multiplier: float, fire_rate_multiplier: float,
+		slow_duration_bonus: float) -> void:
+	damage *= damage_multiplier
+	dot_damage *= damage_multiplier
+	attack_range *= range_multiplier
+	fire_rate *= fire_rate_multiplier
+	if slow_factor < 1.0:
+		slow_duration += slow_duration_bonus
+
+
+## Dégâts directs par seconde sur une cible (sans la brûlure ou le poison, la montée
+## en puissance du Rayon ni les cibles multiples).
 func get_dps() -> float:
 	return damage * fire_rate

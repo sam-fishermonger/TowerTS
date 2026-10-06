@@ -80,13 +80,14 @@ func close() -> void:
 	visible = false
 
 
-## Met à jour l'or disponible (prix et bouton Améliorer).
+## Met à jour l'or disponible (prix et bouton Améliorer). Seul ce qui dépend de l'or est
+## refait : la fiche ouverte n'est pas reconstruite à chaque ennemi détruit.
 func set_gold(gold: int) -> void:
 	if gold == _gold:
 		return
 	_gold = gold
 	if visible:
-		_refresh()
+		_refresh_prices()
 
 
 func _set_tower(new_tower: Tower) -> void:
@@ -133,7 +134,6 @@ func _refresh() -> void:
 		level_label.visible = true
 		footer_label.visible = false
 		actions.visible = true
-		_refresh_upgrade_button()
 		sell_button.text = "Vendre  ·  %d or" % tower.get_sell_value()
 		target_button.visible = tower.uses_target_mode()
 		target_button.text = "Cible : %s" % Tower.TARGET_MODE_NAMES[tower.target_mode]
@@ -143,12 +143,11 @@ func _refresh() -> void:
 		if data.upgrades.size() > 0:
 			footer += "   ·   %d amélioration%s" % [data.upgrades.size(), "s" if data.upgrades.size() > 1 else ""]
 		footer_label.text = footer
-		footer_label.add_theme_color_override("font_color",
-			PRICE_COLOR if _gold >= data.get_cost() else TOO_EXPENSIVE_COLOR)
 		footer_label.visible = true
 		actions.visible = false
 		target_button.visible = false
 
+	_refresh_prices()
 	visible = true
 	# La taille dépend du contenu : on la recalcule (aussi à l'image suivante, une fois
 	# la mise en page des nouvelles lignes faite), puis on replace la fiche.
@@ -157,7 +156,12 @@ func _refresh() -> void:
 	_reposition()
 
 
-func _refresh_upgrade_button() -> void:
+## Bouton Améliorer (tour posée) ou prix en rouge s'il dépasse l'or (aperçu).
+func _refresh_prices() -> void:
+	if not is_instance_valid(tower):
+		footer_label.add_theme_color_override("font_color",
+			PRICE_COLOR if _gold >= data.get_cost() else TOO_EXPENSIVE_COLOR)
+		return
 	if not tower.can_upgrade():
 		upgrade_button.text = "Niveau maximal"
 		upgrade_button.disabled = true

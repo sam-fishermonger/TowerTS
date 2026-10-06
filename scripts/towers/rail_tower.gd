@@ -6,6 +6,9 @@ extends Tower
 ## Demi-largeur du tir : un ennemi est touché si son bord est à moins de ça de la ligne.
 const LINE_HALF_WIDTH := 6.0
 const TRAIL_DURATION := 0.3
+## Marge de recherche autour de la portée : un gros ennemi dont le centre est juste
+## au-delà peut encore toucher la ligne par son bord (rayon max des ennemis + LINE_HALF_WIDTH).
+const SEARCH_MARGIN := 30.0
 
 var _trail_left := 0.0
 var _trail_end := Vector2.ZERO
@@ -18,16 +21,14 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
-## Ennemis traversés par un tir vers `angle`, du plus proche au plus lointain.
+## Ennemis traversés par un tir vers `angle` (tous sont touchés : l'ordre ne compte pas).
 func get_enemies_on_line(angle: float) -> Array[Enemy]:
 	var end := global_position + Vector2.from_angle(angle) * stats.attack_range
 	var result: Array[Enemy] = []
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range + 30.0):
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range + SEARCH_MARGIN):
 		var closest := Geometry2D.get_closest_point_to_segment(enemy.global_position, global_position, end)
 		if closest.distance_to(enemy.global_position) <= enemy.data.radius + LINE_HALF_WIDTH:
 			result.append(enemy)
-	result.sort_custom(func(a: Enemy, b: Enemy) -> bool:
-		return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position))
 	return result
 
 
