@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/undead/chevalier.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Chevalier noir"
+description = "Un chevalier mort en armure : il encaisse les coups, et se relève une fois quand on l'abat."
+max_health = 140.0
+armor = 5.0
+speed = 52.0
+reward = 15
+damage = 2
+color = Color(0.3, 0.29, 0.38, 1)
+radius = 14.0
+texture = ExtResource("9_texture")
+revive_count = 1
+revive_health_ratio = 0.5
+revive_delay = 1.5

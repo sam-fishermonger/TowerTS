@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dessine les tuiles de décor des trois biomes : assets/sprites/tiles/<biome>.png.
+"""Dessine les tuiles de décor des quatre biomes : assets/sprites/tiles/<biome>.png.
 
 Chaque image est une planche de 8 x 3 tuiles de 64 pixels, lue par les TileSet de
 resources/tilesets/ et par GameMap :
@@ -11,14 +11,17 @@ resources/tilesets/ et par GameMap :
 - rang 2 : 4 obstacles pour les cases bloquées, en gris (teintés avec rock_color),
   puis 4 petits détails semés sur le chemin (cailloux, fissures, taches).
 
-Python 3 avec Pillow et numpy. Relancer le script réécrit les images :
+Python 3 avec Pillow et numpy. Relancer le script réécrit les images (toutes, ou
+seulement celles des biomes donnés) :
 
     python3 tools/generate_tilesets.py
+    python3 tools/generate_tilesets.py undead
 """
 
 import math
 import os
 import random
+import sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -261,6 +264,39 @@ def city_grounds(rng):
     return grounds
 
 
+def necropolis_grounds(rng):
+    """La Nécropole : une terre sèche et craquelée, parfois des dalles funéraires
+    usées ou de la mousse, selon la variante."""
+    grounds = []
+    yy, xx = np.mgrid[0:T, 0:T]
+    for variant in range(COLUMNS):
+        local = np.random.default_rng(400 + variant)
+        values = np.full((T, T), 0.82) + (tileable_noise(local, T, 5, 3) - 0.5) * 0.16
+        if variant in (2, 6):
+            # Dalle funéraire au milieu de la tuile, bords usés.
+            inside = (np.abs(xx - T / 2) < s(22)) & (np.abs(yy - T / 2) < s(26))
+            border = inside & ((np.abs(xx - T / 2) > s(19.5)) | (np.abs(yy - T / 2) > s(23.5)))
+            values = np.where(inside, 0.88 + (tileable_noise(local, T, 3, 2) - 0.5) * 0.06, values)
+            values = np.where(border, 0.74, values)
+        img = gray_image(values)
+        draw = ImageDraw.Draw(img)
+        # Craquelures de terre sèche, loin des bords pour que les tuiles se raccordent.
+        for _ in range(3 if variant in (1, 5, 7) else 1):
+            x, y = local.uniform(12, 52), local.uniform(12, 52)
+            points = [(x, y)]
+            for _ in range(4):
+                x = float(np.clip(x + local.uniform(-7, 7), 6, 58))
+                y = float(np.clip(y + local.uniform(-7, 7), 6, 58))
+                points.append((x, y))
+            line(draw, points, (120, 120, 120, 255), 0.8)
+        values = np.array(img)[:, :, 0] / 255.0
+        if variant in (3, 7):
+            # Mousse sombre par plaques.
+            values -= np.clip(tileable_noise(local, T, 3, 2) - 0.55, 0, 1) * 0.5 * edge_mask(T, s(8))
+        grounds.append(gray_image(values))
+    return grounds
+
+
 # --- Détails du sol (en couleur) ------------------------------------------------
 
 def hive_decals():
@@ -445,6 +481,67 @@ def city_decals():
     return decals
 
 
+def necropolis_decals():
+    decals = []
+    bone = (225, 218, 195, 255)
+    # 0 : os croisés.
+    img = layer(); d = ImageDraw.Draw(img)
+    for a, b in (((20, 24), (44, 42)), ((22, 42), (42, 24))):
+        line(d, [a, b], bone, 2.4)
+        for x, y in (a, b):
+            ellipse(d, x - 1.5, y, 2, 2, bone)
+            ellipse(d, x + 1.5, y, 2, 2, bone)
+    decals.append(soft_shadow(img, blur=1.0, alpha=0.35))
+    # 1 : crâne.
+    img = layer(); d = ImageDraw.Draw(img)
+    ellipse(d, 32, 30, 8, 7, bone, (120, 112, 95, 255), 0.8)
+    rect(d, 28, 34, 36, 39, bone, (120, 112, 95, 255), 0.6, 1)
+    ellipse(d, 29, 30, 2.2, 2.4, (40, 35, 30, 255))
+    ellipse(d, 35, 30, 2.2, 2.4, (40, 35, 30, 255))
+    decals.append(soft_shadow(img, blur=1.0, alpha=0.35))
+    # 2 : bougies.
+    img = layer(); d = ImageDraw.Draw(img)
+    for x, h in ((26, 9), (33, 13), (39, 7)):
+        rect(d, x - 2, 42 - h, x + 2, 42, (235, 228, 205, 255), (150, 140, 120, 255), 0.5, 1)
+        ellipse(d, x, 40 - h, 2.6, 3.2, (255, 200, 80, 140))
+        ellipse(d, x, 40 - h, 1.1, 1.8, (255, 240, 170, 255))
+    decals.append(soft_shadow(img, blur=0.8, alpha=0.3))
+    # 3 : herbes mortes.
+    img = layer(); d = ImageDraw.Draw(img)
+    for cx, cy in ((24, 38), (38, 32), (34, 44)):
+        for k in range(6):
+            a = -math.pi / 2 + (k - 2.5) * 0.32
+            line(d, [(cx, cy), (cx + 7 * math.cos(a), cy + 8 * math.sin(a))], (140, 125, 80, 255), 1.0)
+    decals.append(soft_shadow(img, blur=1.0, alpha=0.25))
+    # 4 : toile d'araignée.
+    img = layer(); d = ImageDraw.Draw(img)
+    for k in range(8):
+        a = k * math.tau / 8
+        line(d, [(32, 32), (32 + 16 * math.cos(a), 32 + 16 * math.sin(a))], (230, 230, 235, 110), 0.5)
+    for r in (5, 9, 13):
+        points = [(32 + r * math.cos(k * math.tau / 8), 32 + r * math.sin(k * math.tau / 8)) for k in range(9)]
+        line(d, points, (230, 230, 235, 110), 0.5)
+    decals.append(img)
+    # 5 : champignons pâles.
+    img = layer(); d = ImageDraw.Draw(img)
+    for cx, cy, r in ((26, 36, 4.5), (34, 32, 5.5), (40, 40, 3.5)):
+        rect(d, cx - 1, cy, cx + 1, cy + 5, (220, 215, 200, 255))
+        ellipse(d, cx, cy, r, r * 0.6, (170, 160, 200, 255), (90, 80, 120, 255), 0.6)
+    decals.append(soft_shadow(img, blur=0.8, alpha=0.3))
+    # 6 : brume verdâtre.
+    img = layer(); d = ImageDraw.Draw(img)
+    for cx, cy, rx in ((28, 34, 14), (38, 30, 10), (32, 28, 8)):
+        ellipse(d, cx, cy, rx, rx * 0.5, (120, 200, 140, 45))
+    decals.append(img.filter(ImageFilter.GaussianBlur(s(1.5))))
+    # 7 : terre retournée d'une tombe fraîche.
+    img = layer(); d = ImageDraw.Draw(img)
+    rect(d, 22, 18, 42, 48, (85, 65, 50, 255), (55, 40, 30, 255), 0.8, 6)
+    for k in range(5):
+        ellipse(d, 26 + k * 3.5, 24 + (k % 2) * 14, 2.4, 1.6, (110, 88, 66, 255))
+    decals.append(soft_shadow(img, blur=1.0, alpha=0.3))
+    return decals
+
+
 # --- Obstacles (gris, teintés en jeu) et détails du chemin ---------------------
 
 def shade(v, a=255):
@@ -564,6 +661,39 @@ def city_obstacles():
     return obstacles
 
 
+def necropolis_obstacles():
+    obstacles = []
+    # 0 : pierre tombale arrondie.
+    img = layer(); d = ImageDraw.Draw(img)
+    polygon(d, [(18, 54), (18, 24), (22, 15), (32, 11), (42, 15), (46, 24), (46, 54)], shade(185), shade(70), 1.4)
+    line(d, [(32, 20), (32, 36)], shade(105), 2.2)
+    line(d, [(26, 25), (38, 25)], shade(105), 2.2)
+    line(d, [(22, 44), (42, 44)], shade(130), 1.0)
+    obstacles.append(soft_shadow(img))
+    # 1 : croix de pierre penchée.
+    img = layer(); d = ImageDraw.Draw(img)
+    polygon(d, [(28, 56), (25, 14), (33, 13), (36, 56)], shade(175), shade(70), 1.2)
+    polygon(d, [(15, 25), (44, 22), (45, 30), (16, 33)], shade(175), shade(70), 1.2)
+    ellipse(d, 32, 56, 14, 4, shade(120))
+    obstacles.append(soft_shadow(img))
+    # 2 : colonne brisée.
+    img = layer(); d = ImageDraw.Draw(img)
+    rect(d, 14, 44, 50, 54, shade(160), shade(70), 1.2, 1)
+    rect(d, 20, 18, 44, 46, shade(190), shade(70), 1.2)
+    for x in (25, 32, 39):
+        line(d, [(x, 20), (x, 44)], shade(140), 1.0)
+    polygon(d, [(20, 18), (26, 12), (31, 17), (37, 10), (44, 18)], shade(190), shade(70), 1.2)
+    obstacles.append(soft_shadow(img))
+    # 3 : arbre mort.
+    img = layer(); d = ImageDraw.Draw(img)
+    line(d, [(32, 56), (31, 38), (34, 26)], shade(110), 5)
+    for branch in ([(31, 38), (20, 30), (14, 20)], [(34, 26), (44, 16), (50, 14)], [(33, 32), (44, 30)],
+                   [(20, 30), (22, 18)], [(34, 26), (30, 12)]):
+        line(d, branch, shade(110), 2.4)
+    obstacles.append(soft_shadow(img))
+    return obstacles
+
+
 def path_details(seed):
     """Petits détails transparents semés sur le chemin : cailloux, fissure, taches."""
     rng = random.Random(seed)
@@ -592,12 +722,15 @@ BIOMES = {
     "insectoid": (hive_grounds, hive_decals, hive_obstacles, 1),
     "mecha": (foundry_grounds, foundry_decals, foundry_obstacles, 2),
     "humanoid": (city_grounds, city_decals, city_obstacles, 3),
+    "undead": (necropolis_grounds, necropolis_decals, necropolis_obstacles, 4),
 }
 
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
-    for name, (grounds, decals, obstacles, seed) in BIOMES.items():
+    names = sys.argv[1:] or list(BIOMES)
+    for name in names:
+        grounds, decals, obstacles, seed = BIOMES[name]
         rng = np.random.default_rng(seed)
         sheet = Image.new("RGBA", (TILE * COLUMNS, TILE * ROWS), (0, 0, 0, 0))
         rows = [grounds(rng), decals(), obstacles() + path_details(seed)]

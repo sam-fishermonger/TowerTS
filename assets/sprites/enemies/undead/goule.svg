@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Goule : corps maigre et voûté, à quatre pattes, griffes en avant. -->
+  <ellipse cx="30" cy="34" rx="22" ry="18" fill="#000" opacity="0.2"/>
+  <path d="M38 22 L52 16 M38 42 L52 48 M22 24 L12 14 M22 40 L12 50" stroke="#5e7348" stroke-width="4" stroke-linecap="round"/>
+  <path d="M52 16 l4 -1 M52 16 l3 2 M52 48 l4 1 M52 48 l3 -2" stroke="#e8e2c0" stroke-width="1.5" stroke-linecap="round"/>
+  <ellipse cx="29" cy="32" rx="15" ry="9" fill="#3c4a2c"/>
+  <ellipse cx="29" cy="32" rx="13" ry="7.5" fill="#86a065"/>
+  <path d="M19 32 H35" stroke="#5e7348" stroke-width="1.5"/>
+  <circle cx="44" cy="32" r="6.5" fill="#3c4a2c"/>
+  <circle cx="44" cy="32" r="5.2" fill="#9bb578"/>
+  <circle cx="47" cy="30" r="1.4" fill="#f4e04a"/>
+  <circle cx="47" cy="34" r="1.4" fill="#f4e04a"/>
+</svg>

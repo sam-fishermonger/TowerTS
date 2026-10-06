@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/undead/squelette.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Squelette"
+description = "Un mort qui marche, en os et en rancune : l'ennemi de base de la Nécropole."
+max_health = 75.0
+speed = 68.0
+reward = 8
+damage = 1
+color = Color(0.9, 0.87, 0.75, 1)
+radius = 12.0
+texture = ExtResource("9_texture")

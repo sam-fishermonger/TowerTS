@@ -125,7 +125,9 @@ func show_tower(data: TowerData) -> void:
 	lines.append(_line("Portée", _num(data.attack_range)))
 	if data.splash_radius > 0.0:
 		lines.append(_line("Explosion", "rayon %s" % _num(data.splash_radius)))
-	if data.slow_factor < 1.0:
+	if data.slow_factor <= 0.0:
+		lines.append(_line("Étourdit", "%s s" % _num(data.slow_duration)))
+	elif data.slow_factor < 1.0:
 		lines.append(_line("Ralentit", "-%d %% pendant %s s" % [roundi((1.0 - data.slow_factor) * 100.0),
 			_num(data.slow_duration)]))
 	if data.beam_ramp_max > 1.0:
@@ -149,6 +151,8 @@ func show_tower(data: TowerData) -> void:
 		lines.append(_line("Brouillage", "%s s sans recharge du bouclier" % _num(data.shield_jam_duration)))
 	if data.heal_block_duration > 0.0:
 		lines.append(_line("Anti-soin", "%s s" % _num(data.heal_block_duration)))
+	if data.revive_block_duration > 0.0:
+		lines.append(_line("Consacre", "%s s : un ennemi touché ne peut plus se relever" % _num(data.revive_block_duration)))
 	if data.prefers_healers:
 		lines.append(_line("Cible", "les soigneurs en premier"))
 	if not data.upgrades.is_empty():

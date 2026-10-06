@@ -230,7 +230,13 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 	if stats.heal_block_duration > 0.0:
 		_add_stat("Anti-soin", "%s s" % _format(stats.heal_block_duration),
 			"%s s" % _format(next.heal_block_duration) if next else "")
-	if stats.slow_factor < 1.0:
+	if stats.revive_block_duration > 0.0:
+		_add_stat("Consacre", "%s s" % _format(stats.revive_block_duration),
+			"%s s" % _format(next.revive_block_duration) if next else "")
+	if stats.slow_factor <= 0.0:
+		_add_stat("Étourdit", "%s s" % _format(stats.slow_duration),
+			"%s s" % _format(next.slow_duration) if next else "")
+	elif stats.slow_factor < 1.0:
 		_add_stat("Ralentit", "-%d %%" % roundi((1.0 - stats.slow_factor) * 100.0),
 			"-%d %%" % roundi((1.0 - next.slow_factor) * 100.0) if next else "")
 		_add_stat("Pendant", "%s s" % _format(stats.slow_duration),

@@ -1,0 +1,248 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/levels/level.tscn" id="1_level"]
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="2_tower_data"]
+[ext_resource type="Script" path="res://scripts/data/wave_data.gd" id="3_wave_data"]
+[ext_resource type="Script" path="res://scripts/data/spawn_group.gd" id="4_spawn_group"]
+[ext_resource type="Resource" path="res://resources/towers/cannon.tres" id="t0_cannon"]
+[ext_resource type="Resource" path="res://resources/towers/gatling.tres" id="t1_gatling"]
+[ext_resource type="Resource" path="res://resources/towers/sniper.tres" id="t2_sniper"]
+[ext_resource type="Resource" path="res://resources/towers/mortar.tres" id="t3_mortar"]
+[ext_resource type="Resource" path="res://resources/towers/frost.tres" id="t4_frost"]
+[ext_resource type="Resource" path="res://resources/towers/beam.tres" id="t5_beam"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/chevalier.tres" id="e_chevalier"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/goule.tres" id="e_goule"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/charogne.tres" id="e_charogne"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/squelette.tres" id="e_squelette"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/asticot.tres" id="e_asticot"]
+
+[sub_resource type="Curve2D" id="Curve2D_Path0"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -32, 160, 0, 0, 0, 0, 416, 160, 0, 0, 0, 0, 416, 416, 0, 0, 0, 0, 1312, 416),
+"tilts": PackedFloat32Array(0, 0, 0, 0)
+}
+point_count = 4
+
+[sub_resource type="Curve2D" id="Curve2D_Path1"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -32, 608, 0, 0, 0, 0, 672, 608, 0, 0, 0, 0, 672, 416, 0, 0, 0, 0, 1312, 416),
+"tilts": PackedFloat32Array(0, 0, 0, 0)
+}
+point_count = 4
+
+[sub_resource type="Resource" id="Group_w1_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_squelette")
+count = 20
+interval = 0.7
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w1_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_goule")
+count = 14
+interval = 0.35
+start_delay = 4.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w1_3"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_asticot")
+count = 10
+interval = 0.3
+start_delay = 6.0
+path_index = 1
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w1_1"), SubResource("Group_w1_2"), SubResource("Group_w1_3")])
+bonus_gold = 15
+
+[sub_resource type="Resource" id="Group_w2_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_charogne")
+count = 7
+interval = 1.4
+start_delay = 0.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w2_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_squelette")
+count = 20
+interval = 0.7
+start_delay = 4.0
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2")])
+bonus_gold = 20
+
+[sub_resource type="Resource" id="Group_w3_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chevalier")
+count = 14
+interval = 1.0
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w3_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_goule")
+count = 26
+interval = 0.35
+start_delay = 4.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w3_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_goule")
+count = 1
+interval = 2.0
+start_delay = 8.0
+path_index = 1
+elite = true
+
+[sub_resource type="Resource" id="Wave_3"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_elite")])
+bonus_gold = 25
+
+[sub_resource type="Resource" id="Group_w4_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_charogne")
+count = 12
+interval = 1.4
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w4_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chevalier")
+count = 12
+interval = 1.0
+start_delay = 4.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w4_3"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_squelette")
+count = 20
+interval = 0.7
+start_delay = 8.0
+
+[sub_resource type="Resource" id="Wave_4"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_3")])
+bonus_gold = 30
+
+[sub_resource type="Resource" id="Group_w5_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_charogne")
+count = 16
+interval = 1.4
+start_delay = 0.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w5_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chevalier")
+count = 16
+interval = 1.0
+start_delay = 4.0
+
+[sub_resource type="Resource" id="Group_w5_3"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_goule")
+count = 40
+interval = 0.35
+start_delay = 8.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w5_elite"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_charogne")
+count = 1
+interval = 2.0
+start_delay = 10.0
+elite = true
+
+[sub_resource type="Resource" id="Wave_5"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_w5_3"), SubResource("Group_w5_elite")])
+bonus_gold = 35
+
+[sub_resource type="Resource" id="Group_w6_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chevalier")
+count = 26
+interval = 1.0
+start_delay = 0.0
+
+[sub_resource type="Resource" id="Group_w6_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_charogne")
+count = 18
+interval = 1.4
+start_delay = 4.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w6_3"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_squelette")
+count = 30
+interval = 0.7
+start_delay = 8.0
+
+[sub_resource type="Resource" id="Wave_6"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3")])
+bonus_gold = 40
+
+[sub_resource type="Resource" id="Group_w7_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_chevalier")
+count = 30
+interval = 1.0
+start_delay = 0.0
+path_index = 1
+
+[sub_resource type="Resource" id="Group_w7_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_charogne")
+count = 22
+interval = 1.4
+start_delay = 4.0
+
+[sub_resource type="Resource" id="Group_w7_3"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_goule")
+count = 60
+interval = 0.35
+start_delay = 8.0
+path_index = 1
+
+[sub_resource type="Resource" id="Wave_7"]
+script = ExtResource("3_wave_data")
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3")])
+bonus_gold = 0
+
+[node name="Undead02" instance=ExtResource("1_level")]
+level_name = "Niveau 4-2"
+starting_gold = 270
+starting_lives = 20
+tower_types = Array[ExtResource("2_tower_data")]([ExtResource("t0_cannon"), ExtResource("t1_gatling"), ExtResource("t2_sniper"), ExtResource("t3_mortar"), ExtResource("t4_frost"), ExtResource("t5_beam")])
+
+[node name="Map" parent="."]
+blocked_cells = Array[Vector2i]([Vector2i(3, 4), Vector2i(18, 8), Vector2i(8, 3), Vector2i(9, 3), Vector2i(8, 9), Vector2i(10, 2), Vector2i(2, 3), Vector2i(16, 2), Vector2i(10, 9)])
+background_color = Color(0.06, 0.08, 0.08, 1)
+ground_color = Color(0.28, 0.32, 0.3, 1)
+path_color = Color(0.44, 0.4, 0.34, 1)
+rock_color = Color(0.55, 0.58, 0.58, 1)
+
+[node name="Path0" type="Path2D" parent="Map"]
+curve = SubResource("Curve2D_Path0")
+
+[node name="Path1" type="Path2D" parent="Map"]
+curve = SubResource("Curve2D_Path1")
+
+[node name="WaveSpawner" parent="."]
+waves = Array[ExtResource("3_wave_data")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5"), SubResource("Wave_6"), SubResource("Wave_7")])

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/pulse_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="3_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/magnet_pulse.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/bell.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("3_upgrade")
+cost = 90
+range_multiplier = 1.15
+slow_duration_bonus = 0.2
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("3_upgrade")
+cost = 140
+damage_multiplier = 2.5
+fire_rate_multiplier = 1.25
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Cloche funèbre"
+description = "Sonne le glas : son onde étourdit tous les ennemis à portée pendant 0,7 s. Les boss aussi."
+cost = 130
+scene = ExtResource("2_scene")
+attack_range = 105.0
+damage = 12.0
+fire_rate = 0.3
+color = Color(0.85, 0.65, 0.35, 1)
+turret_texture = ExtResource("10_turret")
+turret_rotates = false
+attack_sound = ExtResource("9_sound")
+slow_factor = 0.0
+slow_duration = 0.7
+upgrades = Array[ExtResource("3_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

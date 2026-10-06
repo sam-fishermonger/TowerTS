@@ -14,6 +14,7 @@ const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 const LOCKED_ALPHA := 0.45
 const STARS_COLOR := Color(0.95, 0.85, 0.45)
 const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
+const LEVEL_BUTTON_WIDTH := 104.0
 
 ## Cartes du mode infini plutôt que de la campagne.
 var endless_mode := false
@@ -127,6 +128,14 @@ func get_level_button(level_path: String) -> Button:
 	return _level_buttons.get(level_path)
 
 
+## Largeur du contenu d'une carte de monde : l'écran partagé entre les mondes, sans les
+## marges.
+func get_card_content_width() -> float:
+	var worlds := maxi(CAMPAIGN.worlds.size(), 1)
+	var separation := worlds_box.get_theme_constant(&"separation")
+	return (get_viewport_rect().size.x - 48.0 - separation * (worlds - 1)) / worlds - 32.0
+
+
 func _build_cards() -> void:
 	for i in CAMPAIGN.worlds.size():
 		worlds_box.add_child(_make_card(i))
@@ -163,13 +172,18 @@ func _make_card(world_index: int) -> Control:
 	column.add_child(description)
 
 	# Les monstres du biome, avec leur nom en bulle d'aide.
+	# Avec quatre mondes, les cartes sont plus étroites : les images des monstres
+	# rapetissent pour tenir sur une ligne, et les niveaux passent sur deux colonnes.
+	var content_width := get_card_content_width()
+	var icon_size := clampf((content_width - 4.0 * (world.enemies.size() - 1)) / maxf(world.enemies.size(), 1.0),
+		28.0, 48.0)
 	var bestiary := HBoxContainer.new()
 	bestiary.alignment = BoxContainer.ALIGNMENT_CENTER
 	bestiary.add_theme_constant_override(&"separation", 4)
 	for enemy in world.enemies:
 		var icon := TextureRect.new()
 		icon.texture = enemy.texture
-		icon.custom_minimum_size = Vector2(48, 48)
+		icon.custom_minimum_size = Vector2.ONE * icon_size
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.tooltip_text = enemy.display_name
@@ -190,7 +204,7 @@ func _make_card(world_index: int) -> Control:
 	column.add_child(stars)
 
 	var grid := GridContainer.new()
-	grid.columns = 3
+	grid.columns = 3 if content_width >= 3 * LEVEL_BUTTON_WIDTH + 16.0 else 2
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	grid.add_theme_constant_override(&"h_separation", 8)
 	grid.add_theme_constant_override(&"v_separation", 8)
@@ -198,7 +212,7 @@ func _make_card(world_index: int) -> Control:
 	for i in world.levels.size():
 		var path := world.levels[i]
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(104, 60)
+		button.custom_minimum_size = Vector2(LEVEL_BUTTON_WIDTH, 60)
 		if endless_mode:
 			_setup_endless_button(button, path, "%d-%d" % [world_index + 1, i + 1])
 		else:

@@ -127,12 +127,17 @@ func _process(delta: float) -> void:
 
 ## Fait apparaître un ennemi sur un chemin, à la distance donnée du départ, un peu
 ## sur le côté. Sert aussi aux ennemis qui se divisent à leur mort.
-func spawn(data: EnemyData, path: Path2D, progress := 0.0, health_multiplier := 1.0) -> Enemy:
+## Un ennemi qui se relève (EnemyData.revive_count) n'a que `health_ratio` de sa vie, et
+## `revives_left` résurrections restantes (-1 : celles de sa ressource).
+func spawn(data: EnemyData, path: Path2D, progress := 0.0, health_multiplier := 1.0, health_ratio := 1.0,
+		revives_left := -1) -> Enemy:
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
 	enemy.data = data
 	enemy.path = path
 	enemy.progress = progress
 	enemy.health_multiplier = health_multiplier
+	enemy.health_ratio = health_ratio
+	enemy.revives_left = revives_left
 	enemy.speed_multiplier = speed_multiplier
 	var spread := get_max_lateral_offset(data)
 	enemy.lateral_offset = _rng.randf_range(-spread, spread)

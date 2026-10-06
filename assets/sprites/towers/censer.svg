@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Encensoir : brasero doré sur bras pivotant, braises sacrées, orienté vers la droite. -->
+  <circle cx="24" cy="32" r="12" fill="#5a4318"/>
+  <circle cx="24" cy="32" r="9.5" fill="#c99a3a"/>
+  <rect x="30" y="29" width="16" height="6" rx="2" fill="#5a4318"/>
+  <rect x="31" y="30.5" width="14" height="3" rx="1.5" fill="#e0b85a"/>
+  <circle cx="51" cy="32" r="9" fill="#5a4318"/>
+  <circle cx="51" cy="32" r="7" fill="#f2cf6b"/>
+  <circle cx="51" cy="32" r="4.2" fill="#ff8a2a"/>
+  <circle cx="51" cy="32" r="2" fill="#fff2b0"/>
+  <path d="M21 32 h6 M24 29 v6" stroke="#fff2b0" stroke-width="2" stroke-linecap="round"/>
+</svg>
