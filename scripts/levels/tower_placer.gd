@@ -118,6 +118,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				refresh()
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and level.conquest and level.conquest.has_stone(cell):
+			# Mode Conquête : un clic sur un rocher y envoie les mineurs.
+			level.conquest.set_preferred_rock(cell)
+			inspect(null)
+			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and level.map.get_occupant(cell) is Tower:
 			inspect(level.map.get_occupant(cell))
 			get_viewport().set_input_as_handled()

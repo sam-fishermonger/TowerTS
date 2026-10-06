@@ -11,6 +11,8 @@ const LEXICON_SCREEN := "res://scenes/ui/lexicon_screen.tscn"
 const DAILY_CHALLENGE_SCREEN := "res://scenes/ui/daily_challenge_screen.tscn"
 const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 const ACHIEVEMENTS_SCREEN := "res://scenes/ui/achievements_screen.tscn"
+## Niveau du mode Conquête (prototype : un seul niveau).
+const CONQUEST_LEVEL := "res://scenes/levels/conquest_01.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## Agrandissement d'un bouton survolé ou qui a le focus.
@@ -37,6 +39,7 @@ var _konami_label: Label
 @onready var perks_button: Button = %PerksButton
 @onready var worlds_button: Button = %WorldsButton
 @onready var daily_button: Button = %DailyButton
+@onready var conquest_button: Button = %ConquestButton
 @onready var editor_button: Button = %EditorButton
 @onready var lexicon_button: Button = %LexiconButton
 @onready var achievements_button: Button = %AchievementsButton
@@ -57,6 +60,7 @@ func _ready() -> void:
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
+	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(CONQUEST_LEVEL))
 	editor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
@@ -71,7 +75,7 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, worlds_button, daily_button, editor_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
+	for button in [play_button, worlds_button, daily_button, conquest_button, editor_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
 	play_button.grab_focus()

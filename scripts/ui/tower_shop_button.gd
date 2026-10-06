@@ -60,11 +60,12 @@ func _fit_font_size(text_value: String, max_size: int) -> int:
 	return font_size
 
 
-## Affiche le prix, en rouge et la case grisée s'il dépasse l'or disponible.
-func set_price(cost: int, affordable: bool) -> void:
+## Affiche le prix, en rouge et la case grisée s'il dépasse l'or disponible (ou la
+## pierre, en mode Conquête : `stone` positif).
+func set_price(cost: int, affordable: bool, stone := -1) -> void:
 	if _price_label == null:
 		return
-	_price_label.text = "%d or" % cost
+	_price_label.text = "%d or" % cost if stone < 0 else "%d or · %d p" % [cost, stone]
 	_price_label.add_theme_color_override("font_color", TowerInfoPanel.PRICE_COLOR if affordable else TowerInfoPanel.TOO_EXPENSIVE_COLOR)
 	modulate.a = 1.0 if affordable or button_pressed else UNAFFORDABLE_ALPHA
 

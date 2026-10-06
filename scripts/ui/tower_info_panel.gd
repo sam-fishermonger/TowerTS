@@ -171,7 +171,10 @@ func _refresh_prices() -> void:
 			PRICE_COLOR if _gold >= data.get_cost() else TOO_EXPENSIVE_COLOR)
 		return
 	if not tower.can_upgrade():
-		upgrade_button.text = "Pas d'amélioration (défi)" if tower.upgrades_locked else "Niveau maximal"
+		if tower.upgrades_locked:
+			upgrade_button.text = "Pas d'amélioration (défi)"
+		else:
+			upgrade_button.text = "En construction" if not tower.is_built() else "Niveau maximal"
 		upgrade_button.disabled = true
 		return
 	var cost := tower.get_upgrade_cost()

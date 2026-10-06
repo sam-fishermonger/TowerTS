@@ -24,6 +24,10 @@ var _group := ButtonGroup.new()
 var _gold := 0
 ## Barre verrouillée (fin de partie) : toutes les cases sont grisées.
 var _locked := false
+## Mode Conquête : pierre disponible, et pierre demandée par chaque type de tour
+## (TowerData -> int ; vide hors de ce mode).
+var stone_cost := Callable()
+var _stone := 0
 
 
 func _ready() -> void:
@@ -55,6 +59,11 @@ func set_gold(gold: int) -> void:
 	refresh()
 
 
+func set_stone(stone: int) -> void:
+	_stone = stone
+	refresh()
+
+
 ## Enfonce la case de la tour donnée (null = aucune), sans émettre tower_selected.
 func set_selected(data: TowerData) -> void:
 	for button: TowerShopButton in get_children():
@@ -75,8 +84,10 @@ func lock() -> void:
 func refresh() -> void:
 	for button: TowerShopButton in get_children():
 		var cost := button.data.get_cost()
-		button.disabled = _locked or (cost > _gold and not button.button_pressed)
-		button.set_price(cost, cost <= _gold)
+		var stone: int = stone_cost.call(button.data) if stone_cost.is_valid() else -1
+		var affordable := cost <= _gold and stone <= _stone
+		button.disabled = _locked or (not affordable and not button.button_pressed)
+		button.set_price(cost, affordable, stone)
 
 
 ## Case choisie par une touche (rangée des chiffres ou pavé numérique), ou -1.
