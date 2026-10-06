@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <g transform="rotate(90 32 32)">
+    <!-- Arc électrique : électrode en pointe sur une sphère, orientée vers la droite (pivote vers la cible). -->
+    <circle cx="32" cy="36" r="15" fill="#1b2350"/>
+    <circle cx="32" cy="36" r="12" fill="#4f66d8"/>
+    <circle cx="28" cy="32" r="4" fill="#a9b8ff"/>
+    <path d="M27 24 L32 6 L37 24 Z" fill="#1b2350"/>
+    <path d="M29.5 23 L32 10 L34.5 23 Z" fill="#c9d4ff"/>
+    <path d="M33 39 L27 45 L32 45 L29 52 L38 43 L33 43 L36 39 Z" fill="#e8eeff"/>
+    <circle cx="32" cy="6" r="3" fill="#e8eeff"/>
+    <path d="M24 8 L29 12 M40 8 L35 12" stroke="#a9b8ff" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

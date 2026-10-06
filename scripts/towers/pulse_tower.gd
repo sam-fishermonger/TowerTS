@@ -2,7 +2,7 @@ class_name PulseTower
 extends Tower
 ## Tour sans projectile : à chaque tir, une onde frappe tous les ennemis à portée,
 ## avec les effets de ses statistiques (ralentissement du Givre, bouclier brouillé
-## du Brouilleur).
+## du Brouilleur, recul de l'Électroaimant, dont l'onde se resserre vers la tour).
 
 const PULSE_DURATION := 0.35
 
@@ -38,4 +38,5 @@ func _draw_effects() -> void:
 	var light := data.color.lightened(0.4)
 	if _pulse_time_left > 0.0:
 		var t := 1.0 - _pulse_time_left / PULSE_DURATION
-		draw_arc(Vector2.ZERO, stats.attack_range * t, 0.0, TAU, 48, Color(light, 1.0 - t), 3.0)
+		var radius := stats.attack_range * (1.0 - t if stats.knockback > 0.0 else t)
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(light, 1.0 - t), 3.0)

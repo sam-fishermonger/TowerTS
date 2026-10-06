@@ -59,15 +59,16 @@ Le dossier `build/` est ignoré par git.
   | Cauchemar | +75 % | +50 % | +20 % |
 
   Chaque groupe d'une vague garde à peu près sa durée : les monstres en plus se resserrent, ceux en moins s'espacent. Le mode infini et la partie de l'écran titre se jouent toujours en Moyen. Les réglages sont dans `scripts/data/difficulty.gd`.
+- **Tours par niveau** : on ne peut prendre qu'un nombre limité de tours différentes dans un niveau, selon la difficulté : **9** en Facile, **8** en Moyen, **6** en Difficile et **5** en Cauchemar (le mode infini, joué en Moyen, en prend 8). Quand le niveau et l'arbre des améliorations en proposent plus, le niveau s'ouvre sur **Choisir les tours** : une case par tour (sa fiche s'affiche au survol), on en coche jusqu'à la limite, puis **Jouer**. Le dernier choix est coché d'avance au niveau suivant (et en recommençant). Les limites sont dans `TOWER_LIMITS` (`scripts/data/difficulty.gd`).
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
 - **Mode infini** : un niveau gagné avec 3 étoiles (dans n'importe quelle difficulté) s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (90 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
 - **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois onglets :
   - **Bonus**, en trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée) ;
-  - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée apparaît dans la barre d'achat de tous les niveaux ;
-  - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
+  - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune, puis les **croisements**, qui demandent deux tours de branches différentes (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée s'ajoute aux tours proposées dans tous les niveaux ;
+  - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours de base et des mondes, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
 
-  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (3 étoiles pour la première amélioration, jusqu'à 14 pour Maître artilleur) : l'arbre complet coûte 199 étoiles, sur les 216 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (3 étoiles pour la première amélioration, jusqu'à 14 pour Maître artilleur) : l'arbre complet coûte 212 étoiles, sur les 216 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
@@ -125,14 +126,28 @@ Chaque monde a deux tours à débloquer dans l'arbre des améliorations (onglet 
 
 | Monde | Tour | Prix | Atout |
 |---|---|---|---|
-| La Ruche | **Lance-flammes** | ★ 10 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
-| La Ruche | **Pesticide** | ★ 14 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
-| La Fonderie | **Brouilleur IEM** | ★ 14 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
-| La Fonderie | **Perforateur** | ★ 18 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
-| La Cité | **Franc-tireur** | ★ 18 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
-| La Cité | **Lacrymogène** | ★ 22 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
+| La Ruche | **Lance-flammes** | ★ 5 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
+| La Ruche | **Pesticide** | ★ 8 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
+| La Fonderie | **Brouilleur IEM** | ★ 7 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
+| La Fonderie | **Perforateur** | ★ 10 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
+| La Cité | **Franc-tireur** | ★ 9 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
+| La Cité | **Lacrymogène** | ★ 12 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
 
 Ces effets se règlent dans la ressource de la tour (`TowerData`, groupes **Effets spéciaux**, **Nuage** et **Flammes**) : brûlure ou poison, coups qui ignorent l'armure, dégâts multipliés sur les boucliers, bouclier brouillé, soins bloqués, priorité aux soigneurs. N'importe quelle tour peut les combiner. La seconde tour d'une branche demande la première, et la branche ne s'ouvre qu'avec son monde (`required_world` de l'amélioration).
+
+### Croisements
+
+Sous les tours des mondes, l'arbre se croise : chaque croisement demande deux tours de branches différentes, et ses traits vont en diagonale de l'une à l'autre. Les uns débloquent une nouvelle tour, mélange des deux ; dans les autres, les deux tours s'échangent un effet.
+
+| Croisement | Demande | Prix | Effet |
+|---|---|---|---|
+| **Arc électrique** | Pesticide + Perforateur | ★ 12 | Débloque l'Arc électrique : un éclair instantané qui rebondit 3 fois d'ennemi en ennemi (le plus proche pas encore touché, à 110 pixels au plus), avec un quart de dégâts en moins à chaque rebond. +50 % de dégâts sur les boucliers d'énergie. Chaque amélioration ajoute un rebond. |
+| **Bobine** | Perforateur + Lacrymogène | ★ 13 | Débloque la Bobine : elle ne tire pas, mais les tours des 8 cases autour d'elle font 25 % de dégâts en plus et tirent 15 % plus vite (+10 points par amélioration, et la dernière agrandit sa portée). Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte. La fiche d'une tour renforcée le dit. |
+| **Électroaimant** | Arc électrique + Bobine | ★ 13 | Débloque l'Électroaimant : son onde fait reculer de 45 pixels tous les ennemis à portée sur leur chemin. Les gros reculent moins (une Couveuse 30 % de moins), et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s : plusieurs Électroaimants ne le bloquent pas sur place. |
+| **Nuage ionisé** | Pesticide + Arc électrique | ★ 10 | L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie pendant 2,5 s. |
+| **Gaz sous tension** | Lacrymogène + Bobine | ★ 10 | La Bobine ralentit de 25 % les ennemis à sa portée et bloque leurs soins, comme le gaz, et le Lacrymogène tire 20 % plus loin et 25 % plus vite. |
+
+Un croisement qui échange des effets est une amélioration (`Perk`) avec `crossing`, dont `specializes_tower` reçoit les effets, et `partner_effect` une seconde amélioration avec les effets de l'autre tour (son `specializes_tower`). Comme pour les spécialisations, ces effets ne s'appliquent qu'à leur tour, et la fiche de la tour les rappelle (« Croisement : … »).
 
 | Niveau | Carte | Vagues |
 |---|---|---|
@@ -174,7 +189,9 @@ Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : 
 ├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement, division à la mort, soin
 ├── Tower                    scripts/towers/tower.gd      ciblage + cadence ; _attack() et _draw_body() à redéfinir
 │   ├── ProjectileTower      tire le projectile défini dans TowerData (Canon, Mitrailleuse, Sniper, Mortier, Franc-tireur, Pesticide, Lacrymogène)
-│   ├── PulseTower           onde qui frappe tout ce qui est à portée (Givre, Brouilleur IEM)
+│   ├── PulseTower           onde qui frappe tout ce qui est à portée (Givre, Brouilleur IEM, Électroaimant)
+│   │   └── CoilTower        ne tire pas : renforce les tours voisines (Bobine), voir Level.refresh_boosts()
+│   ├── ArcTower             éclair qui rebondit d'ennemi en ennemi (Arc électrique)
 │   ├── BeamTower            rayon continu dont les dégâts montent sur la même cible (Rayon)
 │   ├── FlameTower           cône de flammes qui brûle tout ce qu'il touche (Lance-flammes)
 │   └── RailTower            tir instantané qui traverse toute une ligne (Perforateur)
@@ -186,7 +203,8 @@ Composants                   scripts/components/          HealthComponent (vie, 
 Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin
 ├── TowerShop                barre d'achat : une case TowerShopButton (TowerIcon, nom, prix) par tour
 ├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
-└── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
+├── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
+└── TowerPicker              choix des tours au lancement du niveau (limite de la difficulté)
 GameMap (Node2D)             scripts/map/game_map.gd      grille, chemins (Path2D enfants), rochers, cases occupées
 Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, navigation
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris

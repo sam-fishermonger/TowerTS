@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/pulse_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/magnet_pulse.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/magnet.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 90
+range_multiplier = 1.1
+knockback_multiplier = 1.3
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 130
+damage_multiplier = 2.0
+fire_rate_multiplier = 1.25
+knockback_multiplier = 1.3
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Électroaimant"
+description = "Onde magnétique qui fait reculer tous les ennemis à portée sur leur chemin. Les gros reculent moins, et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s."
+cost = 110
+scene = ExtResource("2_scene")
+attack_range = 120.0
+damage = 8.0
+fire_rate = 0.4
+color = Color(0.9, 0.35, 0.45, 1)
+turret_texture = ExtResource("10_turret")
+turret_rotates = false
+attack_sound = ExtResource("9_sound")
+knockback = 45.0
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

@@ -28,6 +28,9 @@ const JAMMER := preload("res://resources/towers/jammer.tres")
 const RAIL := preload("res://resources/towers/rail.tres")
 const MARKSMAN := preload("res://resources/towers/marksman.tres")
 const TEARGAS := preload("res://resources/towers/teargas.tres")
+const ARC := preload("res://resources/towers/arc.tres")
+const COIL := preload("res://resources/towers/coil.tres")
+const MAGNET := preload("res://resources/towers/magnet.tres")
 const CHENILLARD := preload("res://resources/enemies/mecha/chenillard.tres")
 const LARVE := preload("res://resources/enemies/insectoid/larve.tres")
 const SCARABEE := preload("res://resources/enemies/insectoid/scarabee.tres")
@@ -90,6 +93,11 @@ func _run() -> void:
 	await _test_gas_clouds()
 	await _test_jammer_and_rail()
 	await _test_marksman()
+	await _test_arc_tower()
+	await _test_coil_tower()
+	await _test_magnet_tower()
+	await _test_crossings_in_tree()
+	await _test_tower_choice()
 	await _test_worlds()
 	await _test_spawn_spread()
 	await _test_endless_mode()
@@ -390,7 +398,8 @@ func _test_biome_towers_in_tree() -> void:
 	var tower_perks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
 	var per_world := [0, 0, 0]
 	for perk: Perk in tower_perks:
-		per_world[perk.required_world] += 1
+		if perk.required_world >= 0:
+			per_world[perk.required_world] += 1
 	_check(per_world == [2, 2, 2], "2 tours par monde (%s)" % [per_world])
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
@@ -429,17 +438,21 @@ func _test_biome_towers_in_tree() -> void:
 	_win_in_all_difficulties(campaign.levels)
 	for perk: Perk in tower_perks:
 		Perks.buy(perk)
-	_check(Perks.get_unlocked_towers().size() == 6, "les 6 tours achetées")
+	_check(Perks.get_unlocked_towers().size() == 9, "les 9 tours achetées (6 des mondes, 3 croisements)")
+	# En Facile, on prend jusqu'à 9 tours : la barre d'achat doit les tenir.
+	Difficulty.set_current(Difficulty.FACILE)
 	level = await _spawn_level(HUMANOID_01)
+	level.choose_towers(level.get_default_tower_choice())
 	await process_frame
-	_check(level.tower_types.size() == 12 and level.hud.tower_shop.get_child_count() == 12, "12 tours dans la barre d'achat")
+	_check(level.tower_types.size() == 9 and level.hud.tower_shop.get_child_count() == 9, "9 tours dans la barre d'achat")
 	var bar := level.hud.bottom_bar.get_global_rect()
 	var controls := level.hud.pause_button.get_global_rect()
-	var last_slot: Control = level.hud.tower_shop.get_child(11)
+	var last_slot: Control = level.hud.tower_shop.get_child(8)
 	_check(is_equal_approx(bar.size.y, 96.0) and bar.end.x <= 1280.0 and last_slot.get_global_rect().end.x < controls.position.x,
 		"elles tiennent dans la barre, sans pousser les boutons de droite")
 	_check(not level.hud.shop_hint.visible, "le rappel des commandes laisse sa place")
 	await _free(level)
+	Difficulty.set_current(Difficulty.MOYEN)
 	Progress.reset_campaign()
 
 
@@ -1459,6 +1472,180 @@ func _test_marksman() -> void:
 	_check(patient.health.health == hurt, "un ennemi touché ne peut plus être soigné")
 	_check(ahead.health.health == SOLDAT.max_health, "(le soldat hors de portée du soin n'a rien)")
 	await _free(level)
+
+func _test_arc_tower() -> void:
+	print("Arc électrique : un éclair qui rebondit d'ennemi en ennemi")
+	var level := await _spawn_level(MECHA_01)
+	var arc := _place_test_tower(level, ARC) as ArcTower
+	_check(arc != null, "l'Arc électrique vient de sa scène")
+	arc.set_process(false)
+	var at := arc.global_position
+	var still: EnemyData = CHENILLARD.duplicate()
+	still.armor = 0.0
+	var targets: Array[Enemy] = []
+	for i in 5:
+		targets.append(_add_enemy_at(level, still, at + Vector2(60 + i * 90, 0)))
+	var far := _add_enemy_at(level, still, at + Vector2(60 + 3 * 90, 300))
+	var chain := arc.get_chain(targets[0])
+	_check(chain == targets.slice(0, 4), "3 rebonds : il touche les 4 ennemis les plus proches l'un de l'autre, dans l'ordre")
+	arc._attack(targets[0])
+	var damage := ARC.get_stats_at_level(1).damage
+	var lost: Array[float] = []
+	for enemy in targets:
+		lost.append(still.max_health - enemy.health.health)
+	_check(is_equal_approx(lost[0], damage) and is_equal_approx(lost[1], damage * 0.75)
+		and is_equal_approx(lost[3], damage * pow(0.75, 3)), "un quart de dégâts en moins à chaque rebond")
+	_check(lost[4] == 0.0 and far.health.health == still.max_health, "pas de quatrième rebond, ni de saut trop long")
+	_check(ARC.get_stats_at_level(3).chain_count == 5, "chaque amélioration ajoute un rebond")
+	var sentinelle := _add_enemy_at(level, SENTINELLE, at + Vector2(0, 80))
+	sentinelle.hit(10.0, ARC.get_stats_at_level(1))
+	_check(is_equal_approx(sentinelle.health.shield, SENTINELLE.max_shield - 15.0), "50 % de dégâts en plus sur les boucliers")
+	await _free(level)
+
+
+func _test_coil_tower() -> void:
+	print("Bobine : renforce les tours voisines")
+	var level := await _spawn_level(MECHA_01)
+	level.gold = 100000
+	var cannon := level.place_tower(Vector2i(4, 2), CANNON)
+	var far := level.place_tower(Vector2i(6, 6), CANNON)
+	var base_damage := cannon.stats.damage
+	var base_rate := cannon.stats.fire_rate
+	var coil := level.place_tower(Vector2i(5, 3), COIL) as CoilTower
+	_check(coil != null and coil.find_target() == null, "la Bobine se pose et ne tire pas")
+	_check(is_equal_approx(cannon.stats.damage, base_damage * 1.25) and is_equal_approx(cannon.stats.fire_rate, base_rate * 1.15),
+		"le Canon voisin (en diagonale) fait 25 % de dégâts en plus et tire 15 % plus vite")
+	_check(not far.is_boosted() and coil.boosted_towers == [cannon], "pas le Canon plus loin")
+	var second := level.place_tower(Vector2i(3, 3), COIL) as CoilTower
+	level.upgrade_tower(second)
+	_check(is_equal_approx(cannon.boost_damage, 0.35) and second.boosted_towers.has(cannon) and not coil.boosted_towers.has(cannon),
+		"deux Bobines ne s'additionnent pas : le Canon garde la plus forte")
+	_check(not second.is_boosted(), "une Bobine ne renforce pas une autre Bobine")
+	level.upgrade_tower(cannon)
+	_check(is_equal_approx(cannon.stats.damage, CANNON.get_stats_at_level(2).damage * 1.35), "le bonus suit les améliorations de la tour")
+	level.inspect_tower(cannon)
+	_check(level.hud.tower_details.description_label.text.contains("Renforcée par une Bobine"), "la fiche le dit")
+	level.inspect_tower(second)
+	_check(level.hud.tower_details.stats_grid.get_child(1).text == "+35 %", "la fiche de la Bobine montre son bonus")
+	level.sell_tower(second)
+	level.sell_tower(coil)
+	_check(not cannon.is_boosted() and is_equal_approx(cannon.stats.damage, CANNON.get_stats_at_level(2).damage),
+		"vendre les Bobines retire le bonus")
+	await _free(level)
+
+
+func _test_magnet_tower() -> void:
+	print("Électroaimant : fait reculer les ennemis")
+	var level := await _spawn_level(LEVEL_01)
+	var magnet := _place_test_tower(level, MAGNET) as PulseTower
+	_check(magnet != null, "l'Électroaimant est une tour à onde")
+	magnet.set_process(false)
+	var path := level.map.get_enemy_path(0)
+	var near: float = path.curve.get_closest_offset(path.to_local(magnet.global_position))
+	var small := _add_still_enemy(level, LARVE, 0, near)
+	var big := _add_still_enemy(level, COUVEUSE, 0, near + 10.0)
+	small._update_position()
+	big._update_position()
+	magnet._attack(null)
+	var knockback := MAGNET.get_stats_at_level(1).knockback
+	_check(is_equal_approx(small.progress, near - knockback), "une Larve recule de %d pixels" % knockback)
+	_check(is_equal_approx(big.progress, near + 10.0 - knockback * Enemy.KNOCKBACK_FULL_RADIUS / COUVEUSE.radius),
+		"une Couveuse, plus grosse, recule moins")
+	var before := small.progress
+	magnet._attack(null)
+	_check(small.progress == before, "un ennemi qui vient de reculer ne recule plus tout de suite")
+	await _free(level)
+
+
+func _test_crossings_in_tree() -> void:
+	print("Arbre des améliorations : croisements de tours")
+	var tree := Perks.TREE
+	var arc := tree.get_perk("arc")
+	var coil := tree.get_perk("coil")
+	var magnet := tree.get_perk("magnet")
+	var crossings := tree.perks.filter(func(p: Perk) -> bool: return p.is_crossing())
+	_check([arc, coil, magnet].all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
+		"l'Arc électrique, la Bobine et l'Électroaimant se débloquent dans l'onglet Tours des mondes")
+	_check([arc, coil, magnet].all(func(p: Perk) -> bool:
+			return p.requires.size() == 2 and tree.get_branch(p.requires[0]) != tree.get_branch(p.requires[1])),
+		"chacune demande deux tours de branches différentes")
+	_check(crossings.size() == 2 and crossings.all(func(p: Perk) -> bool:
+			return tree.get_page(p) == 1 and not p.paid_with_endless_stars and p.get_partner_tower_path() != p.specializes_tower),
+		"2 croisements où deux tours s'échangent un effet, payés en étoiles")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_win_in_all_difficulties(campaign.levels)
+	for id in ["flame", "pesticide", "jammer", "rail"]:
+		Perks.buy(tree.get_perk(id))
+	_check(Perks.is_unlocked(arc) and not Perks.is_unlocked(coil), "le Pesticide et le Perforateur ouvrent l'Arc électrique")
+	_check(Perks.buy(arc) and Perks.get_unlocked_towers().has(ARC), "l'Arc électrique s'achète et s'ajoute aux tours")
+	var cross := tree.get_perk("cross_pesticide_arc")
+	_check(ARC.get_stats_at_level(1).dot_damage == 0.0 and Perks.buy(cross), "Nuage ionisé s'achète")
+	var arc_stats := ARC.get_stats_at_level(1)
+	_check(arc_stats.dot_damage > 0.0 and arc_stats.dot_is_poison, "l'Arc empoisonne, comme le Pesticide")
+	_check(PESTICIDE.get_stats_at_level(1).shield_jam_duration > 0.0 and CANNON.get_stats_at_level(1).shield_jam_duration == 0.0,
+		"et les nuages du Pesticide brouillent les boucliers, comme une décharge (et pas les autres tours)")
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(1)
+	_check(screen.get_button(cross).get_child_count() == 2, "la case d'un croisement montre ses deux tours")
+	_check(screen._joins_branches(arc) and not screen._joins_branches(tree.get_perk("pesticide")),
+		"les traits des croisements vont droit d'une branche à l'autre")
+	await _free(screen)
+	for id in ["marksman", "teargas", "coil", "cross_teargas_coil"]:
+		Perks.buy(tree.get_perk(id))
+	var coil_stats := COIL.get_stats_at_level(1)
+	_check(coil_stats.slow_factor < 1.0 and coil_stats.heal_block_duration > 0.0, "Gaz sous tension : la Bobine ralentit et bloque les soins")
+	_check(is_equal_approx(TEARGAS.get_stats_at_level(1).attack_range, TEARGAS.attack_range * 1.2),
+		"et le Lacrymogène porte plus loin")
+	var level := await _spawn_level(LEVEL_01)
+	var placed := _place_test_tower(level, COIL) as CoilTower
+	var larve := _add_enemy_at(level, LARVE, placed.global_position + Vector2(40, 0))
+	_check(placed.find_target() == larve, "la Bobine vise alors les ennemis à portée")
+	placed._attack(larve)
+	_check(larve.is_slowed() and not larve.can_be_healed(), "son onde les ralentit et bloque leurs soins")
+	level.inspect_tower(placed)
+	_check(level.hud.tower_details.description_label.text.contains("Croisement : Gaz sous tension"), "la fiche le rappelle")
+	await _free(level)
+	_check(Perks.buy(magnet) and Perks.get_unlocked_towers().size() == 9, "l'Électroaimant demande l'Arc et la Bobine")
+	Progress.reset_campaign()
+
+
+func _test_tower_choice() -> void:
+	print("Nombre de tours différentes par niveau, selon la difficulté")
+	_check(Difficulty.TOWER_LIMITS == [9, 8, 6, 5], "9 en Facile, 8 en Moyen, 6 en Difficile, 5 en Cauchemar")
+	Perks.unlock_everything()
+	Difficulty.set_current(Difficulty.CAUCHEMAR)
+	var level := await _spawn_level(HUMANOID_01)
+	_check(level.available_tower_types.size() == 15 and level.is_choosing_towers and level.hud.tower_picker != null,
+		"avec 15 tours débloquées, le niveau s'ouvre sur le choix des tours")
+	_check(level.tower_types.is_empty() and level.hud.tower_shop.get_child_count() == 0 and not level.can_start_next_wave(),
+		"pas de tour à poser ni de vague avant d'avoir choisi")
+	var picker := level.hud.tower_picker
+	_check(picker.get_selected() == level.available_tower_types.slice(0, 5), "5 tours cochées d'avance : celles du niveau d'abord")
+	_check(picker.get_button(ARC).disabled, "une fois 5 tours cochées, les autres sont grisées")
+	picker.set_tower_selected(CANNON, false)
+	picker.set_tower_selected(ARC, true)
+	_check(picker.get_selected().size() == 5 and picker.get_selected().has(ARC), "on remplace une tour par une autre")
+	_check(not level.choose_towers(level.available_tower_types.slice(0, 6)), "pas plus de 5 tours en Cauchemar")
+	picker.confirm()
+	_check(not level.is_choosing_towers and level.hud.tower_picker == null and level.tower_types.size() == 5
+		and level.tower_types.has(ARC) and not level.tower_types.has(CANNON), "Jouer valide le choix")
+	_check(level.hud.tower_shop.get_child_count() == 5 and level.can_start_next_wave(), "les 5 tours sont dans la barre d'achat")
+	await _free(level)
+	level = await _spawn_level(HUMANOID_01)
+	_check(level.get_default_tower_choice().has(ARC) and not level.get_default_tower_choice().has(CANNON),
+		"le dernier choix est coché d'avance la fois suivante")
+	await _free(level)
+	Difficulty.set_current(Difficulty.FACILE)
+	level = await _spawn_level(HUMANOID_01)
+	_check(level.hud.tower_picker.get_selected().size() == 9 and level.tower_limit == 9, "9 tours en Facile")
+	await _free(level)
+	Progress.reset_campaign()
+	level = await _spawn_level(LEVEL_01)
+	_check(not level.is_choosing_towers and level.tower_types.size() == 3, "pas de choix quand le niveau a assez peu de tours")
+	await _free(level)
+	Difficulty.set_current(Difficulty.MOYEN)
 
 
 func _test_worlds() -> void:

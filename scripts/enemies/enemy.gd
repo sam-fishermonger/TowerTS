@@ -21,6 +21,13 @@ const JAMMED_SHIELD_COLOR := Color(0.6, 0.6, 0.7)
 ## Distance, avant et après l'ennemi sur le chemin, qui donne le sens de la marche pour
 ## son décalage sur le côté : les virages sont arrondis au lieu de faire un saut.
 const TURN_SMOOTHING := 16.0
+## Recul (Électroaimant) : un ennemi de ce rayon ou moins recule de toute la distance,
+## un plus gros d'autant moins qu'il est gros (au moins KNOCKBACK_MIN_RATIO).
+const KNOCKBACK_FULL_RADIUS := 13.0
+const KNOCKBACK_MIN_RATIO := 0.35
+## Secondes après un recul pendant lesquelles l'ennemi ne peut plus reculer : plusieurs
+## Électroaimants ne peuvent pas le bloquer sur place.
+const KNOCKBACK_COOLDOWN := 1.5
 
 @export var data: EnemyData
 
@@ -51,6 +58,7 @@ var _dot_tick_left := 0.0
 var _dot_color := Color.ORANGE
 ## Secondes pendant lesquelles l'ennemi ne peut ni être soigné ni soigner.
 var _heal_block_left := 0.0
+var _knockback_cooldown := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -90,6 +98,8 @@ func _process(delta: float) -> void:
 		_update_dot(delta)
 		if not is_alive:
 			return
+	if _knockback_cooldown > 0.0:
+		_knockback_cooldown -= delta
 	if _heal_block_left > 0.0:
 		_heal_block_left -= delta
 		if _heal_block_left <= 0.0:
@@ -141,7 +151,22 @@ func hit(amount: float, stats: TowerData) -> float:
 	var dealt := take_damage(amount, stats.armor_piercing, stats.shield_damage_multiplier)
 	apply_slow(stats.slow_factor, stats.slow_duration)
 	apply_dot(stats.dot_damage, stats.dot_duration, stats.color)
+	if stats.knockback > 0.0:
+		push_back(stats.knockback)
 	return dealt
+
+
+## Fait reculer l'ennemi sur son chemin (moins s'il est gros), sauf s'il vient déjà de
+## reculer. Renvoie la distance reculée.
+func push_back(distance: float) -> float:
+	if not is_alive or _knockback_cooldown > 0.0 or distance <= 0.0:
+		return 0.0
+	var ratio := clampf(KNOCKBACK_FULL_RADIUS / data.radius, KNOCKBACK_MIN_RATIO, 1.0)
+	var moved := minf(distance * ratio, progress)
+	progress -= moved
+	_knockback_cooldown = KNOCKBACK_COOLDOWN
+	_update_position()
+	return moved
 
 
 ## Ralentit l'ennemi. Le ralentissement le plus fort et la durée la plus longue l'emportent.

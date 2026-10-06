@@ -19,6 +19,8 @@ const FIRST_ROW_Y := 56.0
 const TOWER_ICON_SIZE := 40.0
 ## Case plus large pour une tour : son image et son nom.
 const TOWER_NODE_WIDTH := 200.0
+## Images des deux tours dans la case d'un croisement.
+const CROSSING_ICON_SIZE := 34.0
 
 const OWNED_COLOR := Color(0.95, 0.78, 0.3)
 const BUYABLE_COLOR := Color(0.45, 0.85, 0.45)
@@ -147,11 +149,18 @@ func _build_page(root: Control, page_index: int) -> void:
 		button.pressed.connect(buy.bind(perk))
 		button.mouse_entered.connect(_show_info.bind(perk))
 		button.focus_entered.connect(_show_info.bind(perk))
+		var icon_paths: Array[String] = []
 		if not perk.get_tower_path().is_empty():
+			icon_paths.append(perk.get_tower_path())
+		if perk.is_crossing():
+			icon_paths.append(perk.get_partner_tower_path())
+		# Un croisement montre ses deux tours, un peu plus petites et l'une sur l'autre.
+		var icon_size := TOWER_ICON_SIZE if icon_paths.size() < 2 else CROSSING_ICON_SIZE
+		for i in icon_paths.size():
 			var icon := TowerIcon.new()
-			icon.data = load(perk.get_tower_path())
-			icon.size = Vector2.ONE * TOWER_ICON_SIZE
-			icon.position = Vector2(8.0, (NODE_SIZE.y - TOWER_ICON_SIZE) / 2.0)
+			icon.data = load(icon_paths[i])
+			icon.size = Vector2.ONE * icon_size
+			icon.position = Vector2(6.0 + i * icon_size * 0.6, (NODE_SIZE.y - icon_size) / 2.0)
 			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			button.add_child(icon)
 		root.add_child(button)
@@ -233,8 +242,10 @@ func _style_button(button: Button, perk: Perk) -> void:
 		style.set_border_width_all(3 if owned or style_name == "focus" else 2)
 		style.set_corner_radius_all(8)
 		style.draw_center = style_name != "focus"
-		# Place pour l'image de la tour à gauche.
-		if not perk.get_tower_path().is_empty():
+		# Place pour l'image de la tour (ou des deux tours d'un croisement) à gauche.
+		if perk.is_crossing():
+			style.content_margin_left = CROSSING_ICON_SIZE * 1.6 + 10.0
+		elif not perk.get_tower_path().is_empty():
 			style.content_margin_left = TOWER_ICON_SIZE + 12.0
 		button.add_theme_stylebox_override(style_name, style)
 	for icon in button.get_children():
@@ -295,18 +306,34 @@ func _show_info(perk: Perk) -> void:
 
 
 ## Un trait de chaque amélioration vers celles qu'elle débloque, doré une fois acquise.
+## Les traits d'un croisement (amélioration qui demande des branches différentes) vont
+## droit de chaque parent à l'enfant, et se croisent.
 func _draw_links(root: Control, page_index: int) -> void:
 	for perk in Perks.TREE.get_page_perks(page_index):
 		var to := get_node_position(perk)
+		var crossing := _joins_branches(perk)
 		for required in perk.requires:
 			# Une tour à débloquer sur une autre page : pas de trait, la fiche le dit.
 			if Perks.TREE.get_page(required) != page_index:
 				continue
 			var from := get_node_position(required) + Vector2(0, NODE_SIZE.y)
 			var color := OWNED_COLOR if Perks.is_owned(required) else LOCKED_COLOR.darkened(0.3)
+			if crossing:
+				root.draw_line(from, to, color, 3.0, true)
+				continue
 			var middle_y := (from.y + to.y) / 2.0
 			root.draw_polyline(PackedVector2Array([from, Vector2(from.x, middle_y), Vector2(to.x, middle_y), to]),
 				color, 3.0)
+
+
+## Croisement de deux tours, ou amélioration qui demande des améliorations de plusieurs branches.
+func _joins_branches(perk: Perk) -> bool:
+	if perk.is_crossing():
+		return true
+	var branches := {}
+	for required in perk.requires:
+		branches[Perks.TREE.get_branch(required)] = true
+	return branches.size() > 1
 
 
 func _on_refund_pressed() -> void:

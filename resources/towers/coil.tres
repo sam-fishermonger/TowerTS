@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/coil_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/coil_hum.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/coil.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 90
+boost_bonus = 0.1
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 140
+range_multiplier = 1.5
+boost_bonus = 0.1
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Bobine"
+description = "Ne tire pas : les tours tout autour d'elle (les 8 cases voisines) font 25 % de dégâts en plus et tirent 15 % plus vite. Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte."
+cost = 100
+scene = ExtResource("2_scene")
+attack_range = 96.0
+damage = 0.0
+fire_rate = 1.0
+color = Color(0.95, 0.6, 0.3, 1)
+turret_texture = ExtResource("10_turret")
+turret_rotates = false
+attack_sound = ExtResource("9_sound")
+boost_damage = 0.25
+boost_fire_rate = 0.15
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])
