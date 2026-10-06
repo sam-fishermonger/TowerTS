@@ -53,7 +53,7 @@ func _build() -> void:
 	header.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	header.offset_top = 72.0
 	header.offset_bottom = 100.0
-	counter_label = _label("%d / %d débloqués" % [unlocked, total], 20, Achievements.COLOR)
+	counter_label = _label(tr("%d / %d débloqués") % [unlocked, total], 20, Achievements.COLOR)
 	header.add_child(counter_label)
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(320, 14)
@@ -141,7 +141,7 @@ func _card(definition: Dictionary) -> PanelContainer:
 	var progress := Achievements.get_progress(definition)
 	if unlocked:
 		var date := Time.get_date_dict_from_unix_time(Achievements.get_unlock_time(definition.id))
-		column.add_child(_label("Débloqué le %02d/%02d/%d" % [date.day, date.month, date.year], 13,
+		column.add_child(_label(tr("Débloqué le %02d/%02d/%d") % [date.day, date.month, date.year], 13,
 			Color(Achievements.COLOR, 0.8)))
 	elif not progress.is_empty():
 		column.add_child(_label("%s / %s" % [LevelStats.format_number(mini(progress[0], progress[1])),

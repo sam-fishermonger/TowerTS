@@ -87,6 +87,17 @@ var challenge_rules: PanelContainer
 var stone_label: Label
 var workers_label: Label
 var recruit_button: Button
+## Derniers arguments de update_stats(), update_conquest() et set_interest_rules(), pour
+## réécrire leurs textes au changement de langue.
+var _stats_args := []
+var _conquest_args := []
+var _interest_rules := []
+var _score := 0
+var _worker_cost := 0
+## Prime pour lancer la prochaine vague en avance (dernier appel de show_next_wave()).
+var _next_wave_early_bonus := 0
+## Écran de fin affiché (sa fonction et ses arguments), refait au changement de langue.
+var _end_screen := Callable()
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -159,6 +170,32 @@ func _ready() -> void:
 	wave_preview.mouse_exited.connect(wave_details.close)
 
 
+## Changement de langue (menu Options en jeu) : les textes composés sont refaits avec les
+## derniers chiffres reçus ; les textes fixes se traduisent seuls.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready():
+		return
+	for button: Button in speed_buttons.get_children():
+		button.tooltip_text = _speed_tooltip(button.text)
+	if not _interest_rules.is_empty():
+		set_interest_rules.callv(_interest_rules)
+	if not _stats_args.is_empty():
+		update_stats.callv(_stats_args)
+	if recruit_button:
+		recruit_button.text = tr("Recruter · %d or (R)") % _worker_cost
+		if not _conquest_args.is_empty():
+			update_conquest.callv(_conquest_args)
+	set_score(_score)
+	if not end_panel.visible:
+		# L'aperçu de vague ne se refait que si son texte change : on l'oublie.
+		_wave_preview_text = ""
+		show_next_wave(_next_wave, _next_wave_early_bonus, _next_wave_number, _next_wave_bonus)
+	elif _end_screen.is_valid():
+		_end_screen.call()
+		if end_stats.visible:
+			_center_end_panel.call_deferred()
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if not key.pressed or key.echo or end_panel.visible or tower_picker or options_menu:
@@ -194,13 +231,17 @@ func setup(level_name: String, tower_types: Array[TowerData], game_speeds: Array
 		speed_button.focus_mode = Control.FOCUS_NONE
 		speed_button.custom_minimum_size = Vector2(36, 0)
 		speed_button.set_meta("speed", speed)
-		speed_button.tooltip_text = "Vitesse %s (V : vitesse suivante)" % speed_text
+		speed_button.tooltip_text = _speed_tooltip(speed_text)
 		speed_button.pressed.connect(game_speed_selected.emit.bind(speed))
 		speed_buttons.add_child(speed_button)
 	set_tower_types(tower_types)
 	tower_shop.tower_selected.connect(tower_selected.emit)
 	tower_shop.tower_hovered.connect(_on_shop_button_hovered)
 	tower_shop.hover_ended.connect(shop_info.close)
+
+
+func _speed_tooltip(speed_text: String) -> String:
+	return tr("Vitesse %s (V : vitesse suivante)") % speed_text
 
 
 ## Ajoute un bouton par pouvoir actif, en haut de l'écran, à gauche du bouton de vague.
@@ -243,8 +284,9 @@ func set_selected_power(power: Power) -> void:
 
 ## Bulle d'aide des intérêts : leur taux et leur plafond.
 func set_interest_rules(rate: float, cap: int) -> void:
-	interest_label.tooltip_text = ("Chaque fois que la carte est vidée, l'or gardé rapporte %d %% d'intérêts "
-		+ "(%d or au plus), avant le bonus de vague.") % [roundi(rate * 100.0), cap]
+	_interest_rules = [rate, cap]
+	interest_label.tooltip_text = tr("Chaque fois que la carte est vidée, l'or gardé rapporte %d %% d'intérêts (%d or au plus), avant le bonus de vague.") \
+		% [roundi(rate * 100.0), cap]
 
 
 ## Point de l'écran où s'affichent les intérêts versés : sous l'or.
@@ -302,11 +344,12 @@ func _select_next_speed() -> void:
 ## `interest` : or que rapporteraient les intérêts maintenant (négatif : pas d'intérêts).
 func update_stats(gold: int, lives: int, wave: int, wave_count: int, interest := -1) -> void:
 	_gold = gold
-	gold_label.text = "Or : %d" % gold
+	_stats_args = [gold, lives, wave, wave_count, interest]
+	gold_label.text = tr("Or : %d") % gold
 	interest_label.visible = interest >= 0
-	interest_label.text = "Intérêts : +%d" % maxi(interest, 0)
-	lives_label.text = "Vies : %d" % lives
-	wave_label.text = "Vague : %d / %s" % [wave, str(wave_count) if wave_count >= 0 else "∞"]
+	interest_label.text = tr("Intérêts : +%d") % maxi(interest, 0)
+	lives_label.text = tr("Vies : %d") % lives
+	wave_label.text = tr("Vague : %d / %s") % [wave, str(wave_count) if wave_count >= 0 else "∞"]
 	tower_shop.set_gold(gold)
 	shop_info.set_gold(gold)
 	tower_details.set_gold(gold)
@@ -338,6 +381,7 @@ func show_next_wave(wave: WaveData, early_bonus := 0, wave_number := 0, wave_bon
 	_next_wave = wave
 	_next_wave_number = wave_number
 	_next_wave_bonus = wave_bonus
+	_next_wave_early_bonus = early_bonus
 	if wave_changed and wave_details.visible:
 		if wave:
 			show_wave_details()
@@ -352,15 +396,15 @@ func show_next_wave(wave: WaveData, early_bonus := 0, wave_number := 0, wave_bon
 				EnemyData.plural(enemy.display_name, entry.count)]
 			var tag := EnemyInfo.rank_tag(enemy, entry.elite)
 			parts.append(part + (" " + tag if not tag.is_empty() else ""))
-		text = "[color=#ffffff99]Prochaine vague :[/color]  " + "   ".join(parts)
+		text = "[color=#ffffff99]%s[/color]  " % tr("Prochaine vague :") + "   ".join(parts)
 		if early_bonus > 0:
-			text += "\n[color=#ffd54d]Lancer maintenant : +%d or[/color]" % early_bonus
+			text += "\n[color=#ffd54d]%s[/color]" % (tr("Lancer maintenant : +%d or") % early_bonus)
 	if text == _wave_preview_text:
 		return
 	_wave_preview_text = text
 	wave_preview_label.text = text
 	wave_preview.visible = not text.is_empty()
-	next_wave_button.tooltip_text = "Lancer maintenant rapporte %d or" % early_bonus if early_bonus > 0 else ""
+	next_wave_button.tooltip_text = tr("Lancer maintenant rapporte %d or") % early_bonus if early_bonus > 0 else ""
 	wave_preview.reset_size()
 	# Le panneau, sous le bouton de vague, reste calé à droite de l'écran.
 	wave_preview.position.x = get_viewport().get_visible_rect().size.x - 8.0 - wave_preview.size.x
@@ -411,12 +455,12 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 	end_title.text = "Victoire !" if victory else "Défaite"
 	end_stars.visible = victory and stars > 0
 	end_stars.text = Progress.star_text(stars)
-	end_message.text = "Toutes les vagues ont été repoussées." if victory \
-		else "Les ennemis ont atteint votre base."
+	end_message.text = tr("Toutes les vagues ont été repoussées.") if victory \
+		else tr("Les ennemis ont atteint votre base.")
 	if new_record:
-		end_message.text += "\nNouveau record !"
+		end_message.text += "\n" + tr("Nouveau record !")
 	if not unlocked_world.is_empty():
-		end_message.text += "\nNouveau monde débloqué : %s" % unlocked_world
+		end_message.text += "\n" + tr("Nouveau monde débloqué : %s") % tr(unlocked_world)
 	next_level_button.text = "Monde suivant" if not unlocked_world.is_empty() else "Niveau suivant"
 	next_level_button.visible = can_continue
 	end_panel.visible = true
@@ -436,6 +480,7 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 		next_level_button.grab_focus()
 	else:
 		%RestartButton.grab_focus()
+	_end_screen = show_end_screen.bind(victory, can_continue, stars, new_record, unlocked_world)
 
 
 ## Écran de fin du mode infini : vagues repoussées, étoiles infinies obtenues sur le
@@ -446,11 +491,12 @@ func show_endless_end_screen(waves: int, endless_stars: int, new_record := false
 	end_stars.visible = true
 	end_stars.text = Progress.star_text(endless_stars, Progress.ENDLESS_MAX_STARS)
 	end_stars.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
-	end_message.text = "%d vague%s repoussée%s." % [waves, "s" if waves > 1 else "", "s" if waves > 1 else ""]
+	end_message.text = tr_n("%d vague repoussée.", "%d vagues repoussées.", LevelStats.plural_count(waves)) % waves
 	if new_record:
-		end_message.text += "\nNouveau record !"
-	end_message.text += "\nUne étoile infinie toutes les %d vagues au-delà de celles du niveau." \
+		end_message.text += "\n" + tr("Nouveau record !")
+	end_message.text += "\n" + tr("Une étoile infinie toutes les %d vagues au-delà de celles du niveau.") \
 		% Progress.ENDLESS_STAR_STEP
+	_end_screen = show_endless_end_screen.bind(waves, endless_stars, new_record)
 
 
 ## Statistiques de la partie et succès débloqués, à droite de l'écran de fin (à appeler
@@ -487,8 +533,8 @@ func show_achievement(definition: Dictionary) -> void:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override(&"normal_font_size", 16)
 	label.add_theme_font_size_override(&"bold_font_size", 18)
-	label.text = "[color=#%s][b]%s  Succès débloqué : %s[/b][/color]\n[color=#ffffffb0]%s[/color]" % [
-		Achievements.COLOR.to_html(false), definition.icon, definition.name, definition.description]
+	label.text = "[color=#%s][b]%s  %s[/b][/color]\n[color=#ffffffb0]%s[/color]" % [Achievements.COLOR.to_html(false),
+		definition.icon, tr("Succès débloqué : %s") % tr(definition.name), tr(definition.description)]
 	toast.add_child(label)
 	achievement_toasts.add_child(toast)
 	_place_achievement_toasts.call_deferred()
@@ -549,7 +595,8 @@ func setup_conquest(worker_cost: int, stone_cost: Callable) -> void:
 	workers_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(workers_label)
 	recruit_button = Button.new()
-	recruit_button.text = "Recruter · %d or (R)" % worker_cost
+	_worker_cost = worker_cost
+	recruit_button.text = tr("Recruter · %d or (R)") % worker_cost
 	recruit_button.tooltip_text = "Un ouvrier de plus, au QG : il mine la pierre et bâtit les tours."
 	recruit_button.focus_mode = Control.FOCUS_NONE
 	recruit_button.add_theme_font_size_override("font_size", 13)
@@ -565,10 +612,11 @@ func setup_conquest(worker_cost: int, stone_cost: Callable) -> void:
 ## Pierre, ouvriers (sur le maximum), secondes avant la prochaine vague (négatif : pas
 ## de compte à rebours) et si l'on peut recruter.
 func update_conquest(stone: int, workers: int, max_workers: int, countdown: float, can_recruit: bool) -> void:
-	stone_label.text = "Pierre : %d" % stone
-	workers_label.text = "Ouvriers : %d / %d" % [workers, max_workers]
+	_conquest_args = [stone, workers, max_workers, countdown, can_recruit]
+	stone_label.text = tr("Pierre : %d") % stone
+	workers_label.text = tr("Ouvriers : %d / %d") % [workers, max_workers]
 	recruit_button.disabled = not can_recruit or end_panel.visible
-	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else "Vague dans %d s" % ceili(countdown)
+	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else tr("Vague dans %d s") % ceili(countdown)
 	tower_shop.set_stone(stone)
 
 
@@ -632,8 +680,9 @@ func hide_challenge_rules() -> void:
 
 
 func set_score(score: int) -> void:
+	_score = score
 	if score_label:
-		score_label.text = "Score : %d" % score
+		score_label.text = tr("Score : %d") % score
 
 
 ## Écran de fin du défi du jour : score de la partie, meilleur score du jour, et
@@ -643,12 +692,13 @@ func show_challenge_end_screen(victory: bool, score: int, best: int, new_record 
 	hide_challenge_rules()
 	end_title.text = "Défi réussi !" if victory else "Défi perdu"
 	end_stars.visible = true
-	end_stars.text = "%d points" % score
+	end_stars.text = tr("%d points") % score
 	end_stars.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
-	end_message.text += "\nMeilleur score du jour : %d" % best
+	end_message.text += "\n" + tr("Meilleur score du jour : %d") % best
 	if new_record:
-		end_message.text += "\nNouveau record !"
-	end_message.text += "\nUn nouveau défi demain."
+		end_message.text += "\n" + tr("Nouveau record !")
+	end_message.text += "\n" + tr("Un nouveau défi demain.")
+	_end_screen = show_challenge_end_screen.bind(victory, score, best, new_record)
 
 
 # --- Fenêtres de détail -------------------------------------------------------
@@ -660,8 +710,8 @@ func show_wave_details() -> void:
 		wave_details.close()
 		return
 	var lines: Array[String] = []
-	lines.append("[b]Vague %d[/b]   [color=%s]Bonus : +%d or[/color]" % [_next_wave_number, EnemyInfo.GOLD_HEX,
-		_next_wave_bonus])
+	lines.append("[b]%s[/b]   [color=%s]%s[/color]" % [tr("Vague %d") % _next_wave_number, EnemyInfo.GOLD_HEX,
+		tr("Bonus : +%d or") % _next_wave_bonus])
 	for entry in _next_wave.get_summary():
 		var data: EnemyData = entry.enemy.make_elite() if entry.elite else entry.enemy
 		lines.append("")
@@ -677,9 +727,9 @@ func show_wave_details() -> void:
 
 func _process(_delta: float) -> void:
 	_update_hovered_enemy()
-	var hint := TOUCH_HINT if GameSettings.is_touch_mode() else MOUSE_HINT
+	var hint := tr(TOUCH_HINT) if GameSettings.is_touch_mode() else tr(MOUSE_HINT)
 	if recruit_button:
-		hint = CONQUEST_HINT + "  ·  " + hint
+		hint = tr(CONQUEST_HINT) + "  ·  " + hint
 	if shop_hint.text != hint:
 		shop_hint.text = hint
 

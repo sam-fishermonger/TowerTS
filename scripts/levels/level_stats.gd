@@ -137,11 +137,18 @@ static func format_duration(seconds: float) -> String:
 	return "%d:%02d" % [total / 60, total % 60]
 
 
-## Grand nombre lisible : « 12 345 ».
+## Grand nombre lisible : « 12 345 » (en anglais : « 12,345 »).
 static func format_number(value: float) -> String:
 	var digits := str(roundi(value))
+	var separator := " " if GameSettings.get_language() == "fr" else ","
 	var result := ""
 	while digits.length() > 3:
-		result = " " + digits.right(3) + result
+		result = separator + digits.right(3) + result
 		digits = digits.left(digits.length() - 3)
 	return digits + result
+
+
+## Nombre à passer à tr_n() : en français, 0 se dit au singulier (« 0 destruction »), alors
+## que sans traduction Godot ne garde le singulier que pour 1.
+static func plural_count(count: int) -> int:
+	return 1 if count == 0 and GameSettings.get_language() == "fr" else count

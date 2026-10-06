@@ -49,17 +49,17 @@ func get_stats_lines() -> Array[String]:
 	var lines: Array[String] = []
 	match kind:
 		Kind.METEORS:
-			lines.append("%d météores de %d dégâts" % [count, roundi(damage)])
+			lines.append(tr("%d météores de %d dégâts") % [count, roundi(damage)])
 		Kind.FREEZE:
-			lines.append("Gel de %s s" % _seconds(duration))
+			lines.append(tr("Gel de %s s") % _seconds(duration))
 			if vulnerability > 0.0:
-				lines.append("+%d %% de dégâts subis" % roundi(vulnerability * 100.0))
+				lines.append(tr("+%d %% de dégâts subis") % roundi(vulnerability * 100.0))
 		Kind.REINFORCEMENTS:
-			lines.append("%d soldats, %d vie, %d dégâts/s" % [count, roundi(health), roundi(damage)])
-			lines.append("%s s sur le terrain" % _seconds(duration))
-	lines.append("Recharge : %s s" % _seconds(cooldown))
+			lines.append(tr("%d soldats, %d vie, %d dégâts/s") % [count, roundi(health), roundi(damage)])
+			lines.append(tr("%s s sur le terrain") % _seconds(duration))
+	lines.append(tr("Recharge : %s s") % _seconds(cooldown))
 	return lines
 
 
 static func _seconds(value: float) -> String:
-	return str(snappedf(value, 0.1)).trim_suffix(".0").replace(".", ",")
+	return GameSettings.decimal(value)

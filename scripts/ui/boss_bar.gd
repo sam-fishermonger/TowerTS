@@ -60,7 +60,7 @@ func _refresh() -> void:
 		return
 	var boss := _bosses[0]
 	var others := _bosses.size() - 1
-	_name_label.text = boss.data.display_name + ("  (+%d)" % others if others > 0 else "")
+	_name_label.text = tr(boss.data.display_name) + ("  (+%d)" % others if others > 0 else "")
 	_bars.queue_redraw()
 
 

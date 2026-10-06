@@ -84,9 +84,9 @@ func _build() -> void:
 	rules.add_theme_font_size_override("bold_font_size", 18)
 	var lines: Array[String] = []
 	for rule in challenge.rules:
-		var text := DailyChallenge.RULE_TEXTS[rule]
-		lines.append("•  [b]%s[/b] : %s" % [DailyChallenge.RULE_NAMES[rule], text.left(1).to_lower() + text.substr(1)])
-	lines.append("•  [b]Sans l'arbre des améliorations[/b] : tout le monde joue avec les mêmes tours et les mêmes prix.")
+		var text := tr(DailyChallenge.RULE_TEXTS[rule])
+		lines.append(tr("•  [b]%s[/b] : %s") % [tr(DailyChallenge.RULE_NAMES[rule]), text.left(1).to_lower() + text.substr(1)])
+	lines.append(tr("•  [b]Sans l'arbre des améliorations[/b] : tout le monde joue avec les mêmes tours et les mêmes prix."))
 	rules.text = "\n".join(lines)
 	column.add_child(rules)
 	var score_rule := _add_label(column, DailyChallenge.describe_score(), 15, MUTED_COLOR, false)
@@ -94,7 +94,7 @@ func _build() -> void:
 
 	column.add_child(HSeparator.new())
 	var best := Progress.get_daily_score(challenge.date_key)
-	_add_label(column, "Meilleur score aujourd'hui : %d" % best if best >= 0 else "Pas encore joué aujourd'hui.",
+	_add_label(column, tr("Meilleur score aujourd'hui : %d") % best if best >= 0 else "Pas encore joué aujourd'hui.",
 		22, SCORE_COLOR, true)
 	var history := get_history_text()
 	if not history.is_empty():
@@ -134,20 +134,22 @@ func get_history_text() -> String:
 	var recent := PackedStringArray()
 	for day: String in days:
 		if day != challenge.date_key and recent.size() < HISTORY_DAYS:
-			recent.append("%s : %d" % [_short_date(day), scores[day]])
-	var text := "Record de tous les défis : %d (%s)  ·  %d défi%s joué%s" % [scores[best_day], _short_date(best_day),
-		days.size(), "s" if days.size() > 1 else "", "s" if days.size() > 1 else ""]
+			recent.append(tr("%s : %d") % [_short_date(day), scores[day]])
+	var text := tr("Record de tous les défis : %d (%s)") % [scores[best_day], _short_date(best_day)] + "  ·  " \
+		+ (tr("%d défis joués") if days.size() > 1 else tr("%d défi joué")) % days.size()
 	if not recent.is_empty():
-		text += "\nDerniers jours : " + "   ".join(recent)
+		text += "\n" + tr("Derniers jours : %s") % "   ".join(recent)
 	return text
 
 
-## « 6 oct. » pour « 2026-10-06 ».
+## « 6 oct. » pour « 2026-10-06 » (« 10/6 » en anglais : le numéro du mois).
 static func _short_date(key: String) -> String:
 	var parts := key.split("-")
 	if parts.size() != 3:
 		return key
-	return "%d %s" % [parts[2].to_int(), SHORT_MONTHS[clampi(parts[1].to_int() - 1, 0, 11)]]
+	var month := clampi(parts[1].to_int() - 1, 0, 11)
+	return TranslationServer.translate("{day} {month}").format({day = parts[2].to_int(), month = SHORT_MONTHS[month],
+		month_number = month + 1})
 
 
 static func _capitalized(text: String) -> String:

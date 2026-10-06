@@ -215,13 +215,7 @@ func _ready() -> void:
 		tower_types = types
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
-	var title := "%s  ·  Mode infini" % level_name if is_endless \
-		else "%s  ·  %s" % [level_name, Difficulty.NAMES[difficulty]]
-	if challenge:
-		title = "Défi du jour  ·  %s" % level_name
-	if is_tutorial:
-		title = level_name
-	hud.setup(title, tower_types, game_speeds)
+	hud.setup(get_title(), tower_types, game_speeds)
 	if not custom_level.is_empty():
 		hud.set_menu_button_text("Retour à l'éditeur")
 	if conquest:
@@ -280,6 +274,23 @@ func _ready() -> void:
 		add_child(tutorial)
 		tutorial.setup(self)
 	Sound.play_music()
+
+
+## Titre du niveau dans la barre du haut, avec le mode ou la difficulté (traduit).
+func get_title() -> String:
+	if is_tutorial:
+		return tr(level_name)
+	if challenge:
+		return tr("Défi du jour  ·  %s") % tr(level_name)
+	if is_endless:
+		return tr("%s  ·  Mode infini") % tr(level_name)
+	return "%s  ·  %s" % [tr(level_name), tr(Difficulty.NAMES[difficulty])]
+
+
+## Changement de langue (menu Options en jeu) : le titre est composé, le HUD refait le reste.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		hud.level_label.text = get_title()
 
 
 func _exit_tree() -> void:
@@ -398,7 +409,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 ## Mode Conquête : un chantier vient d'être fini, la tour entre en jeu.
 func on_tower_built(tower: Tower) -> void:
 	Sound.play(&"upgrade")
-	_show_floating_text("Tour bâtie", Color(0.6, 1.0, 0.65), tower.global_position + Vector2(0, -32), 14)
+	_show_floating_text(tr("Tour bâtie"), Color(0.6, 1.0, 0.65), tower.global_position + Vector2(0, -32), 14)
 	refresh_boosts()
 	if placer.inspected_tower == tower:
 		hud.show_tower_details(tower)
@@ -702,7 +713,7 @@ func _revive(data: EnemyData, path: Path2D, at_progress: float, health_multiplie
 		return
 	var enemy := spawner.spawn(data, path, at_progress, health_multiplier, data.revive_health_ratio, revives)
 	Sound.play(&"enemy_split")
-	_show_floating_text("Se relève !", Color(0.75, 0.55, 1.0), enemy.global_position + Vector2(0, -data.radius - 14.0), 14)
+	_show_floating_text(tr("Se relève !"), Color(0.75, 0.55, 1.0), enemy.global_position + Vector2(0, -data.radius - 14.0), 14)
 
 
 ## Renforts appelés par un ennemi (un boss) : ils apparaissent en file derrière lui.
@@ -737,7 +748,7 @@ func _check_wave_cleared() -> void:
 	if interest > 0:
 		gold += interest
 		stats.gold_earned += interest
-		_show_floating_text("+%d intérêts" % interest, GOLD_TEXT_COLOR, hud.get_interest_anchor(), 16)
+		_show_floating_text(tr("+%d intérêts") % interest, GOLD_TEXT_COLOR, hud.get_interest_anchor(), 16)
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
 	while _wave_bonus_paid < spawner.current_wave:

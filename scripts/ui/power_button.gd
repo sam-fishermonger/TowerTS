@@ -21,14 +21,24 @@ func setup(value: Power, key: String) -> void:
 	custom_minimum_size = Vector2(118, 44)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	add_theme_font_size_override("font_size", 14)
-	tooltip_text = "%s (touche %s)\n%s\n%s" % [power.display_name, key_text, power.description,
-		"\n".join(power.get_stats_lines())]
+	_refresh_tooltip()
 	# Même cadre que les cases de la barre d'achat, à la couleur du pouvoir.
 	UiStyle.apply_styles(self, UiStyle.slot_styles(power.color, ICON_SIZE + 12.0, 10.0))
 	add_theme_color_override("font_color", power.color.lightened(0.35))
 	add_theme_color_override("font_hover_color", power.color.lightened(0.5))
 	add_theme_color_override("font_pressed_color", Color.WHITE)
 	add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.45))
+
+
+## Bulle d'aide : nom, touche, description et statistiques du pouvoir (refaite au changement de langue).
+func _refresh_tooltip() -> void:
+	tooltip_text = tr("%s (touche %s)") % [tr(power.display_name), key_text] + "\n%s\n%s" % [tr(power.description),
+		"\n".join(power.get_stats_lines())]
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and power:
+		_refresh_tooltip()
 
 
 ## Recharge restante et pouvoir utilisable maintenant (sinon le bouton est grisé).

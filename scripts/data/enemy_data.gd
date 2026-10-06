@@ -13,10 +13,14 @@ const ELITE_REWARD := 4.0
 const ELITE_DAMAGE := 2
 const ELITE_COLOR := Color(1.0, 0.8, 0.25)
 const BOSS_COLOR := Color(1.0, 0.35, 0.3)
+## Pluriels anglais irréguliers des noms traduits (voir plural()).
+const ENGLISH_PLURALS := {"Larva": "Larvae", "Colossus": "Colossi"}
 
 @export var display_name := "Ennemi"
 ## Courte présentation, affichée dans le lexique.
 @export_multiline var description := ""
+## Nom de l'ennemi d'origine d'un élite (make_elite()), pour traduire « Larve élite ».
+var base_name := ""
 @export var max_health := 50.0
 ## Dégâts retirés à chaque coup reçu (un coup inflige toujours au moins 1).
 @export var armor := 0.0
@@ -97,6 +101,7 @@ func make_elite() -> EnemyData:
 	var elite: EnemyData = duplicate()
 	elite.is_elite = true
 	elite.display_name = "%s élite" % display_name
+	elite.base_name = display_name
 	elite.max_health = max_health * ELITE_HEALTH
 	elite.max_shield = max_shield * ELITE_HEALTH
 	elite.shield_regen = shield_regen * ELITE_HEALTH
@@ -111,38 +116,77 @@ func make_elite() -> EnemyData:
 func get_abilities() -> Array[String]:
 	var result: Array[String] = []
 	if is_boss:
-		result.append("Boss : un seul par vague, sa vie s'affiche en haut de l'écran.")
+		result.append(tr("Boss : un seul par vague, sa vie s'affiche en haut de l'écran."))
 	if is_elite:
-		result.append("Élite : vie x%s, %d fois plus d'or." % [str(ELITE_HEALTH).trim_suffix(".0"),
+		result.append(tr("Élite : vie x%s, %d fois plus d'or.") % [str(ELITE_HEALTH).trim_suffix(".0"),
 			roundi(ELITE_REWARD)])
 	if flying:
-		result.append("Volant : survole le chemin en coupant les virages. Mortier, Lance-flammes et nuages ne l'atteignent pas.")
+		result.append(tr("Volant : survole le chemin en coupant les virages. Mortier, Lance-flammes et nuages ne l'atteignent pas."))
 	if stealthy:
-		result.append("Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même.")
+		result.append(tr("Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même."))
 	if armor > 0.0:
-		result.append("Armure : chaque coup perd %s dégâts (au moins 1 passe)." % str(armor).trim_suffix(".0"))
+		result.append(tr("Armure : chaque coup perd %s dégâts (au moins 1 passe).") % str(armor).trim_suffix(".0"))
 	if max_shield > 0.0:
-		result.append("Bouclier d'énergie de %d points, qui encaisse en premier et se recharge (%d/s)."
+		result.append(tr("Bouclier d'énergie de %d points, qui encaisse en premier et se recharge (%d/s).")
 			% [roundi(max_shield), roundi(shield_regen)])
 	if heal_amount > 0.0:
-		result.append("Soigne de %d points les ennemis autour de lui, toutes les %s s."
+		result.append(tr("Soigne de %d points les ennemis autour de lui, toutes les %s s.")
 			% [roundi(heal_amount), str(heal_interval).trim_suffix(".0")])
 	if summon_enemy and summon_count > 0:
-		result.append("Appelle %d %s en renfort toutes les %s s."
+		result.append(tr("Appelle %d %s en renfort toutes les %s s.")
 			% [summon_count, plural(summon_enemy.display_name, summon_count), str(summon_interval).trim_suffix(".0")])
 	if revive_count > 0:
-		result.append("Se relève %s avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré."
-			% ["une fois" if revive_count == 1 else "%d fois" % revive_count, roundi(revive_health_ratio * 100.0),
-			str(revive_delay).trim_suffix(".0").replace(".", ",")])
+		var percent := roundi(revive_health_ratio * 100.0)
+		# Pas GameSettings.decimal() ici : GameSettings dépend (de loin) des ressources d'ennemis.
+		var delay := str(revive_delay).trim_suffix(".0")
+		if _is_french():
+			delay = delay.replace(".", ",")
+		if revive_count == 1:
+			result.append(tr("Se relève une fois avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré.")
+				% [percent, delay])
+		else:
+			result.append(tr("Se relève %d fois avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré.")
+				% [revive_count, percent, delay])
 	if split_into and split_count > 0:
-		result.append("Libère %d %s à sa mort." % [split_count, plural(split_into.display_name, split_count)])
+		result.append(tr("Libère %d %s à sa mort.") % [split_count, plural(split_into.display_name, split_count)])
 	return result
 
 
-## Nom au pluriel s'il y en a plusieurs : « 3 Larves », « 2 Porte-drones ».
+## Nom traduit, au pluriel s'il y en a plusieurs : « 3 Larves », « 2 Porte-drones »
+## (en anglais : « 3 Larvae », « 2 Drone Carriers »).
 static func plural(name: String, count: int) -> String:
+	if not _is_french():
+		return _english_plural(TranslationServer.translate(name), count)
 	if count <= 1 or name.ends_with("s") or name.ends_with("x"):
 		return name
 	var words := name.split(" ")
 	words[0] += "s"
 	return " ".join(words)
+
+
+## Le jeu est en français (langue d'origine des noms et des textes).
+static func _is_french() -> bool:
+	return TranslationServer.get_locale().begins_with("fr")
+
+
+## Pluriel anglais : le dernier mot prend un « s » (« es » après s, x, ch, sh), sauf
+## les pluriels irréguliers.
+static func _english_plural(name: String, count: int) -> String:
+	if count <= 1:
+		return name
+	if ENGLISH_PLURALS.has(name):
+		return ENGLISH_PLURALS[name]
+	for ending in ["s", "x", "ch", "sh"]:
+		if name.ends_with(ending):
+			return name + "es"
+	# « Mummy » devient « Mummies ».
+	if name.ends_with("y") and not "aeiou".contains(name[-2]):
+		return name.left(-1) + "ies"
+	return name + "s"
+
+
+## Nom affiché, traduit : « Larve élite » devient « Elite Larva ».
+func get_translated_name() -> String:
+	if not base_name.is_empty():
+		return tr("%s élite") % tr(base_name)
+	return tr(display_name)

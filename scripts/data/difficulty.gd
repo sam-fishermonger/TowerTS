@@ -13,6 +13,7 @@ const COUNT := 4
 const DEFAULT := MOYEN
 ## Réglage (Progress) qui garde la difficulté choisie.
 const SETTING := "difficulty"
+## Noms en français (ils servent aussi de clé, voir Progress) : tr() à l'affichage.
 const NAMES: Array[String] = ["Facile", "Moyen", "Difficile", "Cauchemar"]
 const COLORS: Array[Color] = [Color(0.55, 0.9, 0.5), Color(0.95, 0.85, 0.45), Color(1.0, 0.6, 0.3),
 	Color(0.95, 0.35, 0.45)]
@@ -38,19 +39,21 @@ static func set_current(difficulty: int) -> void:
 
 ## « 6 tours différentes au plus par niveau. »
 static func describe_tower_limit(difficulty: int) -> String:
-	return "%d tours différentes au plus par niveau." % TOWER_LIMITS[difficulty]
+	return TranslationServer.translate("%d tours différentes au plus par niveau.") % TOWER_LIMITS[difficulty]
 
 
 ## Effets d'une difficulté, en une phrase : « Monstres 35 % plus résistants, 25 % plus
-## nombreux et 10 % plus rapides. »
+## nombreux et 10 % plus rapides. » (traduite : phrase et morceaux sont dans en.po).
 static func describe(difficulty: int) -> String:
 	if difficulty == MOYEN:
-		return "Les monstres tels que le niveau les prévoit."
+		return TranslationServer.translate("Les monstres tels que le niveau les prévoit.")
 	var parts: Array[String] = []
-	for item in [[HEALTH[difficulty], "résistants"], [ENEMY_COUNT[difficulty], "nombreux"],
-			[SPEED[difficulty], "rapides"]]:
+	for item in [[HEALTH[difficulty], "%d %% plus résistants", "%d %% moins résistants"],
+			[ENEMY_COUNT[difficulty], "%d %% plus nombreux", "%d %% moins nombreux"],
+			[SPEED[difficulty], "%d %% plus rapides", "%d %% moins rapides"]]:
 		var percent := roundi((item[0] - 1.0) * 100.0)
 		if percent != 0:
-			parts.append("%d %% %s %s" % [absi(percent), "plus" if percent > 0 else "moins", item[1]])
-	var text := ", ".join(parts.slice(0, -1)) + " et " + parts[-1] if parts.size() > 1 else parts[0]
-	return "Monstres %s." % text
+			parts.append(TranslationServer.translate(item[1] if percent > 0 else item[2]) % absi(percent))
+	var text := TranslationServer.translate("%s et %s") % [", ".join(parts.slice(0, -1)), parts[-1]] \
+		if parts.size() > 1 else parts[0]
+	return TranslationServer.translate("Monstres %s.") % text

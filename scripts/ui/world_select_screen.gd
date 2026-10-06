@@ -104,13 +104,11 @@ func _refresh() -> void:
 	var difficulty := Difficulty.get_current()
 	get_difficulty_button(difficulty).set_pressed_no_signal(true)
 	if endless_mode:
-		mode_hint.text = ("Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d "
-			+ "vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les "
-			+ "spécialisations des tours, dans Améliorations.") % [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
+		mode_hint.text = tr("Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les spécialisations des tours, dans Améliorations.") \
+			% [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
 	else:
-		mode_hint.text = ("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau "
-			+ "avec 3 étoiles ouvre son mode infini.") % [Difficulty.NAMES[difficulty], Difficulty.describe(difficulty),
-			Difficulty.describe_tower_limit(difficulty)]
+		mode_hint.text = tr("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau avec 3 étoiles ouvre son mode infini.") \
+			% [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty), Difficulty.describe_tower_limit(difficulty)]
 	for card in worlds_box.get_children():
 		worlds_box.remove_child(card)
 		card.queue_free()
@@ -155,7 +153,7 @@ func _make_card(world_index: int) -> Control:
 	column.add_theme_constant_override(&"separation", 12)
 	card.add_child(column)
 
-	var number := _label("Monde %d" % (world_index + 1), 16, Color(1, 1, 1, 0.55))
+	var number := _label(tr("Monde %d") % (world_index + 1), 16, Color(1, 1, 1, 0.55))
 	column.add_child(number)
 	var title := _label(world.display_name, 30, world.color)
 	title.name = "WorldName"
@@ -212,7 +210,7 @@ func _make_card(world_index: int) -> Control:
 		else:
 			button.disabled = not Progress.is_unlocked(CAMPAIGN, first + i)
 			button.text = "%d-%d\n%s" % [world_index + 1, i + 1,
-				"Verrouillé" if button.disabled else Progress.star_text(Progress.get_stars(path, Difficulty.get_current()))]
+				tr("Verrouillé") if button.disabled else Progress.star_text(Progress.get_stars(path, Difficulty.get_current()))]
 			if not button.disabled:
 				button.tooltip_text = _level_tooltip(path)
 		_level_buttons[path] = button
@@ -228,8 +226,8 @@ func _make_card(world_index: int) -> Control:
 	column.add_child(grid)
 
 	if not unlocked:
-		var hint := _label("Gagner le dernier niveau de %s pour débloquer ce monde."
-			% CAMPAIGN.worlds[world_index - 1].display_name, 15, Color(1, 1, 1, 0.6))
+		var hint := _label(tr("Gagner le dernier niveau de %s pour débloquer ce monde.")
+			% tr(CAMPAIGN.worlds[world_index - 1].display_name), 15, Color(1, 1, 1, 0.6))
 		hint.name = "LockedHint"
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		column.add_child(hint)
@@ -240,7 +238,7 @@ func _make_card(world_index: int) -> Control:
 func _level_tooltip(path: String) -> String:
 	var lines: Array[String] = []
 	for d in Difficulty.COUNT:
-		lines.append("%s  %s" % [Progress.star_text(Progress.get_stars(path, d)), Difficulty.NAMES[d]])
+		lines.append("%s  %s" % [Progress.star_text(Progress.get_stars(path, d)), tr(Difficulty.NAMES[d])])
 	return "\n".join(lines)
 
 
@@ -249,12 +247,13 @@ func _level_tooltip(path: String) -> String:
 func _setup_endless_button(button: Button, path: String, number: String) -> void:
 	button.disabled = not Progress.is_endless_unlocked(path)
 	if button.disabled:
-		button.text = "%s\nVerrouillé" % number
+		button.text = "%s\n%s" % [number, tr("Verrouillé")]
 		button.tooltip_text = "Gagner ce niveau avec 3 étoiles pour ouvrir son mode infini."
 		return
 	button.text = "%s  ∞\n%s" % [number, Progress.star_text(Progress.get_endless_stars(path), Progress.ENDLESS_MAX_STARS)]
 	var record := Progress.get_endless_waves(path)
-	button.tooltip_text = "Record : %d vague%s" % [record, "s" if record > 1 else ""] if record > 0 else "Pas encore joué"
+	button.tooltip_text = (tr("Record : %d vagues") if record > 1 else tr("Record : %d vague")) % record if record > 0 \
+		else "Pas encore joué"
 	for color_name in [&"font_color", &"font_hover_color", &"font_focus_color", &"font_pressed_color"]:
 		button.add_theme_color_override(color_name, ENDLESS_COLOR)
 
@@ -283,16 +282,16 @@ func get_level_details(path: String) -> String:
 	var number := "%d-%d" % [world + 1, CAMPAIGN.worlds[world].levels.find(path) + 1]
 	var bonuses := Perks.get_bonuses()
 	var lines: Array[String] = []
-	lines.append("[b]%s[/b]   [color=#%s]%s[/color]" % [level.level_name if level.level_name.contains(number)
-		else "%s  ·  %s" % [number, level.level_name], Difficulty.COLORS[difficulty].to_html(false),
-		"Mode infini" if endless_mode else Difficulty.NAMES[difficulty]])
-	lines.append("[color=%s]%d vagues  ·  Or de départ : %d  ·  Vies : %d[/color]" % [EnemyInfo.MUTED,
+	lines.append("[b]%s[/b]   [color=#%s]%s[/color]" % [tr(level.level_name) if level.level_name.contains(number)
+		else "%s  ·  %s" % [number, tr(level.level_name)], Difficulty.COLORS[difficulty].to_html(false),
+		tr("Mode infini") if endless_mode else tr(Difficulty.NAMES[difficulty])])
+	lines.append(tr("[color=%s]%d vagues  ·  Or de départ : %d  ·  Vies : %d[/color]") % [EnemyInfo.MUTED,
 		spawner.get_wave_count(), level.starting_gold + bonuses.starting_gold_bonus,
 		level.starting_lives + bonuses.lives_bonus])
 	for i in spawner.get_wave_count():
-		lines.append("[color=%s]V%d[/color]  %s" % [EnemyInfo.MUTED, i + 1, EnemyInfo.wave_line(spawner.waves[i], 18)])
+		lines.append(tr("[color=%s]V%d[/color]  %s") % [EnemyInfo.MUTED, i + 1, EnemyInfo.wave_line(spawner.waves[i], 18)])
 	if endless_mode:
-		lines.append("[color=%s]Puis les %d dernières vagues en boucle, de plus en plus dures.[/color]"
+		lines.append(tr("[color=%s]Puis les %d dernières vagues en boucle, de plus en plus dures.[/color]")
 			% [EnemyInfo.MUTED, WaveSpawner.ENDLESS_CYCLE])
 	level.free()
 	_details_cache[key] = "\n".join(lines)

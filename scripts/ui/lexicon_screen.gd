@@ -79,7 +79,7 @@ func show_tab(tab: Tab) -> void:
 	match tab:
 		Tab.TOWERS:
 			for data in get_all_towers():
-				_add_entry(data.display_name, data.color.lightened(0.3), null, data, show_tower.bind(data))
+				_add_entry(tr(data.display_name), data.color.lightened(0.3), null, data, show_tower.bind(data))
 		Tab.ENEMIES:
 			_add_entry("Élites", EnemyData.ELITE_COLOR, null, null, show_elites)
 			for world in CAMPAIGN.worlds:
@@ -88,12 +88,12 @@ func show_tab(tab: Tab) -> void:
 					_add_entry(enemy.display_name, enemy.color.lightened(0.35), enemy.texture, null,
 						show_enemy.bind(enemy, world))
 				for boss in world.bosses:
-					_add_entry("%s  ·  boss" % boss.display_name, EnemyData.BOSS_COLOR, boss.texture, null,
+					_add_entry(tr("%s  ·  boss") % tr(boss.display_name), EnemyData.BOSS_COLOR, boss.texture, null,
 						show_enemy.bind(boss, world))
 		Tab.WORLDS:
 			for i in CAMPAIGN.worlds.size():
 				var world := CAMPAIGN.worlds[i]
-				_add_entry("%d. %s" % [i + 1, world.display_name], world.color,
+				_add_entry("%d. %s" % [i + 1, tr(world.display_name)], world.color,
 					world.enemies[0].texture if not world.enemies.is_empty() else null, null, show_world.bind(i))
 	var first := get_entry_buttons()
 	if not first.is_empty():
@@ -113,122 +113,121 @@ func get_entry_buttons() -> Array[Button]:
 # --- Fiches ---------------------------------------------------------------------
 
 func show_tower(data: TowerData) -> void:
-	_set_detail_header(data.display_name, data.color, null, data)
+	_set_detail_header(tr(data.display_name), data.color, null, data)
 	var lines: Array[String] = []
 	if not data.description.is_empty():
-		lines.append(data.description)
+		lines.append(tr(data.description))
 		lines.append("")
-	lines.append(_line("Prix", "%d or" % data.cost))
-	lines.append(_line("Dégâts", _num(data.damage)))
-	lines.append(_line("Cadence", "%s tirs/s" % _num(data.fire_rate, 2)))
-	lines.append(_line("Dégâts/s", _num(data.get_dps())))
-	lines.append(_line("Portée", _num(data.attack_range)))
+	lines.append(_line(tr("Prix"), tr("%d or") % data.cost))
+	lines.append(_line(tr("Dégâts"), _num(data.damage)))
+	lines.append(_line(tr("Cadence"), tr("%s tirs/s") % _num(data.fire_rate, 2)))
+	lines.append(_line(tr("Dégâts/s"), _num(data.get_dps())))
+	lines.append(_line(tr("Portée"), _num(data.attack_range)))
 	if data.splash_radius > 0.0:
-		lines.append(_line("Explosion", "rayon %s" % _num(data.splash_radius)))
+		lines.append(_line(tr("Explosion"), tr("rayon %s") % _num(data.splash_radius)))
 	if data.slow_factor <= 0.0:
-		lines.append(_line("Étourdit", "%s s" % _num(data.slow_duration)))
+		lines.append(_line(tr("Étourdit"), "%s s" % _num(data.slow_duration)))
 	elif data.slow_factor < 1.0:
-		lines.append(_line("Ralentit", "-%d %% pendant %s s" % [roundi((1.0 - data.slow_factor) * 100.0),
+		lines.append(_line(tr("Ralentit"), tr("-%d %% pendant %s s") % [roundi((1.0 - data.slow_factor) * 100.0),
 			_num(data.slow_duration)]))
 	if data.beam_ramp_max > 1.0:
-		lines.append(_line("Montée", "jusqu'à x%s en %s s" % [_num(data.beam_ramp_max), _num(data.beam_ramp_time)]))
+		lines.append(_line(tr("Montée"), tr("jusqu'à x%s en %s s") % [_num(data.beam_ramp_max), _num(data.beam_ramp_time)]))
 	if data.dot_damage > 0.0:
-		lines.append(_line("Poison" if data.cloud_radius > 0.0 else "Brûlure",
-			"%s/s pendant %s s, sous l'armure" % [_num(data.dot_damage), _num(data.dot_duration)]))
+		lines.append(_line(tr("Poison") if data.cloud_radius > 0.0 else tr("Brûlure"),
+			tr("%s/s pendant %s s, sous l'armure") % [_num(data.dot_damage), _num(data.dot_duration)]))
 	if data.cloud_radius > 0.0:
-		lines.append(_line("Nuage", "rayon %s, %s s" % [_num(data.cloud_radius), _num(data.cloud_duration)]))
+		lines.append(_line(tr("Nuage"), tr("rayon %s, %s s") % [_num(data.cloud_radius), _num(data.cloud_duration)]))
 	if not data.hits_air:
-		lines.append(_line("Volants", "hors d'atteinte (tir au sol)"))
+		lines.append(_line(tr("Volants"), tr("hors d'atteinte (tir au sol)")))
 	elif data.air_damage_multiplier != 1.0:
-		lines.append(_line("Volants", "x%s dégâts" % _num(data.air_damage_multiplier)))
+		lines.append(_line(tr("Volants"), tr("x%s dégâts") % _num(data.air_damage_multiplier)))
 	if data.detects_stealth():
-		lines.append(_line("Détection", "révèle les furtifs dans un rayon de %s" % _num(data.detection_range)))
+		lines.append(_line(tr("Détection"), tr("révèle les furtifs dans un rayon de %s") % _num(data.detection_range)))
 	if data.armor_piercing:
-		lines.append(_line("Armure", "ignorée"))
+		lines.append(_line(tr("Armure"), tr("ignorée")))
 	if data.shield_damage_multiplier != 1.0:
-		lines.append(_line("Boucliers", "x%s dégâts" % _num(data.shield_damage_multiplier)))
+		lines.append(_line(tr("Boucliers"), tr("x%s dégâts") % _num(data.shield_damage_multiplier)))
 	if data.shield_jam_duration > 0.0:
-		lines.append(_line("Brouillage", "%s s sans recharge du bouclier" % _num(data.shield_jam_duration)))
+		lines.append(_line(tr("Brouillage"), tr("%s s sans recharge du bouclier") % _num(data.shield_jam_duration)))
 	if data.heal_block_duration > 0.0:
-		lines.append(_line("Anti-soin", "%s s" % _num(data.heal_block_duration)))
+		lines.append(_line(tr("Anti-soin"), "%s s" % _num(data.heal_block_duration)))
 	if data.revive_block_duration > 0.0:
-		lines.append(_line("Consacre", "%s s : un ennemi touché ne peut plus se relever" % _num(data.revive_block_duration)))
+		lines.append(_line(tr("Consacre"), tr("%s s : un ennemi touché ne peut plus se relever") % _num(data.revive_block_duration)))
 	if data.prefers_healers:
-		lines.append(_line("Cible", "les soigneurs en premier"))
+		lines.append(_line(tr("Cible"), tr("les soigneurs en premier")))
 	if not data.upgrades.is_empty():
 		lines.append("")
-		lines.append("[b]Améliorations[/b]")
+		lines.append("[b]%s[/b]" % tr("Améliorations"))
 		for i in data.upgrades.size():
-			lines.append("Niveau %d  [color=%s](%d or)[/color] : %s" % [i + 2, EnemyInfo.GOLD_HEX, data.upgrades[i].cost,
+			lines.append(tr("Niveau %d  [color=%s](%d or)[/color] : %s") % [i + 2, EnemyInfo.GOLD_HEX, data.upgrades[i].cost,
 				_describe_upgrade(data.upgrades[i])])
 	for perk in Perks.TREE.perks:
 		if perk.unlocks_tower == data.resource_path:
 			lines.append("")
 			var world_name := Perks.get_required_world_name(perk)
-			lines.append("[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]"
-				% [STAR_HEX, world_name if not world_name.is_empty() else "Tours des mondes", perk.cost])
+			lines.append(tr("[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]")
+				% [STAR_HEX, tr(world_name) if not world_name.is_empty() else tr("Tours des mondes"), perk.cost])
 		elif perk.specializes_tower == data.resource_path:
 			lines.append("")
-			lines.append("[color=#73d9ff]Spécialisation « %s » (∞ %d) : %s[/color]" % [perk.display_name, perk.cost,
-				perk.description])
+			lines.append(tr("[color=#73d9ff]Spécialisation « %s » (∞ %d) : %s[/color]") % [tr(perk.display_name), perk.cost,
+				tr(perk.description)])
 	detail_text.text = "\n".join(lines)
 
 
 func show_enemy(data: EnemyData, world: World) -> void:
-	_set_detail_header(data.display_name, EnemyData.BOSS_COLOR if data.is_boss else data.color.lightened(0.2),
+	_set_detail_header(tr(data.display_name), EnemyData.BOSS_COLOR if data.is_boss else data.color.lightened(0.2),
 		data.texture, null)
 	if data.is_boss:
 		detail_title.text += "  " + EnemyInfo.rank_tag(data)
 	var lines: Array[String] = []
-	lines.append("[color=#%s]%s[/color]" % [world.color.to_html(false), world.display_name])
+	lines.append("[color=#%s]%s[/color]" % [world.color.to_html(false), tr(world.display_name)])
 	if not data.description.is_empty():
-		lines.append(data.description)
+		lines.append(tr(data.description))
 	lines.append("")
 	lines.append(EnemyInfo.stats(data))
 	if data.is_boss:
 		lines.append("")
-		lines.append("[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]" % MUTED)
+		lines.append(tr("[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]") % MUTED)
 	elif not data.split_into or data.split_count == 0:
 		var elite := data.make_elite()
 		lines.append("")
-		lines.append("[color=%s]En élite : vie %d, +%d or, -%d vies.[/color]" % [EnemyInfo.ELITE_HEX,
+		lines.append(tr("[color=%s]En élite : vie %d, +%d or, -%d vies.[/color]") % [EnemyInfo.ELITE_HEX,
 			roundi(elite.max_health), elite.reward, elite.damage])
 	else:
 		var elite := data.make_elite()
 		lines.append("")
-		lines.append("[color=%s]En élite : vie %d, +%d or, -%d vies (ceux qu'il libère restent normaux).[/color]"
+		lines.append(tr("[color=%s]En élite : vie %d, +%d or, -%d vies (ceux qu'il libère restent normaux).[/color]")
 			% [EnemyInfo.ELITE_HEX, roundi(elite.max_health), elite.reward, elite.damage])
 	detail_text.text = "\n".join(lines)
 
 
 func show_elites() -> void:
-	_set_detail_header("Élites", EnemyData.ELITE_COLOR, null, null)
+	_set_detail_header(tr("Élites"), EnemyData.ELITE_COLOR, null, null)
 	detail_text.text = "\n".join([
-		"N'importe quel monstre peut arriver en élite : il est entouré d'une aura dorée, et son nom porte « élite ».",
-		"Chaque niveau en a quelques-uns, annoncés dans l'aperçu de la vague.",
+		tr("N'importe quel monstre peut arriver en élite : il est entouré d'une aura dorée, et son nom porte « élite »."),
+		tr("Chaque niveau en a quelques-uns, annoncés dans l'aperçu de la vague."),
 		"",
-		_line("Vie et bouclier", "x%s" % _num(EnemyData.ELITE_HEALTH)),
-		_line("Taille", "+%d %%" % roundi((EnemyData.ELITE_SIZE - 1.0) * 100.0)),
-		_line("Or", "x%d" % roundi(EnemyData.ELITE_REWARD)),
-		_line("Vies", "%d de plus s'il atteint la base" % EnemyData.ELITE_DAMAGE),
+		_line(tr("Vie et bouclier"), "x%s" % _num(EnemyData.ELITE_HEALTH)),
+		_line(tr("Taille"), tr("+%d %%") % roundi((EnemyData.ELITE_SIZE - 1.0) * 100.0)),
+		_line(tr("Or"), "x%d" % roundi(EnemyData.ELITE_REWARD)),
+		_line(tr("Vies"), tr("%d de plus s'il atteint la base") % EnemyData.ELITE_DAMAGE),
 		"",
 		"[b]Boss[/b]",
-		"Un boss par monde, à la dernière vague des niveaux 3 et 6 (plus coriace au 6). Une aura rouge l'entoure, "
-			+ "sa vie s'affiche en haut de l'écran, et il appelle des renforts en marchant.",
+		tr("Un boss par monde, à la dernière vague des niveaux 3 et 6 (plus coriace au 6). Une aura rouge l'entoure, sa vie s'affiche en haut de l'écran, et il appelle des renforts en marchant."),
 	])
 
 
 func show_world(index: int) -> void:
 	var world := CAMPAIGN.worlds[index]
-	_set_detail_header(world.display_name, world.color, null, null)
+	_set_detail_header(tr(world.display_name), world.color, null, null)
 	var lines: Array[String] = []
-	lines.append("[color=%s]Monde %d  ·  %d niveaux[/color]" % [MUTED, index + 1, world.levels.size()])
-	lines.append(world.description)
+	lines.append(tr("[color=%s]Monde %d  ·  %d niveaux[/color]") % [MUTED, index + 1, world.levels.size()])
+	lines.append(tr(world.description))
 	if not Progress.is_world_unlocked(CAMPAIGN, index):
-		lines.append("[color=%s]Verrouillé : gagner le dernier niveau de %s pour l'ouvrir.[/color]"
-			% [MUTED, CAMPAIGN.worlds[index - 1].display_name])
+		lines.append(tr("[color=%s]Verrouillé : gagner le dernier niveau de %s pour l'ouvrir.[/color]")
+			% [MUTED, tr(CAMPAIGN.worlds[index - 1].display_name)])
 	lines.append("")
-	lines.append("[b]Monstres[/b]")
+	lines.append("[b]%s[/b]" % tr("Monstres"))
 	for enemy in world.enemies:
 		lines.append("%s  %s" % [EnemyInfo.icon(enemy, 28), EnemyInfo.title(enemy)])
 	for boss in world.bosses:
@@ -236,32 +235,32 @@ func show_world(index: int) -> void:
 	var towers: Array[String] = []
 	for perk in Perks.TREE.perks:
 		if perk.required_world == index and not perk.unlocks_tower.is_empty():
-			towers.append("%s (★ %d)" % [perk.get_unlocked_tower().display_name, perk.cost])
+			towers.append("%s (★ %d)" % [tr(perk.get_unlocked_tower().display_name), perk.cost])
 	if not towers.is_empty():
 		lines.append("")
-		lines.append("[b]Tours du monde[/b]")
-		lines.append(", ".join(towers) + " : à débloquer dans l'arbre des améliorations.")
+		lines.append("[b]%s[/b]" % tr("Tours du monde"))
+		lines.append(tr("%s : à débloquer dans l'arbre des améliorations.") % ", ".join(towers))
 	lines.append("")
-	lines.append(_line("Étoiles", "★ %d / %d (4 difficultés)" % [Progress.get_world_stars(world),
+	lines.append(_line(tr("Étoiles"), tr("★ %d / %d (4 difficultés)") % [Progress.get_world_stars(world),
 		world.levels.size() * Progress.MAX_LEVEL_STARS]))
 	detail_text.text = "\n".join(lines)
 
 
 func _describe_upgrade(upgrade: TowerUpgrade) -> String:
 	var parts: Array[String] = []
-	for item in [[upgrade.damage_multiplier, "dégâts"], [upgrade.range_multiplier, "portée"],
-			[upgrade.fire_rate_multiplier, "cadence"], [upgrade.splash_radius_multiplier, "explosion"],
-			[upgrade.cloud_radius_multiplier, "nuage"]]:
+	for item in [[upgrade.damage_multiplier, tr("%+d %% dégâts")], [upgrade.range_multiplier, tr("%+d %% portée")],
+			[upgrade.fire_rate_multiplier, tr("%+d %% cadence")], [upgrade.splash_radius_multiplier, tr("%+d %% explosion")],
+			[upgrade.cloud_radius_multiplier, tr("%+d %% nuage")]]:
 		var percent := roundi((item[0] - 1.0) * 100.0)
 		if percent != 0:
-			parts.append("%+d %% %s" % [percent, item[1]])
+			parts.append(item[1] % percent)
 	if upgrade.slow_duration_bonus > 0.0:
-		parts.append("+%s s de ralentissement" % _num(upgrade.slow_duration_bonus))
+		parts.append(tr("+%s s de ralentissement") % _num(upgrade.slow_duration_bonus))
 	return ", ".join(parts) if not parts.is_empty() else "-"
 
 
 func _line(stat_name: String, value: String) -> String:
-	return "[color=%s]%s :[/color]  %s" % [MUTED, stat_name, value]
+	return "[color=%s]%s[/color]  %s" % [MUTED, tr("%s :") % stat_name, value]
 
 
 static func _num(value: float, decimals := 1) -> String:
