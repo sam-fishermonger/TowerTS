@@ -1,7 +1,7 @@
 class_name Hud
 extends CanvasLayer
 ## Interface du niveau : or, vies et vague en haut ; barre d'achat des tours, pause,
-## vitesse et réglages du son en bas ; fiches des tours et écran de fin.
+## vitesse et menu Options en bas ; fiches des tours et écran de fin.
 ## Au survol, des fenêtres de détail : celle de la prochaine vague (sur son aperçu) et
 ## celle du monstre sous la souris. La vie des boss en jeu s'affiche en haut de la carte.
 
@@ -21,6 +21,8 @@ signal tower_details_closed
 signal pause_toggled
 ## Émis quand le joueur choisit une vitesse de jeu (bouton, ou V pour passer à la suivante).
 signal game_speed_selected(speed: float)
+## Émis quand le menu Options s'ouvre (vrai) ou se ferme (faux) : la partie s'arrête pendant ce temps.
+signal options_toggled(open: bool)
 ## Émis quand le joueur valide son choix de tours au lancement du niveau (TowerPicker).
 signal towers_chosen(types: Array[TowerData])
 
@@ -28,6 +30,9 @@ signal towers_chosen(types: Array[TowerData])
 const DAMAGE_FLASH_DURATION := 0.6
 const LIVES_COLOR := Color(1, 0.5, 0.5)
 const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
+## Rappel des commandes à côté de la barre d'achat, à la souris et au tactile.
+const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
+const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien"
 
 var _speed_group := ButtonGroup.new()
 var _gold := 0
@@ -48,8 +53,12 @@ var wave_details: DetailPopup
 var enemy_details: DetailPopup
 ## Monstre décrit par enemy_details, ou null.
 var hovered_enemy: Enemy
+## Au tactile : monstre touché du doigt, dont la fiche reste ouverte jusqu'au toucher suivant.
+var touched_enemy: Enemy
 ## Vie des boss en jeu, en haut de la carte.
 var boss_bar: BossBar
+## Menu Options ouvert (null s'il est fermé).
+var options_menu: OptionsMenu
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -71,7 +80,7 @@ var boss_bar: BossBar
 @onready var tower_details: TowerInfoPanel = %TowerDetails
 @onready var pause_button: Button = %PauseButton
 @onready var speed_buttons: HBoxContainer = %SpeedButtons
-@onready var audio_toggles: AudioToggles = %AudioToggles
+@onready var options_button: Button = %OptionsButton
 @onready var top_bar: Control = %TopBar
 @onready var bottom_bar: Control = %BottomBar
 @onready var pause_overlay: ColorRect = %PauseOverlay
@@ -92,6 +101,7 @@ func _ready() -> void:
 	tower_details.sell_requested.connect(sell_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
+	options_button.pressed.connect(open_options)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
 	boss_bar = BossBar.new()
 	add_child(boss_bar)
@@ -109,7 +119,7 @@ func _ready() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if not key.pressed or key.echo or end_panel.visible or tower_picker:
+	if not key.pressed or key.echo or end_panel.visible or tower_picker or options_menu:
 		return
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
@@ -161,6 +171,18 @@ func show_tower_picker(available: Array[TowerData], limit: int, selected: Array[
 	tower_picker.setup(available, limit, selected, difficulty_name)
 	tower_picker.confirmed.connect(_on_towers_chosen)
 	tower_picker.menu_requested.connect(menu_requested.emit)
+
+
+## Ouvre le menu Options par-dessus la partie, qui s'arrête jusqu'à sa fermeture.
+func open_options() -> void:
+	if options_menu:
+		return
+	options_menu = OptionsMenu.new()
+	options_menu.closed.connect(func() -> void:
+		options_menu = null
+		options_toggled.emit(false))
+	add_child(options_menu)
+	options_toggled.emit(true)
 
 
 func _on_towers_chosen(types: Array[TowerData]) -> void:
@@ -364,11 +386,27 @@ func show_wave_details() -> void:
 
 func _process(_delta: float) -> void:
 	_update_hovered_enemy()
+	var hint := TOUCH_HINT if GameSettings.is_touch_mode() else MOUSE_HINT
+	if shop_hint.text != hint:
+		shop_hint.text = hint
 
 
-## Monstre sous la souris : sa fenêtre de détail le suit, avec sa vie restante.
+## Au tactile, toucher un monstre ouvre sa fiche (il n'y a pas de survol) ; toucher
+## ailleurs la ferme. `_input` : le toucher continue vers la carte (pose des tours).
+func _input(event: InputEvent) -> void:
+	var touch := event as InputEventScreenTouch
+	if touch and touch.pressed:
+		touched_enemy = find_enemy_at(touch.position)
+
+
+## Monstre sous la souris (ou touché) : sa fenêtre de détail le suit, avec sa vie restante.
 func _update_hovered_enemy() -> void:
-	show_enemy_details(_find_enemy_under_mouse() if visible and not end_panel.visible else null)
+	if not visible or end_panel.visible:
+		show_enemy_details(null)
+	elif GameSettings.is_touch_mode():
+		show_enemy_details(touched_enemy if is_instance_valid(touched_enemy) else null)
+	else:
+		show_enemy_details(find_enemy_at(get_viewport().get_mouse_position()))
 
 
 ## Fenêtre de détail d'un monstre en jeu, à côté de lui (null = la fermer).
@@ -389,9 +427,8 @@ func show_enemy_details(enemy: Enemy) -> void:
 	enemy_details.show_text(text, Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0), border)
 
 
-## Monstre en jeu le plus proche de la souris, si elle est dessus (sur la carte).
-func _find_enemy_under_mouse() -> Enemy:
-	var mouse := get_viewport().get_mouse_position()
+## Monstre en jeu le plus proche de ce point de l'écran, s'il est dessus (sur la carte).
+func find_enemy_at(mouse: Vector2) -> Enemy:
 	if not get_play_area().has_point(mouse) or wave_preview.get_global_rect().has_point(mouse):
 		return null
 	var best: Enemy = null

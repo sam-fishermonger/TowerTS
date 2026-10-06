@@ -43,6 +43,8 @@ var is_over := false
 ## ne sont pas mis en pause), mais pas lancer de vague.
 var is_paused := false
 var game_speed := 1.0
+## Pause choisie par le joueur avant d'ouvrir le menu Options.
+var _paused_before_options := false
 ## Partie jouée toute seule derrière l'écran titre (TitleDemo), à régler avant l'ajout
 ## à l'arbre : pas de HUD ni de commandes, rien d'enregistré, et pas de pause à la fin.
 var is_demo := false
@@ -130,6 +132,7 @@ func _ready() -> void:
 		placer.process_mode = Node.PROCESS_MODE_DISABLED
 	hud.pause_toggled.connect(func() -> void: set_paused(not is_paused))
 	hud.game_speed_selected.connect(set_game_speed)
+	hud.options_toggled.connect(_on_options_toggled)
 	hud.tower_selected.connect(select_tower)
 	hud.next_wave_requested.connect(start_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
@@ -148,7 +151,11 @@ func _ready() -> void:
 	starting_lives += _bonuses.lives_bonus
 	gold = starting_gold
 	lives = starting_lives
-	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+	# La démo de l'écran titre garde sa vitesse ; une partie démarre à celle des options.
+	if is_demo:
+		set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
+	else:
+		set_game_speed(GameSettings.pick_start_speed(game_speeds))
 	Sound.play_music()
 
 
@@ -338,6 +345,15 @@ func set_paused(value: bool) -> void:
 	hud.set_paused(value)
 	# Le niveau ne se met plus à jour pendant la pause : on rafraîchit la vague tout de suite.
 	_refresh_wave_ui()
+
+
+## Le menu Options met la partie en pause ; à sa fermeture, elle reprend si elle tournait.
+func _on_options_toggled(open: bool) -> void:
+	if open:
+		_paused_before_options = is_paused
+		set_paused(true)
+	elif not _paused_before_options:
+		set_paused(false)
 
 
 func set_game_speed(speed: float) -> void:
