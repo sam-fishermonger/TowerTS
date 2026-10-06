@@ -1,7 +1,8 @@
 class_name TowerIcon
 extends Control
 ## Image d'un type de tour, comme sur la carte : socle et tourelle tournée vers le haut,
-## ou un carré de sa couleur si le type de tour n'a pas d'image.
+## ou un carré de sa couleur si le type de tour n'a pas d'image. Un petit œil violet
+## signale les tours qui détectent les furtifs.
 
 ## Un TowerData. (Typé Resource : avec TowerData, charger ce script en premier, comme le
 ## fait l'arbre des améliorations, empêche Godot de libérer l'arbre et la campagne en
@@ -23,3 +24,5 @@ func _draw() -> void:
 	else:
 		draw_rect(Rect2(center - Vector2.ONE * base_side / 2.0, Vector2.ONE * base_side), data.color.darkened(0.35))
 		draw_circle(center, base_side * 0.3, data.color)
+	if data.detection_range > 0.0:
+		Tower.draw_detection_eye(self, center + Vector2(base_side / 2.0 - 4.0, -base_side / 2.0 + 4.0))

@@ -34,6 +34,14 @@ const KNOCKBACK_MIN_RATIO := 0.35
 ## Électroaimants ne peuvent pas le bloquer sur place.
 const KNOCKBACK_COOLDOWN := 1.5
 const FROZEN_COLOR := Color(0.7, 0.92, 1.0)
+## Volants : décalage de l'ombre portée au sol, et transparence d'un furtif caché.
+const FLYING_SHADOW_OFFSET := Vector2(7.0, 12.0)
+const HIDDEN_ALPHA := 0.3
+## Groupe des tours qui détectent les furtifs (Tower.DETECTOR_GROUP).
+const DETECTOR_GROUP := "stealth_detectors"
+const FLIGHT_CURVE_META := &"flight_curve"
+## Lissages du trajet des volants (voir get_flight_curve()).
+const FLIGHT_SMOOTHING_PASSES := 3
 
 @export var data: EnemyData
 
@@ -54,6 +62,8 @@ var revives_left := -1
 ## Part de sa vie avec laquelle il apparaît (moins de 1 pour un ennemi qui se relève).
 var health_ratio := 1.0
 
+## Trajet suivi : la courbe du chemin, ou celle du vol pour un volant.
+var _curve: Curve2D
 var _path_length := 0.0
 var _slow_factor := 1.0
 var _slow_time_left := 0.0
@@ -84,19 +94,63 @@ var _frozen_vulnerability := 0.0
 var holder: Node2D
 ## Secondes pendant lesquelles l'ennemi est consacré : il ne peut plus se relever.
 var _consecrated_left := 0.0
+## Furtif : vrai tant qu'il est à portée de détection d'une tour.
+var _revealed := false
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
 
 
-## Ennemis encore en jeu dans un rayon donné autour d'un point.
-static func get_alive_in_radius(tree: SceneTree, center: Vector2, radius: float) -> Array[Enemy]:
+## Ennemis encore en jeu dans un rayon donné autour d'un point. Avec les statistiques
+## d'une tour (`stats`), seulement ceux qu'elle peut toucher : pas les volants si elle
+## tire au sol.
+static func get_alive_in_radius(tree: SceneTree, center: Vector2, radius: float,
+		stats: TowerData = null) -> Array[Enemy]:
 	var result: Array[Enemy] = []
 	for node in tree.get_nodes_in_group(GROUP):
 		var enemy := node as Enemy
-		if enemy and enemy.is_alive and center.distance_to(enemy.global_position) <= radius:
+		if enemy and enemy.is_alive and center.distance_to(enemy.global_position) <= radius \
+				and (stats == null or enemy.can_be_hit_by(stats)):
 			result.append(enemy)
 	return result
+
+
+## Trajet d'un volant sur un chemin (dans le repère du chemin) : il coupe les virages,
+## en allant tout droit d'un virage sur deux, puis en arrondissant. Calculé une fois par
+## chemin.
+static func get_flight_curve(path: Path2D) -> Curve2D:
+	if path.has_meta(FLIGHT_CURVE_META):
+		return path.get_meta(FLIGHT_CURVE_META)
+	var source := path.curve
+	var points := PackedVector2Array([source.get_point_position(0)])
+	for i in range(2, source.point_count - 1, 2):
+		points.append(source.get_point_position(i))
+	points.append(source.get_point_position(source.point_count - 1))
+	# Chaikin : chaque coin est remplacé par deux points, au quart et aux trois quarts.
+	for pass_index in FLIGHT_SMOOTHING_PASSES:
+		var smoothed := PackedVector2Array([points[0]])
+		for i in points.size() - 1:
+			if i > 0:
+				smoothed.append(points[i].lerp(points[i + 1], 0.25))
+			if i < points.size() - 2:
+				smoothed.append(points[i].lerp(points[i + 1], 0.75))
+		smoothed.append(points[points.size() - 1])
+		points = smoothed
+	var curve := Curve2D.new()
+	for point in points:
+		curve.add_point(point)
+	path.set_meta(FLIGHT_CURVE_META, curve)
+	return curve
+
+
+## La tour peut le toucher : un volant échappe aux tours qui tirent au sol.
+func can_be_hit_by(stats: TowerData) -> bool:
+	return stats.hits_air or not data.flying
+
+
+## Visible des tours : pas furtif, ou à portée de détection d'une tour.
+func is_revealed() -> bool:
+	return not data.stealthy or _revealed
 
 
 func _ready() -> void:
@@ -117,7 +171,14 @@ func _ready() -> void:
 	_summon_cooldown = data.summon_interval
 	health_bar.width = data.radius * 2.0
 	health_bar.position = Vector2(0, -data.radius - 8.0)
-	_path_length = path.curve.get_baked_length()
+	if data.flying:
+		# Il vole au-dessus des tours et des autres monstres.
+		z_index = 1
+	_curve = get_flight_curve(path) if data.flying else path.curve
+	_path_length = _curve.get_baked_length()
+	if data.stealthy:
+		modulate.a = HIDDEN_ALPHA
+		_update_detection()
 	_update_position()
 
 
@@ -158,6 +219,8 @@ func _process(delta: float) -> void:
 	if data.is_elite or data.is_boss:
 		_aura_time += delta
 		queue_redraw()
+	if data.stealthy:
+		_update_detection()
 	if is_held():
 		return
 	progress += get_speed() * delta
@@ -217,11 +280,14 @@ func take_damage(amount: float, ignore_armor := false, shield_multiplier := 1.0)
 
 
 ## Coup porté par une tour : les dégâts donnés, puis les effets de ses statistiques
-## (ralentissement, brûlure ou poison, bouclier brouillé, soins bloqués).
+## (ralentissement, brûlure ou poison, bouclier brouillé, soins bloqués). Rien si la
+## tour ne peut pas le toucher (volant), et ses dégâts contre les volants comptent.
 ## Renvoie les dégâts réellement subis.
 func hit(amount: float, stats: TowerData) -> float:
-	if not is_alive:
+	if not is_alive or not can_be_hit_by(stats):
 		return 0.0
+	if data.flying:
+		amount *= stats.air_damage_multiplier
 	if stats.shield_jam_duration > 0.0:
 		health.jam_shield(stats.shield_jam_duration)
 	if stats.heal_block_duration > 0.0:
@@ -351,15 +417,29 @@ func _update_healing(delta: float) -> void:
 			enemy.healed.emit(enemy, amount)
 
 
+## Furtif : révélé tant qu'une tour qui détecte l'a à portée de détection.
+func _update_detection() -> void:
+	var revealed := false
+	for node in get_tree().get_nodes_in_group(DETECTOR_GROUP):
+		var tower := node as Tower
+		if tower and tower.stats and global_position.distance_to(tower.global_position) <= tower.stats.detection_range:
+			revealed = true
+			break
+	if revealed != _revealed:
+		_revealed = revealed
+		modulate.a = 1.0 if revealed else HIDDEN_ALPHA
+		queue_redraw()
+
+
 func _update_position() -> void:
-	var point := path.curve.sample_baked(progress)
+	var point := _curve.sample_baked(progress)
 	var offset := Vector2.ZERO
 	if lateral_offset != 0.0:
-		var behind := path.curve.sample_baked(maxf(progress - TURN_SMOOTHING, 0.0))
-		var further := path.curve.sample_baked(minf(progress + TURN_SMOOTHING, _path_length))
+		var behind := _curve.sample_baked(maxf(progress - TURN_SMOOTHING, 0.0))
+		var further := _curve.sample_baked(minf(progress + TURN_SMOOTHING, _path_length))
 		offset = (further - behind).normalized().orthogonal() * lateral_offset
 	global_position = path.to_global(point + offset)
-	var ahead := path.curve.sample_baked(minf(progress + 4.0, _path_length))
+	var ahead := _curve.sample_baked(minf(progress + 4.0, _path_length))
 	if not ahead.is_equal_approx(point):
 		var heading := point.angle_to_point(ahead)
 		if not is_equal_approx(heading, _heading):
@@ -373,6 +453,8 @@ func _on_health_depleted() -> void:
 
 
 func _draw() -> void:
+	if data.flying:
+		_draw_flying_shadow()
 	if data.is_elite or data.is_boss:
 		_draw_aura()
 	if _heal_pulse_left > 0.0:
@@ -431,6 +513,14 @@ func _draw_ice() -> void:
 	for i in 3:
 		var direction := Vector2.from_angle(TAU * i / 3.0 + PI / 6.0) * r * 0.75
 		draw_line(-direction, direction, Color(1, 1, 1, 0.55), 1.5)
+
+
+## Ombre au sol d'un volant, décalée : il paraît en l'air.
+func _draw_flying_shadow() -> void:
+	var size := Vector2(data.radius * 1.1, data.radius * 0.7)
+	draw_set_transform(FLYING_SHADOW_OFFSET, _heading, size / data.radius)
+	draw_circle(Vector2.ZERO, data.radius, Color(0, 0, 0, 0.28))
+	draw_set_transform(Vector2.ZERO)
 
 
 ## Aura dorée qui pulse autour d'un élite, rouge et dorée autour d'un boss.

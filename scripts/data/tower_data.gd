@@ -93,6 +93,16 @@ var source_tower_id := 0
 ## Bonus de cadence donné aux tours à portée (Bobine).
 @export var boost_fire_rate := 0.0
 
+@export_group("Volants et furtifs")
+## Peut toucher les monstres volants (faux pour les tours qui tirent au sol : obus,
+## flammes, nuages).
+@export var hits_air := true
+## Multiplicateur des dégâts infligés aux monstres volants.
+@export var air_damage_multiplier := 1.0
+## Rayon dans lequel la tour révèle les monstres furtifs, en pixels (0 = aucun). Il
+## grandit avec la portée.
+@export var detection_range := 0.0
+
 @export_group("Recul")
 ## Pixels dont les ennemis touchés reculent sur leur chemin (Électroaimant). Les gros
 ## ennemis reculent moins (voir Enemy.push_back).
@@ -149,9 +159,15 @@ func scale_stats(damage_multiplier: float, range_multiplier: float, fire_rate_mu
 	damage *= damage_multiplier
 	dot_damage *= damage_multiplier
 	attack_range *= range_multiplier
+	detection_range *= range_multiplier
 	fire_rate *= fire_rate_multiplier
 	if slow_factor < 1.0:
 		slow_duration += slow_duration_bonus
+
+
+## La tour révèle les monstres furtifs autour d'elle.
+func detects_stealth() -> bool:
+	return detection_range > 0.0
 
 
 ## Tour de soutien : elle renforce les tours voisines (Bobine).

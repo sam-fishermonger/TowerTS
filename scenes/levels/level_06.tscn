@@ -16,6 +16,8 @@
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="e_slime"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/ravageur.tres" id="e_tank"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/reine.tres" id="99_boss"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/frelon.tres" id="e_frelon"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/mante.tres" id="e_mante"]
 
 [sub_resource type="Curve2D" id="Curve2D_SpiralPath"]
 _data = {
@@ -76,9 +78,16 @@ count = 16
 interval = 0.4
 start_delay = 5.0
 
+[sub_resource type="Resource" id="Group_new_3_0"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_frelon")
+count = 10
+interval = 0.9
+start_delay = 3.0
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_new_3_0")])
 bonus_gold = 25
 
 [sub_resource type="Resource" id="Group_w4_1"]
@@ -123,9 +132,16 @@ count = 36
 interval = 0.3
 start_delay = 6.0
 
+[sub_resource type="Resource" id="Group_new_5_1"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_mante")
+count = 6
+interval = 1.4
+start_delay = 4.0
+
 [sub_resource type="Resource" id="Wave_5"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_new_5_1")])
 bonus_gold = 35
 
 [sub_resource type="Resource" id="Group_w6_1"]
@@ -177,9 +193,16 @@ start_delay = 10.1
 path_index = 0
 elite = true
 
+[sub_resource type="Resource" id="Group_new_7_2"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_frelon")
+count = 14
+interval = 0.8
+start_delay = 4.0
+
 [sub_resource type="Resource" id="Wave_7"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_elite")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_elite"), SubResource("Group_new_7_2")])
 bonus_gold = 45
 
 [sub_resource type="Resource" id="Group_w8_1"]
@@ -231,9 +254,16 @@ start_delay = 10.5
 path_index = 0
 elite = true
 
+[sub_resource type="Resource" id="Group_new_9_3"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_mante")
+count = 10
+interval = 1.0
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_9"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3"), SubResource("Group_w9_elite")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3"), SubResource("Group_w9_elite"), SubResource("Group_new_9_3")])
 bonus_gold = 55
 
 [sub_resource type="Resource" id="Group_w10_1"]

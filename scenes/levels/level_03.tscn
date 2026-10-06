@@ -16,6 +16,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="14_shell"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/couveuse.tres" id="15_giant"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/reine.tres" id="99_boss"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/frelon.tres" id="e_frelon"]
 
 [sub_resource type="Curve2D" id="Curve2D_path"]
 _data = {
@@ -57,9 +58,16 @@ count = 5
 interval = 2.0
 start_delay = 4.0
 
+[sub_resource type="Resource" id="Group_new_2_0"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("e_frelon")
+count = 6
+interval = 1.0
+start_delay = 3.0
+
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("9_wave_data")
-groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2")])
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2"), SubResource("Group_new_2_0")])
 bonus_gold = 20
 
 [sub_resource type="Resource" id="Group_w3_1"]
@@ -130,9 +138,16 @@ count = 12
 interval = 1.0
 start_delay = 3.0
 
+[sub_resource type="Resource" id="Group_new_5_1"]
+script = ExtResource("10_spawn_group")
+enemy = ExtResource("e_frelon")
+count = 8
+interval = 0.9
+start_delay = 4.0
+
 [sub_resource type="Resource" id="Wave_5"]
 script = ExtResource("9_wave_data")
-groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2")])
+groups = Array[ExtResource("10_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2"), SubResource("Group_new_5_1")])
 bonus_gold = 35
 
 [sub_resource type="Resource" id="Group_w6_1"]

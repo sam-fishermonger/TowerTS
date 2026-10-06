@@ -187,6 +187,21 @@ Chaque monde a ses monstres, rangés dans `resources/enemies/<biome>/` avec leur
 
 Le bouclier, le soin, les renforts et la résurrection se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier**, **Soin**, **Renforts** et **Résurrection**) : n'importe quel ennemi peut en avoir. Sa `description` est celle du lexique.
 
+### Volants et furtifs
+
+Chaque monde a aussi un monstre volant et un monstre furtif :
+
+| Monde | Volant | Furtif |
+|---|---|---|
+| La Ruche | **Frelon** (dès le 1-2) | **Mante** (dès le 1-4), armure 3 |
+| La Fonderie | **Chasseur** (dès le 2-2), bouclier | **Spectre** (dès le 2-3), bouclier |
+| La Cité | **Aviateur** (dès le 3-2), armure 2 | **Infiltré** (dès le 3-3), armure 2 |
+
+- **Volants** : ils survolent le chemin en coupant les virages (ils vont tout droit d'un virage sur deux, en arrondissant), avec leur ombre au sol, et passent au-dessus des tours. Avant la première vague, leur trajet s'affiche en pointillés bleus à côté des flèches du chemin. Les tours qui tirent au sol ne les touchent pas : **Mortier**, **Lance-flammes**, **Pesticide** et **Lacrymogène** (ni leurs explosions et nuages). La **Mitrailleuse** leur fait 50 % de dégâts en plus.
+- **Furtifs** : à demi transparents, les tours ne les visent pas, sauf quand ils passent à portée de détection d'une tour qui détecte : **Sniper** (150), **Franc-tireur** (200) et **Bobine** (140), marquées d'un petit œil violet (la portée de détection s'affiche en pointillés violets au survol). Les ondes, qui ne visent personne (Givre, Brouilleur, Électroaimant), et les explosions et nuages autour d'une autre cible les touchent quand même.
+
+Un ennemi vole avec `flying` et se cache avec `stealthy` (groupe **Déplacement** de `EnemyData`). Côté tours (groupe **Volants et furtifs** de `TowerData`) : `hits_air`, `air_damage_multiplier` et `detection_range`, qui grandit avec la portée.
+
 ### Tours des mondes
 
 Chaque monde a deux tours à débloquer dans l'arbre des améliorations (onglet **Tours des mondes**), chacune avec un atout contre les monstres de son biome. Elles s'ajoutent à la barre d'achat de tous les niveaux une fois achetées.
@@ -261,7 +276,7 @@ Les objets de jeu héritent de quelques classes de base, et chaque scène ne con
 
 ```
 Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : is_alive, despawn()
-├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement, division à la mort, soin
+├── Enemy                    scripts/enemies/             suit un Path2D (ou le vol d'un volant), santé, ralentissement, division à la mort, soin, furtivité
 ├── Tower                    scripts/towers/tower.gd      ciblage + cadence ; _attack() et _draw_body() à redéfinir
 │   ├── ProjectileTower      tire le projectile défini dans TowerData (Canon, Mitrailleuse, Sniper, Mortier, Franc-tireur, Pesticide, Lacrymogène)
 │   ├── PulseTower           onde qui frappe tout ce qui est à portée (Givre, Brouilleur IEM, Électroaimant)

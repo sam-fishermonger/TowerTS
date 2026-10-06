@@ -25,7 +25,7 @@ func _process(delta: float) -> void:
 func get_enemies_on_line(angle: float) -> Array[Enemy]:
 	var end := global_position + Vector2.from_angle(angle) * stats.attack_range
 	var result: Array[Enemy] = []
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range + SEARCH_MARGIN):
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range + SEARCH_MARGIN, stats):
 		var closest := Geometry2D.get_closest_point_to_segment(enemy.global_position, global_position, end)
 		if closest.distance_to(enemy.global_position) <= enemy.data.radius + LINE_HALF_WIDTH:
 			result.append(enemy)

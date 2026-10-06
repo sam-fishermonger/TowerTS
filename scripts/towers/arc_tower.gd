@@ -27,7 +27,7 @@ func get_chain(first: Enemy) -> Array[Enemy]:
 	for i in stats.chain_count:
 		var next: Enemy = null
 		var best := INF
-		for enemy in Enemy.get_alive_in_radius(get_tree(), current.global_position, stats.chain_range):
+		for enemy in Enemy.get_alive_in_radius(get_tree(), current.global_position, stats.chain_range, stats):
 			var distance := current.global_position.distance_squared_to(enemy.global_position)
 			if not chain.has(enemy) and distance < best:
 				next = enemy

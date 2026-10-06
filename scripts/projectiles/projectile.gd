@@ -45,7 +45,7 @@ func _hit_enemy(enemy: Enemy) -> void:
 
 ## Touche tous les ennemis dans le rayon, autour du point d'impact (obus, grenades).
 func _hit_all_in_radius(radius: float) -> void:
-	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, radius):
+	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, radius, stats):
 		_hit_enemy(enemy)
 
 

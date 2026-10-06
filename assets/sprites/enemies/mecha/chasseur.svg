@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Chasseur : aéronef de combat en flèche, réacteur orange, orienté vers la droite. -->
+  <path d="M60 32 L20 6 L14 10 L24 28 L8 28 L4 22 L2 22 L4 32 L2 42 L4 42 L8 36 L24 36 L14 54 L20 58 Z" fill="#2b2e35"/>
+  <path d="M56 32 L21 10 L18 12 L28 30 L8 30 L6 32 L8 34 L28 34 L18 52 L21 54 Z" fill="#8b929e"/>
+  <path d="M24 30 L22 18 M24 34 L22 46" stroke="#5b616c" stroke-width="2"/>
+  <ellipse cx="42" cy="32" rx="8" ry="3.5" fill="#2b2e35"/>
+  <ellipse cx="43" cy="32" rx="6" ry="2.2" fill="#7fd4ff"/>
+  <rect x="0" y="29" width="6" height="6" rx="2" fill="#ff9a2e"/>
+</svg>

@@ -67,7 +67,8 @@ func _process(delta: float) -> void:
 
 ## Se bat contre l'ennemi tant qu'il est en vie et à portée (il bouge s'il n'est pas retenu).
 func _is_valid_target(enemy: Enemy) -> bool:
-	return enemy.is_alive \
+	# Un soldat au sol ne retient pas un volant.
+	return enemy.is_alive and not enemy.data.flying \
 		and global_position.distance_to(enemy.global_position) <= power.radius + enemy.data.radius
 
 

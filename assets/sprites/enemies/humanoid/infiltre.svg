@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Infiltré : espion en tenue sombre et cape, lunettes de vision nocturne vertes, orienté vers la droite. -->
+  <ellipse cx="30" cy="35" rx="22" ry="24" fill="#000" opacity="0.2"/>
+  <path d="M8 12 Q20 8 30 14 L30 50 Q20 56 8 52 Q14 32 8 12 Z" fill="#14161b"/>
+  <path d="M11 15 Q20 12 28 16 L28 48 Q20 52 11 49 Q16 32 11 15 Z" fill="#2c3038"/>
+  <rect x="34" y="35" width="16" height="4" rx="2" fill="#0d0d0d"/>
+  <circle cx="38" cy="38" r="4.5" fill="#3a3540"/>
+  <circle cx="30" cy="32" r="11" fill="#14161b"/>
+  <circle cx="30" cy="32" r="9" fill="#2f333c"/>
+  <rect x="36" y="27" width="6" height="4" rx="1.5" fill="#62f27a"/>
+  <rect x="36" y="33" width="6" height="4" rx="1.5" fill="#62f27a"/>
+  <path d="M24 26 Q28 24 32 26" stroke="#555b66" stroke-width="2" fill="none"/>
+</svg>

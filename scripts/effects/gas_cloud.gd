@@ -23,7 +23,7 @@ func _process(delta: float) -> void:
 	_tick_left -= delta
 	if _tick_left <= 0.0:
 		_tick_left += TICK
-		for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.cloud_radius):
+		for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.cloud_radius, stats):
 			enemy.hit(0.0, stats)
 	queue_redraw()
 

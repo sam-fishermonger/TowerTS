@@ -25,6 +25,7 @@ description = "Crache un jet de flammes en cône qui touche tout un essaim et le
 cost = 100
 scene = ExtResource("2_scene")
 attack_range = 100.0
+hits_air = false
 damage = 3.0
 fire_rate = 4.0
 color = Color(0.95, 0.32, 0.12, 1)
