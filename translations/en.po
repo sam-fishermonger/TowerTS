@@ -131,3 +131,165 @@ msgstr "Close"
 
 msgid "Tournez l'appareil\npour jouer à l'horizontale."
 msgstr "Turn your device\nto play in landscape."
+
+msgid "+%d pierre"
+msgstr "+%d stone"
+
+msgid "+%d essence"
+msgstr "+%d essence"
+
+msgid "%s bâti"
+msgstr "%s built"
+
+msgid "%s détruit"
+msgstr "%s destroyed"
+
+msgid "Vie : %d / %d"
+msgstr "Health: %d / %d"
+
+msgid "En construction : %d %%"
+msgstr "Under construction: %d %%"
+
+msgid "Démolir  ·  +%d or"
+msgstr "Demolish  ·  +%d gold"
+
+msgid "%d or · %d p · %d e"
+msgstr "%d gold · %d s · %d e"
+
+msgid "%d or · %d p"
+msgstr "%d gold · %d s"
+
+msgid "Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour l'arbre des améliorations."
+msgstr "Each difficulty has its own stars (3 per level), which also count for the upgrade tree."
+
+msgid "Niveau %d  ·  %s"
+msgstr "Level %d  ·  %s"
+
+msgid "Pillards : %s"
+msgstr "Raiders: %s"
+
+msgid "★ %d / %d (4 difficultés)"
+msgstr "★ %d / %d (4 difficulties)"
+
+msgid "Gagner « %s » pour l'ouvrir."
+msgstr "Win “%s” to unlock it."
+
+msgid "Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus)."
+msgstr "Workers in play, out of the maximum: %d, plus %d per House built (%d at most)."
+
+msgid "Pierre : %d"
+msgstr "Stone: %d"
+
+msgid "Essence : %d"
+msgstr "Essence: %d"
+
+msgid "Ouvriers : %d / %d"
+msgstr "Workers: %d / %d"
+
+msgid "%s  ·  Conquête"
+msgstr "%s  ·  Conquest"
+
+msgid "Mode Conquête seulement : il n'apparaît pas dans la campagne."
+msgstr "Conquest mode only: it never appears in the campaign."
+
+msgid "Pillards (mode Conquête)"
+msgstr "Raiders (Conquest mode)"
+
+msgid "Améliorer  ·  %d or"
+msgstr "Upgrade  ·  %d gold"
+
+msgid "Améliorer  ·  %d or  ·  %d essence"
+msgstr "Upgrade  ·  %d gold  ·  %d essence"
+
+msgid "Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades et casernes, et protégez votre économie des Pillards. Les vagues partent seules."
+msgstr "Gather stone and essence with your workers, build towers, depots, houses, barricades and barracks, and protect your economy from Raiders. Waves start on their own."
+
+msgid "Verrouillé"
+msgstr "Locked"
+
+msgid "Bâtiments"
+msgstr "Buildings"
+
+msgid "La Carrière"
+msgstr "The Quarry"
+
+msgid "Une carrière pleine de rochers, un seul chemin : de quoi apprendre à miner et à bâtir."
+msgstr "A quarry full of rocks and a single path: the place to learn mining and building."
+
+msgid "La Mine de fer"
+msgstr "The Iron Mine"
+
+msgid "Le chemin serpente sur toute la carte : chaque gisement se mine sous le feu des machines."
+msgstr "The path winds across the whole map: every deposit is mined under machine fire."
+
+msgid "Les Faubourgs"
+msgstr "The Outskirts"
+
+msgid "Des maisons à bâtir loin du QG, et des Maraudeurs rapides pour les incendier."
+msgstr "Houses to build far from HQ, and fast Marauders to burn them down."
+
+msgid "Les Catacombes"
+msgstr "The Catacombs"
+
+msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."
+msgstr "Two paths of undead and Grave Robbers from the very first wave."
+
+msgid "Le Nid de la Reine"
+msgstr "The Queen's Nest"
+
+msgid "Dix vagues, un long chemin en spirale autour du QG, et la Reine au bout."
+msgstr "Ten waves, a long path spiralling around HQ, and the Queen at the end."
+
+msgid "Dépôt"
+msgstr "Depot"
+
+msgid "Les ouvriers y déposent la pierre et l'essence au lieu de rentrer au QG : à poser près des gisements lointains."
+msgstr "Workers drop stone and essence here instead of walking back to HQ: place it near distant deposits."
+
+msgid "Maison"
+msgstr "House"
+
+msgid "Loge 2 ouvriers de plus."
+msgstr "Houses 2 more workers."
+
+msgid "Extracteur"
+msgstr "Extractor"
+
+msgid "Se pose sur un filon d'essence et en tire 1 toutes les 6 secondes, sans ouvrier et sans l'épuiser."
+msgstr "Placed on an essence vein, it draws 1 every 6 seconds, with no worker and without depleting it."
+
+msgid "Barricade"
+msgstr "Barricade"
+
+msgid "Se pose sur le chemin : les monstres au sol s'y arrêtent et doivent la casser pour passer. Les volants la survolent."
+msgstr "Placed on the path: ground monsters stop and must break it to get through. Flyers pass over it."
+
+msgid "Caserne"
+msgstr "Barracks"
+
+msgid "Envoie 2 soldats sur le chemin le plus proche ; un soldat tombé est remplacé au bout de 12 secondes."
+msgstr "Sends 2 soldiers to the nearest path; a fallen soldier is replaced after 12 seconds."
+
+msgid "Pierre récoltée"
+msgstr "Stone gathered"
+
+msgid "Essence récoltée"
+msgstr "Essence gathered"
+
+msgid "Bâtiments bâtis"
+msgstr "Buildings built"
+
+msgid "Ouvriers perdus"
+msgstr "Workers lost"
+
+msgid "Pillarde"
+msgstr "Looter"
+
+msgid "Récupérateur"
+msgstr "Scavenger"
+
+msgid "Maraudeur"
+msgstr "Marauder"
+
+msgid "Pilleur de tombes"
+msgstr "Grave Robber"

@@ -15,6 +15,10 @@ signal selection_changed(data: TowerData)
 signal inspection_changed(tower: Tower)
 ## Émis quand le pouvoir en train d'être visé change (null = aucun).
 signal power_selection_changed(power: Power)
+## Mode Conquête : émis quand le bâtiment à poser change (-1 = aucun)…
+signal building_selection_changed(kind: int)
+## … et quand le bâtiment posé inspecté change (null = aucun).
+signal building_inspection_changed(building: Building)
 
 ## Niveau qui valide et effectue les placements.
 var level: Level
@@ -23,6 +27,10 @@ var selected_tower: TowerData
 var inspected_tower: Tower
 ## Pouvoir en train d'être visé : le prochain clic sur la carte le lance.
 var selected_power: Power
+## Mode Conquête : bâtiment à poser (Building.Kind, -1 = aucun), et bâtiment posé dont
+## la fiche est ouverte.
+var selected_building := -1
+var inspected_building: Building
 
 var _hovered_tower: Tower
 var _mouse_position := Vector2.ZERO
@@ -54,9 +62,35 @@ func select(data: TowerData) -> void:
 	_set_touch_cell(NO_CELL)
 	if data:
 		select_power(null)
+		select_building(-1)
 		inspect(null)
 	selection_changed.emit(data)
 	refresh()
+
+
+## Mode Conquête : choisit le bâtiment à poser (-1 = aucun) ; la tour choisie est abandonnée.
+func select_building(kind: int) -> void:
+	if kind == selected_building:
+		return
+	selected_building = kind
+	_set_touch_cell(NO_CELL)
+	if kind >= 0:
+		if selected_tower:
+			select(null)
+		select_power(null)
+		inspect(null)
+	building_selection_changed.emit(kind)
+	refresh()
+
+
+## Ouvre la fiche d'un bâtiment posé (null = la fermer).
+func inspect_building(building: Building) -> void:
+	if building == inspected_building:
+		return
+	inspected_building = building
+	if building:
+		inspect(null)
+	building_inspection_changed.emit(building)
 
 
 ## Vise un pouvoir (null = arrêter de viser) : la tour choisie est abandonnée.
@@ -67,6 +101,7 @@ func select_power(power: Power) -> void:
 	if power and selected_tower:
 		select(null)
 	if power:
+		select_building(-1)
 		inspect(null)
 	power_selection_changed.emit(power)
 	refresh()
@@ -79,6 +114,8 @@ func inspect(tower: Tower) -> void:
 		return
 	var previous := inspected_tower
 	inspected_tower = tower
+	if tower:
+		inspect_building(null)
 	_refresh_range(previous)
 	_refresh_range(tower)
 	inspection_changed.emit(tower)
@@ -104,6 +141,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif selected_power and event.button_index == MOUSE_BUTTON_RIGHT:
 			select_power(null)
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and selected_building >= 0 and touch and cell != touch_cell:
+			_set_touch_cell(cell if level.map.is_cell_in_grid(cell) else NO_CELL)
+			_update_hover(_to_world(event.position))
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and selected_building >= 0:
+			_set_touch_cell(NO_CELL)
+			var built := level.conquest.place_building(cell, selected_building)
+			if built and not event.shift_pressed:
+				select_building(-1)
+			else:
+				refresh()
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_RIGHT and selected_building >= 0:
+			select_building(-1)
+			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and selected_tower and touch and cell != touch_cell:
 			# Premier toucher : l'aperçu se cale sur la case, sans rien poser.
 			_set_touch_cell(cell if level.map.is_cell_in_grid(cell) else NO_CELL)
@@ -118,25 +170,35 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				refresh()
 			get_viewport().set_input_as_handled()
-		elif event.button_index == MOUSE_BUTTON_LEFT and level.conquest and level.conquest.has_stone(cell):
-			# Mode Conquête : un clic sur un rocher y envoie les mineurs.
+		elif event.button_index == MOUSE_BUTTON_LEFT and level.map.get_occupant(cell) is Building:
+			inspect_building(level.map.get_occupant(cell))
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and level.conquest and level.conquest.has_resource(cell):
+			# Mode Conquête : un clic sur un rocher ou un filon y envoie les mineurs.
 			level.conquest.set_preferred_rock(cell)
 			inspect(null)
+			inspect_building(null)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and level.map.get_occupant(cell) is Tower:
 			inspect(level.map.get_occupant(cell))
 			get_viewport().set_input_as_handled()
-		elif event.button_index == MOUSE_BUTTON_LEFT and touch and inspected_tower:
+		elif event.button_index == MOUSE_BUTTON_LEFT and touch and (inspected_tower or inspected_building):
 			inspect(null)
+			inspect_building(null)
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_RIGHT and selected_tower:
 			select(null)
 			get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_cancel") and (selected_tower or selected_power or inspected_tower):
+	elif event.is_action_pressed("ui_cancel") and (selected_tower or selected_power or inspected_tower
+			or selected_building >= 0 or inspected_building):
 		if selected_power:
 			select_power(null)
 		elif selected_tower:
 			select(null)
+		elif selected_building >= 0:
+			select_building(-1)
+		elif inspected_building:
+			inspect_building(null)
 		else:
 			inspect(null)
 		get_viewport().set_input_as_handled()
@@ -145,10 +207,11 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Arme (ou désarme, avec NO_CELL) le second toucher, et place son rappel.
 func _set_touch_cell(cell: Vector2i) -> void:
 	touch_cell = cell
-	touch_hint.visible = cell != NO_CELL and selected_tower != null
+	touch_hint.visible = cell != NO_CELL and (selected_tower != null or selected_building >= 0)
 	if not touch_hint.visible:
 		return
-	var can_place := level.can_place_tower(cell, selected_tower)
+	var can_place := level.conquest.can_place_building(cell, selected_building) if selected_building >= 0 \
+		else level.can_place_tower(cell, selected_tower)
 	touch_hint.text = "Touchez encore pour poser" if can_place else "Impossible ici"
 	touch_hint.add_theme_color_override(&"font_color", Color(0.6, 1.0, 0.65) if can_place else Color(1.0, 0.5, 0.5))
 	touch_hint.reset_size()
@@ -183,6 +246,9 @@ func _update_hover(world_position: Vector2) -> void:
 		_refresh_range(hovered)
 	if selected_tower and map.is_cell_in_grid(cell):
 		preview.show_at(map.cell_to_world(cell), selected_tower, level.can_place_tower(cell, selected_tower))
+	elif selected_building >= 0 and map.is_cell_in_grid(cell):
+		preview.show_building_at(map.cell_to_world(cell), selected_building,
+			level.conquest.can_place_building(cell, selected_building))
 	else:
 		preview.visible = false
 

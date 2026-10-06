@@ -20,6 +20,9 @@ const SLOT_KEYS: Array[Key] = [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, 
 const SLOT_KEYPAD_KEYS: Array[Key] = [KEY_KP_1, KEY_KP_2, KEY_KP_3, KEY_KP_4, KEY_KP_5,
 	KEY_KP_6, KEY_KP_7, KEY_KP_8, KEY_KP_9, KEY_KP_0]
 
+## Largeur réellement disponible (moins en mode Conquête, où un bouton suit la barre).
+var max_width := MAX_WIDTH
+
 var _group := ButtonGroup.new()
 var _gold := 0
 ## Barre verrouillée (fin de partie) : toutes les cases sont grisées.
@@ -39,7 +42,7 @@ func setup(tower_types: Array[TowerData]) -> void:
 		remove_child(child)
 		child.queue_free()
 	var separation := get_theme_constant("separation")
-	var slot_width := clampf(floorf(MAX_WIDTH / maxi(tower_types.size(), 1)) - separation,
+	var slot_width := clampf(floorf(max_width / maxi(tower_types.size(), 1)) - separation,
 		MIN_SLOT_WIDTH, TowerShopButton.SLOT_SIZE.x)
 	for i in tower_types.size():
 		var button := TowerShopButton.new(tower_types[i])

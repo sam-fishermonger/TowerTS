@@ -10,11 +10,14 @@ extends RefCounted
 ## - id, name, description, icon (un caractère dessiné dans sa vignette) ;
 ## - selon son objectif, une seule de ces clés :
 ##   - win : condition vérifiée à la fin d'une partie gagnée (voir _is_win_met) ;
+##   - conquest_win : de même, à la fin d'un niveau de Conquête gagné ;
+##   - conquest : tous les niveaux de Conquête à gagner ;
 ##   - boss : chemin du boss à vaincre ;
 ##   - world : indice du monde dont il faut gagner tous les niveaux ;
 ##   - counter + goal : compteur cumulé sur toutes les parties (voir add_counters) ;
 ##   - stars : étoiles à obtenir ; perks : améliorations à acheter dans l'arbre ;
-##   - aucune : débloqué par le niveau à un moment précis (commando, impatient, infatigable).
+##   - aucune : débloqué par le niveau à un moment précis (commando, impatient,
+##     infatigable, contremaître).
 ## Les identifiants sont enregistrés dans la sauvegarde : ne pas les renommer.
 
 ## Section du fichier : identifiant -> date du déblocage (secondes Unix).
@@ -30,6 +33,8 @@ const MINIMALIST_MAX_TOWERS := 5
 const IMPATIENT_EARLY_CALLS := 5
 const TREASURE_GOLD := 1000
 const TIRELESS_WAVES := 30
+## Ouvriers en même temps pour le Contremaître.
+const FOREMAN_WORKERS := 12
 
 const LIST: Array[Dictionary] = [
 	{id = "premier_pas", name = "Premier pas", icon = "★",
@@ -78,6 +83,16 @@ const LIST: Array[Dictionary] = [
 		description = "Obtenir 100 étoiles.", stars = 100},
 	{id = "jardinier", name = "Jardinier", icon = "❦",
 		description = "Acheter 15 améliorations dans l'arbre.", perks = 15},
+	{id = "premiere_pierre", name = "Première pierre", icon = "Δ",
+		description = "Gagner un niveau de Conquête.", conquest_win = "any"},
+	{id = "securite", name = "Sécurité au travail", icon = "+",
+		description = "Gagner un niveau de Conquête sans perdre d'ouvrier.", conquest_win = "no_worker_lost"},
+	{id = "contremaitre", name = "Contremaître", icon = "Ω",
+		description = "Avoir 12 ouvriers en même temps."},
+	{id = "carrier", name = "Carrier", icon = "#",
+		description = "Miner 2000 pierres en Conquête.", counter = "stone_mined", goal = 2000},
+	{id = "conquerant", name = "Conquérant", icon = "Σ",
+		description = "Gagner tous les niveaux de Conquête.", conquest = true},
 ]
 
 
@@ -147,6 +162,9 @@ static func get_progress(definition: Dictionary) -> Array[int]:
 		return [Perks.get_earned_stars(), definition.stars]
 	if definition.has("perks"):
 		return [Perks.get_owned_ids().size(), definition.perks]
+	if definition.has("conquest"):
+		var levels := ConquestLevels.LEVELS
+		return [levels.filter(func(path: String) -> bool: return Progress.get_stars(path) > 0).size(), levels.size()]
 	if definition.has("world"):
 		var campaign: Campaign = load(CAMPAIGN_PATH)
 		if definition.world >= campaign.worlds.size():
@@ -173,6 +191,19 @@ static func on_victory(stats: LevelStats, lives: int, gold: int, difficulty: int
 	var ids: Array[String] = []
 	for definition in LIST:
 		if definition.has("win") and _is_win_met(definition.win, stats, lives, gold, difficulty):
+			ids.append(definition.id)
+	var result := unlock_all(ids)
+	result.append_array(check_progress())
+	return result
+
+
+## Succès d'un niveau de Conquête gagné : ceux dont la condition `conquest_win` est
+## remplie, puis ceux de la progression. Renvoie les identifiants débloqués.
+static func on_conquest_victory(stats: LevelStats) -> Array[String]:
+	var ids: Array[String] = []
+	for definition in LIST:
+		if definition.get("conquest_win", "") == "any" \
+				or (definition.get("conquest_win", "") == "no_worker_lost" and stats.workers_lost == 0):
 			ids.append(definition.id)
 	var result := unlock_all(ids)
 	result.append_array(check_progress())

@@ -1,47 +1,79 @@
 class_name Conquest
 extends Node2D
-## Mode Conquête (prototype) : les tours coûtent de l'or et de la pierre, et des ouvriers
-## les bâtissent. Les ouvriers minent la pierre des rochers de la carte et la rapportent
-## au QG (la base) ; un rocher vidé disparaît et libère sa case. Une tour posée n'est
-## d'abord qu'un chantier, qui ne tire qu'une fois bâti. Les vagues partent seules au bout
-## d'un compte à rebours, qu'on peut toujours devancer avec « Lancer la vague ».
+## Mode Conquête : les tours coûtent de l'or et de la pierre, et des ouvriers les
+## bâtissent. Les ouvriers minent la pierre des rochers de la carte et l'essence de ses
+## filons, et les rapportent au QG (la base) ou au Dépôt le plus proche ; un gisement
+## vidé disparaît et libère sa case. Une tour posée n'est d'abord qu'un chantier, qui ne
+## tire qu'une fois bâti, et il en va de même des bâtiments (Building). L'essence paie
+## les dernières améliorations des tours et la Caserne. Des Pillards (EnemyData.raider)
+## s'ajoutent aux vagues et quittent le chemin pour frapper ouvriers et bâtiments.
+## Les vagues partent seules au bout d'un compte à rebours, qu'on peut toujours devancer
+## avec « Lancer la vague ».
 ## Le niveau crée ce nœud quand il a `conquest_mode`.
 
-const STARTING_STONE := 40
-const STARTING_WORKERS := 3
-const MAX_WORKERS := 8
+enum Ore { STONE, ESSENCE }
+
+## Ouvriers au plus sans Maison, et au plus avec toutes les Maisons.
+const BASE_WORKERS := 6
+const MAX_WORKERS := 14
 ## Prix d'un ouvrier, en or.
 const WORKER_COST := 40
-## Pierre d'un rocher.
+## Pierre d'un rocher, essence d'un filon.
 const ROCK_STONE := 30
+const VEIN_ESSENCE := 16
 ## Pierre d'une tour, par or de son prix.
 const STONE_PER_GOLD := 0.4
+## Essence demandée par une amélioration, à partir du niveau 3 de la tour : celle-ci
+## pour le niveau 3, le double pour le 4 (spécialisation)…
+const UPGRADE_ESSENCE := 3
+const UPGRADE_ESSENCE_FROM_LEVEL := 3
+## Part de la pierre et de l'essence rendue à la vente d'une tour ou d'un bâtiment bâti.
+const SELL_RATIO := 0.7
 ## Ouvriers qui bâtissent un même chantier, au plus.
 const BUILDERS_PER_SITE := 2
+## Ouvriers qui vont d'eux-mêmes miner l'essence, au plus (le joueur peut en envoyer
+## plus en cliquant sur un filon).
+const AUTO_ESSENCE_MINERS := 1
 ## Secondes avant la première vague, puis entre la fin d'une vague et la suivante.
 const FIRST_WAVE_DELAY := 45.0
 const WAVE_DELAY := 25.0
+## Pillards : secondes entre deux apparitions, et après le début de la vague.
+const RAIDER_INTERVAL := 2.5
+const RAIDER_DELAY := 3.0
 const STONE_COLOR := Color(0.78, 0.8, 0.88)
+const ESSENCE_COLOR := Color(0.78, 0.5, 1.0)
 const NO_CELL := Vector2i(-1000, -1000)
+## Groupe des cibles des Pillards : ouvriers et bâtiments.
+const RAID_TARGET_GROUP := "raid_targets"
 
-## Émis quand la pierre, les ouvriers ou le compte à rebours changent.
+## Émis quand la pierre, l'essence, les ouvriers, les bâtiments ou le compte à rebours
+## changent.
 signal changed
 
 var level: Level
 var stone := 0
-## Pierre restante de chaque rocher (case -> pierre).
+var essence := 0
+## Pierre restante de chaque rocher, essence de chaque filon (case -> quantité).
 var rocks := {}
-## Rocher désigné par le joueur : les ouvriers y minent tant qu'il reste de la pierre.
+var veins := {}
+## Gisement désigné par le joueur : les mineurs y vont tant qu'il en reste.
 var preferred_rock := NO_CELL
-## Point de dépôt de la pierre : le QG, au bout du chemin.
+## QG : au bout du chemin, point de dépôt où les ouvriers sont à l'abri.
 var depot_position := Vector2.ZERO
 ## Secondes avant le départ de la prochaine vague (négatif : pas de compte à rebours).
 var wave_countdown := -1.0
 ## Bilan de la partie.
 var stone_mined := 0
+var essence_mined := 0
 var workers_lost := 0
+var buildings_lost := 0
+## Ouvriers en même temps, au plus, depuis le début de la partie.
+var peak_workers := 0
 
-var _sites: Array[Tower] = []
+## Chantiers pas encore finis : des tours (Tower) et des bâtiments (Building), sans
+## type commun qui ait is_built() (d'où les variables sans type).
+var _sites: Array = []
+var _buildings: Array[Building] = []
 
 
 ## Pierre demandée pour un type de tour.
@@ -50,22 +82,71 @@ static func stone_cost(data: TowerData) -> int:
 
 
 ## Secondes pour bâtir un type de tour avec un seul ouvrier.
-static func build_time(data: TowerData) -> float:
+static func tower_build_time(data: TowerData) -> float:
 	return 3.0 + data.get_cost() / 25.0
+
+
+## Secondes pour bâtir un chantier (tour ou bâtiment) avec un seul ouvrier.
+static func build_time(site) -> float:
+	if site is Building:
+		return Building.get_definition(site.kind).build_time
+	return tower_build_time((site as Tower).data)
+
+
+## Essence demandée par la prochaine amélioration d'une tour (0 = aucune).
+static func upgrade_essence_cost(tower: Tower) -> int:
+	var next_level := tower.level + 1
+	return UPGRADE_ESSENCE * (next_level - UPGRADE_ESSENCE_FROM_LEVEL + 1) if next_level >= UPGRADE_ESSENCE_FROM_LEVEL else 0
+
+
+## Contour d'un cristal d'essence (losange irrégulier) de hauteur `height`.
+static func crystal_points(center: Vector2, height: float) -> PackedVector2Array:
+	var half := height / 2.0
+	return PackedVector2Array([center + Vector2(0, -half), center + Vector2(half * 0.55, -half * 0.2),
+		center + Vector2(half * 0.35, half), center + Vector2(-half * 0.35, half), center + Vector2(-half * 0.55, -half * 0.2)])
 
 
 func setup(owner_level: Level) -> void:
 	level = owner_level
-	stone = STARTING_STONE
+	level.stats.conquest = true
+	stone = level.conquest_starting_stone
 	depot_position = level.map.get_base_position()
 	for cell in level.map.blocked_cells:
 		rocks[cell] = ROCK_STONE
-	for i in STARTING_WORKERS:
+	for cell in level.essence_cells:
+		veins[cell] = VEIN_ESSENCE
+		level.map.block_cell(cell)
+	for i in level.conquest_starting_workers:
 		_add_worker(depot_position + Vector2.from_angle(PI * (0.8 + 0.4 * i)) * 30.0)
+	_add_raiders()
 	wave_countdown = FIRST_WAVE_DELAY
 	level.spawner.wave_started.connect(func(_index: int) -> void:
 		wave_countdown = -1.0
 		changed.emit())
+
+
+## Ajoute les Pillards du niveau aux vagues (sur des copies : la scène ne change pas),
+## en nombre réglé par la difficulté.
+func _add_raiders() -> void:
+	if level.raider == null:
+		return
+	var spawner := level.spawner
+	var waves: Array[WaveData] = []
+	for i in spawner.waves.size():
+		var wave := spawner.waves[i]
+		var count := level.raiders_per_wave[i] if i < level.raiders_per_wave.size() else 0
+		if count > 0:
+			wave = wave.duplicate()
+			wave.groups = wave.groups.duplicate()
+			var group := SpawnGroup.new()
+			group.enemy = level.raider
+			group.count = maxi(roundi(count * Difficulty.ENEMY_COUNT[level.difficulty]), 1)
+			group.interval = RAIDER_INTERVAL
+			group.start_delay = RAIDER_DELAY
+			group.path_index = i % maxi(level.map.paths.size(), 1)
+			wave.groups.append(group)
+		waves.append(wave)
+	spawner.waves = waves
 
 
 func get_workers() -> Array[Worker]:
@@ -76,10 +157,30 @@ func get_workers() -> Array[Worker]:
 	return result
 
 
-# --- Pierre et rochers -----------------------------------------------------
+## Ouvriers au plus : ceux du QG, et 2 de plus par Maison bâtie.
+func get_max_workers() -> int:
+	var houses := get_buildings(Building.Kind.HOUSE).size()
+	return mini(BASE_WORKERS + houses * Building.HOUSE_WORKERS, MAX_WORKERS)
+
+
+# --- Pierre, essence et gisements ----------------------------------------------
 
 func has_stone(cell: Vector2i) -> bool:
 	return rocks.has(cell)
+
+
+## Filon d'essence qu'un ouvrier peut miner (pas sous un Extracteur).
+func has_free_vein(cell: Vector2i) -> bool:
+	return veins.has(cell) and not level.map.get_occupant(cell) is Building
+
+
+## Gisement qu'un ouvrier peut miner : un rocher ou un filon libre.
+func has_resource(cell: Vector2i) -> bool:
+	return has_stone(cell) or has_free_vein(cell)
+
+
+func resource_at(cell: Vector2i) -> Ore:
+	return Ore.ESSENCE if veins.has(cell) else Ore.STONE
 
 
 func can_afford(data: TowerData) -> bool:
@@ -88,12 +189,18 @@ func can_afford(data: TowerData) -> bool:
 
 ## Prend jusqu'à `amount` pierres d'un rocher ; vidé, il disparaît de la carte.
 func take_stone(cell: Vector2i, amount: int) -> int:
-	if not rocks.has(cell):
+	return take_resource(cell, amount)
+
+
+## Prend jusqu'à `amount` pierres ou essences d'un gisement ; vidé, il disparaît.
+func take_resource(cell: Vector2i, amount: int) -> int:
+	var deposits := veins if veins.has(cell) else rocks
+	if not deposits.has(cell):
 		return 0
-	var taken := mini(amount, rocks[cell])
-	rocks[cell] -= taken
-	if rocks[cell] <= 0:
-		rocks.erase(cell)
+	var taken := mini(amount, deposits[cell])
+	deposits[cell] -= taken
+	if deposits[cell] <= 0:
+		deposits.erase(cell)
 		level.map.remove_rock(cell)
 		if preferred_rock == cell:
 			preferred_rock = NO_CELL
@@ -101,22 +208,52 @@ func take_stone(cell: Vector2i, amount: int) -> int:
 	return taken
 
 
-## Pierre rapportée au QG.
-func deposit(amount: int) -> void:
+## Pierre ou essence rapportée à un dépôt.
+func deposit(amount: int, kind := Ore.STONE, at := Vector2.INF) -> void:
+	if amount <= 0:
+		return
+	var shown_at := (depot_position if at == Vector2.INF else at) + Vector2(0, -40)
+	if kind == Ore.ESSENCE:
+		add_essence(amount, shown_at)
+		return
 	stone += amount
 	stone_mined += amount
-	_show_text("+%d pierre" % amount, STONE_COLOR, depot_position + Vector2(0, -40), 14)
+	level.stats.stone_mined += amount
+	_show_text(tr("+%d pierre") % amount, STONE_COLOR, shown_at, 14)
 	changed.emit()
 
 
-## Désigne le rocher où miner (clic sur un rocher) : les mineurs y vont tout de suite.
-## Renvoie false si la case n'a pas de rocher.
+## Essence gagnée (rapportée par un ouvrier, ou tirée par un Extracteur).
+func add_essence(amount: int, at: Vector2) -> void:
+	essence += amount
+	essence_mined += amount
+	level.stats.essence_mined += amount
+	_show_text(tr("+%d essence") % amount, ESSENCE_COLOR, at, 14)
+	changed.emit()
+
+
+## Dépôt le plus proche d'un point : le QG ou un Dépôt bâti.
+func nearest_depot(from: Vector2) -> Vector2:
+	var best := depot_position
+	for building in get_buildings(Building.Kind.DEPOT):
+		if building.global_position.distance_squared_to(from) < best.distance_squared_to(from):
+			best = building.global_position
+	return best
+
+
+## Près du QG, les ouvriers sont à l'abri des monstres.
+func is_safe(at: Vector2) -> bool:
+	return at.distance_to(depot_position) < Worker.SAFE_RADIUS
+
+
+## Désigne le gisement où miner (clic sur un rocher ou un filon) : les mineurs y vont
+## tout de suite. Renvoie false si la case n'a pas de gisement libre.
 func set_preferred_rock(cell: Vector2i) -> bool:
-	if not rocks.has(cell):
+	if not has_resource(cell):
 		return false
 	preferred_rock = cell
 	for worker in get_workers():
-		if worker.is_mining() or (worker.state == Worker.State.IDLE and worker.cargo < Worker.CARRY):
+		if worker.is_mining() or (worker.state == Worker.State.IDLE and worker.cargo == 0):
 			worker.go_mine(cell, level.map.cell_to_world(cell))
 	queue_redraw()
 	return true
@@ -125,7 +262,7 @@ func set_preferred_rock(cell: Vector2i) -> bool:
 # --- Ouvriers --------------------------------------------------------------
 
 func can_recruit() -> bool:
-	return not level.is_over and get_workers().size() < MAX_WORKERS and level.gold >= WORKER_COST
+	return not level.is_over and get_workers().size() < get_max_workers() and level.gold >= WORKER_COST
 
 
 ## Recrute un ouvrier au QG contre de l'or. Renvoie l'ouvrier, ou null.
@@ -144,12 +281,16 @@ func _add_worker(at: Vector2) -> Worker:
 	worker.killed.connect(_on_worker_killed)
 	add_child(worker)
 	worker.global_position = at
+	peak_workers = maxi(peak_workers, get_workers().size())
+	if level.counts_achievements() and peak_workers >= Achievements.FOREMAN_WORKERS:
+		level.unlock_achievements(["contremaitre"])
 	changed.emit()
 	return worker
 
 
 func _on_worker_killed(worker: Worker) -> void:
 	workers_lost += 1
+	level.stats.workers_lost += 1
 	Sound.play(&"lives_lost", -6.0)
 	_show_text("Ouvrier perdu", Color(1.0, 0.45, 0.4), worker.global_position + Vector2(0, -16), 14)
 	changed.emit.call_deferred()
@@ -165,24 +306,153 @@ func start_site(tower: Tower) -> void:
 	changed.emit()
 
 
-## Un ouvrier bâtit le chantier pendant `delta` secondes.
-func build(tower: Tower, delta: float) -> void:
-	if tower.advance_construction(delta / build_time(tower.data)):
-		_sites.erase(tower)
-		level.on_tower_built(tower)
+## Un ouvrier bâtit un chantier (tour ou bâtiment) pendant `delta` secondes.
+func build(site, delta: float) -> void:
+	if not site.advance_construction(delta / build_time(site)):
+		return
+	_sites.erase(site)
+	if site is Building:
+		_on_building_built(site)
+	else:
+		level.on_tower_built(site)
 
 
 ## Une tour vendue rend sa pierre : toute pour un chantier, la même part que l'or sinon.
 func refund(tower: Tower) -> void:
 	_sites.erase(tower)
 	var cost := stone_cost(tower.data)
-	stone += cost if not tower.is_built() else roundi(cost * Tower.SELL_RATIO)
+	stone += cost if not tower.is_built() else roundi(cost * SELL_RATIO)
 	changed.emit()
 
 
 ## Chantiers pas encore finis.
-func get_sites() -> Array[Tower]:
-	return _sites.filter(func(tower: Tower) -> bool: return is_instance_valid(tower) and tower.is_alive)
+func get_sites() -> Array:
+	return _sites.filter(func(site) -> bool: return is_instance_valid(site) and site.is_alive)
+
+
+# --- Améliorations -----------------------------------------------------------
+
+func can_afford_upgrade(tower: Tower) -> bool:
+	return essence >= upgrade_essence_cost(tower)
+
+
+## Paie l'essence d'une amélioration (avant qu'elle soit faite).
+func pay_upgrade(tower: Tower) -> void:
+	essence -= upgrade_essence_cost(tower)
+	changed.emit()
+
+
+# --- Bâtiments ---------------------------------------------------------------
+
+## Bâtiments posés (bâtis ou en chantier) ; d'un seul type si `kind` est donné, et
+## alors seulement ceux qui sont bâtis.
+func get_buildings(kind := -1) -> Array[Building]:
+	var result: Array[Building] = []
+	for building in _buildings:
+		if is_instance_valid(building) and building.is_alive and (kind < 0 or (building.kind == kind and building.is_built())):
+			result.append(building)
+	return result
+
+
+func can_afford_building(kind: int) -> bool:
+	var definition := Building.get_definition(kind)
+	return level.gold >= definition.gold and stone >= definition.stone and essence >= definition.essence
+
+
+## La case convient au bâtiment : une case libre, un filon libre (Extracteur) ou une case
+## du chemin (Barricade).
+func is_cell_suitable(cell: Vector2i, kind: int) -> bool:
+	var map := level.map
+	if not map.is_cell_in_grid(cell) or map.get_occupant(cell) != null:
+		return false
+	match Building.get_definition(kind).placement:
+		Building.Placement.VEIN:
+			return veins.has(cell)
+		Building.Placement.PATH:
+			return map.is_cell_on_path(cell) and not map.is_cell_blocked(cell) \
+				and map.cell_to_world(cell).distance_to(depot_position) > map.cell_size
+	return map.is_cell_buildable(cell)
+
+
+func can_place_building(cell: Vector2i, kind: int) -> bool:
+	return not level.is_over and kind >= 0 and is_cell_suitable(cell, kind) and can_afford_building(kind)
+
+
+## Pose un bâtiment en chantier, payé tout de suite. Renvoie le bâtiment, ou null.
+func place_building(cell: Vector2i, kind: int) -> Building:
+	if not can_place_building(cell, kind):
+		return null
+	var definition := Building.get_definition(kind)
+	level.gold -= definition.gold
+	level.stats.gold_spent += definition.gold
+	stone -= definition.stone
+	essence -= definition.essence
+	var building := Building.new()
+	building.kind = kind
+	building.conquest = self
+	building.cell = cell
+	building.destroyed.connect(_on_building_destroyed)
+	add_child(building)
+	move_child(building, 0)
+	building.global_position = level.map.cell_to_world(cell)
+	level.map.occupy(cell, building)
+	_buildings.append(building)
+	_sites.append(building)
+	Sound.play(&"build")
+	if preferred_rock == cell:
+		preferred_rock = NO_CELL
+	changed.emit()
+	return building
+
+
+## Or, pierre et essence rendus à la démolition : tout pour un chantier, une part sinon.
+func get_building_refund(building: Building) -> Dictionary:
+	var definition := Building.get_definition(building.kind)
+	var ratio := 1.0 if not building.is_built() else SELL_RATIO
+	return {gold = roundi(definition.gold * ratio), stone = roundi(definition.stone * ratio),
+		essence = roundi(definition.essence * ratio)}
+
+
+## Démolit un bâtiment et en rend une part. Renvoie l'or rendu (0 si impossible).
+func sell_building(building: Building) -> int:
+	if not is_instance_valid(building) or not building.is_alive or level.is_over:
+		return 0
+	var refund_amounts := get_building_refund(building)
+	level.gold += refund_amounts.gold
+	level.stats.gold_earned += refund_amounts.gold
+	stone += refund_amounts.stone
+	essence += refund_amounts.essence
+	_show_text("+%d" % refund_amounts.gold, Level.GOLD_TEXT_COLOR, building.global_position, 16)
+	Sound.play(&"sell")
+	_remove_building(building)
+	building.despawn()
+	return refund_amounts.gold
+
+
+func _on_building_built(building: Building) -> void:
+	level.stats.buildings_built += 1
+	Sound.play(&"upgrade")
+	_show_text(tr("%s bâti") % tr(building.get_display_name()), Color(0.6, 1.0, 0.65),
+		building.global_position + Vector2(0, -32), 14)
+	changed.emit()
+
+
+func _on_building_destroyed(building: Building) -> void:
+	buildings_lost += 1
+	Sound.play(&"lives_lost", -6.0)
+	_show_text(tr("%s détruit") % tr(building.get_display_name()), Color(1.0, 0.45, 0.4),
+		building.global_position + Vector2(0, -24), 14)
+	_remove_building(building)
+
+
+func _remove_building(building: Building) -> void:
+	_sites.erase(building)
+	_buildings.erase(building)
+	if level.map.get_occupant(building.cell) == building:
+		level.map.release(building.cell)
+	if level.placer.inspected_building == building:
+		level.placer.inspect_building(null)
+	changed.emit.call_deferred()
 
 
 # --- Vagues ------------------------------------------------------------------
@@ -214,40 +484,53 @@ func _process(delta: float) -> void:
 ## en train de miner), puis la mine.
 func _assign_workers() -> void:
 	var workers := get_workers()
-	for tower in get_sites():
-		var builders := workers.filter(func(worker: Worker) -> bool: return worker.is_building(tower)).size()
+	for site in get_sites():
+		var builders := workers.filter(func(worker: Worker) -> bool: return worker.is_building(site)).size()
 		while builders < BUILDERS_PER_SITE:
 			var best: Worker = null
 			for worker in workers:
 				var free := worker.state == Worker.State.IDLE or worker.is_mining()
-				if free and (best == null or worker.global_position.distance_squared_to(tower.global_position)
-						< best.global_position.distance_squared_to(tower.global_position)):
+				if free and (best == null or worker.global_position.distance_squared_to(site.global_position)
+						< best.global_position.distance_squared_to(site.global_position)):
 					best = worker
 			if best == null:
 				break
-			best.go_build(tower)
+			best.go_build(site)
 			builders += 1
 	for worker in workers:
 		if worker.state != Worker.State.IDLE:
 			continue
-		var cell := _rock_to_mine() if worker.cargo < Worker.CARRY else NO_CELL
+		var cell := _resource_to_mine(worker, workers) if worker.cargo == 0 else NO_CELL
 		if cell != NO_CELL:
 			worker.go_mine(cell, level.map.cell_to_world(cell))
-		elif worker.cargo > 0 or worker.global_position.distance_to(depot_position) > Worker.SAFE_RADIUS:
+		elif worker.cargo > 0 or not is_safe(worker.global_position):
 			worker.go_deposit()
 
 
-## Rocher à miner : celui désigné par le joueur, sinon le plus proche du QG.
-func _rock_to_mine() -> Vector2i:
-	if rocks.has(preferred_rock):
+## Gisement à miner pour un ouvrier : celui désigné par le joueur ; sinon un filon libre
+## si personne ne mine encore l'essence ; sinon le rocher le plus rentable (le moins de
+## marche, aller et retour au dépôt le plus proche).
+func _resource_to_mine(worker: Worker, workers: Array[Worker]) -> Vector2i:
+	if has_resource(preferred_rock):
 		return preferred_rock
+	var essence_miners := workers.filter(func(other: Worker) -> bool: return other.is_mining_essence()).size()
+	var free_veins: Array = veins.keys().filter(has_free_vein)
+	if essence_miners < AUTO_ESSENCE_MINERS and not free_veins.is_empty():
+		return _closest_deposit(worker.global_position, free_veins)
+	if rocks.is_empty():
+		return _closest_deposit(worker.global_position, free_veins) if not free_veins.is_empty() else NO_CELL
+	return _closest_deposit(worker.global_position, rocks.keys())
+
+
+func _closest_deposit(from: Vector2, cells: Array) -> Vector2i:
 	var best := NO_CELL
-	var best_distance := INF
-	for cell: Vector2i in rocks:
-		var distance := level.map.cell_to_world(cell).distance_squared_to(depot_position)
-		if distance < best_distance:
+	var best_cost := INF
+	for cell: Vector2i in cells:
+		var at := level.map.cell_to_world(cell)
+		var cost := from.distance_to(at) + at.distance_to(nearest_depot(at)) * 2.0
+		if cost < best_cost:
 			best = cell
-			best_distance = distance
+			best_cost = cost
 	return best
 
 
@@ -260,14 +543,31 @@ func _show_text(text: String, color: Color, at: Vector2, font_size: int) -> void
 	level.effects.add_child(label)
 
 
-## Sous chaque rocher, une jauge de la pierre restante ; le rocher désigné est entouré.
+## Sous chaque rocher, une jauge de la pierre restante ; les filons d'essence sont des
+## cristaux, avec leur jauge ; le gisement désigné est entouré.
 func _draw() -> void:
 	var map := level.map
 	for cell: Vector2i in rocks:
+		_draw_gauge(map.cell_to_world(cell), rocks[cell] / float(ROCK_STONE), STONE_COLOR)
+	for cell: Vector2i in veins:
 		var center := to_local(map.cell_to_world(cell))
-		var width := map.cell_size * 0.7
-		var top_left := center + Vector2(-width / 2.0, map.cell_size * 0.5 - 9.0)
-		draw_rect(Rect2(top_left, Vector2(width, 5)), Color(0, 0, 0, 0.6))
-		draw_rect(Rect2(top_left, Vector2(width * rocks[cell] / float(ROCK_STONE), 5)), STONE_COLOR)
-		if cell == preferred_rock:
-			draw_arc(center, map.cell_size * 0.55, 0.0, TAU, 40, Color(1.0, 0.82, 0.25), 2.5)
+		if not map.get_occupant(cell) is Building:
+			for offset: Vector2 in [Vector2(-12, 6), Vector2(11, 8), Vector2(0, -4)]:
+				var height := 26.0 if offset.y < 0.0 else 18.0
+				draw_colored_polygon(crystal_points(center + offset, height), ESSENCE_COLOR.darkened(0.15))
+				draw_polyline(crystal_points(center + offset, height) + PackedVector2Array([crystal_points(center + offset, height)[0]]),
+					ESSENCE_COLOR.lightened(0.4), 1.5)
+			_draw_gauge(map.cell_to_world(cell), veins[cell] / float(VEIN_ESSENCE), ESSENCE_COLOR)
+		else:
+			draw_circle(center, map.cell_size * 0.42, Color(ESSENCE_COLOR, 0.18))
+	if has_resource(preferred_rock):
+		draw_arc(to_local(map.cell_to_world(preferred_rock)), map.cell_size * 0.55, 0.0, TAU, 40, Color(1.0, 0.82, 0.25), 2.5)
+
+
+func _draw_gauge(world_center: Vector2, ratio: float, color: Color) -> void:
+	var cell_size := level.map.cell_size
+	var center := to_local(world_center)
+	var width := cell_size * 0.7
+	var top_left := center + Vector2(-width / 2.0, cell_size * 0.5 - 9.0)
+	draw_rect(Rect2(top_left, Vector2(width, 5)), Color(0, 0, 0, 0.6))
+	draw_rect(Rect2(top_left, Vector2(width * ratio, 5)), color)

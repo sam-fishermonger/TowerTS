@@ -49,6 +49,11 @@ func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
 		"Tours posées": str(stats.towers_built),
 		"Améliorations": str(stats.upgrades_bought),
 	}
+	if stats.conquest:
+		summary["Pierre récoltée"] = LevelStats.format_number(stats.stone_mined)
+		summary["Essence récoltée"] = LevelStats.format_number(stats.essence_mined)
+		summary["Bâtiments bâtis"] = str(stats.buildings_built)
+		summary["Ouvriers perdus"] = str(stats.workers_lost)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override(&"h_separation", 12)
