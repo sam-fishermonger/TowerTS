@@ -1,11 +1,13 @@
 class_name CustomLevel
 extends RefCounted
 ## Niveau fait dans l'éditeur : un chemin tracé case par case, des rochers, des vagues
-## et l'or et les vies de départ. Il est gardé sous forme de dictionnaire (enregistré
-## avec la progression, voir LevelEditor) et joué dans la scène de niveau vide, que
-## apply() remplit avant qu'elle soit prête.
+## et l'or et les vies de départ. Il est gardé sous forme de dictionnaire (les niveaux
+## du joueur sont enregistrés avec la progression, voir load_all()) et joué dans la
+## scène de niveau vide, que apply() remplit avant qu'elle soit prête. Un niveau se
+## partage sous forme de code texte à copier-coller (encode() et decode()).
 ##
 ## Le dictionnaire :
+## - name : nom du niveau ;
 ## - biome : indice du monde dont la carte prend les tuiles et les couleurs ;
 ## - path : cases du chemin (Vector2i), chacune alignée avec la précédente : le chemin
 ##   va en ligne droite de l'une à l'autre. La première est au bord de la carte ;
@@ -15,9 +17,23 @@ extends RefCounted
 ##   count, elite }] }.
 
 const CAMPAIGN_PATH := "res://resources/campaign.tres"
-## Réglage (Progress) qui garde le niveau en cours d'édition.
-const SETTING := "editor_level"
+## Réglages (Progress) : la liste des niveaux du joueur et celui qui est ouvert.
+const LEVELS_SETTING := "editor_levels"
+const CURRENT_SETTING := "editor_current"
+## Ancien réglage, qui ne gardait qu'un niveau : il devient le premier de la liste.
+const LEGACY_SETTING := "editor_level"
 const LEVEL_NAME := "Niveau perso"
+const MAX_LEVELS := 30
+const MAX_NAME_LENGTH := 28
+
+## Code de partage : ce préfixe (avec la version du format), puis le niveau en JSON
+## compressé et écrit en base64 (version URL, sans « + » ni « / »).
+const CODE_PREFIX := "TTS1-"
+## Taille maximale d'un code et de son contenu décompressé, pour ne pas se laisser
+## noyer par un code trafiqué.
+const MAX_CODE_LENGTH := 6000
+const MAX_JSON_SIZE := 30000
+const ENEMIES_DIR := "res://resources/enemies/"
 
 ## Grille de la carte (celle de GameMap).
 const COLUMNS := 20
@@ -63,6 +79,7 @@ const BIOME_COLORS: Array[Array] = [
 ## Niveau de départ de l'éditeur : un chemin en S et trois vagues de La Ruche.
 static func create_default() -> Dictionary:
 	return {
+		name = LEVEL_NAME,
 		biome = 0,
 		path = [Vector2i(0, 2), Vector2i(8, 2), Vector2i(8, 7), Vector2i(15, 7), Vector2i(15, 3), Vector2i(19, 3)],
 		rocks = [Vector2i(3, 5), Vector2i(12, 1), Vector2i(17, 8)],
@@ -78,16 +95,54 @@ static func create_default() -> Dictionary:
 	}
 
 
-## Niveau en cours d'édition (celui par défaut s'il n'y en a pas encore).
-static func load_saved() -> Dictionary:
-	var data: Variant = Progress.get_setting(SETTING, {})
-	if data is Dictionary and validate(data).is_empty():
-		return data
-	return create_default()
+## Niveaux du joueur, dans l'ordre de la liste (au moins un : celui par défaut s'il
+## n'y en a pas encore). Le niveau de l'ancien réglage, s'il y en a un, est repris.
+static func load_all() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var saved: Variant = Progress.get_setting(LEVELS_SETTING, false)
+	if not saved is Array:
+		saved = [Progress.get_setting(LEGACY_SETTING, {})]
+	if saved is Array:
+		for entry: Variant in saved:
+			if entry is Dictionary and validate_shape(entry).is_empty():
+				var level: Dictionary = entry.duplicate(true)
+				level.name = clean_name(level.get("name", ""))
+				result.append(level)
+	if result.is_empty():
+		result.append(create_default())
+	return result
 
 
-static func save(data: Dictionary) -> void:
-	Progress.set_setting(SETTING, data)
+## Rang du niveau ouvert dans la liste.
+static func load_current_index(count: int) -> int:
+	return clampi(int(Progress.get_setting(CURRENT_SETTING, 0)), 0, maxi(count - 1, 0))
+
+
+static func save_all(levels: Array[Dictionary], current: int) -> void:
+	Progress.set_setting(LEVELS_SETTING, levels)
+	Progress.set_setting(CURRENT_SETTING, current)
+
+
+## Nom propre : sans espaces autour, raccourci, et celui par défaut s'il est vide.
+static func clean_name(text: Variant) -> String:
+	var result := str(text).strip_edges().left(MAX_NAME_LENGTH)
+	return result if not result.is_empty() else LEVEL_NAME
+
+
+## Nom libre dans la liste : « Nom », sinon « Nom (2) », « Nom (3) »...
+static func unique_name(text: String, levels: Array[Dictionary], ignore := -1) -> String:
+	var taken: Array[String] = []
+	for i in levels.size():
+		if i != ignore:
+			taken.append(str(levels[i].get("name", "")))
+	var base := clean_name(text)
+	var result := base
+	var number := 2
+	while taken.has(result):
+		var suffix := " (%d)" % number
+		result = base.left(MAX_NAME_LENGTH - suffix.length()) + suffix
+		number += 1
+	return result
 
 
 ## Monstres qu'on peut mettre dans les vagues : ceux de chaque monde, puis ses boss.
@@ -272,11 +327,33 @@ static func build_waves(data: Dictionary) -> Array[WaveData]:
 
 # --- Vérification et lancement -------------------------------------------------
 
-## Ce qui empêche de jouer le niveau, en une phrase ("" s'il est jouable).
-static func validate(data: Dictionary) -> String:
+## Le dictionnaire a-t-il tout ce qu'il faut, avec les bons types ("" si oui) ? Un
+## niveau bien formé peut encore être injouable (voir validate()) : il s'édite.
+static func validate_shape(data: Dictionary) -> String:
 	for key in ["biome", "path", "rocks", "gold", "lives", "waves"]:
 		if not data.has(key):
 			return "Niveau incomplet."
+	if not (data.path is Array and data.rocks is Array and data.waves is Array):
+		return "Niveau incomplet."
+	if int(data.biome) < 0 or int(data.biome) >= BIOME_COLORS.size():
+		return "Niveau incomplet."
+	for cell: Variant in data.path + data.rocks:
+		if not cell is Vector2i:
+			return "Niveau incomplet."
+	for wave: Variant in data.waves:
+		if not wave is Dictionary or not wave.get("groups") is Array:
+			return "Niveau incomplet."
+		for group: Variant in wave.groups:
+			if not group is Dictionary or not group.get("enemy") is String:
+				return "Niveau incomplet."
+	return ""
+
+
+## Ce qui empêche de jouer le niveau, en une phrase ("" s'il est jouable).
+static func validate(data: Dictionary) -> String:
+	var shape := validate_shape(data)
+	if not shape.is_empty():
+		return shape
 	var path: Array = data.path
 	if path.size() < 2:
 		return "Tracez le chemin : il part du bord de la carte et va jusqu'à la base."
@@ -308,7 +385,7 @@ static func validate(data: Dictionary) -> String:
 ## prête (Level._enter_tree), pour que la carte trouve son chemin en se préparant.
 static func apply(level: Level, data: Dictionary) -> void:
 	var biome := clampi(int(data.biome), 0, BIOME_COLORS.size() - 1)
-	level.level_name = LEVEL_NAME
+	level.level_name = clean_name(data.get("name", ""))
 	level.starting_gold = clampi(int(data.gold), MIN_GOLD, MAX_GOLD)
 	level.starting_lives = clampi(int(data.lives), MIN_LIVES, MAX_LIVES)
 	var towers: Array[TowerData] = []
@@ -338,3 +415,100 @@ static func apply(level: Level, data: Dictionary) -> void:
 	map.add_child(path)
 	var spawner: WaveSpawner = level.get_node("WaveSpawner")
 	spawner.waves = build_waves(data)
+
+
+# --- Partage ---------------------------------------------------------------------
+
+## Code de partage du niveau : une ligne de texte à copier-coller.
+static func encode(data: Dictionary) -> String:
+	var path := []
+	for cell: Vector2i in data.path:
+		path.append_array([cell.x, cell.y])
+	var rocks := []
+	for cell: Vector2i in data.rocks:
+		rocks.append_array([cell.x, cell.y])
+	var waves := []
+	for wave: Dictionary in data.waves:
+		var groups := []
+		for group: Dictionary in wave.groups:
+			groups.append([_enemy_id(group.enemy), int(group.count), 1 if group.get("elite", false) else 0])
+		waves.append(groups)
+	var compact := {
+		n = clean_name(data.get("name", "")), b = int(data.biome), g = int(data.gold), l = int(data.lives),
+		p = path, r = rocks, w = waves,
+	}
+	var bytes := JSON.stringify(compact).to_utf8_buffer()
+	var packed := bytes.compress(FileAccess.COMPRESSION_DEFLATE)
+	return CODE_PREFIX + Marshalls.raw_to_base64(packed).replace("+", "-").replace("/", "_").trim_suffix("=").trim_suffix("=")
+
+
+## Niveau lu dans un code de partage, ou {} si le code n'en est pas un. Le code vient
+## d'ailleurs : tout est vérifié et borné, et les monstres ne peuvent être que ceux
+## proposés par l'éditeur.
+static func decode(code: String) -> Dictionary:
+	for blank in [" ", "\n", "\r", "\t"]:
+		code = code.replace(blank, "")
+	if not code.begins_with(CODE_PREFIX) or code.length() > MAX_CODE_LENGTH:
+		return {}
+	var text := code.substr(CODE_PREFIX.length()).replace("-", "+").replace("_", "/")
+	while text.length() % 4 != 0:
+		text += "="
+	var packed := Marshalls.base64_to_raw(text)
+	if packed.is_empty():
+		return {}
+	var bytes := packed.decompress_dynamic(MAX_JSON_SIZE, FileAccess.COMPRESSION_DEFLATE)
+	var json := JSON.new()
+	if json.parse(bytes.get_string_from_utf8()) != OK or not json.data is Dictionary:
+		return {}
+	var compact: Dictionary = json.data
+	var enemies := {}
+	for enemy in get_enemy_choices():
+		enemies[_enemy_id(enemy.resource_path)] = enemy
+	var data := {
+		name = clean_name(compact.get("n", "")),
+		biome = clampi(_to_int(compact.get("b")), 0, BIOME_COLORS.size() - 1),
+		gold = clampi(_to_int(compact.get("g")), MIN_GOLD, MAX_GOLD),
+		lives = clampi(_to_int(compact.get("l")), MIN_LIVES, MAX_LIVES),
+		path = _read_cells(compact.get("p"), COLUMNS * ROWS),
+		rocks = _read_cells(compact.get("r"), COLUMNS * ROWS),
+		waves = [],
+	}
+	var waves: Variant = compact.get("w")
+	if not waves is Array or waves.size() > MAX_WAVES:
+		return {}
+	for groups: Variant in waves:
+		if not groups is Array or groups.is_empty() or groups.size() > MAX_GROUPS:
+			return {}
+		var wave := {groups = []}
+		for group: Variant in groups:
+			if not group is Array or group.size() != 3 or not enemies.has(group[0]):
+				return {}
+			var enemy: EnemyData = enemies[group[0]]
+			wave.groups.append({enemy = enemy.resource_path, count = clampi(_to_int(group[1]), 1, MAX_COUNT),
+				elite = _to_int(group[2]) == 1})
+		data.waves.append(wave)
+	if not validate(data).is_empty():
+		return {}
+	return data
+
+
+## Nom court d'un monstre dans un code : son dossier et son fichier (« mecha/drone »).
+static func _enemy_id(path: String) -> String:
+	return path.trim_prefix(ENEMIES_DIR).trim_suffix(".tres")
+
+
+static func _to_int(value: Variant) -> int:
+	return int(value) if value is float or value is int else 0
+
+
+## Cases lues dans une liste de nombres (x, y, x, y...), ou null si elle est mal formée.
+static func _read_cells(values: Variant, limit: int) -> Variant:
+	if not values is Array or values.size() % 2 != 0 or values.size() > limit * 2:
+		return null
+	var result := []
+	for i in range(0, values.size(), 2):
+		var cell := Vector2i(_to_int(values[i]), _to_int(values[i + 1]))
+		if not is_in_grid(cell):
+			return null
+		result.append(cell)
+	return result

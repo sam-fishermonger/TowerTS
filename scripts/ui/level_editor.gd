@@ -1,8 +1,9 @@
 class_name LevelEditor
 extends Control
 ## Éditeur de niveau : on trace le chemin des ennemis sur la grille, on pose des
-## rochers, on compose les vagues, puis on joue. Le niveau en cours d'édition est
-## enregistré avec la progression (CustomLevel), et une partie finie ramène ici.
+## rochers, on compose les vagues, puis on joue. Les niveaux du joueur sont enregistrés
+## avec la progression (CustomLevel) ; l'onglet Niveaux en crée, en ouvre, et les partage
+## sous forme de code à copier-coller. Une partie finie ramène ici.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/map/base.svg")
@@ -15,9 +16,14 @@ const READY_COLOR := Color(0.55, 1.0, 0.6)
 const START_COLOR := Color(0.45, 0.9, 0.5)
 
 enum EditTool { PATH, ROCKS }
+enum Tab { LEVELS, MAP, WAVES }
 
-## Niveau en cours d'édition (voir CustomLevel).
+## Niveaux du joueur (voir CustomLevel), et le rang de celui qui est ouvert.
+var levels: Array[Dictionary] = []
+var current := 0
+## Niveau ouvert (un élément de levels).
 var data: Dictionary
+var current_tab := Tab.MAP
 var current_tool := EditTool.PATH
 ## Monstres proposés dans les vagues, dans l'ordre des listes.
 var enemy_choices: Array[EnemyData] = []
@@ -25,6 +31,11 @@ var enemy_choices: Array[EnemyData] = []
 var map_view: Control
 var waves_view: ScrollContainer
 var waves_list: VBoxContainer
+var levels_view: VBoxContainer
+var levels_list: VBoxContainer
+var import_edit: LineEdit
+var name_edit: LineEdit
+var levels_tab: Button
 var map_tab: Button
 var waves_tab: Button
 var path_tool_button: Button
@@ -40,10 +51,17 @@ var back_button: Button
 ## Rochers : le glisser pose (true) ou enlève (false), selon la première case.
 var _painting_rocks := true
 var _dragging := false
+## Niveau dont la suppression attend une confirmation (deuxième clic), ou -1.
+var _pending_delete := -1
+## Message passager (code copié, import raté...) affiché en bas jusqu'à la prochaine action.
+var _notice := ""
+var _notice_is_error := false
 
 
 func _ready() -> void:
-	data = CustomLevel.load_saved()
+	levels = CustomLevel.load_all()
+	current = CustomLevel.load_current_index(levels.size())
+	data = levels[current]
 	enemy_choices = CustomLevel.get_enemy_choices()
 	_build()
 	_refresh()
@@ -51,7 +69,11 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	CustomLevel.save(data)
+	_save()
+
+
+func _save() -> void:
+	CustomLevel.save_all(levels, current)
 
 
 # --- Construction de l'écran ----------------------------------------------------
@@ -67,21 +89,31 @@ func _build() -> void:
 	top.size = Vector2(1248, 44)
 	top.add_theme_constant_override("separation", 10)
 	add_child(top)
-	var title := Label.new()
-	title.text = "Éditeur de niveau"
-	title.add_theme_font_size_override("font_size", 26)
-	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
-	top.add_child(title)
+	# Le nom du niveau ouvert, qu'on modifie sur place.
+	name_edit = LineEdit.new()
+	name_edit.custom_minimum_size = Vector2(250, 0)
+	name_edit.max_length = CustomLevel.MAX_NAME_LENGTH
+	name_edit.tooltip_text = "Nom du niveau"
+	name_edit.add_theme_font_size_override("font_size", 22)
+	name_edit.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	name_edit.text_changed.connect(func(text: String) -> void: data.name = text)
+	name_edit.text_submitted.connect(func(text: String) -> void:
+		rename_level(text)
+		name_edit.release_focus())
+	name_edit.focus_exited.connect(func() -> void: rename_level(name_edit.text))
+	top.add_child(name_edit)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
 	var tabs := ButtonGroup.new()
+	levels_tab = _make_toggle("Niveaux", tabs, top)
+	levels_tab.pressed.connect(show_tab.bind(Tab.LEVELS))
 	map_tab = _make_toggle("Carte", tabs, top)
 	map_tab.button_pressed = true
-	map_tab.pressed.connect(_show_tab.bind(false))
+	map_tab.pressed.connect(show_tab.bind(Tab.MAP))
 	waves_tab = _make_toggle("Vagues", tabs, top)
-	waves_tab.pressed.connect(_show_tab.bind(true))
-	top.add_child(_make_label("   Monde"))
+	waves_tab.pressed.connect(show_tab.bind(Tab.WAVES))
+	top.add_child(_make_label("  Monde"))
 	biome_option = OptionButton.new()
 	for name in CustomLevel.get_biome_names():
 		biome_option.add_item(name)
@@ -114,6 +146,8 @@ func _build() -> void:
 	waves_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	waves_list.add_theme_constant_override("separation", 8)
 	waves_view.add_child(waves_list)
+
+	_build_levels_view()
 
 	var bottom := HBoxContainer.new()
 	bottom.position = Vector2(16, BAR_HEIGHT + map_view.size.y + 18)
@@ -183,14 +217,21 @@ func set_tool(edit_tool: EditTool) -> void:
 	_refresh()
 
 
-func _show_tab(waves: bool) -> void:
-	map_view.visible = not waves
-	waves_view.visible = waves
-	path_tool_button.visible = not waves
-	rocks_tool_button.visible = not waves
-	clear_button.visible = not waves
-	if waves:
+func show_tab(tab: Tab) -> void:
+	current_tab = tab
+	[levels_tab, map_tab, waves_tab][tab].button_pressed = true
+	map_view.visible = tab == Tab.MAP
+	waves_view.visible = tab == Tab.WAVES
+	levels_view.visible = tab == Tab.LEVELS
+	path_tool_button.visible = tab == Tab.MAP
+	rocks_tool_button.visible = tab == Tab.MAP
+	clear_button.visible = tab == Tab.MAP
+	_pending_delete = -1
+	_notice = ""
+	if tab == Tab.WAVES:
 		_rebuild_waves()
+	elif tab == Tab.LEVELS:
+		_rebuild_levels()
 	_refresh()
 
 
@@ -198,43 +239,59 @@ func _show_tab(waves: bool) -> void:
 
 ## Met à jour les réglages, les boutons et le message du bas, et redessine la carte.
 func _refresh() -> void:
+	if not name_edit.has_focus():
+		name_edit.text = str(data.get("name", ""))
 	biome_option.select(int(data.biome))
 	gold_spin.set_value_no_signal(int(data.gold))
 	lives_spin.set_value_no_signal(int(data.lives))
 	clear_button.text = "Effacer le chemin" if current_tool == EditTool.PATH else "Enlever les rochers"
 	var problem := CustomLevel.validate(data)
 	play_button.disabled = not problem.is_empty()
-	if not problem.is_empty():
+	if not _notice.is_empty():
+		status_label.text = _notice
+		status_label.add_theme_color_override("font_color", ERROR_COLOR if _notice_is_error else READY_COLOR)
+	elif not problem.is_empty():
 		status_label.text = problem
 		status_label.add_theme_color_override("font_color", ERROR_COLOR)
 	else:
-		status_label.text = "%s  ·  %s" % [_describe_waves(), _tool_hint()]
+		status_label.text = "%s  ·  %s" % [_describe_waves(data), _tool_hint()]
 		status_label.add_theme_color_override("font_color", HINT_COLOR)
 	map_view.queue_redraw()
 
 
+## Message passager en bas de l'écran (jusqu'à la prochaine action).
+func _show_notice(text: String, is_error := false) -> void:
+	_notice = text
+	_notice_is_error = is_error
+	_refresh()
+	_notice = ""
+
+
 func _tool_hint() -> String:
-	if waves_view and waves_view.visible:
+	if current_tab == Tab.LEVELS:
+		return tr("Copiez le code d'un niveau pour le partager.")
+	if current_tab == Tab.WAVES:
 		return "Prêt à jouer."
 	if current_tool == EditTool.PATH:
 		return "Cliquez ou glissez pour prolonger le chemin, clic droit pour reculer."
 	return "Cliquez ou glissez pour poser ou enlever des rochers."
 
 
-func _describe_waves() -> String:
-	var waves: Array = data.waves
+func _describe_waves(level: Dictionary) -> String:
+	var waves: Array = level.waves
 	var monsters := 0
 	for wave: Dictionary in waves:
 		for group: Dictionary in wave.groups:
 			monsters += 1 if load(group.enemy).is_boss else int(group.count)
-	return "%d vague%s, %d monstres" % [waves.size(), "s" if waves.size() > 1 else "", monsters]
+	return tr_n("%d vague", "%d vagues", waves.size()) % waves.size() + ", " \
+		+ tr_n("%d monstre", "%d monstres", monsters) % monsters
 
 
 ## Joue le niveau, s'il est jouable.
 func play() -> bool:
 	if not CustomLevel.validate(data).is_empty():
 		return false
-	CustomLevel.save(data)
+	_save()
 	Level.open_custom(get_tree(), data)
 	return true
 
@@ -448,7 +505,7 @@ func _make_wave_row(index: int) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	panel.add_child(row)
-	var label := _make_label("Vague %d" % (index + 1))
+	var label := _make_label(tr("Vague %d") % (index + 1))
 	label.custom_minimum_size = Vector2(90, 0)
 	label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
 	row.add_child(label)
@@ -524,3 +581,189 @@ func _world_of(campaign: Campaign, enemy: EnemyData) -> int:
 		if campaign.worlds[i].enemies.has(enemy) or campaign.worlds[i].bosses.has(enemy):
 			return i
 	return 0
+
+
+# --- Niveaux et partage -----------------------------------------------------------
+
+func _build_levels_view() -> void:
+	levels_view = VBoxContainer.new()
+	levels_view.position = Vector2(16, BAR_HEIGHT + 8)
+	levels_view.size = Vector2(1248, map_view.size.y - 16)
+	levels_view.add_theme_constant_override("separation", 10)
+	levels_view.visible = false
+	add_child(levels_view)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 12)
+	levels_view.add_child(actions)
+	var new_button := Button.new()
+	new_button.text = "+ Nouveau niveau"
+	new_button.custom_minimum_size = Vector2(220, 44)
+	new_button.pressed.connect(new_level)
+	actions.add_child(new_button)
+	actions.add_child(_make_label("   Code reçu"))
+	import_edit = LineEdit.new()
+	import_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	import_edit.placeholder_text = "Collez ici le code d'un niveau partagé (%s...)" % CustomLevel.CODE_PREFIX
+	import_edit.text_submitted.connect(func(text: String) -> void: import_code(text))
+	actions.add_child(import_edit)
+	var import_button := Button.new()
+	import_button.text = "Importer"
+	import_button.custom_minimum_size = Vector2(140, 44)
+	import_button.pressed.connect(func() -> void: import_code(import_edit.text))
+	actions.add_child(import_button)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	levels_view.add_child(scroll)
+	levels_list = VBoxContainer.new()
+	levels_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	levels_list.add_theme_constant_override("separation", 8)
+	scroll.add_child(levels_list)
+
+
+func _rebuild_levels() -> void:
+	for child in levels_list.get_children():
+		levels_list.remove_child(child)
+		child.queue_free()
+	for i in levels.size():
+		levels_list.add_child(_make_level_row(i))
+
+
+func _make_level_row(index: int) -> Control:
+	var level := levels[index]
+	var is_open := index == current
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel",
+		UiStyle.panel(UiStyle.ACCENT if is_open else Color(UiStyle.ACCENT, 0.25), 10.0))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	panel.add_child(row)
+	var texts := VBoxContainer.new()
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.add_theme_constant_override("separation", 0)
+	row.add_child(texts)
+	var name_label := _make_label(CustomLevel.clean_name(level.get("name", "")))
+	name_label.add_theme_font_size_override("font_size", 22)
+	name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35) if is_open else UiStyle.TEXT_COLOR)
+	texts.add_child(name_label)
+	var biome_names := CustomLevel.get_biome_names()
+	var problem := CustomLevel.validate(level)
+	var summary := _make_label("%s  ·  %s  ·  %s" % [biome_names[int(level.biome)], _describe_waves(level),
+		tr("Jouable") if problem.is_empty() else tr("À finir")])
+	summary.add_theme_font_size_override("font_size", 16)
+	summary.add_theme_color_override("font_color", HINT_COLOR if problem.is_empty() else ERROR_COLOR)
+	texts.add_child(summary)
+	var open := _make_row_button("Ouvert" if is_open else "Ouvrir", row)
+	open.disabled = is_open
+	open.pressed.connect(open_level.bind(index))
+	var copy := _make_row_button("Dupliquer", row)
+	copy.disabled = levels.size() >= CustomLevel.MAX_LEVELS
+	copy.pressed.connect(duplicate_level.bind(index))
+	var share := _make_row_button("Copier le code", row)
+	share.disabled = not problem.is_empty()
+	share.tooltip_text = "Met le code du niveau dans le presse-papiers, pour le partager."
+	share.pressed.connect(copy_code.bind(index))
+	var delete := _make_row_button("Confirmer ?" if _pending_delete == index else "Supprimer", row)
+	delete.disabled = levels.size() <= 1
+	if _pending_delete == index:
+		delete.add_theme_color_override("font_color", ERROR_COLOR)
+	delete.pressed.connect(delete_level.bind(index))
+	return panel
+
+
+func _make_row_button(text: String, parent: Control) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(150, 44)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	parent.add_child(button)
+	return button
+
+
+## Ouvre un niveau de la liste dans l'éditeur, sur l'onglet Carte.
+func open_level(index: int) -> void:
+	rename_level(name_edit.text)
+	current = clampi(index, 0, levels.size() - 1)
+	data = levels[current]
+	_save()
+	show_tab(Tab.MAP)
+
+
+## Ajoute un niveau (avec le chemin et les vagues de départ) et l'ouvre.
+func new_level() -> bool:
+	return _add_level(CustomLevel.create_default())
+
+
+func duplicate_level(index: int) -> bool:
+	var copy := levels[index].duplicate(true)
+	copy.name = tr("Copie de %s") % CustomLevel.clean_name(copy.get("name", ""))
+	return _add_level(copy)
+
+
+func _add_level(level: Dictionary) -> bool:
+	if levels.size() >= CustomLevel.MAX_LEVELS:
+		_show_notice(tr("Pas plus de %d niveaux : supprimez-en un d'abord.") % CustomLevel.MAX_LEVELS, true)
+		return false
+	level.name = CustomLevel.unique_name(level.get("name", ""), levels)
+	levels.append(level)
+	open_level(levels.size() - 1)
+	return true
+
+
+## Supprime un niveau au deuxième clic (le premier demande confirmation).
+func delete_level(index: int) -> void:
+	if levels.size() <= 1:
+		return
+	if _pending_delete != index:
+		_pending_delete = index
+		_rebuild_levels()
+		return
+	_pending_delete = -1
+	var removed := CustomLevel.clean_name(levels[index].get("name", ""))
+	levels.remove_at(index)
+	if current > index or current >= levels.size():
+		current = maxi(current - 1, 0)
+	data = levels[current]
+	_save()
+	_rebuild_levels()
+	_show_notice(tr("« %s » est supprimé.") % removed)
+
+
+## Renomme le niveau ouvert (le nom vide redevient celui par défaut, un nom déjà pris
+## reçoit un numéro).
+func rename_level(text: String) -> void:
+	var name := CustomLevel.unique_name(text, levels, current)
+	var changed: bool = name != levels[current].get("name")
+	data.name = name
+	if name_edit.text != name:
+		name_edit.text = name
+	# Seulement si le nom change : la liste refaite perdrait le clic en cours.
+	if changed and current_tab == Tab.LEVELS:
+		_rebuild_levels()
+
+
+## Met le code de partage du niveau dans le presse-papiers et le renvoie.
+func copy_code(index: int) -> String:
+	if not CustomLevel.validate(levels[index]).is_empty():
+		return ""
+	var code := CustomLevel.encode(levels[index])
+	DisplayServer.clipboard_set(code)
+	_show_notice(tr("Code de « %s » copié : collez-le à qui vous voulez, il l'importe dans son éditeur.")
+		% CustomLevel.clean_name(levels[index].get("name", "")))
+	return code
+
+
+## Ajoute le niveau d'un code de partage et l'ouvre. Renvoie false si le code ne va pas.
+func import_code(code: String) -> bool:
+	if code.strip_edges().is_empty():
+		_show_notice(tr("Collez d'abord un code dans le champ."), true)
+		return false
+	var level := CustomLevel.decode(code)
+	if level.is_empty():
+		_show_notice(tr("Ce code n'est pas un niveau valide : vérifiez qu'il est copié en entier."), true)
+		return false
+	if not _add_level(level):
+		return false
+	import_edit.clear()
+	_show_notice(tr("« %s » est importé.") % data.name)
+	return true

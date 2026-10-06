@@ -3257,7 +3257,18 @@ func _test_level_editor() -> void:
 		"les vagues se construisent (un seul boss, groupes décalés, pas de bonus à la dernière)")
 
 	# L'écran de l'éditeur.
-	Progress.set_setting(CustomLevel.SETTING, {})
+	# L'ancien réglage (un seul niveau) devient le premier de la liste.
+	Progress.set_setting(CustomLevel.LEVELS_SETTING, null)
+	Progress.set_setting(CustomLevel.CURRENT_SETTING, 0)
+	var legacy := data.duplicate(true)
+	legacy.erase("name")
+	legacy.gold = 777
+	Progress.set_setting(CustomLevel.LEGACY_SETTING, legacy)
+	var migrated := CustomLevel.load_all()
+	_check(migrated.size() == 1 and migrated[0].gold == 777 and migrated[0].name == CustomLevel.LEVEL_NAME,
+		"le niveau de l'ancien éditeur est repris dans la liste")
+	Progress.set_setting(CustomLevel.LEGACY_SETTING, {})
+	Progress.set_setting(CustomLevel.LEVELS_SETTING, [])
 	var editor: LevelEditor = load("res://scenes/ui/level_editor.tscn").instantiate()
 	root.add_child(editor)
 	await process_frame
@@ -3288,9 +3299,64 @@ func _test_level_editor() -> void:
 	editor.remove_wave(editor.data.waves.size() - 1)
 	_check(editor.data.waves.size() == wave_count and editor.data.waves[0].groups.size() == 2, "groupes et vagues s'ajoutent et s'enlèvent")
 	editor.data.gold = 5000
+
+	# Plusieurs niveaux.
+	editor.show_tab(LevelEditor.Tab.LEVELS)
+	_check(editor.levels_view.visible and not editor.map_view.visible and editor.levels_list.get_child_count() == 1,
+		"l'onglet Niveaux liste les niveaux")
+	var first: Dictionary = editor.data
+	editor.rename_level("  Mon labyrinthe  ")
+	_check(first.name == "Mon labyrinthe", "le niveau se renomme (%s)" % first.name)
+	_check(editor.new_level() and editor.levels.size() == 2 and editor.current == 1 and editor.map_view.visible
+		and editor.data.path == data.path and editor.data.name == CustomLevel.LEVEL_NAME,
+		"un nouveau niveau s'ouvre sur la carte, avec le chemin de départ")
+	editor.duplicate_level(0)
+	_check(editor.levels.size() == 3 and editor.current == 2 and editor.data.name == "Copie de Mon labyrinthe"
+		and editor.data.path == first.path, "un niveau se duplique")
+	var first_size: int = first.path.size()
+	editor.data.path.append(Vector2i(19, 9))
+	_check(first.path.size() == first_size, "la copie ne touche pas l'original")
+	editor.rename_level("Mon labyrinthe")
+	_check(editor.data.name == "Mon labyrinthe (2)", "deux niveaux n'ont pas le même nom (%s)" % editor.data.name)
+	editor.show_tab(LevelEditor.Tab.LEVELS)
+	editor.delete_level(1)
+	_check(editor.levels.size() == 3, "supprimer demande une confirmation")
+	editor.delete_level(1)
+	_check(editor.levels.size() == 2 and editor.current == 1 and editor.data.name == "Mon labyrinthe (2)"
+		and editor.levels_list.get_child_count() == 2, "le niveau est supprimé et l'ouvert reste ouvert")
+	editor.open_level(0)
+	_check(editor.data == first and editor.name_edit.text == "Mon labyrinthe", "un niveau de la liste s'ouvre")
+
+	# Partage par code.
+	var code := editor.copy_code(0)
+	_check(code.begins_with(CustomLevel.CODE_PREFIX) and code.length() < 600, "le code de partage est court (%d)" % code.length())
+	var decoded := CustomLevel.decode(code)
+	_check(decoded.path == first.path and decoded.rocks == first.rocks and decoded.waves == first.waves
+		and decoded.gold == CustomLevel.MAX_GOLD and decoded.name == first.name and decoded.biome == first.biome,
+		"le code redonne le même niveau")
+	_check(CustomLevel.decode(" " + code.insert(20, "\n") + " ").path == first.path, "les blancs collés avec le code sont ignorés")
+	_check(CustomLevel.decode(code.left(code.length() - 8)).is_empty() and CustomLevel.decode("bonjour").is_empty()
+		and CustomLevel.decode(CustomLevel.CODE_PREFIX + "AAAA").is_empty(), "un code abîmé est refusé")
+	var sneaky := {n = "x", b = 0, g = 100, l = 5, p = [0, 2, 5, 2], r = [], w = [[["../towers/cannon", 3, 0]]]}
+	var sneaky_code := CustomLevel.CODE_PREFIX + Marshalls.raw_to_base64(JSON.stringify(sneaky).to_utf8_buffer()
+		.compress(FileAccess.COMPRESSION_DEFLATE)).replace("+", "-").replace("/", "_")
+	_check(CustomLevel.decode(sneaky_code).is_empty(), "un code ne charge que des monstres de l'éditeur")
+	sneaky.w = [[["mecha/drone", 99999, 1]]]
+	sneaky.g = -5
+	sneaky_code = CustomLevel.CODE_PREFIX + Marshalls.raw_to_base64(JSON.stringify(sneaky).to_utf8_buffer()
+		.compress(FileAccess.COMPRESSION_DEFLATE))
+	var clamped := CustomLevel.decode(sneaky_code)
+	_check(clamped.gold == CustomLevel.MIN_GOLD and clamped.waves[0].groups[0].count == CustomLevel.MAX_COUNT
+		and clamped.waves[0].groups[0].elite, "les nombres d'un code sont bornés")
+	_check(not editor.import_code("n'importe quoi") and editor.levels.size() == 2
+		and editor.status_label.text.begins_with("Ce code"), "un mauvais code est refusé, le bas de l'écran le dit")
+	_check(editor.import_code(code) and editor.levels.size() == 3 and editor.current == 2
+		and editor.data.name == "Mon labyrinthe (3)" and editor.data.path == first.path, "un code s'importe comme nouveau niveau")
+	editor.open_level(0)
 	await _free(editor)
-	var saved: Dictionary = CustomLevel.load_saved()
-	_check(saved.path[0] == Vector2i(0, 5) and saved.rocks.has(Vector2i(4, 4)), "le niveau en cours est enregistré")
+	var saved := CustomLevel.load_all()
+	_check(saved.size() == 3 and CustomLevel.load_current_index(saved.size()) == 0 and saved[0].path[0] == Vector2i(0, 5)
+		and saved[0].rocks.has(Vector2i(4, 4)) and saved[2].name == "Mon labyrinthe (3)", "les niveaux sont enregistrés")
 
 	# Jouer le niveau.
 	var stars_before := Progress.get_total_stars(Level.EMPTY_LEVEL)
