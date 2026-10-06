@@ -11,6 +11,29 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 1. Ouvrir Godot, cliquer sur **Importer** et sélectionner le fichier `project.godot`.
 2. Appuyer sur **F5** : le jeu démarre sur l'écran titre.
 
+## Télécharger le jeu
+
+Pas besoin d'installer Godot pour jouer : GitHub construit le jeu tout seul (workflow `.github/workflows/build.yml`).
+
+- **Dernière version** : à chaque push sur `main`, la page [Releases](https://github.com/sam-fishermonger/TowerTS/releases) met à jour la pré-release **« Dernière version (main) »** avec trois fichiers :
+  - `TowerTS-windows.zip` : décompresser puis lancer `TowerTS.exe`. Le jeu n'étant pas signé, Windows peut afficher « Windows a protégé votre ordinateur » : **Informations complémentaires** puis **Exécuter quand même**.
+  - `TowerTS-linux.zip` : décompresser puis lancer `TowerTS.x86_64`.
+  - `TowerTS-web.zip` : la version navigateur, à déposer telle quelle sur un hébergeur (itch.io, GitHub Pages…). Ouvrir `index.html` directement depuis le disque ne marche pas : il faut un serveur web, par exemple `python3 -m http.server` dans le dossier décompressé, puis http://localhost:8000.
+- **Version numérotée** : créer un tag qui commence par `v` (par exemple `v0.3`, depuis l'onglet Releases de GitHub ou avec `git tag v0.3 && git push origin v0.3`) publie une Release du même nom avec les trois fichiers.
+- **Sur une PR** : les fichiers construits sont dans l'onglet **Actions**, en bas de la page du run (**Artifacts**).
+
+Les fichiers construits ne sont pas commités dans le dépôt : ils pèsent plus de 100 Mo chacun et changeraient à chaque modification, ce qui alourdirait l'historique git pour toujours.
+
+### Exporter soi-même
+
+Les réglages d'export sont dans `export_presets.cfg` (Windows, Linux et Web). Dans l'éditeur : **Éditeur > Gérer les modèles d'export** (une fois, pour télécharger les modèles de Godot 4.7.2), puis **Projet > Exporter**. En ligne de commande :
+
+```
+godot --headless --path . --export-release "Windows" build/windows/TowerTS.exe
+```
+
+Le dossier `build/` est ignoré par git.
+
 ## Comment jouer
 
 - Choisir une tour dans la barre d'achat, en bas à gauche (une case par tour : son image, son nom et son prix, grisée quand l'or manque), puis cliquer sur une case libre hors du chemin.
@@ -115,6 +138,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 
 ```
 project.godot        Configuration du projet
+export_presets.cfg   Réglages d'export (Windows, Linux, Web)
 scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
@@ -131,5 +155,5 @@ resources/           Campagne et mondes, statistiques des ennemis (un dossier pa
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites
 assets/audio/        Musiques et effets sonores
-assets/fonts/        Polices
+assets/fonts/        Police de l'interface : Open Sans + symboles ★ ☆ ✕ (voir LICENCES.md)
 ```
