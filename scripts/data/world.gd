@@ -10,3 +10,6 @@ extends Resource
 ## Monstres du biome, montrés sur la carte du monde.
 @export var enemies: Array[EnemyData] = []
 @export_file("*.tscn") var levels: Array[String] = []
+## Tuiles du biome (sol, détails, obstacles), posées sur les cartes de ses niveaux
+## (voir GameMap.tileset).
+@export var tileset: TileSet

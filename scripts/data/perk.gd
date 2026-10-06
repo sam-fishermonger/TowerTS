@@ -1,7 +1,8 @@
 class_name Perk
 extends Resource
 ## Amélioration permanente de l'arbre des améliorations (écran titre), achetée avec
-## les étoiles gagnées sur les niveaux. Ses bonus s'appliquent à toutes les parties.
+## les étoiles gagnées sur les niveaux, ou, pour les spécialisations, avec les étoiles
+## infinies du mode infini. Ses bonus s'appliquent à toutes les parties.
 ## Un champ laissé à sa valeur par défaut n'a aucun effet.
 
 @export var id := ""
@@ -9,6 +10,8 @@ extends Resource
 @export_multiline var description := ""
 ## Prix en étoiles.
 @export var cost := 1
+## Payée en étoiles infinies (gagnées en mode infini) au lieu des étoiles des niveaux.
+@export var paid_with_endless_stars := false
 ## Améliorations (Perk) à posséder avant de pouvoir acheter celle-ci (toutes).
 ## (Array[Resource] : un Array[Perk] dans Perk empêcherait Godot de libérer le script.)
 @export var requires: Array[Resource] = []
@@ -45,11 +48,57 @@ extends Resource
 ## Vies rendues à chaque vague repoussée, sans dépasser les vies de départ.
 @export var lives_per_wave := 0
 
+@export_group("Spécialisation")
+## Spécialisation d'une tour (chemin de sa TowerData) : les bonus de tour de cette
+## amélioration (dégâts, portée, cadence, durée du ralentissement, et ceux de ce
+## groupe) ne s'appliquent qu'à elle, après ses améliorations.
+@export_file("*.tres") var specializes_tower := ""
+@export var splash_radius_multiplier := 1.0
+## Multiplicateur du facteur de ralentissement : plus petit, les ennemis vont moins vite.
+@export var slow_factor_multiplier := 1.0
+## Brûlure ou poison ajouté aux coups : dégâts par seconde et secondes en plus.
+@export var dot_damage_bonus := 0.0
+@export var dot_duration_bonus := 0.0
+## Les coups ignorent l'armure.
+@export var armor_piercing := false
+## Multiplicateur de la montée en puissance du Rayon.
+@export var beam_ramp_multiplier := 1.0
+@export var cloud_radius_multiplier := 1.0
+@export var cloud_duration_bonus := 0.0
+## Secondes ajoutées au brouillage des boucliers.
+@export var shield_jam_bonus := 0.0
+
 
 ## Tour débloquée par cette amélioration (TowerData), ou null. (Resource et pas
 ## TowerData pour la même raison : ce script ne doit pas dépendre de TowerData.)
 func get_unlocked_tower() -> Resource:
 	return load(unlocks_tower) if not unlocks_tower.is_empty() else null
+
+
+func is_specialization() -> bool:
+	return not specializes_tower.is_empty()
+
+
+## Chemin de la tour montrée dans la case de l'amélioration (débloquée ou spécialisée), ou "".
+func get_tower_path() -> String:
+	return unlocks_tower if not unlocks_tower.is_empty() else specializes_tower
+
+
+## Applique la spécialisation aux statistiques d'une tour (TowerData, modifiées sur
+## place ; pas de type pour ne pas dépendre de TowerData).
+func apply_specialization(stats) -> void:
+	stats.scale_stats(damage_multiplier, range_multiplier, fire_rate_multiplier, slow_duration_bonus)
+	stats.splash_radius *= splash_radius_multiplier
+	if stats.slow_factor < 1.0:
+		stats.slow_factor = clampf(stats.slow_factor * slow_factor_multiplier, 0.1, 1.0)
+	if dot_damage_bonus > 0.0:
+		stats.dot_damage += dot_damage_bonus
+		stats.dot_duration = maxf(stats.dot_duration, 0.0) + dot_duration_bonus
+	stats.armor_piercing = stats.armor_piercing or armor_piercing
+	stats.beam_ramp_max *= beam_ramp_multiplier
+	stats.cloud_radius *= cloud_radius_multiplier
+	stats.cloud_duration += cloud_duration_bonus
+	stats.shield_jam_duration += shield_jam_bonus
 
 
 ## Ajoute les bonus de cette amélioration à `total` (modifié sur place) : les

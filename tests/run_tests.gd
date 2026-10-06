@@ -91,6 +91,11 @@ func _run() -> void:
 	await _test_jammer_and_rail()
 	await _test_marksman()
 	await _test_worlds()
+	await _test_spawn_spread()
+	await _test_endless_mode()
+	await _test_specializations()
+	await _test_konami_code()
+	await _test_biome_tiles()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
 	await _test_levels_04_to_06_with_earned_gold()
@@ -1486,6 +1491,230 @@ func _test_worlds() -> void:
 		and level.hud.end_message.text.contains("La Fonderie"), "l'écran de victoire annonce le nouveau monde")
 	await _free(level)
 	Progress.reset_campaign()
+
+
+## Les ennemis marchent un peu sur le côté du chemin, chacun à sa place, et le tirage
+## est le même à chaque partie du niveau.
+func _test_spawn_spread() -> void:
+	print("Ennemis : un peu d'aléatoire dans leur place sur le chemin")
+	var offsets := []
+	for attempt in 2:
+		var level := await _spawn_level(LEVEL_01)
+		var row := []
+		for i in 8:
+			var enemy := level.spawner.spawn(LARVE, level.map.get_enemy_path(0), 200.0)
+			enemy.set_process(false)
+			row.append(enemy.lateral_offset)
+		offsets.append(row)
+		if attempt == 0:
+			var spread := level.spawner.get_max_lateral_offset(LARVE)
+			_check(row.all(func(o: float) -> bool: return absf(o) <= spread + 0.01),
+				"chaque ennemi reste sur le chemin (décalage d'au plus %d px)" % spread)
+			var distinct := {}
+			for o: float in row:
+				distinct[snappedf(o, 0.5)] = true
+			_check(distinct.size() >= 6 and spread >= 12.0, "les ennemis ne sont pas tous sur la même ligne")
+			var on_path: Enemy = level.get_tree().get_nodes_in_group(Enemy.GROUP)[0]
+			var center := level.map.get_enemy_path(0).curve.sample_baked(200.0)
+			_check(is_equal_approx(on_path.global_position.distance_to(level.map.get_enemy_path(0).to_global(center)),
+				absf(on_path.lateral_offset)), "le décalage est perpendiculaire à la marche")
+		await _free(level)
+	_check(offsets[0] == offsets[1], "le tirage est le même d'une partie à l'autre (les tests d'équilibrage restent stables)")
+
+
+func _test_endless_mode() -> void:
+	print("Mode infini")
+	_check(not Progress.is_endless_unlocked(LEVEL_01.resource_path), "fermé tant que le niveau n'a pas 3 étoiles")
+	Progress.record_victory(LEVEL_01.resource_path, 2)
+	_check(not Progress.is_endless_unlocked(LEVEL_01.resource_path), "toujours fermé avec 2 étoiles")
+	Progress.record_victory(LEVEL_01.resource_path, 3)
+	_check(Progress.is_endless_unlocked(LEVEL_01.resource_path), "ouvert avec 3 étoiles")
+	_check(Progress.endless_stars_for(4) == 0 and Progress.endless_stars_for(5) == 1
+		and Progress.endless_stars_for(12) == 2 and Progress.endless_stars_for(99) == Progress.ENDLESS_MAX_STARS,
+		"une étoile infinie toutes les 5 vagues de plus que le niveau, 5 au plus")
+
+	var screen := await _spawn_world_select()
+	var mode_button: Button = screen.get_node("%ModeButton")
+	mode_button.toggled.emit(true)
+	await process_frame
+	var endless_button: Button = screen.get_level_button(LEVEL_01.resource_path)
+	_check(screen.endless_mode and screen.get_node("%Title").text == "Mode infini", "le bouton Mode infini change les cartes")
+	_check(not endless_button.disabled and endless_button.text.ends_with("☆☆☆☆☆")
+		and screen.get_level_button(LEVEL_02.resource_path).disabled, "seul le niveau à 3 étoiles s'ouvre en mode infini")
+	_check(screen.get_card(0).find_child("Stars", true, false).text.contains("0 / 30"), "la carte compte les étoiles infinies du monde")
+	await _free(screen)
+
+	Engine.set_meta(Level.ENDLESS_META, true)
+	var level := await _spawn_level(LEVEL_01)
+	var count := level.spawner.get_wave_count()
+	_check(level.is_endless and not Engine.has_meta(Level.ENDLESS_META), "le niveau s'ouvre en mode infini")
+	_check(level.hud.wave_label.text.ends_with("/ ∞") and level.hud.level_label.text.ends_with("Mode infini"),
+		"le HUD l'annonce")
+	level.spawner.current_wave = count - 1
+	_check(level.spawner.has_next_wave(), "après la dernière vague du niveau, il y en a toujours une autre")
+	var last := level.spawner.get_wave(count - 1)
+	var first_extra := level.spawner.get_wave(count)
+	var later := level.spawner.get_wave(count + 9)
+	var enemies_in := func(wave: WaveData) -> int:
+		var total := 0
+		for group in wave.groups:
+			total += group.count
+		return total
+	_check(first_extra.health_multiplier > 1.0 and later.health_multiplier > first_extra.health_multiplier * 2.0,
+		"les ennemis des vagues en plus sont de plus en plus résistants")
+	_check(enemies_in.call(later) > enemies_in.call(last), "et de plus en plus nombreux")
+	_check(level.spawner.get_wave(count) == first_extra, "une vague créée reste la même")
+	level.start_next_wave()
+	while level.spawner.is_spawning:
+		await _step()
+	var spawned: Enemy = get_nodes_in_group(Enemy.GROUP)[0]
+	_check(is_equal_approx(spawned.health.max_health, spawned.data.max_health * first_extra.health_multiplier),
+		"la vie des ennemis suit la vague")
+	for enemy in get_nodes_in_group(Enemy.GROUP):
+		enemy.queue_free()
+	await process_frame
+	# Quatre vagues de plus repoussées, puis la cinquième : la première étoile infinie.
+	level.spawner.current_wave = count + 4
+	level._check_wave_cleared()
+	_check(level.get_waves_cleared() == count + 5 and not level.is_over, "la partie continue après les vagues du niveau")
+	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == count + 5
+		and Progress.get_endless_stars(LEVEL_01.resource_path) == 1, "chaque vague repoussée compte pour le record et les étoiles")
+	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == 3, "les étoiles infinies sont une monnaie à part")
+	level.lives = 1
+	level._on_enemy_reached_end(_add_still_enemy(level, LARVE, 0, 0.0))
+	_check(level.is_over and level.hud.end_title.text == "Fin de la partie"
+		and level.hud.end_message.text.contains("%d vagues" % (count + 5)) and level.hud.end_message.text.contains("Nouveau record")
+		and level.hud.end_stars.text == "★☆☆☆☆" and not level.hud.next_level_button.visible,
+		"l'écran de fin donne les vagues repoussées, le record et les étoiles infinies")
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 3, "le mode infini ne touche pas aux étoiles du niveau")
+	await _free(level)
+	level = await _spawn_level(LEVEL_01)
+	_check(not level.is_endless and not level.spawner.endless, "le niveau suivant s'ouvre normalement")
+	await _free(level)
+	Progress.reset_campaign()
+	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == 0, "Effacer la progression efface les records du mode infini")
+
+
+func _test_specializations() -> void:
+	print("Spécialisations des tours, payées en étoiles infinies")
+	var tree := Perks.TREE
+	var page := tree.page_names.find("Spécialisations")
+	var specializations := tree.get_page_perks(page)
+	_check(page == 2 and tree.get_page_branches(page).size() == 3 and specializations.size() == 12,
+		"un onglet Spécialisations : 3 branches, 12 spécialisations")
+	var towers := {}
+	var all_valid := true
+	for perk in specializations:
+		towers[perk.specializes_tower] = true
+		all_valid = all_valid and perk.paid_with_endless_stars and load(perk.specializes_tower) is TowerData
+	_check(all_valid, "chacune spécialise une tour, payée en étoiles infinies")
+	_check(towers.size() == 12, "une spécialisation par tour")
+	var gatling := tree.get_perk("spe_gatling")
+	var sniper := tree.get_perk("spe_sniper")
+	var marksman := tree.get_perk("spe_marksman")
+	Progress.record_victory(LEVEL_01.resource_path, 3)
+	_check(not Perks.can_buy(gatling), "les étoiles des niveaux n'achètent pas les spécialisations")
+	Progress.record_endless(LEVEL_01.resource_path, 20, 3)
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(page)
+	_check(screen.stars_label.text.begins_with("∞ ★ 3 à dépenser"), "l'onglet compte les étoiles infinies")
+	screen.get_button(gatling).pressed.emit()
+	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 3,
+		"Balles perforantes coûte 2 étoiles infinies, et aucune étoile des niveaux")
+	_check(GATLING.get_stats_at_level(1).armor_piercing and GATLING.get_stats_at_level(3).armor_piercing
+		and not CANNON.get_stats_at_level(1).armor_piercing, "les balles de la Mitrailleuse, et d'elle seule, ignorent l'armure")
+	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("∞ ★ 3"), "la suivante est trop chère")
+	Progress.record_endless(LEVEL_02.resource_path, 40, 5)
+	screen.buy(sniper)
+	_check(is_equal_approx(SNIPER.get_stats_at_level(1).damage, 80.0 * 1.4) and is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0),
+		"Tir en pleine tête : +40 % de dégâts pour le Sniper seulement")
+	_check(not Perks.can_buy(marksman) and screen.get_button(marksman).text.ends_with("Verrouillé"),
+		"la spécialisation d'une tour des mondes demande la tour")
+	screen.get_button(marksman).mouse_entered.emit()
+	_check(screen.info_status.text.contains("Franc-tireur"), "la fiche le dit")
+	var level := await _spawn_level(LEVEL_01)
+	var tower := level.place_tower(Vector2i(3, 3), GATLING) if level.map.is_cell_buildable(Vector2i(3, 3)) else null
+	if tower == null:
+		for y in level.map.rows:
+			for x in level.map.columns:
+				if tower == null and level.map.is_cell_buildable(Vector2i(x, y)):
+					tower = level.place_tower(Vector2i(x, y), GATLING)
+	level.inspect_tower(tower)
+	_check(tower.stats.armor_piercing and level.hud.tower_details.description_label.text.contains("Balles perforantes"),
+		"en jeu, la tour posée a sa spécialisation, rappelée sur sa fiche")
+	await _free(level)
+	screen.get_node("%RefundButton").pressed.emit()
+	_check(Perks.get_owned_ids().is_empty() and Perks.get_available_stars(true) == 8, "Réinitialiser rend aussi les étoiles infinies")
+	await _free(screen)
+	Progress.reset_campaign()
+
+
+func _test_konami_code() -> void:
+	print("Code Konami sur l'écran titre")
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var code := [KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_LEFT, KEY_RIGHT, KEY_B, KEY_A]
+	for keycode in [KEY_UP, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_B, KEY_A]:
+		title.enter_konami_key(keycode)
+	_check(Perks.get_earned_stars() == 0, "un code faux ne débloque rien")
+	# Une flèche de trop au début ne gâche pas le code.
+	title.enter_konami_key(KEY_UP)
+	for keycode in code:
+		var event := InputEventKey.new()
+		event.keycode = keycode
+		event.pressed = true
+		title._input(event)
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_check(Perks.get_earned_stars() == campaign.size() * 3 and Progress.is_world_unlocked(campaign, 2),
+		"le code débloque tous les mondes et tous les niveaux, avec 3 étoiles")
+	var endless_open := true
+	for path in campaign.levels:
+		endless_open = endless_open and Progress.is_endless_unlocked(path) \
+			and Progress.get_endless_stars(path) == Progress.ENDLESS_MAX_STARS
+	_check(endless_open, "et tous les modes infinis, avec leurs étoiles")
+	_check(Perks.TREE.perks.all(func(p: Perk) -> bool: return Perks.is_owned(p)), "et toutes les améliorations et spécialisations")
+	var announced := false
+	for child in title.get_children():
+		announced = announced or (child is Label and child.text.contains("Konami"))
+	_check(title.get_node("%PlayButton").text == "Continuer" and announced, "l'écran titre se met à jour et l'annonce")
+	await _free(title)
+	Progress.reset_campaign()
+
+
+func _test_biome_tiles() -> void:
+	print("Tuiles des biomes sur les cartes")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_check(campaign.worlds.all(func(w: World) -> bool: return w.tileset != null), "chaque monde a ses tuiles")
+	var level := await _spawn_level(LEVEL_01)
+	var map := level.map
+	_check(map.tileset == campaign.worlds[0].tileset, "la carte prend les tuiles de son monde")
+	var ground: TileMapLayer = map.get_node("Sol")
+	var details: TileMapLayer = map.get_node("Details")
+	_check(ground.get_used_cells().size() == map.columns * map.rows, "tout le sol est pavé")
+	var on_path := details.get_used_cells().filter(func(c: Vector2i) -> bool: return map.is_cell_on_path(c) or map.is_cell_blocked(c))
+	_check(details.get_used_cells().size() > 10 and on_path.is_empty(),
+		"des détails sur le sol libre, jamais sur le chemin (%d)" % details.get_used_cells().size())
+	_check(not map._path_details.is_empty() and map._obstacles.size() == map.blocked_cells.size(),
+		"des cailloux sur le chemin et un obstacle du biome par case bloquée")
+	var first := _ground_tiles(ground)
+	await _free(level)
+	level = await _spawn_level(LEVEL_01)
+	_check(_ground_tiles(level.map.get_node("Sol")) == first, "la même carte à chaque partie")
+	await _free(level)
+	level = await _spawn_level(MECHA_01)
+	_check(level.map.tileset == campaign.worlds[1].tileset, "La Fonderie a les siennes")
+	await _free(level)
+
+
+func _ground_tiles(layer: TileMapLayer) -> Array:
+	var tiles := []
+	for cell in layer.get_used_cells():
+		tiles.append([cell, layer.get_cell_atlas_coords(cell)])
+	tiles.sort()
+	return tiles
 
 
 func _test_beam_tower() -> void:

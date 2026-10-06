@@ -124,11 +124,12 @@ func _select_next_speed() -> void:
 	(buttons[(current + 1) % buttons.size()] as Button).pressed.emit()
 
 
+## `wave_count` négatif : mode infini, les vagues ne s'arrêtent pas.
 func update_stats(gold: int, lives: int, wave: int, wave_count: int) -> void:
 	_gold = gold
 	gold_label.text = "Or : %d" % gold
 	lives_label.text = "Vies : %d" % lives
-	wave_label.text = "Vague : %d / %d" % [wave, wave_count]
+	wave_label.text = "Vague : %d / %s" % [wave, str(wave_count) if wave_count >= 0 else "∞"]
 	tower_shop.set_gold(gold)
 	shop_info.set_gold(gold)
 	tower_details.set_gold(gold)
@@ -238,6 +239,21 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 		next_level_button.grab_focus()
 	else:
 		%RestartButton.grab_focus()
+
+
+## Écran de fin du mode infini : vagues repoussées, étoiles infinies obtenues sur le
+## niveau avec cette partie, et « Nouveau record » si le record de vagues est battu.
+func show_endless_end_screen(waves: int, endless_stars: int, new_record := false) -> void:
+	show_end_screen(false)
+	end_title.text = "Fin de la partie"
+	end_stars.visible = true
+	end_stars.text = Progress.star_text(endless_stars, Progress.ENDLESS_MAX_STARS)
+	end_stars.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	end_message.text = "%d vague%s repoussée%s." % [waves, "s" if waves > 1 else "", "s" if waves > 1 else ""]
+	if new_record:
+		end_message.text += "\nNouveau record !"
+	end_message.text += "\nUne étoile infinie toutes les %d vagues au-delà de celles du niveau." \
+		% Progress.ENDLESS_STAR_STEP
 
 
 ## Zone de la carte visible entre la barre du haut et celle du bas.

@@ -22,11 +22,12 @@ func get_perk(id: String) -> Perk:
 	return null
 
 
-## Prix total de l'arbre, en étoiles.
-func get_total_cost() -> int:
+## Prix total de l'arbre, en étoiles (ou en étoiles infinies pour les spécialisations).
+func get_total_cost(endless := false) -> int:
 	var total := 0
 	for perk in perks:
-		total += perk.cost
+		if perk.paid_with_endless_stars == endless:
+			total += perk.cost
 	return total
 
 

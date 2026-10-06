@@ -2,6 +2,8 @@ extends Control
 ## Écran titre : reprend la campagne, ouvre la sélection des mondes et des niveaux,
 ## ouvre l'arbre des améliorations, ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
+## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
+## améliorations et spécialisations.
 
 const PERK_TREE_SCREEN := "res://scenes/ui/perk_tree_screen.tscn"
 const WORLD_SELECT_SCREEN := "res://scenes/ui/world_select_screen.tscn"
@@ -13,8 +15,14 @@ const BUTTON_HOVER_DURATION := 0.12
 ## Apparition du menu : le panneau, puis les boutons l'un après l'autre.
 const INTRO_DURATION := 0.5
 const INTRO_STAGGER := 0.06
+const KONAMI_CODE: Array[Key] = [KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_LEFT, KEY_RIGHT,
+	KEY_B, KEY_A]
+## Durée du message affiché quand le code Konami est entré, en secondes.
+const KONAMI_MESSAGE_DURATION := 3.0
 
 var _time := 0.0
+## Touches du code Konami déjà entrées dans l'ordre.
+var _konami_progress := 0
 
 @onready var play_button: Button = %PlayButton
 @onready var perks_button: Button = %PerksButton
@@ -58,6 +66,52 @@ func _process(delta: float) -> void:
 	title.rotation = 0.025 * sin(_time * 1.1)
 
 
+## Les flèches servent aussi à passer d'un bouton à l'autre : le code est guetté dans
+## _input, avant le menu, sans bloquer les touches.
+func _input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key and key.pressed and not key.echo:
+		enter_konami_key(key.keycode if key.keycode != KEY_NONE else key.physical_keycode)
+
+
+## Ajoute une touche au code Konami en cours ; débloque tout quand il est complet.
+## Les lettres sont lues selon la disposition du clavier (le A d'un clavier AZERTY).
+func enter_konami_key(keycode: Key) -> void:
+	if keycode == KONAMI_CODE[_konami_progress]:
+		_konami_progress += 1
+	elif keycode == KEY_UP:
+		# ↑ ↑ ↑ : les deux dernières flèches peuvent encore commencer le code.
+		_konami_progress = 2 if _konami_progress == 2 else 1
+	else:
+		_konami_progress = 0
+	if _konami_progress == KONAMI_CODE.size():
+		_konami_progress = 0
+		unlock_everything()
+
+
+## Code Konami : tout est débloqué, les boutons se mettent à jour et un message le dit.
+func unlock_everything() -> void:
+	Perks.unlock_everything()
+	_refresh()
+	Sound.play(&"victory")
+	var message := Label.new()
+	message.text = "Code Konami : tout est débloqué !"
+	message.add_theme_font_size_override(&"font_size", 28)
+	message.add_theme_color_override(&"font_color", Progress.ENDLESS_STAR_COLOR)
+	message.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.7))
+	message.add_theme_constant_override(&"shadow_offset_x", 2)
+	message.add_theme_constant_override(&"shadow_offset_y", 2)
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(message)
+	message.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	message.offset_top = 64.0
+	var tween := message.create_tween()
+	tween.tween_interval(KONAMI_MESSAGE_DURATION)
+	tween.tween_property(message, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(message.queue_free)
+
+
 func open_level(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
@@ -71,7 +125,12 @@ func _refresh() -> void:
 	worlds_button.text = "Mondes  ·  ★ %d / %d" % [earned, CAMPAIGN.size() * 3] if any_won else "Mondes"
 	# Les étoiles non dépensées sont signalées sur le bouton de l'arbre.
 	var available := Perks.get_available_stars()
-	perks_button.text = "Améliorations  ·  ★ %d" % available if available > 0 else "Améliorations"
+	var endless_available := Perks.get_available_stars(true)
+	perks_button.text = "Améliorations"
+	if available > 0:
+		perks_button.text += "  ·  ★ %d" % available
+	if endless_available > 0:
+		perks_button.text += "  ·  ∞ %d" % endless_available
 	reset_button.visible = any_won
 
 

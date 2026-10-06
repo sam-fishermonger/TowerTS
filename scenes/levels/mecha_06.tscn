@@ -268,7 +268,7 @@ bonus_gold = 0
 
 [node name="Mecha06" instance=ExtResource("1_level")]
 level_name = "Niveau 2-6"
-starting_gold = 300
+starting_gold = 340
 starting_lives = 20
 tower_types = Array[ExtResource("2_tower_data")]([ExtResource("t0_cannon"), ExtResource("t1_gatling"), ExtResource("t2_sniper"), ExtResource("t3_mortar"), ExtResource("t4_frost"), ExtResource("t5_beam")])
 

@@ -43,7 +43,7 @@ Le dossier `build/` est ignoré par git.
 - Cliquer sur une tour posée ouvre sa fiche, avec le bouton **Améliorer** : chaque tour a 2 améliorations (niveau 3 maximum), dont les gains sont affichés en vert avant l'achat.
 - Dans la même fiche, **Vendre** retire la tour et rend 70 % de ce qu'elle a coûté (améliorations comprises), et le bouton **Cible** choisit l'ennemi visé en priorité : Premier (le plus avancé, par défaut), Dernier, Le plus fort (le plus de vie) ou Le plus proche. Le Givre frappe tout ce qui est à portée et n'a donc pas ce choix.
 - **✕** ou **Échap** ferme la fiche.
-- **Lancer la vague** envoie la vague suivante. Chaque ennemi détruit rapporte de l'or, et chaque vague nettoyée donne un bonus.
+- **Lancer la vague** envoie la vague suivante. Chaque ennemi détruit rapporte de l'or, et chaque vague nettoyée donne un bonus. Les ennemis ne marchent pas tous en file au milieu du chemin : chacun tire au hasard sa place sur sa largeur (le tirage dépend du niveau, il est le même à chaque partie).
 - Sous le bouton, un encadré annonce la composition de la prochaine vague. La lancer alors que des ennemis sont encore en jeu rapporte une prime : la moitié de son bonus, versée tout de suite (réglable dans la propriété `early_call_bonus_ratio` du niveau).
 - Les dégâts infligés s'affichent au-dessus des ennemis touchés. Un ennemi détruit affiche l'or gagné et laisse au sol une tache qui s'estompe en 20 secondes.
 - Quand un ennemi atteint la base, l'écran rougit brièvement, le compteur de vies grossit en rouge et « -N » s'affiche à la sortie.
@@ -51,17 +51,47 @@ Le dossier `build/` est ignoré par git.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
-- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Deux onglets :
+- **Mode infini** : un niveau gagné avec 3 étoiles s'ouvre en mode infini (bouton **∞ Mode infini** en haut à droite de la sélection des mondes, qui fait passer les cartes au mode infini). Après les vagues du niveau, d'autres arrivent sans fin : elles reprennent en boucle ses 3 dernières vagues, avec à chaque fois 10 % d'ennemis en plus et 13 % de vie (et de bouclier) en plus, d'une vague à l'autre. La partie s'arrête quand les vies tombent à 0. Chaque vague repoussée est enregistrée : record de vagues (en bulle d'aide sur le bouton du niveau) et **étoiles infinies**, en bleu, une toutes les 5 vagues repoussées au-delà de celles du niveau, jusqu'à 5 par niveau (90 en tout). Elles sont une monnaie à part, qui achète les spécialisations des tours. Les réglages sont dans `scripts/levels/wave_spawner.gd` (`ENDLESS_*`) et `scripts/save/progress.gd`.
+- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois onglets :
   - **Bonus**, en trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée) ;
-  - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée apparaît dans la barre d'achat de tous les niveaux.
+  - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée apparaît dans la barre d'achat de tous les niveaux ;
+  - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
 
-  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte 53 étoiles (la campagne en rapporte 54) : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte 53 étoiles (la campagne en rapporte 54), et les spécialisations 42 étoiles infinies : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
+- **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
+
+### Spécialisations
+
+| Branche | Tour | Spécialisation | Prix | Effet |
+|---|---|---|---|---|
+| Précision | Mitrailleuse | Balles perforantes | ∞ 2 | Ses balles ignorent l'armure. |
+| Précision | Sniper | Tir en pleine tête | ∞ 3 | +40 % de dégâts, +10 % de portée. |
+| Précision | Franc-tireur | Lunette thermique | ∞ 4 | Tire 35 % plus vite. |
+| Précision | Perforateur | Surcharge | ∞ 5 | +40 % de dégâts. |
+| Zone | Canon | Boulets lourds | ∞ 2 | +35 % de dégâts, +10 % de portée. |
+| Zone | Mortier | Obus incendiaires | ∞ 3 | Ses explosions brûlent : 8 dégâts/s pendant 2 s, sous l'armure. |
+| Zone | Lance-flammes | Napalm | ∞ 4 | Brûlure de 8 dégâts/s en plus, 1,5 s de plus. |
+| Zone | Pesticide | Nuage tenace | ∞ 5 | Nuage 30 % plus large, 2 s de plus. |
+| Contrôle | Givre | Zéro absolu | ∞ 2 | Ralentit 30 % plus fort, 1 s de plus. |
+| Contrôle | Rayon | Focalisation | ∞ 3 | Montée en puissance jusqu'à x4,5 au lieu de x3. |
+| Contrôle | Brouilleur IEM | Surtension | ∞ 4 | +50 % de dégâts, boucliers brouillés 2 s de plus. |
+| Contrôle | Lacrymogène | Gaz suffocant | ∞ 5 | Son nuage empoisonne aussi : 10 dégâts/s, sous l'armure. |
+
+Une spécialisation est une amélioration de l'arbre (`Perk`) avec `paid_with_endless_stars` et `specializes_tower` (la tour visée) : ses bonus de tour (groupes **Tours** et **Spécialisation**) ne s'appliquent qu'à cette tour.
 
 ## Images
 
 Les tours, les ennemis, les rochers et la base sont des images SVG dans `assets/sprites/` (importées en 2x pour rester nettes). Chaque type de tour a sa tourelle (`turret_texture`, qui pivote vers la cible sauf si `turret_rotates` est décoché) posée sur un socle commun ; chaque ennemi a son image (`texture`), tournée dans le sens de la marche. Sans image, la tour ou l'ennemi est dessiné en code comme avant : on peut remplacer les SVG par d'autres images sans toucher au code.
+
+Chaque biome a ses **tuiles** (`assets/sprites/tiles/<biome>.png`, une planche de 8 x 3 tuiles de 64 pixels, lue par le `TileSet` de `resources/tilesets/`) :
+
+- 8 sols, en gris, teintés avec la couleur du sol du niveau (`ground_color`) : sol organique en alvéoles pour La Ruche, plaques de métal rivetées (tôle striée, grilles d'aération) pour La Fonderie, dalles et pavés pour La Cité ;
+- 8 détails en couleur semés sur le sol libre (œufs, bave, champignons ; taches d'huile, boulons, câbles ; herbes, plaques d'égout, feuilles mortes…) ;
+- 4 obstacles qui remplacent les rochers des cases bloquées (ruches, sacs d'œufs, épines ; caisses, barils, machines ; murs en ruine, arbres, barricades), teintés avec `rock_color`, et 4 petits détails semés sur le chemin (cailloux, fissures).
+
+La carte (`GameMap`) prend les tuiles du monde de son niveau (`tileset` de `resources/worlds/*.tres`) et les pose en deux calques `TileMapLayer` sous le chemin ; un niveau peut en choisir d'autres dans sa propriété `tileset`, ou régler `decal_density` et `path_detail_spacing`. Le tirage dépend du niveau : la carte est la même à chaque partie. Les tuiles sont dessinées par `tools/generate_tilesets.py` (Python 3, Pillow et numpy) : modifier le script puis le relancer réécrit les planches.
 
 ## Sons
 
@@ -174,6 +204,8 @@ scripts/components/  Composants réutilisables (santé, barre de vie)
 scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
 scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
+resources/tilesets/  Tuiles de chaque biome (TileSet)
+tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py)
 scripts/save/        Progression enregistrée (Progress) et améliorations permanentes achetées (Perks)
 resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre

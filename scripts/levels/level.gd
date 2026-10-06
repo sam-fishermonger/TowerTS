@@ -10,6 +10,9 @@ const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
 const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
 const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 const HEAL_TEXT_COLOR := Color(0.45, 1.0, 0.55)
+## Méta du moteur posée juste avant d'ouvrir un niveau en mode infini (voir open()) :
+## le niveau la lit et l'efface à son lancement.
+const ENDLESS_META := &"level_endless"
 
 @export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
@@ -40,8 +43,14 @@ var game_speed := 1.0
 ## Partie jouée toute seule derrière l'écran titre (TitleDemo), à régler avant l'ajout
 ## à l'arbre : pas de HUD ni de commandes, rien d'enregistré, et pas de pause à la fin.
 var is_demo := false
+## Mode infini : après les vagues du niveau, d'autres vagues, de plus en plus dures,
+## arrivent sans fin. La partie se termine quand les vies tombent à 0, et chaque vague
+## repoussée compte pour le record et les étoiles infinies du niveau.
+var is_endless := false
 
 var _wave_bonus_paid := -1
+## Mode infini : record de vagues du niveau au lancement de la partie.
+var _endless_record_before := 0
 ## Bonus de l'arbre des améliorations, lus au lancement : ils ne changent pas en cours de partie.
 var _bonuses: Perk
 
@@ -57,7 +66,24 @@ var _bonuses: Perk
 @onready var hud: Hud = $HUD
 
 
+## Ouvre un niveau, en mode infini ou non.
+static func open(tree: SceneTree, path: String, endless := false) -> void:
+	if endless:
+		Engine.set_meta(ENDLESS_META, true)
+	tree.change_scene_to_file(path)
+
+
 func _ready() -> void:
+	if Engine.has_meta(ENDLESS_META):
+		is_endless = Engine.get_meta(ENDLESS_META)
+		Engine.remove_meta(ENDLESS_META)
+	spawner.endless = is_endless
+	# La carte prend les tuiles du biome de son monde, si elle n'en a pas.
+	var world := campaign.world_index_of(scene_file_path) if campaign else -1
+	if world >= 0 and map.tileset == null:
+		map.tileset = campaign.worlds[world].tileset
+	if is_endless:
+		_endless_record_before = Progress.get_endless_waves(scene_file_path)
 	placer.level = self
 	# Les tours débloquées dans l'arbre des améliorations s'ajoutent à celles du niveau.
 	var types := tower_types.duplicate()
@@ -67,7 +93,7 @@ func _ready() -> void:
 	tower_types = types
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
-	hud.setup(level_name, tower_types, game_speeds)
+	hud.setup("%s  ·  Mode infini" % level_name if is_endless else level_name, tower_types, game_speeds)
 	if is_demo:
 		hud.visible = false
 		hud.process_mode = Node.PROCESS_MODE_DISABLED
@@ -117,6 +143,16 @@ func get_next_world_name() -> String:
 	var world := campaign.world_index_of(scene_file_path)
 	var next_world := campaign.world_index_of(get_next_level())
 	return campaign.worlds[next_world].display_name if next_world != world else ""
+
+
+## Vagues repoussées jusqu'ici (toutes celles dont le bonus a été versé).
+func get_waves_cleared() -> int:
+	return _wave_bonus_paid + 1
+
+
+## Mode infini : étoiles infinies méritées avec les vagues repoussées jusqu'ici.
+func get_endless_stars() -> int:
+	return Progress.endless_stars_for(get_waves_cleared() - spawner.get_wave_count())
 
 
 ## Étoiles méritées si la partie était gagnée maintenant.
@@ -238,7 +274,7 @@ func get_early_call_bonus() -> int:
 
 ## Or versé quand la vague donnée est repoussée, bonus de l'arbre des améliorations compris.
 func get_wave_bonus(index: int) -> int:
-	return roundi(spawner.waves[index].bonus_gold * _bonuses.wave_bonus_multiplier)
+	return roundi(spawner.get_wave(index).bonus_gold * _bonuses.wave_bonus_multiplier)
 
 
 ## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations compris.
@@ -286,7 +322,8 @@ func _split(enemy: Enemy) -> void:
 		return
 	Sound.play(&"enemy_split")
 	for i in data.split_count:
-		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0))
+		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0),
+			enemy.health_multiplier)
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
@@ -314,6 +351,8 @@ func _check_wave_cleared() -> void:
 		# Infirmerie : rend des vies perdues, sans dépasser celles du départ.
 		if lives < starting_lives:
 			lives = mini(lives + _bonuses.lives_per_wave, starting_lives)
+	if is_endless and not is_demo:
+		Progress.record_endless(scene_file_path, get_waves_cleared(), get_endless_stars())
 	if not spawner.has_next_wave():
 		_end_game(true)
 
@@ -327,10 +366,15 @@ func _end_game(victory: bool) -> void:
 	if is_demo:
 		game_over.emit(victory)
 		return
-	var stars := get_stars() if victory else 0
-	var new_record := victory and Progress.record_victory(scene_file_path, stars)
-	hud.show_end_screen(victory, victory and has_next_level(), stars, new_record,
-		get_next_world_name() if victory else "")
+	if is_endless:
+		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
+		hud.show_endless_end_screen(get_waves_cleared(), get_endless_stars(),
+			get_waves_cleared() > _endless_record_before)
+	else:
+		var stars := get_stars() if victory else 0
+		var new_record := victory and Progress.record_victory(scene_file_path, stars)
+		hud.show_end_screen(victory, victory and has_next_level(), stars, new_record,
+			get_next_world_name() if victory else "")
 	is_paused = false
 	Engine.time_scale = 1.0
 	Sound.play(&"victory" if victory else &"defeat")
@@ -342,6 +386,8 @@ func _end_game(victory: bool) -> void:
 
 func _on_restart_requested() -> void:
 	get_tree().paused = false
+	if is_endless:
+		Engine.set_meta(ENDLESS_META, true)
 	get_tree().reload_current_scene()
 
 
@@ -378,7 +424,7 @@ func _show_lives_lost(amount: int, at: Vector2) -> void:
 func _refresh_hud() -> void:
 	if not is_node_ready():
 		return
-	hud.update_stats(gold, lives, spawner.current_wave + 1, spawner.waves.size())
+	hud.update_stats(gold, lives, spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count())
 
 
 func _process(_delta: float) -> void:
@@ -389,5 +435,5 @@ func _process(_delta: float) -> void:
 func _refresh_wave_ui() -> void:
 	hud.set_next_wave_available(can_start_next_wave())
 	if not is_over:
-		var next_wave: WaveData = spawner.waves[spawner.current_wave + 1] if spawner.has_next_wave() else null
+		var next_wave: WaveData = spawner.get_wave(spawner.current_wave + 1) if spawner.has_next_wave() else null
 		hud.show_next_wave(next_wave, get_early_call_bonus())

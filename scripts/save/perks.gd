@@ -1,8 +1,9 @@
 class_name Perks
 extends RefCounted
 ## Améliorations permanentes achetées par le joueur, enregistrées avec la progression.
-## Les étoiles gagnées sur les niveaux sont la monnaie : celles dépensées dans l'arbre
-## peuvent être récupérées à tout moment (Réinitialiser l'arbre).
+## Les étoiles gagnées sur les niveaux sont la monnaie, et les étoiles infinies du mode
+## infini celle des spécialisations : celles dépensées dans l'arbre peuvent être
+## récupérées à tout moment (Réinitialiser l'arbre).
 
 const TREE: PerkTree = preload("res://resources/perk_tree.tres")
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
@@ -53,29 +54,44 @@ static func get_unlocked_towers() -> Array[Resource]:
 	return result
 
 
-## Étoiles gagnées sur tous les niveaux de la campagne (meilleur résultat de chacun).
-static func get_earned_stars() -> int:
+## Spécialisations achetées pour une tour (chemin de sa TowerData), dans l'ordre de l'arbre.
+static func get_specializations(tower_path: String) -> Array[Perk]:
+	var owned := get_owned_ids()
+	var result: Array[Perk] = []
+	if tower_path.is_empty():
+		return result
+	for perk in TREE.perks:
+		if perk.specializes_tower == tower_path and owned.has(perk.id):
+			result.append(perk)
+	return result
+
+
+## Étoiles gagnées sur tous les niveaux de la campagne (meilleur résultat de chacun), ou
+## avec `endless`, étoiles infinies gagnées en mode infini.
+static func get_earned_stars(endless := false) -> int:
 	var total := 0
 	for path in CAMPAIGN.levels:
-		total += Progress.get_stars(path)
+		total += Progress.get_endless_stars(path) if endless else Progress.get_stars(path)
 	return total
 
 
-static func get_spent_stars() -> int:
+## Étoiles (ou étoiles infinies) dépensées dans l'arbre.
+static func get_spent_stars(endless := false) -> int:
 	var total := 0
 	for id in get_owned_ids():
 		var perk := TREE.get_perk(id)
-		if perk:
+		if perk and perk.paid_with_endless_stars == endless:
 			total += perk.cost
 	return total
 
 
-static func get_available_stars() -> int:
-	return get_earned_stars() - get_spent_stars()
+static func get_available_stars(endless := false) -> int:
+	return get_earned_stars(endless) - get_spent_stars(endless)
 
 
 static func can_buy(perk: Perk) -> bool:
-	return not is_owned(perk) and is_unlocked(perk) and get_available_stars() >= perk.cost
+	return not is_owned(perk) and is_unlocked(perk) \
+		and get_available_stars(perk.paid_with_endless_stars) >= perk.cost
 
 
 ## Achète l'amélioration si c'est possible. Renvoie true si elle a été achetée.
@@ -88,6 +104,15 @@ static func buy(perk: Perk) -> bool:
 	return true
 
 
+## Code Konami : tous les niveaux gagnés avec 3 étoiles, tous les mondes et modes infinis
+## ouverts avec toutes leurs étoiles infinies, et toutes les améliorations achetées.
+static func unlock_everything() -> void:
+	var ids := PackedStringArray()
+	for perk in TREE.perks:
+		ids.append(perk.id)
+	Progress.unlock_all(CAMPAIGN.levels, ids)
+
+
 ## Rend toutes les étoiles dépensées.
 static func refund_all() -> void:
 	Progress.set_value("perks", "owned", PackedStringArray())
@@ -98,7 +123,8 @@ static func get_bonuses() -> Perk:
 	var total := Perk.new()
 	for id in get_owned_ids():
 		var perk := TREE.get_perk(id)
-		if perk:
+		# Les bonus d'une spécialisation ne valent que pour sa tour (TowerData).
+		if perk and not perk.is_specialization():
 			perk.add_to(total)
 	return total
 

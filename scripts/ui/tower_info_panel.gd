@@ -120,7 +120,11 @@ func _refresh() -> void:
 	name_label.add_theme_color_override("font_color", data.color.lightened(0.3))
 	close_button.visible = placed
 	description_label.text = data.description
-	description_label.visible = not data.description.is_empty()
+	# Spécialisations achetées avec les étoiles infinies : déjà comptées dans les statistiques.
+	for specialization in data.get_specializations():
+		description_label.text += "\nSpécialisation : %s" % specialization.display_name
+	description_label.text = description_label.text.strip_edges()
+	description_label.visible = not description_label.text.is_empty()
 
 	var level := tower.level if placed else 1
 	var stats := tower.stats if placed else data.get_stats_at_level(1)
