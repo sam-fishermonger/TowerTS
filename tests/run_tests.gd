@@ -82,6 +82,11 @@ func _run() -> void:
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
 	await _test_wave_preview_and_early_call()
+	await _test_interest()
+	await _test_powers_in_tree()
+	await _test_meteors()
+	await _test_freeze()
+	await _test_reinforcements()
 	await _test_path_preview()
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
@@ -1084,8 +1089,11 @@ func _test_wave_bonus_when_waves_overlap() -> void:
 		rewards += enemy.data.reward
 		enemy.take_damage(1e9)
 	var bonuses := level.spawner.waves[0].bonus_gold + level.spawner.waves[1].bonus_gold
-	_check(level.gold == gold_before + rewards + bonuses,
-		"les bonus des deux vagues sont versés (%d or attendus, %d reçus)" % [rewards + bonuses, level.gold - gold_before])
+	# Les intérêts, eux, ne sont versés qu'une fois : sur l'or gardé quand la carte est vidée.
+	var interest := mini(floori((gold_before + rewards) * level.interest_rate), level.interest_cap)
+	_check(level.gold == gold_before + rewards + interest + bonuses,
+		"les bonus des deux vagues sont versés, et les intérêts une fois (%d or attendus, %d reçus)"
+		% [rewards + interest + bonuses, level.gold - gold_before])
 	await _free(level)
 
 
@@ -1115,6 +1123,216 @@ func _test_wave_preview_and_early_call() -> void:
 	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % bonus),
 		"« +%d » s'affiche sous le bouton" % bonus)
 	await _free(level)
+
+
+func _test_interest() -> void:
+	print("Intérêts sur l'or gardé")
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 300
+	_check(level.get_interest() == 15, "300 or gardés rapportent 15 or d'intérêts (5 %)")
+	_check(level.hud.interest_label.visible and level.hud.interest_label.text == "Intérêts : +15",
+		"le HUD les annonce sous l'or (%s)" % level.hud.interest_label.text)
+	_check(level.hud.interest_label.tooltip_text.contains("5 %") and level.hud.interest_label.tooltip_text.contains("25"),
+		"sa bulle d'aide donne le taux et le plafond")
+	level.gold = 5000
+	_check(level.get_interest() == 25, "plafonnés à 25 or")
+	level.gold = 300
+	level.spawner.current_wave = 0
+	level._check_wave_cleared()
+	var bonus := level.get_wave_bonus(0)
+	_check(level.gold == 300 + 15 + bonus, "versés avec le bonus de vague, calculés sur l'or d'avant le bonus (%d)" % level.gold)
+	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+15 intérêts"),
+		"« +15 intérêts » s'affiche sous l'or")
+	var gold := level.gold
+	level._check_wave_cleared()
+	_check(level.gold == gold, "rien de plus tant qu'aucune nouvelle vague n'est repoussée")
+	await _free(level)
+
+
+## Débloque les mondes et achète les pouvoirs et leurs renforts (étoiles infinies comprises).
+func _buy_all_powers() -> void:
+	Perks.unlock_everything()
+	Progress.set_value("perks", "owned", PackedStringArray())
+	for perk in Perks.TREE.perks:
+		if not perk.get_power_path().is_empty():
+			_check(Perks.buy(perk), "achat : %s" % perk.display_name)
+
+
+func _test_powers_in_tree() -> void:
+	print("Pouvoirs : arbre des améliorations")
+	var tree := Perks.TREE
+	var unlocks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_power.is_empty())
+	var on_page := unlocks.all(func(p: Perk) -> bool: return tree.get_page(p) == 3 and not p.paid_with_endless_stars)
+	_check(unlocks.size() == 3 and on_page, "3 pouvoirs, payés en étoiles, sur la page Pouvoirs")
+	var upgrades := tree.perks.filter(func(p: Perk) -> bool: return not p.improves_power.is_empty())
+	_check(upgrades.size() == 6 and upgrades.all(func(p: Perk) -> bool: return p.paid_with_endless_stars),
+		"6 renforts de pouvoirs, payés en étoiles infinies")
+	_check(tree.get_total_cost(true) <= Progress.ENDLESS_MAX_STARS * Perks.CAMPAIGN.size(),
+		"les étoiles infinies suffisent à tout acheter (%d)" % tree.get_total_cost(true))
+	_check(Perks.get_powers().is_empty(), "aucun pouvoir sans achat")
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.powers.is_empty() and not level.hud.power_bar.visible, "ni bouton de pouvoir en jeu")
+	await _free(level)
+
+	_win_in_all_difficulties(Perks.CAMPAIGN.worlds[0].levels)
+	var meteors := tree.get_perk("pouvoir_meteores")
+	_check(Perks.is_unlocked(meteors) and Perks.is_unlocked(tree.get_perk("pouvoir_gel"))
+		and not Perks.is_unlocked(tree.get_perk("pouvoir_renforts")),
+		"Météores ouverts d'emblée, Gel avec La Fonderie, Renforts avec La Cité")
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(3)
+	_check(screen.get_button(meteors).is_visible_in_tree() and screen.get_button(meteors).get_child(0) is PowerIcon,
+		"la page Pouvoirs montre le pouvoir avec son image")
+	_check(screen.stars_label.text.contains("★") and screen.stars_label.text.contains("∞ ★"),
+		"et les deux monnaies (%s)" % screen.stars_label.text)
+	_check(screen.buy(meteors), "les Météores s'achètent")
+	await _free(screen)
+	var powers := Perks.get_powers()
+	_check(powers.size() == 1 and powers[0].id == "meteors" and is_equal_approx(powers[0].damage, 80.0),
+		"le pouvoir débloqué est disponible")
+	Progress.reset_campaign()
+
+	_buy_all_powers()
+	powers = Perks.get_powers()
+	_check(powers.size() == 3, "les 3 pouvoirs")
+	_check(is_equal_approx(powers[0].damage, 120.0) and is_equal_approx(powers[0].cooldown, 28.0),
+		"Pluie battante et Comètes : 120 dégâts, 28 s de recharge")
+	_check(is_equal_approx(powers[1].duration, 5.0) and is_equal_approx(powers[1].vulnerability, 0.3),
+		"Blizzard et Engelures : 5 s de gel, +30 % de dégâts subis")
+	_check(powers[2].count == 5 and is_equal_approx(powers[2].health, 225.0), "Vétérans et Escouade : 5 soldats de 225 vie")
+	var resource: Power = load("res://resources/powers/meteors.tres")
+	_check(is_equal_approx(resource.damage, 80.0), "sans toucher à la ressource du pouvoir")
+	level = await _spawn_level(LEVEL_01)
+	await process_frame
+	var buttons := level.hud.power_buttons
+	_check(buttons.size() == 3 and level.hud.power_bar.visible, "un bouton par pouvoir en haut de l'écran")
+	var top := level.hud.top_bar.get_global_rect()
+	_check(buttons.all(func(b: PowerButton) -> bool: return top.encloses(b.get_global_rect()))
+		and buttons[2].get_global_rect().end.x <= level.hud.next_wave_button.get_global_rect().position.x
+		and level.hud.wave_label.get_global_rect().end.x < buttons[0].get_global_rect().position.x,
+		"ils tiennent dans la barre du haut, entre la vague et le bouton de vague")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _press_key(level: Level, physical: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = physical
+	event.pressed = true
+	level.hud._unhandled_key_input(event)
+
+
+func _test_meteors() -> void:
+	print("Pouvoir : Météores")
+	_buy_all_powers()
+	var level := await _spawn_level(LEVEL_01)
+	var meteors := level.powers[0]
+	var at := level.map.get_enemy_path(0).to_global(level.map.get_enemy_path(0).curve.sample_baked(400.0))
+	var near := _add_enemy_at(level, LARVE, at)
+	var far := _add_enemy_at(level, LARVE, at + Vector2(400, 0))
+	var health := near.health.health
+	_press_key(level, KEY_Q)
+	_check(level.placer.selected_power == meteors and level.hud.power_buttons[0].button_pressed,
+		"Q (A en AZERTY) vise les Météores, et leur bouton reste enfoncé")
+	_press_key(level, KEY_Q)
+	_check(level.placer.selected_power == null, "la même touche annule")
+	level.select_tower(CANNON)
+	level.select_power(meteors)
+	_check(level.placer.selected_tower == null and level.placer.selected_power == meteors, "viser un pouvoir lâche la tour choisie")
+	level.select_tower(CANNON)
+	_check(level.placer.selected_power == null, "et inversement")
+	level.select_tower(null)
+	level.select_power(meteors)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = at
+	await _send_to_placer(level, click)
+	_check(level.placer.selected_power == null and level.get_power_cooldown(meteors) > meteors.cooldown - 0.5,
+		"un clic sur la carte lance la pluie, et le pouvoir se recharge")
+	_check(not level.can_use_power(meteors) and level.hud.power_buttons[0].disabled, "en recharge, il ne se relance pas")
+	var elapsed := 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(not is_instance_valid(near) or not near.is_alive or near.health.health < health - meteors.damage * 0.9,
+		"les météores frappent les ennemis de la zone")
+	_check(far.health.health == far.health.max_health, "et pas ceux d'ailleurs")
+	_check(level.get_power_cooldown(meteors) < meteors.cooldown - 1.0, "la recharge avance avec le jeu")
+	_check(level.hud.power_buttons[0].text.ends_with(" s"), "le bouton montre les secondes restantes")
+	level.power_cooldowns[0] = 0.0
+	level.set_paused(true)
+	_check(not level.use_power(meteors, at), "pas de pouvoir pendant la pause")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _test_freeze() -> void:
+	print("Pouvoir : Gel")
+	_buy_all_powers()
+	var level := await _spawn_level(LEVEL_01)
+	var freeze := level.powers[1]
+	var walker := _add_still_enemy(level, LARVE, 0, 200.0)
+	walker.set_process(true)
+	var boss := _add_still_enemy(level, REINE, 0, 100.0)
+	boss.set_process(true)
+	await process_frame
+	level.select_power(freeze)
+	_check(walker.is_frozen() and level.get_power_cooldown(freeze) > 0.0, "le Gel part tout de suite, sans viser")
+	_check(not boss.is_frozen() and boss.is_slowed(), "un boss ne gèle pas : il ralentit")
+	var progress := walker.progress
+	var elapsed := 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(walker.progress == progress, "un ennemi gelé ne bouge plus")
+	var dealt := walker.take_damage(10.0, true)
+	_check(is_equal_approx(dealt, 13.0), "Engelures : il subit 30 %% de dégâts en plus (%.1f)" % dealt)
+	while elapsed < freeze.duration + 0.5:
+		elapsed += await _step()
+	_check(not walker.is_frozen() and walker.progress > progress, "puis il repart")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _test_reinforcements() -> void:
+	print("Pouvoir : Renforts")
+	_buy_all_powers()
+	var level := await _spawn_level(LEVEL_01)
+	var reinforcements := level.powers[2]
+	var path := level.map.get_enemy_path(0)
+	var post := path.to_global(path.curve.sample_baked(500.0))
+	_check(level.map.get_closest_path_point(post + Vector2(3, 4)).distance_to(post) < 6.0,
+		"le point du chemin le plus proche d'un clic")
+	_check(level.use_power(reinforcements, post), "les renforts se lancent sur le chemin")
+	var soldiers := level.get_soldiers()
+	_check(soldiers.size() == reinforcements.count, "%d soldats arrivent" % reinforcements.count)
+	_check(soldiers.all(func(s: Soldier) -> bool: return s.global_position.distance_to(post) < 20.0),
+		"ils se postent autour du point visé")
+	var enemy := _add_still_enemy(level, SCARABEE, 0, 460.0)
+	enemy.set_process(true)
+	var boss := _add_still_enemy(level, REINE, 0, 380.0)
+	boss.set_process(true)
+	var elapsed := 0.0
+	while elapsed < 1.5:
+		elapsed += await _step()
+	_check(enemy.is_held(), "un soldat arrête le premier ennemi qui arrive")
+	var progress := enemy.progress
+	var health := enemy.health.health
+	while elapsed < 2.5:
+		elapsed += await _step()
+	_check(not enemy.is_alive or (enemy.progress == progress and enemy.health.health < health),
+		"l'ennemi retenu ne marche plus et se fait frapper")
+	_check(not boss.is_held(), "un boss ne s'arrête pas")
+	_check(soldiers.any(func(s: Soldier) -> bool: return s.health < s.max_health) or not enemy.is_alive,
+		"l'ennemi retenu frappe son soldat")
+	boss.despawn()
+	while elapsed < reinforcements.duration + 1.0:
+		elapsed += await _step()
+	_check(level.get_soldiers().is_empty(), "les soldats repartent au bout de %d s" % reinforcements.duration)
+	_check(not is_instance_valid(enemy) or not enemy.is_alive or not enemy.is_held(), "et lâchent leur ennemi")
+	await _free(level)
+	Progress.reset_campaign()
 
 
 func _test_path_preview() -> void:

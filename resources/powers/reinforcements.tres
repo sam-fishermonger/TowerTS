@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="Power" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/power.gd" id="1_power"]
+
+[resource]
+script = ExtResource("1_power")
+id = "reinforcements"
+display_name = "Renforts"
+description = "Des soldats prennent position sur le chemin, au plus près du point visé. Chacun arrête un ennemi et le combat, jusqu'à tomber ou repartir. Les boss ne s'arrêtent pas, mais les soldats les frappent au passage."
+kind = 2
+color = Color(0.5, 0.75, 1, 1)
+cooldown = 45.0
+damage = 24.0
+count = 3
+radius = 30.0
+duration = 20.0
+health = 150.0
