@@ -242,13 +242,29 @@ func _test_title_screen() -> void:
 	await process_frame
 	_check(title.get_node("%PlayButton") is Button, "le bouton Jouer existe")
 	_check(title.get_node("%PlayButton").has_focus(), "le bouton Jouer a le focus")
-	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%LexiconButton").text == "Lexique", "le bouton Lexique existe")
+	_check(title.get_main_buttons().all(func(b: Button) -> bool: return b.visible)
+		and title.get_play_buttons().all(func(b: Button) -> bool: return not b.visible),
+		"le menu principal ne montre que Jouer, Améliorations, Lexique, Succès, Options et Quitter")
+	title.get_node("%PlayButton").pressed.emit()
+	_check(title.is_play_menu_open() and title.get_play_buttons().all(func(b: Button) -> bool: return b.visible)
+		and not title.get_node("%PerksButton").visible and title.get_node("%CampaignButton").has_focus(),
+		"Jouer ouvre le choix du mode, Campagne a le focus")
+	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
 	_check(title.get_node("%DailyButton").text == "Défi du jour", "le bouton Défi du jour existe")
 	_check(title.get_node("%EditorButton").text == "Éditeur de niveau", "le bouton Éditeur de niveau existe")
 	_check(title.get_node("%ConquestButton").text == "Conquête", "le bouton Conquête existe")
-	_check(title.get_node("%PlayButton").text == "Jouer" and not title.get_node("%ResetButton").visible,
+	_check(title.get_node("%CampaignButton").text == "Campagne" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
+	var cancel := InputEventAction.new()
+	cancel.action = &"ui_cancel"
+	cancel.pressed = true
+	Input.parse_input_event(cancel)
+	await process_frame
+	_check(not title.is_play_menu_open() and title.get_node("%PlayButton").has_focus(), "Échap revient au menu principal")
+	title.get_node("%PlayButton").pressed.emit()
+	title.get_node("%BackButton").pressed.emit()
+	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible, "Retour aussi")
 	await _free(title)
 	await _test_title_demo()
 	var screen := await _spawn_world_select()
@@ -331,7 +347,7 @@ func _test_progress() -> void:
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(title.get_node("%PlayButton").text == "Continuer", "le bouton devient Continuer")
+	_check(title.get_node("%CampaignButton").text == "Continuer", "le bouton Campagne devient Continuer")
 	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 288"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
@@ -2498,7 +2514,7 @@ func _test_konami_code() -> void:
 	var announced := false
 	for child in title.get_children():
 		announced = announced or (child is Label and child.text.contains("Konami"))
-	_check(title.get_node("%PlayButton").text == "Continuer" and announced, "l'écran titre se met à jour et l'annonce")
+	_check(title.get_node("%CampaignButton").text == "Continuer" and announced, "l'écran titre se met à jour et l'annonce")
 	Progress.reset_campaign()
 	# Flèches du pavé numérique, et A lu à sa place sur le clavier (le Q d'un AZERTY).
 	var events := [[KEY_KP_8, KEY_KP_8], [KEY_KP_8, KEY_KP_8], [KEY_DOWN, KEY_DOWN], [KEY_DOWN, KEY_DOWN],
