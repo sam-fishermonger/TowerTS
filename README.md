@@ -36,7 +36,8 @@ Le dossier `build/` est ignoré par git.
 
 ## Comment jouer
 
-- Le menu de l'écran titre est court : **Jouer**, **Améliorations**, **Lexique**, **Succès**, **Options** et **Quitter**. **Jouer** ouvre le choix du mode : **Campagne** (ou **Continuer**), **Mondes**, **Défi du jour**, **Conquête** et **Éditeur de niveau** ; **Retour** ou **Échap** revient au menu principal.
+- Le menu de l'écran titre est court : **Jouer**, **Améliorations**, **Lexique**, **Succès**, **Options** et **Quitter**. **Jouer** ouvre le choix du mode : **Campagne** (ou **Continuer**), **Tutoriel**, **Mondes**, **Défi du jour**, **Conquête** et **Éditeur de niveau** ; **Retour** ou **Échap** revient au menu principal.
+- **Tutoriel** : une partie guidée sur un petit niveau de La Ruche (4 vagues). Une bulle explique quoi faire, étape par étape, et un cadre clignotant montre où cliquer : choisir et poser une tour, lancer une vague, l'or, le bonus et les intérêts, la fiche d'une tour (amélioration, cible, vente), les volants, les furtifs et la tour qui les détecte, la pause et la vitesse, puis un pouvoir (le Gel, prêté pour la dernière vague). Les étapes avancent avec ce que fait le joueur : il peut prendre de l'avance, les bulles déjà faites sont sautées. **Passer le tutoriel** ouvre directement le niveau 1-1. La toute première fois, **Campagne** commence par le tutoriel (tant qu'il n'est ni fini ni passé et qu'aucune étoile n'est gagnée), et le bouton **Tutoriel** reste marqué « conseillé ». Il se joue en Moyen, sans l'arbre des améliorations, ne rapporte ni étoiles ni succès, et sa victoire propose **Commencer la campagne**. Les étapes sont dans `scripts/levels/tutorial.gd` (textes passés par `tr()`), le niveau dans `scenes/levels/tutorial.tscn`.
 - Sur l'écran titre, une partie se joue toute seule derrière le menu : un niveau de la campagne tiré au hasard (son nom s'affiche en haut à droite), avec des tours posées et améliorées automatiquement. Quand elle se termine, un autre niveau prend la suite. Elle est muette et n'enregistre rien.
 - Choisir une tour dans la barre d'achat, en bas à gauche (une case par tour : son image, son nom et son prix, grisée quand l'or manque), ou avec les touches **1 à 9 puis 0** (rangée des chiffres ou pavé numérique, aussi en AZERTY) pour les dix premières cases, dont le chiffre est rappelé dans un coin. Puis cliquer sur une case libre hors du chemin. La même touche repose la tour.
 - **Maj + clic** pour poser plusieurs tours d'affilée, **clic droit** ou **Échap** pour annuler.
@@ -317,6 +318,7 @@ Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin 
 ├── LevelStats               dégâts et destructions de chaque tour, or, durée (statistiques de fin de niveau)
 ├── Conquest                 scripts/levels/conquest.gd   mode Conquête : pierre, rochers, chantiers, compte à rebours des vagues
 │   └── Worker               scripts/entities/worker.gd   ouvrier : mine, rapporte la pierre au QG, bâtit les chantiers
+├── Tutorial (CanvasLayer)   scripts/levels/tutorial.gd   tutoriel : bulles des étapes, cadre sur la cible
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris
 └── WaveSpawner              fait apparaître les ennemis sur les chemins de la carte
 TitleDemo                    scripts/ui/title_demo.gd     partie jouée toute seule derrière l'écran titre (Level.is_demo)

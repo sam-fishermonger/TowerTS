@@ -44,6 +44,10 @@ const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 ## par des ouvriers qui les bâtissent, et les vagues partent seules. Comme les niveaux de
 ## l'éditeur, il ne compte ni pour la progression ni pour les succès.
 @export var conquest_mode := false
+## Tutoriel (voir Tutorial) : des bulles guident le joueur pas à pas. Il se joue en Moyen,
+## sans l'arbre des améliorations ni choix des tours, ne compte ni pour la progression ni
+## pour les succès, et ouvre ensuite le premier niveau de la campagne.
+@export var is_tutorial := false
 
 var gold := 0:
 	set(value):
@@ -97,6 +101,8 @@ var powers: Array[Power] = []
 var power_cooldowns: Array[float] = []
 ## Mode Conquête : ses ouvriers, sa pierre et ses rochers (null hors de ce mode).
 var conquest: Conquest
+## Bulles du tutoriel (null hors du tutoriel).
+var tutorial: Tutorial
 
 var _wave_bonus_paid := -1
 ## Ennemis tombés qui vont se relever (EnemyData.revive_count) : la vague n'est pas
@@ -155,7 +161,7 @@ func _enter_tree() -> void:
 ## Les succès comptent dans les parties de la campagne, du mode infini et du défi, mais
 ## pas dans la partie de l'écran titre ni dans les niveaux de l'éditeur.
 func counts_achievements() -> bool:
-	return not is_demo and custom_level.is_empty() and conquest == null
+	return not is_demo and custom_level.is_empty() and conquest == null and not is_tutorial
 
 
 func _ready() -> void:
@@ -168,8 +174,12 @@ func _ready() -> void:
 		is_endless = false
 		# L'arbre des améliorations ne compte pas pendant le défi (voir _exit_tree()).
 		Engine.set_meta(Perks.DISABLED_META, true)
+	if is_tutorial:
+		is_endless = false
+		# Comme pendant le défi, l'arbre des améliorations ne compte pas (voir _exit_tree()).
+		Engine.set_meta(Perks.DISABLED_META, true)
 	spawner.endless = is_endless
-	if not is_endless and not is_demo and not challenge:
+	if not is_endless and not is_demo and not challenge and not is_tutorial:
 		difficulty = Difficulty.get_current()
 	if challenge:
 		spawner.apply_modifiers(challenge.get_health_multiplier(), challenge.get_count_multiplier(),
@@ -197,7 +207,7 @@ func _ready() -> void:
 	if challenge:
 		types = challenge.get_towers()
 	available_tower_types = types
-	tower_limit = 0 if is_demo or challenge else Difficulty.TOWER_LIMITS[difficulty]
+	tower_limit = 0 if is_demo or challenge or is_tutorial else Difficulty.TOWER_LIMITS[difficulty]
 	is_choosing_towers = tower_limit > 0 and types.size() > tower_limit
 	if is_choosing_towers:
 		tower_types = []
@@ -209,6 +219,8 @@ func _ready() -> void:
 		else "%s  ·  %s" % [level_name, Difficulty.NAMES[difficulty]]
 	if challenge:
 		title = "Défi du jour  ·  %s" % level_name
+	if is_tutorial:
+		title = level_name
 	hud.setup(title, tower_types, game_speeds)
 	if not custom_level.is_empty():
 		hud.set_menu_button_text("Retour à l'éditeur")
@@ -263,18 +275,24 @@ func _ready() -> void:
 		set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
 	else:
 		set_game_speed(GameSettings.pick_start_speed(game_speeds))
+	if is_tutorial and not is_demo:
+		tutorial = Tutorial.new()
+		add_child(tutorial)
+		tutorial.setup(self)
 	Sound.play_music()
 
 
 func _exit_tree() -> void:
 	# La vitesse est globale au moteur : on la remet à x1 en quittant le niveau.
 	Engine.time_scale = 1.0
-	if challenge and Engine.has_meta(Perks.DISABLED_META):
+	if (challenge or is_tutorial) and Engine.has_meta(Perks.DISABLED_META):
 		Engine.remove_meta(Perks.DISABLED_META)
 
 
 ## Niveau proposé après une victoire ("" = dernier niveau).
 func get_next_level() -> String:
+	if is_tutorial:
+		return campaign.levels[0] if campaign and campaign.size() > 0 else ""
 	return campaign.get_next(scene_file_path) if campaign and not challenge and custom_level.is_empty() \
 		and not conquest_mode else ""
 
@@ -761,6 +779,8 @@ func _end_game(victory: bool) -> void:
 		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0)
 	elif not custom_level.is_empty() or conquest:
 		hud.show_end_screen(victory, false, get_stars() if victory else 0)
+	elif is_tutorial:
+		hud.show_end_screen(victory, victory and has_next_level(), get_stars() if victory else 0)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
