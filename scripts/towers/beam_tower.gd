@@ -36,7 +36,7 @@ func _attack(enemy: Enemy) -> void:
 	# Nouvelle cible choisie pendant cette image : le rayon repart de zéro avant de frapper.
 	if enemy.get_instance_id() != _ramp_target_id:
 		_reset_ramp(enemy)
-	enemy.take_damage(stats.damage * get_ramp_multiplier())
+	enemy.hit(stats.damage * get_ramp_multiplier(), stats)
 
 
 ## Chaleur du rayon, de 0 (vient d'accrocher sa cible) à 1 (dégâts au maximum).

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/flame_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/beam_zap.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/flame.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 80
+damage_multiplier = 1.35
+range_multiplier = 1.1
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 130
+damage_multiplier = 1.5
+fire_rate_multiplier = 1.2
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Lance-flammes"
+description = "Crache un jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous les carapaces."
+cost = 100
+scene = ExtResource("2_scene")
+attack_range = 100.0
+damage = 3.0
+fire_rate = 4.0
+color = Color(0.95, 0.32, 0.12, 1)
+turret_texture = ExtResource("10_turret")
+attack_sound = ExtResource("9_sound")
+dot_damage = 12.0
+dot_duration = 2.0
+cone_angle = 55.0
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

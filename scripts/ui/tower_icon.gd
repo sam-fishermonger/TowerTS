@@ -3,7 +3,10 @@ extends Control
 ## Image d'un type de tour, comme sur la carte : socle et tourelle tournée vers le haut,
 ## ou un carré de sa couleur si le type de tour n'a pas d'image.
 
-var data: TowerData:
+## Un TowerData. (Typé Resource : avec TowerData, charger ce script en premier, comme le
+## fait l'arbre des améliorations, empêche Godot de libérer l'arbre et la campagne en
+## quittant.)
+var data: Resource:
 	set(value):
 		data = value
 		queue_redraw()

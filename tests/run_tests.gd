@@ -22,6 +22,13 @@ const GATLING := preload("res://resources/towers/gatling.tres")
 const MORTAR := preload("res://resources/towers/mortar.tres")
 const FROST := preload("res://resources/towers/frost.tres")
 const BEAM := preload("res://resources/towers/beam.tres")
+const FLAME := preload("res://resources/towers/flame.tres")
+const PESTICIDE := preload("res://resources/towers/pesticide.tres")
+const JAMMER := preload("res://resources/towers/jammer.tres")
+const RAIL := preload("res://resources/towers/rail.tres")
+const MARKSMAN := preload("res://resources/towers/marksman.tres")
+const TEARGAS := preload("res://resources/towers/teargas.tres")
+const CHENILLARD := preload("res://resources/enemies/mecha/chenillard.tres")
 const LARVE := preload("res://resources/enemies/insectoid/larve.tres")
 const SCARABEE := preload("res://resources/enemies/insectoid/scarabee.tres")
 const COUVEUSE := preload("res://resources/enemies/insectoid/couveuse.tres")
@@ -47,6 +54,7 @@ func _run() -> void:
 	await _test_progress()
 	await _test_perk_tree()
 	await _test_perks_in_level()
+	await _test_biome_towers_in_tree()
 	await _test_sound()
 	await _test_health_component()
 	await _test_entity_despawn()
@@ -77,6 +85,10 @@ func _run() -> void:
 	await _test_beam_tower()
 	await _test_shielded_enemy()
 	await _test_healer_enemy()
+	await _test_burn_and_flame_tower()
+	await _test_gas_clouds()
+	await _test_jammer_and_rail()
+	await _test_marksman()
 	await _test_worlds()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
@@ -249,7 +261,7 @@ func _test_perk_tree() -> void:
 		for required in perk.requires:
 			consistent = consistent and tree.perks.has(required) and required.row < perk.row
 	_check(consistent, "identifiants uniques, et chaque amélioration demande des améliorations des rangs au-dessus")
-	_check(tree.branch_names.size() == 3, "3 branches : tours, or, vies")
+	_check(tree.get_page_branches(0).size() == 3, "page Bonus : 3 branches, tours, or, vies")
 	var poudre := tree.get_perk("poudre")
 	var longue_vue := tree.get_perk("longue_vue")
 	_check(Perks.get_available_stars() == 0 and not Perks.can_buy(poudre), "sans étoiles, rien à acheter")
@@ -314,6 +326,66 @@ func _test_perks_in_level() -> void:
 	level.spawner.current_wave = 1
 	level._check_wave_cleared()
 	_check(level.lives == 25, "sans dépasser les vies de départ")
+	await _free(level)
+	Progress.reset_campaign()
+
+
+func _test_biome_towers_in_tree() -> void:
+	print("Arbre des améliorations : tours des mondes")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	var tree := Perks.TREE
+	var tower_perks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
+	var per_world := [0, 0, 0]
+	for perk: Perk in tower_perks:
+		per_world[perk.required_world] += 1
+	_check(per_world == [2, 2, 2], "2 tours par monde (%s)" % [per_world])
+	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
+		"elles sont toutes sur la page Tours des mondes")
+	var campaign_stars := campaign.size() * 3
+	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars - 3,
+		"l'arbre complet (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [tree.get_total_cost(), campaign_stars])
+
+	var flame := tree.get_perk("flame")
+	var jammer := tree.get_perk("jammer")
+	for path in campaign.worlds[0].levels:
+		Progress.record_victory(path, 3)
+	_check(Perks.is_unlocked(flame) and Perks.is_unlocked(jammer) and not Perks.is_unlocked(tree.get_perk("marksman")),
+		"finir La Ruche ouvre les branches de La Ruche et de La Fonderie, pas celle de La Cité")
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(not screen.get_button(flame).is_visible_in_tree(), "les tours des mondes sont sur un autre onglet")
+	screen.show_page(1)
+	_check(screen.get_button(flame).is_visible_in_tree() and not screen.get_button(tree.get_perk("poudre")).is_visible_in_tree(),
+		"l'onglet Tours des mondes les affiche")
+	_check(screen._lock_labels[5].text.contains("La Fonderie"), "la branche de La Cité dit quel monde finir pour l'ouvrir")
+	screen._show_info(tree.get_perk("marksman"))
+	_check(screen.info_status.text.contains("La Fonderie"), "la fiche aussi")
+	_check(screen.buy(flame) and Perks.is_owned(flame), "le Lance-flammes s'achète")
+	await _free(screen)
+
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.tower_types.size() == 4 and level.tower_types.has(FLAME), "le Lance-flammes s'ajoute à la barre d'achat")
+	var fresh: Level = LEVEL_01.instantiate()
+	_check(fresh.tower_types.size() == 3, "sans changer la liste du niveau lui-même")
+	fresh.free()
+	await _free(level)
+
+	for world in campaign.worlds:
+		for path in world.levels:
+			Progress.record_victory(path, 3)
+	for perk: Perk in tower_perks:
+		Perks.buy(perk)
+	_check(Perks.get_unlocked_towers().size() == 6, "les 6 tours achetées")
+	level = await _spawn_level(HUMANOID_01)
+	await process_frame
+	_check(level.tower_types.size() == 12 and level.hud.tower_shop.get_child_count() == 12, "12 tours dans la barre d'achat")
+	var bar := level.hud.bottom_bar.get_global_rect()
+	var controls := level.hud.pause_button.get_global_rect()
+	var last_slot: Control = level.hud.tower_shop.get_child(11)
+	_check(is_equal_approx(bar.size.y, 96.0) and bar.end.x <= 1280.0 and last_slot.get_global_rect().end.x < controls.position.x,
+		"elles tiennent dans la barre, sans pousser les boutons de droite")
+	_check(not level.hud.shop_hint.visible, "le rappel des commandes laisse sa place")
 	await _free(level)
 	Progress.reset_campaign()
 
@@ -1114,6 +1186,177 @@ func _test_healer_enemy() -> void:
 	var heal_shown := level.effects.get_children().any(func(n: Node) -> bool:
 		return n is FloatingText and n.text.begins_with("+") and n.color == Level.HEAL_TEXT_COLOR)
 	_check(heal_shown, "le soin s'affiche en vert")
+	await _free(level)
+
+
+## Pose une tour au centre de la carte (case libre la plus proche de x, y) et renvoie la tour.
+func _place_test_tower(level: Level, data: TowerData) -> Tower:
+	level.gold = 100000
+	for cell in [Vector2i(4, 2), Vector2i(4, 4), Vector2i(2, 2), Vector2i(6, 6)]:
+		var tower := level.place_tower(cell, data)
+		if tower:
+			return tower
+	return null
+
+
+## Ennemi immobile posé à un endroit précis (hors du chemin si besoin).
+func _add_enemy_at(level: Level, data: EnemyData, at: Vector2) -> Enemy:
+	var enemy := _add_still_enemy(level, data, 0, 0.0)
+	enemy.global_position = at
+	return enemy
+
+
+func _test_burn_and_flame_tower() -> void:
+	print("Lance-flammes : cône de flammes et brûlure qui passe sous l'armure")
+	var level := await _spawn_level(LEVEL_03)
+	var still: EnemyData = SCARABEE.duplicate()
+	still.speed = 0.0
+	var scarabee := _add_still_enemy(level, still, 0, 200.0)
+	scarabee.set_process(true)
+	scarabee.apply_dot(10.0, 2.0)
+	var elapsed := 0.0
+	while elapsed < 3.0:
+		elapsed += await _step()
+	_check(is_equal_approx(scarabee.health.health, SCARABEE.max_health - 20.0),
+		"la brûlure fait 10/s pendant 2 s, sans armure (%s PV restants)" % scarabee.health.health)
+	_check(not scarabee.is_burning(), "puis s'éteint")
+
+	var tower := _place_test_tower(level, FLAME) as FlameTower
+	_check(tower != null, "le Lance-flammes vient de sa scène")
+	tower.set_process(false)
+	var at := tower.global_position
+	var front := _add_enemy_at(level, LARVE, at + Vector2(60, 0))
+	var side := _add_enemy_at(level, LARVE, at + Vector2(60, 15))
+	var behind := _add_enemy_at(level, LARVE, at + Vector2(-60, 0))
+	var too_far := _add_enemy_at(level, LARVE, at + Vector2(FLAME.attack_range + 30.0, 0))
+	tower._attack(front)
+	_check(front.health.health < LARVE.max_health and side.health.health < LARVE.max_health and front.is_burning(),
+		"les ennemis dans le cône sont touchés et brûlent")
+	_check(behind.health.health == LARVE.max_health and too_far.health.health == LARVE.max_health,
+		"pas ceux derrière la tour ou hors de portée")
+	await _free(level)
+
+
+func _test_gas_clouds() -> void:
+	print("Pesticide et Lacrymogène : nuages")
+	var level := await _spawn_level(LEVEL_03)
+	var tower := _place_test_tower(level, PESTICIDE)
+	tower.set_process(false)
+	var still: EnemyData = SCARABEE.duplicate()
+	still.speed = 0.0
+	var target := _add_still_enemy(level, still, 0, 300.0)
+	target.set_process(true)
+	tower._attack(target)
+	var cloud: GasCloud = null
+	var elapsed := 0.0
+	while cloud == null and elapsed < 5.0:
+		elapsed += await _step()
+		for node in level.projectiles.get_children():
+			if node is GasCloud:
+				cloud = node
+	_check(cloud != null, "la grenade laisse un nuage à l'impact")
+	_check(target.is_burning(), "le Scarabée dans le nuage est empoisonné")
+	var walker := _add_still_enemy(level, still, 0, 300.0)
+	walker.set_process(true)
+	await _step()
+	await _step()
+	_check(walker.is_burning(), "un ennemi qui arrive dans le nuage est empoisonné à son tour")
+	var health_before := target.health.health
+	elapsed = 0.0
+	while elapsed < 2.0:
+		elapsed += await _step()
+	_check(target.health.health < health_before - 10.0, "le poison passe sous la carapace (%s → %s)" % [health_before, target.health.health])
+	elapsed = 0.0
+	while is_instance_valid(cloud) and elapsed < 10.0:
+		elapsed += await _step()
+	_check(not is_instance_valid(cloud), "le nuage se dissipe")
+	await _free(level)
+
+	level = await _spawn_level(HUMANOID_01)
+	var soldier := _add_still_enemy(level, SOLDAT, 0, 300.0)
+	var cloud_stats := TEARGAS.get_stats_at_level(1)
+	var gas := GasCloud.new()
+	gas.stats = cloud_stats
+	level.projectiles.add_child(gas)
+	gas.global_position = soldier.global_position
+	await _step()
+	_check(soldier.is_slowed() and not soldier.can_be_healed(), "le gaz lacrymogène ralentit et empêche les soins")
+	await _free(level)
+
+
+func _test_jammer_and_rail() -> void:
+	print("Brouilleur IEM et Perforateur : contre les boucliers et les blindés")
+	var level := await _spawn_level(MECHA_01)
+	var still: EnemyData = SENTINELLE.duplicate()
+	still.speed = 0.0
+	var sentinelle := _add_still_enemy(level, still, 0, 200.0)
+	sentinelle.set_process(true)
+	var stats := JAMMER.get_stats_at_level(1)
+	sentinelle.hit(stats.damage, stats)
+	_check(is_equal_approx(sentinelle.health.shield, SENTINELLE.max_shield - stats.damage * 5.0),
+		"l'onde fait 5 fois plus de dégâts au bouclier")
+	_check(sentinelle.health.is_shield_jammed(), "et le brouille")
+	var shield_before := sentinelle.health.shield
+	var elapsed := 0.0
+	while elapsed < stats.shield_jam_duration - 0.3:
+		elapsed += await _step()
+	_check(sentinelle.health.shield == shield_before, "un bouclier brouillé ne se recharge pas")
+	while elapsed < stats.shield_jam_duration + SENTINELLE.max_shield / SENTINELLE.shield_regen + 1.0:
+		elapsed += await _step()
+	_check(sentinelle.health.shield == SENTINELLE.max_shield, "puis se recharge une fois le brouillage fini")
+	_check(is_equal_approx(sentinelle.take_damage(SENTINELLE.max_shield), SENTINELLE.max_shield),
+		"les autres tours font des dégâts normaux au bouclier")
+
+	var rail := _place_test_tower(level, RAIL) as RailTower
+	_check(rail != null, "le Perforateur vient de sa scène")
+	rail.set_process(false)
+	var at := rail.global_position
+	var first := _add_enemy_at(level, CHENILLARD, at + Vector2(60, 0))
+	var second := _add_enemy_at(level, CHENILLARD, at + Vector2(120, 0))
+	var third := _add_enemy_at(level, CHENILLARD, at + Vector2(180, 0))
+	var aside := _add_enemy_at(level, CHENILLARD, at + Vector2(120, 60))
+	rail._attack(first)
+	var full := CHENILLARD.max_health - RAIL.get_stats_at_level(1).damage
+	_check([first, second, third].all(func(e: Enemy) -> bool: return is_equal_approx(e.health.health, full)),
+		"le tir traverse les 3 Chenillards alignés, sans compter leur armure")
+	_check(aside.health.health == CHENILLARD.max_health, "pas celui qui est à côté de la ligne")
+	await _free(level)
+
+
+func _test_marksman() -> void:
+	print("Franc-tireur : abat les Médecins et bloque les soins")
+	var level := await _spawn_level(HUMANOID_01)
+	var tower := _place_test_tower(level, MARKSMAN)
+	tower.set_process(false)
+	var ahead := _add_still_enemy(level, SOLDAT, 0, 400.0)
+	var medecin := _add_still_enemy(level, MEDECIN, 0, 300.0)
+	tower.stats.attack_range = 10000.0
+	_check(tower.find_target() == medecin, "il vise le Médecin avant le soldat plus avancé")
+	tower.set_target_mode(Tower.TargetMode.STRONGEST)
+	_check(tower.find_target() == medecin, "quelle que soit la règle de ciblage")
+	_check(CANNON.get_stats_at_level(1).prefers_healers == false, "les autres tours n'ont pas cette priorité")
+	# Le Médecin touché ne soigne plus, et le soldat touché ne peut plus être soigné.
+	var patient := _add_still_enemy(level, SOLDAT, 0, 300.0 + MEDECIN.heal_radius * 0.5)
+	patient.take_damage(40.0)
+	medecin.hit(1.0, tower.stats)
+	medecin.data = MEDECIN.duplicate()
+	medecin.data.speed = 0.0
+	medecin.set_process(true)
+	var elapsed := 0.0
+	while elapsed < MARKSMAN.heal_block_duration - 0.5:
+		elapsed += await _step()
+	_check(patient.health.health == SOLDAT.max_health - 40.0, "un Médecin touché ne soigne plus")
+	while elapsed < MARKSMAN.heal_block_duration + MEDECIN.heal_interval * 2.0:
+		elapsed += await _step()
+	_check(patient.health.health > SOLDAT.max_health - 40.0, "il reprend une fois l'effet passé")
+	patient.take_damage(40.0)
+	patient.hit(1.0, tower.stats)
+	var hurt := patient.health.health
+	elapsed = 0.0
+	while elapsed < MARKSMAN.heal_block_duration - 0.5:
+		elapsed += await _step()
+	_check(patient.health.health == hurt, "un ennemi touché ne peut plus être soigné")
+	_check(ahead.health.health == SOLDAT.max_health, "(le soldat hors de portée du soin n'a rien)")
 	await _free(level)
 
 

@@ -24,7 +24,7 @@ func _init(tower_data: TowerData = null) -> void:
 func _ready() -> void:
 	_apply_styles()
 	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 4)
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
 	column.add_theme_constant_override("separation", 0)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -36,10 +36,22 @@ func _ready() -> void:
 	icon_view.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	icon_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(icon_view)
-	var name_label := _add_label(column, data.display_name, 13, data.color.lightened(0.35))
+	var name_label := _add_label(column, data.display_name, _fit_font_size(data.display_name, 13),
+		data.color.lightened(0.35))
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_price_label = _add_label(column, "", 12, TowerInfoPanel.PRICE_COLOR)
 	set_price(data.get_cost(), true)
+
+
+## Taille de police (au plus `max_size`) pour que le nom tienne dans une case étroite
+## (beaucoup de tours dans la barre) ; en dessous de 9, il est coupé.
+func _fit_font_size(text_value: String, max_size: int) -> int:
+	var font := get_theme_default_font()
+	var width := custom_minimum_size.x - 6.0
+	var font_size := max_size
+	while font_size > 9 and font.get_string_size(text_value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > width:
+		font_size -= 1
+	return font_size
 
 
 ## Affiche le prix, en rouge et la case grisée s'il dépasse l'or disponible.

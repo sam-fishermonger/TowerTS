@@ -56,6 +56,12 @@ var _bonuses: Perk
 
 func _ready() -> void:
 	placer.level = self
+	# Les tours débloquées dans l'arbre des améliorations s'ajoutent à celles du niveau.
+	var types := tower_types.duplicate()
+	for data in Perks.get_unlocked_towers():
+		if not types.has(data):
+			types.append(data)
+	tower_types = types
 	placer.selection_changed.connect(hud.set_selected_tower)
 	placer.inspection_changed.connect(hud.show_tower_details)
 	hud.setup(level_name, tower_types, game_speeds)

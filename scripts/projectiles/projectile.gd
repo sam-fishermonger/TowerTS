@@ -7,8 +7,8 @@ var target: Enemy
 var damage := 0.0
 var speed := 500.0
 var color := Color.WHITE
-var slow_factor := 1.0
-var slow_duration := 0.0
+## Statistiques de la tour qui a tiré : effets du coup (ralentissement, brûlure...).
+var stats: TowerData
 
 var _destination := Vector2.ZERO
 
@@ -18,8 +18,7 @@ func setup(new_target: Enemy, data: TowerData) -> void:
 	damage = data.damage
 	speed = data.projectile_speed
 	color = data.color.lightened(0.4)
-	slow_factor = data.slow_factor
-	slow_duration = data.slow_duration
+	stats = data
 	_destination = target.global_position
 
 
@@ -44,8 +43,7 @@ func _impact(hit: Enemy) -> void:
 
 
 func _hit_enemy(enemy: Enemy) -> void:
-	enemy.take_damage(damage)
-	enemy.apply_slow(slow_factor, slow_duration)
+	enemy.hit(damage, stats)
 
 
 func _draw() -> void:

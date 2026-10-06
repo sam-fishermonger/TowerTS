@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Brouilleur IEM : antenne en anneaux et éclairs (ne tourne pas). -->
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#1e2560" stroke-width="7"/>
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#8c96ff" stroke-width="3.5" stroke-dasharray="9 6"/>
+  <circle cx="32" cy="32" r="11" fill="#1e2560"/>
+  <circle cx="32" cy="32" r="8.5" fill="#5763e0"/>
+  <path d="M33 23 L28 33 L33 33 L30 41 L37 30 L32 30 Z" fill="#e6ecff"/>
+  <circle cx="32" cy="9" r="3" fill="#c8d0ff"/>
+  <circle cx="32" cy="55" r="3" fill="#c8d0ff"/>
+  <circle cx="9" cy="32" r="3" fill="#c8d0ff"/>
+  <circle cx="55" cy="32" r="3" fill="#c8d0ff"/>
+</svg>

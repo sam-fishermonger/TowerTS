@@ -41,6 +41,33 @@ extends Resource
 ## Secondes sur la même cible pour atteindre beam_ramp_max.
 @export var beam_ramp_time := 2.0
 
+@export_group("Effets spéciaux")
+## Dégâts par seconde d'une brûlure ou d'un poison laissé sur les ennemis touchés.
+## Ils passent sous l'armure (0 = aucun).
+@export var dot_damage := 0.0
+## Durée de la brûlure ou du poison, en secondes.
+@export var dot_duration := 0.0
+## Les coups ignorent l'armure.
+@export var armor_piercing := false
+## Multiplicateur des dégâts infligés aux boucliers d'énergie.
+@export var shield_damage_multiplier := 1.0
+## Secondes pendant lesquelles un bouclier touché ne se recharge plus.
+@export var shield_jam_duration := 0.0
+## Secondes pendant lesquelles un ennemi touché ne peut ni être soigné ni soigner.
+@export var heal_block_duration := 0.0
+## Vise d'abord les soigneurs à portée, quelle que soit la règle de ciblage.
+@export var prefers_healers := false
+
+@export_group("Nuage")
+## Rayon du nuage laissé à l'impact (tours à projectile de nuage).
+@export var cloud_radius := 0.0
+## Durée du nuage, en secondes.
+@export var cloud_duration := 0.0
+
+@export_group("Flammes")
+## Ouverture du cône de flammes, en degrés (Lance-flammes).
+@export var cone_angle := 50.0
+
 @export_group("Améliorations")
 ## Améliorations achetables, dans l'ordre : la tour posée est au niveau 1,
 ## chaque amélioration la fait monter d'un niveau.
@@ -72,6 +99,7 @@ func get_stats_at_level(level: int) -> TowerData:
 		upgrades[i].apply_to(stats)
 	var bonuses := Perks.get_bonuses()
 	stats.damage *= bonuses.damage_multiplier
+	stats.dot_damage *= bonuses.damage_multiplier
 	stats.attack_range *= bonuses.range_multiplier
 	stats.fire_rate *= bonuses.fire_rate_multiplier
 	if stats.slow_factor < 1.0:

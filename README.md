@@ -50,7 +50,11 @@ Le dossier `build/` est ignoré par git.
 - La partie est perdue quand les vies tombent à 0, gagnée quand toutes les vagues du niveau sont repoussées. Une victoire rapporte des étoiles : 3 sans perdre de vie, 2 en gardant au moins la moitié des vies, 1 sinon. Après une victoire, **Niveau suivant** ouvre le niveau d'après.
 - La campagne compte **trois mondes** de 6 niveaux, un par biome, chacun avec ses monstres : **La Ruche** (insectoïdes et xénomorphes), **La Fonderie** (mecha) et **La Cité** (humanoïdes). **Mondes** (écran titre) ouvre la sélection : une carte par monde, avec ses monstres, ses étoiles et un bouton par niveau.
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et gagner le dernier niveau d'un monde débloque le monde suivant (l'écran de victoire propose alors **Monde suivant**). La sélection affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche de l'écran titre) repart de zéro.
-- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée). Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte 26 étoiles (la campagne en rapporte 54) : au début il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+- **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Deux onglets :
+  - **Bonus**, en trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée) ;
+  - **Tours des mondes** : une branche par monde, avec deux nouvelles tours chacune (voir plus bas). La branche d'un monde s'ouvre quand ce monde est débloqué, et une tour achetée apparaît dans la barre d'achat de tous les niveaux.
+
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte 53 étoiles (la campagne en rapporte 54) : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
 
@@ -73,6 +77,21 @@ Chaque monde a ses monstres, rangés dans `resources/enemies/<biome>/` avec leur
 | 3. La Cité (humanoïdes) | Soldat, Éclaireur (rapide), Garde (bouclier anti-émeute : armure), Médecin, Transport de troupes (libère 4 Soldats), Colosse (énorme) | **Soin** (Médecin) : il rend régulièrement des points de vie aux ennemis blessés autour de lui (onde et « +N » verts). Mieux vaut l'abattre en premier. |
 
 Le bouclier et le soin se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier** et **Soin**) : n'importe quel ennemi peut en avoir.
+
+### Tours des mondes
+
+Chaque monde a deux tours à débloquer dans l'arbre des améliorations (onglet **Tours des mondes**), chacune avec un atout contre les monstres de son biome. Elles s'ajoutent à la barre d'achat de tous les niveaux une fois achetées.
+
+| Monde | Tour | Prix | Atout |
+|---|---|---|---|
+| La Ruche | **Lance-flammes** | ★ 3 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
+| La Ruche | **Pesticide** | ★ 4 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
+| La Fonderie | **Brouilleur IEM** | ★ 4 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
+| La Fonderie | **Perforateur** | ★ 5 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
+| La Cité | **Franc-tireur** | ★ 5 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
+| La Cité | **Lacrymogène** | ★ 6 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
+
+Ces effets se règlent dans la ressource de la tour (`TowerData`, groupes **Effets spéciaux**, **Nuage** et **Flammes**) : brûlure ou poison, coups qui ignorent l'armure, dégâts multipliés sur les boucliers, bouclier brouillé, soins bloqués, priorité aux soigneurs. N'importe quelle tour peut les combiner. La seconde tour d'une branche demande la première, et la branche ne s'ouvre qu'avec son monde (`required_world` de l'amélioration).
 
 | Niveau | Carte | Vagues |
 |---|---|---|
@@ -113,11 +132,14 @@ Les objets de jeu héritent de quelques classes de base, et chaque scène ne con
 Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : is_alive, despawn()
 ├── Enemy                    scripts/enemies/             suit un Path2D, santé, ralentissement, division à la mort, soin
 ├── Tower                    scripts/towers/tower.gd      ciblage + cadence ; _attack() et _draw_body() à redéfinir
-│   ├── ProjectileTower      tire le projectile défini dans TowerData (Canon, Mitrailleuse, Sniper, Mortier)
-│   ├── PulseTower           onde qui frappe et ralentit tout ce qui est à portée (Givre)
-│   └── BeamTower            rayon continu dont les dégâts montent sur la même cible (Rayon)
+│   ├── ProjectileTower      tire le projectile défini dans TowerData (Canon, Mitrailleuse, Sniper, Mortier, Franc-tireur, Pesticide, Lacrymogène)
+│   ├── PulseTower           onde qui frappe tout ce qui est à portée (Givre, Brouilleur IEM)
+│   ├── BeamTower            rayon continu dont les dégâts montent sur la même cible (Rayon)
+│   ├── FlameTower           cône de flammes qui brûle tout ce qu'il touche (Lance-flammes)
+│   └── RailTower            tir instantané qui traverse toute une ligne (Perforateur)
 └── Projectile               scripts/projectiles/         tête chercheuse, un seul ennemi touché
-    └── ExplosiveProjectile  dégâts de zone à l'impact
+    ├── ExplosiveProjectile  dégâts de zone à l'impact
+    └── CloudProjectile      laisse un nuage (GasCloud) qui applique les effets de la tour (Pesticide, Lacrymogène)
 
 Composants                   scripts/components/          HealthComponent (vie, armure, bouclier), HealthBar
 Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin
@@ -142,8 +164,8 @@ export_presets.cfg   Réglages d'export (Windows, Linux, Web)
 scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
-scenes/towers/       ProjectileTower et PulseTower
-scenes/projectiles/  Projectile et ExplosiveProjectile
+scenes/towers/       ProjectileTower, PulseTower, BeamTower, FlameTower et RailTower
+scenes/projectiles/  Projectile, ExplosiveProjectile et CloudProjectile
 scripts/             Scripts GDScript (.gd), même découpage que scenes/, plus :
 scripts/entities/    Classe de base Entity
 scripts/components/  Composants réutilisables (santé, barre de vie)

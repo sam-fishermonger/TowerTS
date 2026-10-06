@@ -22,13 +22,35 @@ static func is_owned(perk: Perk) -> bool:
 	return get_owned_ids().has(perk.id)
 
 
-## Toutes les améliorations demandées par celle-ci sont achetées.
+## Son monde est débloqué, et toutes les améliorations demandées par celle-ci sont achetées.
 static func is_unlocked(perk: Perk) -> bool:
+	if not is_world_unlocked(perk):
+		return false
 	var owned := get_owned_ids()
 	for required in perk.requires:
 		if not owned.has(required.id):
 			return false
 	return true
+
+
+## Le monde demandé par l'amélioration (s'il y en a un) est débloqué.
+static func is_world_unlocked(perk: Perk) -> bool:
+	return perk.required_world < 0 or Progress.is_world_unlocked(CAMPAIGN, perk.required_world)
+
+
+## Nom du monde demandé par l'amélioration, ou "".
+static func get_required_world_name(perk: Perk) -> String:
+	return CAMPAIGN.worlds[perk.required_world].display_name if perk.required_world >= 0 else ""
+
+
+## Tours (TowerData) débloquées par les améliorations achetées, dans l'ordre de l'arbre.
+static func get_unlocked_towers() -> Array[Resource]:
+	var owned := get_owned_ids()
+	var result: Array[Resource] = []
+	for perk in TREE.perks:
+		if not perk.unlocks_tower.is_empty() and owned.has(perk.id):
+			result.append(perk.get_unlocked_tower())
+	return result
 
 
 ## Étoiles gagnées sur tous les niveaux de la campagne (meilleur résultat de chacun).

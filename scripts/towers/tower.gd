@@ -130,6 +130,12 @@ func find_target() -> Enemy:
 
 ## Plus le score est grand, plus l'ennemi est prioritaire.
 func _target_score(enemy: Enemy) -> float:
+	# Le Franc-tireur abat les soigneurs avant tout le reste.
+	var bonus := 1e12 if stats.prefers_healers and enemy.data.heal_amount > 0.0 else 0.0
+	return bonus + _mode_score(enemy)
+
+
+func _mode_score(enemy: Enemy) -> float:
 	match target_mode:
 		TargetMode.LAST:
 			return enemy.distance_to_end()

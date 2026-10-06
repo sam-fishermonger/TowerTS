@@ -1,7 +1,8 @@
 class_name PulseTower
 extends Tower
-## Tour sans projectile : à chaque tir, une onde frappe et ralentit tous les
-## ennemis à portée.
+## Tour sans projectile : à chaque tir, une onde frappe tous les ennemis à portée,
+## avec les effets de ses statistiques (ralentissement du Givre, bouclier brouillé
+## du Brouilleur).
 
 const PULSE_DURATION := 0.35
 
@@ -21,8 +22,7 @@ func uses_target_mode() -> bool:
 
 func _attack(_enemy: Enemy) -> void:
 	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, stats.attack_range):
-		enemy.take_damage(stats.damage)
-		enemy.apply_slow(stats.slow_factor, stats.slow_duration)
+		enemy.hit(stats.damage, stats)
 	_pulse_time_left = PULSE_DURATION
 
 
