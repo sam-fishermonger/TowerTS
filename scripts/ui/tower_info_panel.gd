@@ -11,13 +11,14 @@ signal close_requested
 
 ## Écart entre la fiche et ce qu'elle décrit, et marge avec les bords de l'écran.
 const GAP := 8.0
-## Haut de la zone de jeu, sous la barre du HUD.
-const TOP_LIMIT := 72.0
 const BONUS_COLOR := Color(0.55, 0.95, 0.55)
 const MUTED_COLOR := Color(1, 1, 1, 0.6)
 const PRICE_COLOR := Color(1, 0.85, 0.3)
 const TOO_EXPENSIVE_COLOR := Color(1, 0.45, 0.45)
 
+## Zone de l'écran où la fiche doit rester (vide = tout l'écran) : le HUD y met la
+## carte, entre ses barres du haut et du bas.
+var bounds := Rect2()
 ## Type de tour affiché.
 var data: TowerData
 ## Tour posée affichée, ou null en mode aperçu.
@@ -26,7 +27,7 @@ var tower: Tower
 var _gold := 0
 ## Zone de l'écran que la fiche décrit (bouton ou tour).
 var _anchor_rect := Rect2()
-## true : à côté de la zone (tour posée) ; false : en dessous (bouton).
+## true : à côté de la zone (tour posée) ; false : au-dessus ou en dessous (bouton).
 var _beside := false
 
 @onready var name_label: Label = %NameLabel
@@ -52,7 +53,8 @@ func _ready() -> void:
 	resized.connect(_reposition)
 
 
-## Aperçu d'un type de tour, sous la zone donnée (le bouton de la barre d'achat).
+## Aperçu d'un type de tour, au-dessus de la zone donnée (le bouton de la barre
+## d'achat), ou en dessous s'il n'y a pas la place.
 func show_tower_type(tower_data: TowerData, gold: int, anchor_rect: Rect2) -> void:
 	_set_tower(null)
 	data = tower_data
@@ -67,8 +69,8 @@ func show_tower(placed: Tower, gold: int) -> void:
 	_set_tower(placed)
 	data = placed.data
 	_gold = gold
-	var size := Vector2(Tower.SIZE, Tower.SIZE)
-	_anchor_rect = Rect2(placed.get_global_transform_with_canvas().origin - size / 2.0, size)
+	var tower_size := Vector2.ONE * Tower.SIZE
+	_anchor_rect = Rect2(placed.get_global_transform_with_canvas().origin - tower_size / 2.0, tower_size)
 	_beside = true
 	_refresh()
 
@@ -214,17 +216,19 @@ static func _format(value: float, decimals := 1) -> String:
 func _reposition() -> void:
 	if not visible or not is_inside_tree():
 		return
-	var screen := get_viewport_rect().size
+	var area := bounds if bounds.has_area() else get_viewport_rect()
 	var target: Vector2
 	if _beside:
 		# À droite de la tour, ou à gauche s'il n'y a pas la place.
 		target.x = _anchor_rect.end.x + GAP
-		if target.x + size.x > screen.x - GAP:
+		if target.x + size.x > area.end.x - GAP:
 			target.x = _anchor_rect.position.x - GAP - size.x
 		target.y = _anchor_rect.get_center().y - size.y / 2.0
 	else:
 		target.x = _anchor_rect.get_center().x - size.x / 2.0
-		target.y = _anchor_rect.end.y + GAP
-	target.x = clampf(target.x, GAP, maxf(GAP, screen.x - size.x - GAP))
-	target.y = clampf(target.y, TOP_LIMIT, maxf(TOP_LIMIT, screen.y - size.y - GAP))
+		target.y = _anchor_rect.position.y - GAP - size.y
+		if target.y < area.position.y + GAP:
+			target.y = _anchor_rect.end.y + GAP
+	target.x = clampf(target.x, area.position.x + GAP, maxf(area.position.x + GAP, area.end.x - size.x - GAP))
+	target.y = clampf(target.y, area.position.y + GAP, maxf(area.position.y + GAP, area.end.y - size.y - GAP))
 	position = target

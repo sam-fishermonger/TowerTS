@@ -13,9 +13,9 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 
 ## Comment jouer
 
-- Choisir une tour dans la barre du haut, puis cliquer sur une case libre hors du chemin.
+- Choisir une tour dans la barre d'achat, en bas à gauche (une case par tour : son image, son nom et son prix, grisée quand l'or manque), puis cliquer sur une case libre hors du chemin.
 - **Maj + clic** pour poser plusieurs tours d'affilée, **clic droit** ou **Échap** pour annuler.
-- Survoler une tour de la barre d'achat affiche sa fiche : description, statistiques et prix.
+- Survoler une case de la barre d'achat affiche, juste au-dessus, la fiche de la tour : description, statistiques et prix.
 - Cliquer sur une tour posée ouvre sa fiche, avec le bouton **Améliorer** : chaque tour a 2 améliorations (niveau 3 maximum), dont les gains sont affichés en vert avant l'achat.
 - Dans la même fiche, **Vendre** retire la tour et rend 70 % de ce qu'elle a coûté (améliorations comprises), et le bouton **Cible** choisit l'ennemi visé en priorité : Premier (le plus avancé, par défaut), Dernier, Le plus fort (le plus de vie) ou Le plus proche. Le Givre frappe tout ce qui est à portée et n'a donc pas ce choix.
 - **✕** ou **Échap** ferme la fiche.
@@ -28,7 +28,7 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 - La progression est enregistrée : chaque niveau gagné débloque le suivant, et l'écran titre affiche le meilleur résultat de chaque niveau. **Continuer** reprend au premier niveau pas encore gagné ; **Effacer la progression** (en bas à gauche) repart de zéro.
 - **Améliorations** (écran titre) ouvre l'arbre des améliorations permanentes, payées avec les étoiles gagnées sur les niveaux. Trois branches : **Tours** (dégâts, portée, cadence, ralentissement), **Or** (or de départ, or par ennemi, bonus de vague, prix réduits, meilleure revente) et **Vies** (vies de départ, vies rendues à chaque vague repoussée). Chaque amélioration se débloque quand celles qui la précèdent sont achetées. L'arbre complet coûte plus d'étoiles que la campagne n'en rapporte : il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
-- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément sur l'écran titre (le choix est enregistré).
+- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle. **Musique** et **Sons** se coupent séparément, sur l'écran titre comme en jeu (en bas à droite, même pendant la pause) ; le choix est enregistré.
 
 ## Images
 
@@ -45,6 +45,9 @@ Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (P
 | 1 | Un chemin en zigzag | Canon, Mitrailleuse, Sniper | 5 |
 | 2 | Deux entrées (nord et sud) qui se rejoignent, rochers où l'on ne peut pas construire | + Mortier (explosion de zone), Givre (onde qui ralentit) | 6, avec la Carapace (ennemi blindé : les petits dégâts rebondissent) |
 | 3 | Un long chemin en serpentin dans un marais | + Rayon (rayon continu dont les dégâts montent jusqu'à x3 sur la même cible) | 7, avec le Slime géant (se divise en 3 Slimes à sa mort) |
+| 4 | Le carrefour : un chemin qui se recoupe lui-même, deux allées parallèles | Les 6 | 8 |
+| 5 | Le canyon : trois entrées (ouest, sud et nord) qui se rejoignent au centre | Les 6 | 8, réparties sur les trois entrées |
+| 6 | La spirale : le chemin tourne jusqu'à la base, au centre de la carte | Les 6 | 10 |
 
 Les niveaux se suivent dans l'ordre de `resources/campaign.tres` : pour ajouter un niveau, il suffit de l'y ajouter.
 
@@ -71,13 +74,17 @@ Entity (Node2D)              scripts/entities/entity.gd   cycle de vie commun : 
     └── ExplosiveProjectile  dégâts de zone à l'impact
 
 Composants                   scripts/components/          HealthComponent (vie, armure), HealthBar
+Hud (CanvasLayer)            scripts/ui/hud.gd            barres du haut et du bas, fiches, écran de fin
+├── TowerShop                barre d'achat : une case TowerShopButton (TowerIcon, nom, prix) par tour
+├── AudioToggles             boutons Musique et Sons (aussi sur l'écran titre)
+└── TowerInfoPanel           fiche d'un type de tour (survol) ou d'une tour posée
 GameMap (Node2D)             scripts/map/game_map.gd      grille, chemins (Path2D enfants), rochers, cases occupées
 Level (Node2D)               scripts/levels/level.gd      or, vies, vagues, fin de partie, navigation
 ├── TowerPlacer              sélection, aperçu et pose des tours à la souris
 └── WaveSpawner              fait apparaître les ennemis sur les chemins de la carte
 ```
 
-`scenes/levels/level.tscn` est la scène de base de tous les niveaux. `level_01.tscn` et `level_02.tscn` en héritent et n'ajoutent que leurs données : chemins, rochers, couleurs, tours disponibles et vagues. Pour créer un niveau 3 : **Scène > Nouvelle scène héritée** depuis `level.tscn`, ajouter un ou plusieurs `Path2D` sous `Map`, puis remplir les vagues du `WaveSpawner`.
+`scenes/levels/level.tscn` est la scène de base de tous les niveaux. Les niveaux (`level_01.tscn` à `level_06.tscn`) en héritent et n'ajoutent que leurs données : chemins, rochers, couleurs, tours disponibles et vagues. La base est dessinée au bout du premier chemin. Pour créer un nouveau niveau : **Scène > Nouvelle scène héritée** depuis `level.tscn`, ajouter un ou plusieurs `Path2D` sous `Map`, puis remplir les vagues du `WaveSpawner`.
 
 Une nouvelle tour se crée sans code si elle réutilise un comportement existant (un `.tres` `TowerData` qui pointe vers `projectile_tower.tscn` ou `pulse_tower.tscn`), ou en sous-classant `Tower` pour un nouveau comportement.
 
@@ -85,7 +92,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 
 ```
 project.godot        Configuration du projet
-scenes/ui/           Écran titre (scène de démarrage), arbre des améliorations et HUD
+scenes/ui/           Écran titre (scène de démarrage), arbre des améliorations, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower et PulseTower

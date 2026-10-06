@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/title_screen.gd" id="1_title"]
+[ext_resource type="PackedScene" path="res://scenes/ui/audio_toggles.tscn" id="9_audio"]
 
 [node name="TitleScreen" type="Control"]
 layout_mode = 3
@@ -75,26 +76,10 @@ layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 12
 
-[node name="AudioButtons" type="HBoxContainer" parent="Center/Menu"]
+[node name="AudioToggles" parent="Center/Menu" instance=ExtResource("9_audio")]
+unique_name_in_owner = true
 layout_mode = 2
-alignment = 1
 theme_override_constants/separation = 12
-
-[node name="MusicButton" type="Button" parent="Center/Menu/AudioButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(124, 36)
-layout_mode = 2
-toggle_mode = true
-button_pressed = true
-text = "Musique : oui"
-
-[node name="SoundButton" type="Button" parent="Center/Menu/AudioButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(124, 36)
-layout_mode = 2
-toggle_mode = true
-button_pressed = true
-text = "Sons : oui"
 
 [node name="QuitButton" type="Button" parent="Center/Menu"]
 unique_name_in_owner = true

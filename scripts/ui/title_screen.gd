@@ -12,8 +12,6 @@ const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 @onready var quit_button: Button = %QuitButton
 @onready var reset_button: Button = %ResetButton
 @onready var reset_dialog: ConfirmationDialog = %ResetDialog
-@onready var music_button: Button = %MusicButton
-@onready var sound_button: Button = %SoundButton
 
 
 func _ready() -> void:
@@ -24,13 +22,6 @@ func _ready() -> void:
 	quit_button.visible = not OS.has_feature("web")
 	reset_button.pressed.connect(reset_dialog.popup_centered)
 	reset_dialog.confirmed.connect(_on_reset_confirmed)
-	music_button.toggled.connect(func(on: bool) -> void:
-		Sound.set_music_enabled(on)
-		_refresh_audio_buttons())
-	sound_button.toggled.connect(func(on: bool) -> void:
-		Sound.set_sound_enabled(on)
-		_refresh_audio_buttons())
-	_refresh_audio_buttons()
 	_build_level_buttons()
 	Sound.play_music()
 	play_button.grab_focus()
@@ -61,13 +52,6 @@ func _build_level_buttons() -> void:
 	var available := Perks.get_available_stars()
 	perks_button.text = "Améliorations  ·  ★ %d" % available if available > 0 else "Améliorations"
 	reset_button.visible = any_won
-
-
-func _refresh_audio_buttons() -> void:
-	music_button.set_pressed_no_signal(Sound.is_music_enabled())
-	sound_button.set_pressed_no_signal(Sound.is_sound_enabled())
-	music_button.text = "Musique : %s" % ("oui" if music_button.button_pressed else "non")
-	sound_button.text = "Sons : %s" % ("oui" if sound_button.button_pressed else "non")
 
 
 func _on_reset_confirmed() -> void:

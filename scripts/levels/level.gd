@@ -6,12 +6,11 @@ extends Node2D
 signal game_over(victory: bool)
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
-
-@export var level_name := "Niveau"
 const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
 const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
 const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 
+@export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
 @export var starting_gold := 150
 @export var starting_lives := 20
@@ -39,6 +38,8 @@ var is_paused := false
 var game_speed := 1.0
 
 var _wave_bonus_paid := -1
+## Bonus de l'arbre des améliorations, lus au lancement : ils ne changent pas en cours de partie.
+var _bonuses: Perk
 
 @onready var map: GameMap = $Map
 @onready var stains: Node2D = $Stains
@@ -72,9 +73,9 @@ func _ready() -> void:
 	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
 	# Les bonus de l'arbre des améliorations comptent comme des vies de départ : les
 	# étoiles se calculent sur ce total.
-	var bonuses := Perks.get_bonuses()
-	starting_gold += bonuses.starting_gold_bonus
-	starting_lives += bonuses.lives_bonus
+	_bonuses = Perks.get_bonuses()
+	starting_gold += _bonuses.starting_gold_bonus
+	starting_lives += _bonuses.lives_bonus
 	gold = starting_gold
 	lives = starting_lives
 	set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
@@ -210,12 +211,12 @@ func get_early_call_bonus() -> int:
 
 ## Or versé quand la vague donnée est repoussée, bonus de l'arbre des améliorations compris.
 func get_wave_bonus(index: int) -> int:
-	return roundi(spawner.waves[index].bonus_gold * Perks.get_bonuses().wave_bonus_multiplier)
+	return roundi(spawner.waves[index].bonus_gold * _bonuses.wave_bonus_multiplier)
 
 
 ## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations compris.
 func get_enemy_reward(data: EnemyData) -> int:
-	return roundi(data.reward * Perks.get_bonuses().reward_multiplier)
+	return roundi(data.reward * _bonuses.reward_multiplier)
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:
@@ -274,13 +275,12 @@ func _check_wave_cleared() -> void:
 		return
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
-	var lives_per_wave := Perks.get_bonuses().lives_per_wave
 	while _wave_bonus_paid < spawner.current_wave:
 		_wave_bonus_paid += 1
 		gold += get_wave_bonus(_wave_bonus_paid)
 		# Infirmerie : rend des vies perdues, sans dépasser celles du départ.
 		if lives < starting_lives:
-			lives = mini(lives + lives_per_wave, starting_lives)
+			lives = mini(lives + _bonuses.lives_per_wave, starting_lives)
 	if not spawner.has_next_wave():
 		_end_game(true)
 
@@ -333,7 +333,7 @@ func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int
 func _show_lives_lost(amount: int, at: Vector2) -> void:
 	hud.play_damage_effect(amount)
 	# L'ennemi sort par le bord de l'écran : on ramène le texte dans la zone visible.
-	var area := get_viewport_rect().grow_individual(-24.0, -90.0, -24.0, -24.0)
+	var area := hud.get_play_area().grow(-24.0)
 	var shown_at := at.clamp(area.position, area.end)
 	_show_floating_text("-%d" % amount, LIVES_LOST_TEXT_COLOR, shown_at, 20)
 

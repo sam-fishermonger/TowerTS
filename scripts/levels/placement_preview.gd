@@ -23,8 +23,7 @@ func _draw() -> void:
 	var half := Tower.SIZE / 2.0
 	var rect := Rect2(-half, -half, Tower.SIZE, Tower.SIZE)
 	if tower_data.turret_texture:
-		draw_texture_rect(Tower.BASE_TEXTURE, rect, false, Color(1, 1, 1, 0.65))
-		draw_texture_rect(tower_data.turret_texture, rect.grow(Tower.SIZE * 0.15), false, Color(1, 1, 1, 0.65))
+		Tower.draw_sprite(self, tower_data, Vector2.ZERO, Tower.SIZE, Tower.TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.65))
 	else:
 		draw_rect(rect, Color(tower_data.color, 0.6))
 	draw_rect(rect, tint, false, 2.0)
