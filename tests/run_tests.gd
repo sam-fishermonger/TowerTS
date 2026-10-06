@@ -143,6 +143,7 @@ func _run() -> void:
 	await _test_tutorial()
 	await _test_conquest_buildings()
 	await _test_conquest_hud()
+	await _test_conquest_top_bar()
 	await _test_raiders()
 	await _test_conquest_progress()
 	await _test_detail_windows()
@@ -3778,6 +3779,34 @@ func _test_conquest_buildings() -> void:
 		and conquest.nearest_depot(level.map.cell_to_world(Vector2i(2, 8))) == conquest.depot_position,
 		"un Dépôt détruit ne sert plus")
 	await _free(level)
+
+
+func _test_conquest_top_bar() -> void:
+	print("Mode Conquête : barre du haut avec les pouvoirs")
+	_buy_all_powers()
+	var level := await _spawn_level(load(ConquestLevels.LEVELS[1]))
+	if level.is_choosing_towers:
+		level.choose_towers(level.get_default_tower_choice())
+	for i in 3:
+		await process_frame
+	var hud := level.hud
+	var row := hud.level_label.get_parent() as Control
+	_check(hud.level_label.get_global_rect().position.x >= 0.0 and row.get_global_rect().end.x <= hud.top_bar.size.x,
+		"tout tient dans la barre du haut (nom du niveau à x = %d)" % hud.level_label.get_global_rect().position.x)
+	_check(hud.power_buttons.size() == 3 and hud.power_buttons.all(func(b: PowerButton) -> bool: return b.compact and b.text.is_empty()),
+		"les pouvoirs perdent leur nom pour faire de la place")
+	_check(hud.level_label.text.begins_with("Conquête") and hud.level_label.size.x >= Hud.LEVEL_LABEL_MIN_WIDTH,
+		"le nom du niveau reste lisible")
+	_check(hud.level_label.tooltip_text.is_empty() or hud.level_label.tooltip_text == hud.level_label.text,
+		"coupé, le nom du niveau est en entier dans sa bulle d'aide")
+	await _free(level)
+	level = await _spawn_level(LEVEL_01)
+	for i in 3:
+		await process_frame
+	_check(level.hud.power_buttons.all(func(b: PowerButton) -> bool: return not b.compact)
+		and level.hud.level_label.tooltip_text.is_empty(), "campagne : les pouvoirs gardent leur nom, le niveau aussi")
+	await _free(level)
+	Progress.reset_campaign()
 
 
 func _test_conquest_hud() -> void:

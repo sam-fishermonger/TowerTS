@@ -5,11 +5,16 @@ extends Button
 ## secondes restantes. Il reste enfoncé tant que le pouvoir est visé sur la carte.
 
 const ICON_SIZE := 26.0
+const WIDTH := 118.0
+## Largeur du bouton sans son nom (barre du haut trop pleine) : l'image, la touche et la recharge.
+const COMPACT_WIDTH := 72.0
 
 var power: Power
 ## Touche du pouvoir, telle qu'elle est écrite sur le clavier du joueur.
 var key_text := ""
 var cooldown_left := 0.0
+## Sans son nom, qui reste dans la bulle d'aide (voir set_compact).
+var compact := false
 
 
 func setup(value: Power, key: String) -> void:
@@ -18,7 +23,7 @@ func setup(value: Power, key: String) -> void:
 	text = power.display_name
 	toggle_mode = true
 	focus_mode = Control.FOCUS_NONE
-	custom_minimum_size = Vector2(118, 44)
+	custom_minimum_size = Vector2(WIDTH, 44)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	add_theme_font_size_override("font_size", 14)
 	_refresh_tooltip()
@@ -41,15 +46,28 @@ func _notification(what: int) -> void:
 		_refresh_tooltip()
 
 
+## Retire le nom du bouton (ou le remet), pour laisser de la place dans la barre du haut.
+func set_compact(value: bool) -> void:
+	compact = value
+	custom_minimum_size.x = COMPACT_WIDTH if compact else WIDTH
+	text = _label_text()
+
+
+func _label_text() -> String:
+	if cooldown_left > 0.0:
+		return "%d s" % ceili(cooldown_left)
+	return "" if compact else power.display_name
+
+
 ## Recharge restante et pouvoir utilisable maintenant (sinon le bouton est grisé).
 func set_state(cooldown: float, usable: bool) -> void:
 	disabled = not usable
-	var label := power.display_name if cooldown <= 0.0 else "%d s" % ceili(cooldown)
-	if label != text:
-		text = label
 	if not is_equal_approx(cooldown, cooldown_left):
 		cooldown_left = cooldown
 		queue_redraw()
+	var label := _label_text()
+	if label != text:
+		text = label
 
 
 func _draw() -> void:
