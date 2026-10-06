@@ -11,6 +11,8 @@ extends Resource
 @export var enemies: Array[EnemyData] = []
 ## Boss du biome, au bout de certains niveaux (lexique et sélection des mondes).
 @export var bosses: Array[EnemyData] = []
+## Pillards du biome, qui ne viennent que dans les niveaux du mode Conquête (lexique).
+@export var raiders: Array[EnemyData] = []
 @export_file("*.tscn") var levels: Array[String] = []
 ## Tuiles du biome (sol, détails, obstacles), posées sur les cartes de ses niveaux
 ## (voir GameMap.tileset).

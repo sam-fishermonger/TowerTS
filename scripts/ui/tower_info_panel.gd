@@ -25,6 +25,10 @@ var data: TowerData
 var tower: Tower
 
 var _gold := 0
+## Mode Conquête : essence disponible, et essence demandée par la prochaine amélioration
+## d'une tour (Tower -> int ; vide hors de ce mode).
+var essence_cost := Callable()
+var _essence := 0
 ## Zone de l'écran que la fiche décrit (bouton ou tour).
 var _anchor_rect := Rect2()
 ## true : à côté de la zone (tour posée) ; false : au-dessus ou en dessous (bouton).
@@ -89,6 +93,15 @@ func set_gold(gold: int) -> void:
 	if gold == _gold:
 		return
 	_gold = gold
+	if visible:
+		_refresh_prices()
+
+
+## Mode Conquête : met à jour l'essence disponible (bouton Améliorer).
+func set_essence(essence: int) -> void:
+	if essence == _essence:
+		return
+	_essence = essence
 	if visible:
 		_refresh_prices()
 
@@ -181,8 +194,10 @@ func _refresh_prices() -> void:
 		upgrade_button.disabled = true
 		return
 	var cost := tower.get_upgrade_cost()
-	upgrade_button.text = tr("Améliorer  ·  %d or") % cost
-	upgrade_button.disabled = _gold < cost
+	var essence: int = essence_cost.call(tower) if essence_cost.is_valid() else 0
+	upgrade_button.text = tr("Améliorer  ·  %d or") % cost if essence == 0 \
+		else tr("Améliorer  ·  %d or  ·  %d essence") % [cost, essence]
+	upgrade_button.disabled = _gold < cost or _essence < essence
 
 
 ## Une ligne par statistique : nom, valeur actuelle et, si fourni, la valeur au niveau suivant.

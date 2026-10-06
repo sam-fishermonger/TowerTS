@@ -891,8 +891,8 @@ msgstr "Left click: place the tower  ·  Shift + click: place several  ·  Right
 msgid "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
 msgstr "Tap a tower in the bar, then tap a free tile twice to place it  ·  Tap it again in the bar to cancel  ·  Tap a placed tower for its card, an enemy for its own  ·  An aimed power lands where you tap"
 
-msgid "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher : y envoyer les mineurs  ·  R : recruter un ouvrier"
-msgstr "Conquest: towers also cost stone and workers build them  ·  Click a rock: send the miners there  ·  R: recruit a worker"
+msgid "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  R : recruter un ouvrier  ·  B : bâtiments"
+msgstr "Conquest: towers also cost stone and workers build them  ·  Click a rock or a vein: send the miners there  ·  R: recruit a worker  ·  B: buildings"
 
 msgid "Pause"
 msgstr "Pause"
@@ -988,12 +988,6 @@ msgstr "Recruit · %d gold (R)"
 
 msgid "Vague dans %d s"
 msgstr "Wave in %d s"
-
-msgid "Pierre : minée par les ouvriers dans les rochers et rapportée au QG.\nChaque tour en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs."
-msgstr "Stone: mined from rocks by the workers and brought back to HQ.\nEvery tower needs some, on top of gold. Click a rock to send the miners there."
-
-msgid "Un ouvrier de plus, au QG : il mine la pierre et bâtit les tours."
-msgstr "One more worker, at HQ: mines stone and builds towers."
 
 msgid "Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte la prime habituelle."
 msgstr "Waves start on their own when the countdown ends. Sending them early earns the usual bonus."
@@ -2187,3 +2181,226 @@ msgstr "Next"
 
 msgid "TUTORIEL  ·  %d / %d"
 msgstr "TUTORIAL  ·  %d / %d"
+
+# --- Mode Conquête ---------------------------------------------------------------
+
+msgid "+%d pierre"
+msgstr "+%d stone"
+
+msgid "+%d essence"
+msgstr "+%d essence"
+
+msgid "%s bâti"
+msgstr "%s built"
+
+msgid "%s détruit"
+msgstr "%s destroyed"
+
+msgid "Vie : %d / %d"
+msgstr "Health: %d / %d"
+
+msgid "En construction : %d %%"
+msgstr "Under construction: %d %%"
+
+msgid "Démolir  ·  +%d or"
+msgstr "Demolish  ·  +%d gold"
+
+msgid "%d or · %d p · %d e"
+msgstr "%d gold · %d s · %d e"
+
+msgid "Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour l'arbre des améliorations."
+msgstr "Each difficulty has its own stars (3 per level), which also count for the upgrade tree."
+
+msgid "Niveau %d  ·  %s"
+msgstr "Level %d  ·  %s"
+
+msgid "Pillards : %s"
+msgstr "Raiders: %s"
+
+msgid "Gagner « %s » pour l'ouvrir."
+msgstr "Win “%s” to unlock it."
+
+msgid "Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus)."
+msgstr "Workers in play, out of the maximum: %d, plus %d per House built (%d at most)."
+
+msgid "Essence : %d"
+msgstr "Essence: %d"
+
+msgid "%s  ·  Conquête"
+msgstr "%s  ·  Conquest"
+
+msgid "Mode Conquête seulement : il n'apparaît pas dans la campagne."
+msgstr "Conquest mode only: it never appears in the campaign."
+
+msgid "Pillards (mode Conquête)"
+msgstr "Raiders (Conquest mode)"
+
+msgid "Améliorer  ·  %d or  ·  %d essence"
+msgstr "Upgrade  ·  %d gold  ·  %d essence"
+
+msgid "Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades et casernes, et protégez votre économie des Pillards. Les vagues partent seules."
+msgstr "Gather stone and essence with your workers, build towers, depots, houses, barricades and barracks, and protect your economy from Raiders. Waves start on their own."
+
+msgid "Bâtiments"
+msgstr "Buildings"
+
+msgid "La Carrière"
+msgstr "The Quarry"
+
+msgid "Une carrière pleine de rochers, un seul chemin : de quoi apprendre à miner et à bâtir."
+msgstr "A quarry full of rocks and a single path: the place to learn mining and building."
+
+msgid "La Mine de fer"
+msgstr "The Iron Mine"
+
+msgid "Le chemin serpente sur toute la carte : chaque gisement se mine sous le feu des machines."
+msgstr "The path winds across the whole map: every deposit is mined under machine fire."
+
+msgid "Les Faubourgs"
+msgstr "The Outskirts"
+
+msgid "Des maisons à bâtir loin du QG, et des Maraudeurs rapides pour les incendier."
+msgstr "Houses to build far from HQ, and fast Marauders to burn them down."
+
+msgid "Les Catacombes"
+msgstr "The Catacombs"
+
+msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."
+msgstr "Two paths of undead and Grave Robbers from the very first wave."
+
+msgid "Le Nid de la Reine"
+msgstr "The Queen's Nest"
+
+msgid "Dix vagues, un long chemin en spirale autour du QG, et la Reine au bout."
+msgstr "Ten waves, a long path spiralling around HQ, and the Queen at the end."
+
+msgid "Dépôt"
+msgstr "Depot"
+
+msgid "Les ouvriers y déposent la pierre et l'essence au lieu de rentrer au QG : à poser près des gisements lointains."
+msgstr "Workers drop stone and essence here instead of walking back to HQ: place it near distant deposits."
+
+msgid "Maison"
+msgstr "House"
+
+msgid "Loge 2 ouvriers de plus."
+msgstr "Houses 2 more workers."
+
+msgid "Extracteur"
+msgstr "Extractor"
+
+msgid "Se pose sur un filon d'essence et en tire 1 toutes les 6 secondes, sans ouvrier et sans l'épuiser."
+msgstr "Placed on an essence vein, it draws 1 every 6 seconds, with no worker and without depleting it."
+
+msgid "Barricade"
+msgstr "Barricade"
+
+msgid "Se pose sur le chemin : les monstres au sol s'y arrêtent et doivent la casser pour passer. Les volants la survolent."
+msgstr "Placed on the path: ground monsters stop and must break it to get through. Flyers pass over it."
+
+msgid "Caserne"
+msgstr "Barracks"
+
+msgid "Envoie 2 soldats sur le chemin le plus proche ; un soldat tombé est remplacé au bout de 12 secondes."
+msgstr "Sends 2 soldiers to the nearest path; a fallen soldier is replaced after 12 seconds."
+
+msgid "Pierre récoltée"
+msgstr "Stone gathered"
+
+msgid "Essence récoltée"
+msgstr "Essence gathered"
+
+msgid "Bâtiments bâtis"
+msgstr "Buildings built"
+
+msgid "Ouvriers perdus"
+msgstr "Workers lost"
+
+msgid "Pillarde"
+msgstr "Looter"
+
+msgid "Récupérateur"
+msgstr "Scavenger"
+
+msgid "Maraudeur"
+msgstr "Marauder"
+
+msgid "Pilleur de tombes"
+msgstr "Grave Robber"
+
+# --- Mode Conquête (suite) -------------------------------------------------------
+
+msgid "Pillard : quitte le chemin pour frapper les ouvriers et les bâtiments à portée (mode Conquête), puis y revient."
+msgstr "Raider: leaves the path to strike workers and buildings in range (Conquest mode), then returns to it."
+
+msgid "Ouvrier perdu"
+msgstr "Worker lost"
+
+msgid "Première pierre"
+msgstr "Cornerstone"
+
+msgid "Gagner un niveau de Conquête."
+msgstr "Win a Conquest level."
+
+msgid "Sécurité au travail"
+msgstr "Safety First"
+
+msgid "Gagner un niveau de Conquête sans perdre d'ouvrier."
+msgstr "Win a Conquest level without losing a worker."
+
+msgid "Contremaître"
+msgstr "Foreman"
+
+msgid "Avoir 12 ouvriers en même temps."
+msgstr "Have 12 workers at the same time."
+
+msgid "Carrier"
+msgstr "Quarryman"
+
+msgid "Miner 2000 pierres en Conquête."
+msgstr "Mine 2000 stone in Conquest."
+
+msgid "Conquérant"
+msgstr "Conqueror"
+
+msgid "Gagner tous les niveaux de Conquête."
+msgstr "Win every Conquest level."
+
+msgid "Pierre : minée par les ouvriers dans les rochers et rapportée au QG ou à un Dépôt.\nChaque tour et chaque bâtiment en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs."
+msgstr "Stone: mined from rocks by the workers and brought back to HQ or a Depot.\nEvery tower and building needs some, on top of gold. Click a rock to send the miners there."
+
+msgid "Essence : minée dans les filons de cristaux, ou tirée par un Extracteur posé dessus.\nElle paie les améliorations à partir du niveau 3 et la Caserne."
+msgstr "Essence: mined from crystal veins, or drawn by an Extractor built on top.\nIt pays for upgrades from level 3 and for the Barracks."
+
+msgid "Un ouvrier de plus, au QG : il mine la pierre et l'essence, et bâtit tours et bâtiments."
+msgstr "One more worker, at HQ: mines stone and essence, and builds towers and buildings."
+
+msgid "Dépôt, Maison, Extracteur, Barricade et Caserne : posés comme les tours, bâtis par les ouvriers."
+msgstr "Depot, House, Extractor, Barricade and Barracks: placed like towers, built by workers."
+
+msgid "Rapide et sans scrupules : il fond sur les ouvriers isolés et met le feu aux bâtiments avant de rejoindre la colonne."
+msgstr "Fast and ruthless: he swoops on lone workers and sets buildings on fire before rejoining the column."
+
+msgid "Fourmi géante dressée au pillage : elle quitte le chemin pour dévorer les ouvriers et ronger les bâtiments, puis y revient."
+msgstr "Giant ant trained for plunder: she leaves the path to devour workers and gnaw at buildings, then returns to it."
+
+msgid "Engin de ferraille qui sort du chemin pour démonter ouvriers et bâtiments, sous une carcasse blindée."
+msgstr "Scrap-metal machine that leaves the path to take apart workers and buildings, under an armored hull."
+
+msgid "Goule affamée qui quitte le chemin pour s'en prendre aux vivants qui travaillent, et aux murs qui les abritent."
+msgstr "Starving ghoul that leaves the path to go after the living at work, and the walls that shelter them."
+
+msgid "Conquête · La Mine de fer"
+msgstr "Conquest · The Iron Mine"
+
+msgid "Conquête · Les Faubourgs"
+msgstr "Conquest · The Outskirts"
+
+msgid "Conquête · Les Catacombes"
+msgstr "Conquest · The Catacombs"
+
+msgid "Conquête · Le Nid de la Reine"
+msgstr "Conquest · The Queen's Nest"
+
+msgid "%s : %s %s %s"
+msgstr "%s: %s %s %s"

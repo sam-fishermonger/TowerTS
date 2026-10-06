@@ -47,6 +47,13 @@ var towers_sold := 0
 var early_calls := 0
 ## Durée de la partie, en secondes de jeu (sans la pause ni le choix des tours).
 var duration := 0.0
+## Mode Conquête : la partie en est une, pierre et essence récoltées, bâtiments bâtis et
+## ouvriers perdus.
+var conquest := false
+var stone_mined := 0
+var essence_mined := 0
+var buildings_built := 0
+var workers_lost := 0
 
 
 func on_tower_placed(tower: Tower) -> void:

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/insectoid/rodeur.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Pillarde"
+description = "Fourmi géante dressée au pillage : elle quitte le chemin pour dévorer les ouvriers et ronger les bâtiments, puis y revient."
+max_health = 70.0
+armor = 0.0
+speed = 95.0
+reward = 8
+damage = 1
+color = Color(1, 0.55, 0.2, 1)
+radius = 11.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.6
+raider = true
+raid_radius = 130.0
+raid_damage = 25.0

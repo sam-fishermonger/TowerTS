@@ -54,6 +54,8 @@ const LICHE := preload("res://resources/enemies/undead/liche.tres")
 const CONQUEST_01 := preload("res://scenes/levels/conquest_01.tscn")
 const TUTORIAL := preload("res://scenes/levels/tutorial.tscn")
 const FREEZE_POWER := preload("res://resources/powers/freeze.tres")
+const CONQUEST_SELECT_SCREEN := preload("res://scenes/ui/conquest_select_screen.tscn")
+const PILLARDE := preload("res://resources/enemies/insectoid/pillarde.tres")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -139,6 +141,10 @@ func _run() -> void:
 	await _test_conquest()
 	await _test_conquest_victory()
 	await _test_tutorial()
+	await _test_conquest_buildings()
+	await _test_conquest_hud()
+	await _test_raiders()
+	await _test_conquest_progress()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -2764,9 +2770,14 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 34 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
-			and names.has("Frelon") and names.has("Infiltré") and names.any(func(n: String) -> bool: return n.contains("Liche")),
-		"onglet Monstres : les élites, les 29 monstres (dont les volants et les furtifs) et les 4 boss (%d)" % names.size())
+	_check(names.size() == 38 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+			and names.has("Frelon") and names.has("Infiltré") and names.any(func(n: String) -> bool: return n.contains("Liche"))
+			and names.has("Pillarde  ·  Conquête"),
+		"onglet Monstres : les élites, les 29 monstres (dont les volants et les furtifs), les 4 boss et les 4 Pillards (%d)"
+			% names.size())
+	var raider_entry: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.begins_with("Maraudeur"))[0]
+	raider_entry.pressed.emit()
+	_check(screen.detail_text.get_parsed_text().contains("Mode Conquête seulement"), "la fiche d'un Pillard dit qu'il est de la Conquête")
 	var general: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.contains("Général"))[0]
 	general.pressed.emit()
 	_check(screen.detail_text.get_parsed_text().contains("Soldats en renfort"), "la fiche d'un boss donne ses capacités")
@@ -2842,6 +2853,17 @@ func _test_end_stats() -> void:
 		"le panneau de fin tient à l'écran")
 	_check(LevelStats.format_number(1234567) == "1 234 567" and LevelStats.format_duration(125.0) == "2:05",
 		"nombres et durées lisibles")
+	_check(not end.summary.has("Pierre récoltée"), "pas de lignes de Conquête dans une partie de la campagne")
+	var conquest_stats := LevelStats.new()
+	conquest_stats.conquest = true
+	conquest_stats.stone_mined = 1250
+	conquest_stats.workers_lost = 2
+	var conquest_end := EndStats.new()
+	conquest_end.setup(conquest_stats)
+	_check(conquest_end.summary.get("Pierre récoltée") == "1 250" and conquest_end.summary.get("Ouvriers perdus") == "2"
+		and conquest_end.summary.has("Essence récoltée") and conquest_end.summary.has("Bâtiments bâtis"),
+		"mode Conquête : pierre, essence, bâtiments et ouvriers perdus en fin de partie")
+	conquest_end.free()
 	await _free(level)
 
 
@@ -3443,11 +3465,15 @@ func _test_conquest() -> void:
 	print("Mode Conquête : pierre, ouvriers et chantiers")
 	var level := await _spawn_level(CONQUEST_01)
 	var conquest := level.conquest
-	_check(conquest != null and conquest.stone == Conquest.STARTING_STONE
-		and conquest.get_workers().size() == Conquest.STARTING_WORKERS, "pierre et ouvriers de départ")
-	_check(level.hud.stone_label.text == "Pierre : %d" % Conquest.STARTING_STONE
-		and level.hud.workers_label.text == "Ouvriers : 3 / %d" % Conquest.MAX_WORKERS, "la barre du haut montre la pierre et les ouvriers")
-	_check(not level.counts_achievements() and not level.has_next_level(), "ni succès ni niveau suivant (prototype)")
+	_check(conquest != null and conquest.stone == level.conquest_starting_stone and conquest.essence == 0
+		and conquest.get_workers().size() == level.conquest_starting_workers and level.stats.conquest,
+		"pierre et ouvriers de départ")
+	_check(level.hud.stone_label.text == "Pierre : %d" % level.conquest_starting_stone
+		and level.hud.essence_label.text == "Essence : 0"
+		and level.hud.workers_label.text == "Ouvriers : 3 / %d" % Conquest.BASE_WORKERS,
+		"la barre du haut montre la pierre, l'essence et les ouvriers")
+	_check(level.counts_achievements() and level.get_next_level() == ConquestLevels.LEVELS[1],
+		"les succès comptent, et le niveau suivant est celui de la Conquête")
 	var rock := Vector2i(17, 6)
 	_check(conquest.has_stone(rock) and not level.map.is_cell_buildable(rock), "les rochers de la carte sont des gisements")
 	_check(Conquest.stone_cost(CANNON) == 20 and Conquest.stone_cost(SNIPER) == 48, "les tours coûtent aussi de la pierre")
@@ -3464,7 +3490,7 @@ func _test_conquest() -> void:
 		elapsed += await _step()
 	await _step()
 	var builders := conquest.get_workers().filter(func(worker: Worker) -> bool: return worker.site == tower).size()
-	_check(tower.is_built() and tower.is_processing() and elapsed < Conquest.build_time(CANNON),
+	_check(tower.is_built() and tower.is_processing() and elapsed < Conquest.tower_build_time(CANNON),
 		"deux ouvriers bâtissent la tour plus vite qu'un seul (%.1f s)" % elapsed)
 	_check(level.can_upgrade_tower(tower) or level.gold < tower.get_upgrade_cost(), "la tour bâtie peut s'améliorer")
 	_check(builders == 0, "les bâtisseurs retournent à la mine")
@@ -3486,7 +3512,7 @@ func _test_conquest() -> void:
 	var recruit := conquest.recruit()
 	_check(recruit != null and level.gold == 100 - Conquest.WORKER_COST and conquest.get_workers().size() == 4,
 		"recruter un ouvrier coûte de l'or")
-	_check(level.hud.workers_label.text == "Ouvriers : 4 / %d" % Conquest.MAX_WORKERS, "le compte des ouvriers suit")
+	_check(level.hud.workers_label.text == "Ouvriers : 4 / %d" % Conquest.BASE_WORKERS, "le compte des ouvriers suit")
 	conquest.stone = 50
 	var stone_now := conquest.stone
 	var site := level.place_tower(Vector2i(14, 7), CANNON)
@@ -3631,3 +3657,334 @@ func _test_conquest_victory() -> void:
 	_check(level.is_over and level.lives > 0, "la partie est gagnée (vies : %d, tours : %d, pierre minée : %d, ouvriers perdus : %d)"
 		% [level.lives, bought, conquest.stone_mined, conquest.workers_lost])
 	await _free(level)
+
+
+## Termine tout de suite un chantier de bâtiment.
+func _finish_building(building: Building) -> void:
+	building.conquest.build(building, Building.get_definition(building.kind).build_time + 1.0)
+
+
+func _test_conquest_buildings() -> void:
+	print("Mode Conquête : essence et bâtiments")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	var vein := Vector2i(9, 4)
+	_check(conquest.veins.has(vein) and not level.map.is_cell_buildable(vein) and conquest.has_resource(vein),
+		"les filons d'essence sont des gisements")
+	var elapsed := 0.0
+	while conquest.essence == 0 and elapsed < 60.0:
+		elapsed += await _step()
+	_check(conquest.essence > 0 and conquest.essence_mined == conquest.essence and level.stats.essence_mined > 0,
+		"un ouvrier va de lui-même miner l'essence (%.0f s)" % elapsed)
+	level.gold = 2000
+	conquest.stone = 1000
+	conquest.essence = 0
+	var free := Vector2i(14, 4)
+	var path_cell := Vector2i(15, 4)
+	var K := Building.Kind
+	_check(conquest.can_place_building(free, K.HOUSE) and not conquest.can_place_building(path_cell, K.HOUSE)
+		and not conquest.can_place_building(vein, K.HOUSE), "une Maison se pose sur une case libre")
+	_check(conquest.can_place_building(vein, K.EXTRACTOR) and not conquest.can_place_building(free, K.EXTRACTOR),
+		"un Extracteur se pose sur un filon")
+	_check(conquest.can_place_building(path_cell, K.BARRICADE) and not conquest.can_place_building(free, K.BARRICADE)
+		and not conquest.can_place_building(Vector2i(18, 8), K.BARRICADE), "une Barricade se pose sur le chemin, pas contre le QG")
+	_check(not conquest.can_place_building(free, K.BARRACKS), "la Caserne demande de l'essence")
+	# Maison : un chantier bâti par les ouvriers, puis 2 ouvriers de plus.
+	var house := conquest.place_building(free, K.HOUSE)
+	_check(house != null and not house.is_built() and level.gold == 2000 - 40 and conquest.stone == 1000 - 30
+		and level.map.get_occupant(free) == house, "une Maison posée est un chantier, payé en or et en pierre")
+	elapsed = 0.0
+	while not house.is_built() and elapsed < 30.0:
+		elapsed += await _step()
+	_check(house.is_built() and conquest.get_max_workers() == Conquest.BASE_WORKERS + Building.HOUSE_WORKERS
+		and level.stats.buildings_built == 1, "les ouvriers bâtissent la Maison : 2 ouvriers de plus au maximum")
+	# Dépôt : le plus proche des dépôts reçoit la pierre.
+	var depot := conquest.place_building(Vector2i(5, 8), K.DEPOT)
+	_finish_building(depot)
+	_check(conquest.nearest_depot(level.map.cell_to_world(Vector2i(2, 8))) == depot.global_position
+		and conquest.nearest_depot(level.map.cell_to_world(Vector2i(18, 5))) == conquest.depot_position,
+		"le Dépôt bâti sert de dépôt aux gisements proches")
+	# Extracteur : de l'essence sans ouvrier.
+	conquest.set_preferred_rock(Vector2i(12, 3))
+	var extractor := conquest.place_building(vein, K.EXTRACTOR)
+	_finish_building(extractor)
+	_check(not conquest.has_resource(vein), "un filon sous un Extracteur ne se mine plus")
+	var miners := conquest.get_workers().filter(func(worker: Worker) -> bool: return worker.is_mining_essence())
+	for worker: Worker in miners:
+		worker.cargo = 0
+		worker.go_deposit()
+	conquest.veins.erase(Vector2i(13, 8))
+	conquest.essence = 0
+	elapsed = 0.0
+	while elapsed < Building.EXTRACT_INTERVAL + 0.5:
+		elapsed += await _step()
+	_check(conquest.essence == 1, "l'Extracteur tire 1 essence toutes les %d s" % Building.EXTRACT_INTERVAL)
+	# Caserne : des soldats sur le chemin.
+	conquest.essence = 10
+	var barracks := conquest.place_building(Vector2i(12, 4), K.BARRACKS)
+	_check(barracks != null and conquest.essence == 6, "la Caserne coûte de l'essence")
+	_finish_building(barracks)
+	await _step()
+	_check(level.get_soldiers().size() == Building.BARRACKS_SOLDIERS, "la Caserne bâtie envoie ses soldats")
+	conquest.sell_building(barracks)
+	for soldier in level.get_soldiers():
+		soldier.despawn()
+	# Barricade : les monstres au sol s'y arrêtent et la frappent.
+	var barricade := conquest.place_building(path_cell, K.BARRICADE)
+	_finish_building(barricade)
+	var enemy := level.spawner.spawn(LARVE, level.map.get_enemy_path(0))
+	elapsed = 0.0
+	while not enemy.is_held() and elapsed < 30.0:
+		elapsed += await _step()
+	var health_before := barricade.health
+	await _step()
+	_check(enemy.holder == barricade and barricade.health < health_before, "un monstre au sol s'arrête à la Barricade et la frappe")
+	var progress := enemy.progress
+	barricade.health = 0.01
+	for i in 3:
+		await _step()
+	_check(not is_instance_valid(barricade) and level.map.get_occupant(path_cell) == null and conquest.buildings_lost == 1,
+		"la Barricade cassée disparaît")
+	_check(enemy.progress > progress, "le monstre repart")
+	enemy.despawn()
+	# Améliorations : l'essence paie le niveau 3.
+	var tower := level.place_tower(Vector2i(16, 4), CANNON)
+	conquest.build(tower, 100.0)
+	_check(Conquest.upgrade_essence_cost(tower) == 0 and level.upgrade_tower(tower), "le niveau 2 ne demande pas d'essence")
+	conquest.essence = 2
+	conquest.changed.emit()
+	_check(Conquest.upgrade_essence_cost(tower) == Conquest.UPGRADE_ESSENCE and not level.can_upgrade_tower(tower),
+		"le niveau 3 demande de l'essence")
+	level.inspect_tower(tower)
+	await process_frame
+	_check(level.hud.tower_details.upgrade_button.text.ends_with("%d essence" % Conquest.UPGRADE_ESSENCE)
+		and level.hud.tower_details.upgrade_button.disabled, "la fiche montre l'essence de l'amélioration")
+	conquest.essence = 5
+	_check(level.upgrade_tower(tower) and conquest.essence == 5 - Conquest.UPGRADE_ESSENCE, "l'amélioration paie son essence")
+	level.inspect_tower(null)
+	# Démolir : une part du prix rendue ; un chantier, tout.
+	var gold_before := level.gold
+	_check(conquest.sell_building(house) == roundi(40 * Conquest.SELL_RATIO) and level.gold == gold_before + 28
+		and conquest.get_max_workers() == Conquest.BASE_WORKERS, "une Maison démolie rend une part de son prix")
+	var site := conquest.place_building(free, K.DEPOT)
+	gold_before = level.gold
+	var stone_before := conquest.stone
+	_check(conquest.sell_building(site) == 50 and level.gold == gold_before + 50 and conquest.stone == stone_before + 30,
+		"un chantier démoli rend tout")
+	# Un bâtiment détruit par les monstres disparaît.
+	depot.take_damage(10000.0)
+	await process_frame
+	_check(not is_instance_valid(depot) and level.map.get_occupant(Vector2i(5, 8)) == null
+		and conquest.nearest_depot(level.map.cell_to_world(Vector2i(2, 8))) == conquest.depot_position,
+		"un Dépôt détruit ne sert plus")
+	await _free(level)
+
+
+func _test_conquest_hud() -> void:
+	print("Mode Conquête : barre des bâtiments et fiche")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	var hud := level.hud
+	level.gold = 500
+	conquest.stone = 200
+	_check(hud.buildings_button != null and hud.buildings_button.get_parent() == hud.tower_shop.get_parent()
+		and not hud.building_shop.visible, "le bouton Bâtiments suit la barre d'achat")
+	_press_key(level, KEY_B)
+	await process_frame
+	_check(hud.building_shop.visible and hud.buildings_button.button_pressed, "B ouvre la barre des bâtiments")
+	_check(hud.building_shop.get_button(Building.Kind.BARRACKS).disabled
+		and not hud.building_shop.get_button(Building.Kind.HOUSE).disabled, "la Caserne est grisée sans essence")
+	_press_key(level, KEY_2)
+	_check(level.placer.selected_building == Building.Kind.HOUSE and level.placer.selected_tower == null
+		and hud.building_shop.get_button(Building.Kind.HOUSE).button_pressed, "les chiffres choisissent un bâtiment quand la barre est ouverte")
+	var cell := Vector2i(14, 4)
+	await _click(level, level.get_viewport().get_canvas_transform() * level.map.cell_to_world(cell))
+	var house := level.map.get_occupant(cell) as Building
+	_check(house != null and house.kind == Building.Kind.HOUSE and level.placer.selected_building == -1
+		and not hud.building_shop.visible, "un clic pose le bâtiment, et la barre se referme")
+	_press_key(level, KEY_1)
+	_check(level.placer.selected_tower != null, "barre fermée, les chiffres choisissent de nouveau une tour")
+	level.select_tower(null)
+	await _click(level, level.get_viewport().get_canvas_transform() * level.map.cell_to_world(cell))
+	_check(level.placer.inspected_building == house and hud.building_details.visible
+		and hud.building_details._status_label.text.begins_with("En construction"), "un clic sur un bâtiment ouvre sa fiche")
+	hud.building_details.demolish_requested.emit(house)
+	await process_frame
+	_check(not is_instance_valid(house) and not hud.building_details.visible, "Démolir retire le bâtiment et ferme sa fiche")
+	await _click(level, level.get_viewport().get_canvas_transform() * level.map.cell_to_world(Vector2i(13, 8)))
+	_check(conquest.preferred_rock == Vector2i(13, 8), "un clic sur un filon y envoie les mineurs")
+	await _free(level)
+
+
+func _test_raiders() -> void:
+	print("Mode Conquête : Pillards")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	_check(level.spawner.waves[2].groups.back().enemy == PILLARDE and level.spawner.waves[2].groups.back().count == 1
+		and level.spawner.waves[1].groups.all(func(group: SpawnGroup) -> bool: return group.enemy != PILLARDE),
+		"les Pillards s'ajoutent aux vagues du niveau")
+	var original := LEVEL_01.instantiate()
+	_check(not original.get_node("WaveSpawner").waves[2].groups.any(
+		func(group: SpawnGroup) -> bool: return group.enemy == PILLARDE), "sans changer les vagues de la scène d'origine")
+	original.free()
+	_check(PILLARDE.get_abilities().any(func(line: String) -> bool: return line.begins_with("Pillard")),
+		"la fiche du Pillard décrit son pillage")
+	# Un ouvrier loin du QG, près du chemin.
+	var worker: Worker = conquest.get_workers()[0]
+	worker.set_process(false)
+	var raider := level.spawner.spawn(PILLARDE, level.map.get_enemy_path(0), 300.0)
+	worker.global_position = raider.global_position + Vector2(0, 90)
+	var start := raider.global_position
+	var elapsed := 0.0
+	while is_instance_valid(worker) and worker.health >= Worker.MAX_HEALTH and elapsed < 5.0:
+		elapsed += await _step()
+	_check(raider.is_raiding() and raider.global_position.distance_to(start) > 20.0, "le Pillard quitte le chemin vers l'ouvrier")
+	_check(not is_instance_valid(worker) or worker.health < Worker.MAX_HEALTH, "il frappe l'ouvrier")
+	elapsed = 0.0
+	while raider.is_raiding() and elapsed < 20.0:
+		elapsed += await _step()
+	_check(not raider.is_raiding() and raider.global_position.distance_to(level.map.get_enemy_path(0).to_global(
+		level.map.get_enemy_path(0).curve.sample_baked(raider.progress))) < 30.0, "puis il revient sur le chemin")
+	# Les ouvriers près du QG sont à l'abri.
+	var safe: Worker = conquest.get_workers()[0]
+	safe.set_process(false)
+	safe.global_position = conquest.depot_position
+	_check(not safe.can_be_raided(), "les ouvriers au QG sont à l'abri des Pillards")
+	raider.despawn()
+	await _free(level)
+
+
+func _test_conquest_progress() -> void:
+	print("Mode Conquête : niveaux, étoiles et succès")
+	Progress.reset_campaign()
+	for id in ["premiere_pierre", "securite", "conquerant", "contremaitre", "carrier"]:
+		Progress.set_value(Achievements.SECTION, id, 0)
+	var title: Control = TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	title.get_node("%ConquestButton").pressed.emit()
+	await process_frame
+	await process_frame
+	_check(current_scene and current_scene.scene_file_path == ConquestLevels.SELECT_SCREEN, "le bouton Conquête ouvre le choix des niveaux")
+	if is_instance_valid(title):
+		title.queue_free()
+	if current_scene:
+		current_scene.queue_free()
+	await process_frame
+	var screen: Control = CONQUEST_SELECT_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(screen.play_buttons.size() == ConquestLevels.size() and not screen.play_buttons[0].disabled
+		and screen.play_buttons[1].disabled, "une carte par niveau, seul le premier ouvert")
+	screen.queue_free()
+	var stars_before := Perks.get_earned_stars()
+	var level := await _spawn_level(CONQUEST_01)
+	level.conquest.peak_workers = 0
+	for i in Achievements.FOREMAN_WORKERS:
+		level.conquest._add_worker(level.conquest.depot_position)
+	_check(Achievements.is_unlocked("contremaitre"), "Contremaître : %d ouvriers en même temps" % Achievements.FOREMAN_WORKERS)
+	level.stats.stone_mined = 2000
+	level._end_game(true)
+	_check(Progress.get_stars(ConquestLevels.LEVELS[0]) == 3 and ConquestLevels.is_unlocked(1)
+		and Perks.get_earned_stars() == stars_before + 3, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
+	_check(Achievements.is_unlocked("premiere_pierre") and Achievements.is_unlocked("securite")
+		and Achievements.is_unlocked("carrier") and not Achievements.is_unlocked("conquerant"),
+		"succès de la Conquête débloqués")
+	_check(level.hud.next_level_button.visible and level.unlocked_achievements.has("premiere_pierre"),
+		"l'écran de fin propose le niveau suivant et annonce les succès")
+	await _free(level)
+	for path in ConquestLevels.LEVELS:
+		Progress.record_victory(path, 1)
+	_check(Achievements.check_progress().has("conquerant"), "Conquérant : tous les niveaux gagnés")
+	Progress.reset_campaign()
+
+
+## Ordre de construction du bot de chaque niveau de Conquête : celui du niveau de la
+## campagne dont il reprend la carte et les vagues.
+const CONQUEST_BUILD_ORDERS := {
+	"res://scenes/levels/conquest_01.tscn": [
+		[Vector2i(14, 4), CANNON], [Vector2i(16, 2), GATLING], [Vector2i(14, 7), CANNON],
+		[Vector2i(11, 3), GATLING], [Vector2i(9, 6), CANNON], [Vector2i(16, 4), CANNON], [Vector2i(14, 2), GATLING],
+		[Vector2i(9, 2), CANNON], [Vector2i(5, 5), GATLING], [Vector2i(3, 3), CANNON],
+	],
+	"res://scenes/levels/conquest_02.tscn": "res://scenes/levels/mecha_01.tscn",
+	"res://scenes/levels/conquest_03.tscn": "res://scenes/levels/humanoid_02.tscn",
+	"res://scenes/levels/conquest_04.tscn": "res://scenes/levels/undead_02.tscn",
+	"res://scenes/levels/conquest_05.tscn": [
+		[Vector2i(8, 2), CANNON], [Vector2i(9, 4), CANNON], [Vector2i(10, 5), MORTAR],
+		[Vector2i(9, 7), BEAM], [Vector2i(6, 4), FROST], [Vector2i(11, 2), CANNON],
+		[Vector2i(5, 5), SNIPER], [Vector2i(13, 5), MORTAR], [Vector2i(16, 5), BEAM],
+		[Vector2i(11, 7), GATLING], [Vector2i(4, 4), FROST], [Vector2i(14, 2), SNIPER],
+		[Vector2i(6, 7), MORTAR], [Vector2i(3, 4), BEAM], [Vector2i(16, 2), CANNON],
+		[Vector2i(9, 5), MORTAR], [Vector2i(3, 7), SNIPER], [Vector2i(13, 4), BEAM],
+	],
+}
+
+
+func _conquest_build_order(path: String) -> Array:
+	var order = CONQUEST_BUILD_ORDERS[path]
+	return WORLD_BUILD_ORDERS[order] if order is String else order
+
+
+## Bot du mode Conquête, qui joue comme un joueur appliqué : il pose les `tower_count`
+## premières tours de l'ordre de construction du niveau dès qu'il peut les payer, recrute
+## un ouvrier quand la pierre manque, bâtit une Maison puis une Caserne, et améliore ses
+## tours avec l'or et l'essence en trop (seulement s'il suit tout l'ordre de construction).
+## Les vagues partent seules. Renvoie le bilan.
+func _play_conquest_bot(level: Level, tower_count := 99, max_time := 1500.0) -> Dictionary:
+	var conquest := level.conquest
+	var order := _conquest_build_order(level.scene_file_path)
+	tower_count = mini(tower_count, order.size())
+	if level.is_choosing_towers:
+		level.choose_towers(level.get_default_tower_choice())
+	var bought := 0
+	var house_done := false
+	var barracks_done := false
+	var elapsed := 0.0
+	while not level.is_over and elapsed < max_time:
+		if bought < tower_count:
+			var cell: Vector2i = order[bought][0]
+			var data: TowerData = order[bought][1]
+			if not level.map.is_cell_buildable(cell):
+				bought += 1
+			elif conquest.stone < Conquest.stone_cost(data) and conquest.get_workers().size() < 8 \
+					and level.gold >= data.get_cost() + Conquest.WORKER_COST:
+				conquest.recruit()
+			elif level.place_tower(cell, data):
+				bought += 1
+		# Maison et Caserne, sur des cases que l'ordre de construction n'utilise pas.
+		var spare := func(cell: Vector2i) -> bool: return not order.any(func(item: Array) -> bool: return item[0] == cell)
+		if conquest.get_workers().size() < 4 and level.gold >= Conquest.WORKER_COST + 20:
+			conquest.recruit()
+		if bought >= 4 and not house_done and conquest.get_workers().size() >= conquest.get_max_workers():
+			for item: Array in order:
+				var cell: Vector2i = item[0] + Vector2i(0, 1)
+				if spare.call(cell) and conquest.place_building(cell, Building.Kind.HOUSE):
+					house_done = true
+					break
+		if bought >= 6 and not barracks_done:
+			for item: Array in order:
+				var cell: Vector2i = item[0] + Vector2i(1, 0)
+				if spare.call(cell) and conquest.place_building(cell, Building.Kind.BARRACKS):
+					barracks_done = true
+					break
+		# L'or en trop (la pierre manque, ou toutes les tours sont posées) va aux améliorations.
+		var next_cost: int = order[bought][1].get_cost() if bought < tower_count else 0
+		if tower_count < order.size():
+			pass
+		elif bought >= tower_count or (conquest.stone < Conquest.stone_cost(order[bought][1]) and level.gold > next_cost + 60):
+			for tower in level.get_towers():
+				if level.gold - tower.get_upgrade_cost() >= next_cost and level.upgrade_tower(tower):
+					break
+		var before := elapsed
+		elapsed += await _step()
+		if OS.has_environment("BOT_DEBUG") and int(before / 10.0) != int(elapsed / 10.0):
+			print("  t=%d or=%d pierre=%d ess=%d ouvriers=%d bâties=%d/%d vague=%d vies=%d" % [elapsed, level.gold,
+				conquest.stone, conquest.essence, conquest.get_workers().size(),
+				level.get_towers().filter(func(t: Tower) -> bool: return t.is_built()).size(), level.get_towers().size(),
+				level.spawner.current_wave + 1, level.lives])
+	return {won = level.is_over and level.lives > 0, lives = level.lives, bought = bought,
+		text = "%s vies=%d/%d vague=%d/%d tours=%d pierre=%d essence=%d ouvriers_perdus=%d bat_perdus=%d t=%.0f" % [
+		"GAGNÉ" if level.is_over and level.lives > 0 else ("PERDU" if level.is_over else "TEMPS"),
+		level.lives, level.starting_lives, level.spawner.current_wave + 1, level.spawner.get_wave_count(),
+		bought, conquest.stone_mined, conquest.essence_mined, conquest.workers_lost, conquest.buildings_lost, elapsed]}
