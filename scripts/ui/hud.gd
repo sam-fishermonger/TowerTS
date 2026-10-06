@@ -39,6 +39,8 @@ signal building_details_closed
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
+## Largeur en dessous de laquelle le nom du niveau n'est plus coupé (barre du haut).
+const LEVEL_LABEL_MIN_WIDTH := 80.0
 const LIVES_COLOR := Color(1, 0.5, 0.5)
 const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 ## Rappel des commandes à côté de la barre d'achat, à la souris et au tactile.
@@ -148,6 +150,11 @@ var _hint_max_towers := 7
 
 func _ready() -> void:
 	end_panel.visible = false
+	level_label.clip_text = true
+	level_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	level_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	top_bar.resized.connect(_fit_level_label)
+	level_label.get_parent().minimum_size_changed.connect(_fit_level_label, CONNECT_DEFERRED)
 	next_wave_button.pressed.connect(next_wave_requested.emit)
 	%RestartButton.pressed.connect(restart_requested.emit)
 	%NextLevelButton.pressed.connect(next_level_requested.emit)
@@ -360,6 +367,30 @@ func _select_next_speed() -> void:
 
 ## `wave_count` négatif : mode infini, les vagues ne s'arrêtent pas.
 ## `interest` : or que rapporteraient les intérêts maintenant (négatif : pas d'intérêts).
+## Le nom du niveau prend la place que lui laisse le reste de la barre du haut. Quand elle
+## est pleine (Conquête et pouvoirs, textes anglais plus longs), les boutons des pouvoirs
+## perdent leur nom, puis le nom du niveau finit par « … » (sa bulle d'aide le donne en entier).
+func _fit_level_label() -> void:
+	var row := level_label.get_parent() as HBoxContainer
+	var margin := row.get_parent() as MarginContainer
+	var available := top_bar.size.x - margin.get_theme_constant(&"margin_left") - margin.get_theme_constant(&"margin_right")
+	var others := 0.0
+	for child in row.get_children():
+		if child != level_label and child is Control and child.visible:
+			others += child.get_combined_minimum_size().x + row.get_theme_constant(&"separation")
+	var font := level_label.get_theme_font(&"font")
+	var text_width := font.get_string_size(level_label.atr(level_label.text), HORIZONTAL_ALIGNMENT_LEFT, -1.0,
+		level_label.get_theme_font_size(&"font_size")).x
+	if available - others < text_width and power_buttons.any(func(b: PowerButton) -> bool: return not b.compact):
+		# D'abord les pouvoirs perdent leur nom : la barre se recalcule ensuite.
+		for button in power_buttons:
+			button.set_compact(true)
+		return
+	var width := ceilf(clampf(available - others, LEVEL_LABEL_MIN_WIDTH, text_width))
+	level_label.custom_minimum_size.x = width
+	level_label.tooltip_text = level_label.text if width < text_width else ""
+
+
 func update_stats(gold: int, lives: int, wave: int, wave_count: int, interest := -1) -> void:
 	_gold = gold
 	_stats_args = [gold, lives, wave, wave_count, interest]
@@ -371,6 +402,7 @@ func update_stats(gold: int, lives: int, wave: int, wave_count: int, interest :=
 	tower_shop.set_gold(gold)
 	shop_info.set_gold(gold)
 	tower_details.set_gold(gold)
+	_fit_level_label()
 
 
 ## Affiche la fiche d'une tour posée (null = la fermer).
@@ -598,16 +630,22 @@ func _on_shop_button_hovered(button: TowerShopButton) -> void:
 ## l'essence au bouton Améliorer des fiches (`essence_cost` : Tower -> int), et le
 ## bouton des bâtiments à droite de la barre d'achat. À appeler avant setup().
 func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callable) -> void:
-	stone_label = _add_resource_label(wave_label, Conquest.STONE_COLOR,
+	# Pierre et essence l'une sous l'autre, comme l'or et ses intérêts : la barre du haut
+	# garde de la place pour les pouvoirs et le nom du niveau.
+	var resources := VBoxContainer.new()
+	resources.alignment = BoxContainer.ALIGNMENT_CENTER
+	resources.add_theme_constant_override("separation", -4)
+	wave_label.add_sibling(resources)
+	stone_label = _add_resource_label(resources, Conquest.STONE_COLOR,
 		"Pierre : minée par les ouvriers dans les rochers et rapportée au QG ou à un Dépôt.\n"
 		+ "Chaque tour et chaque bâtiment en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs.")
-	essence_label = _add_resource_label(stone_label, Conquest.ESSENCE_COLOR,
+	essence_label = _add_resource_label(resources, Conquest.ESSENCE_COLOR,
 		"Essence : minée dans les filons de cristaux, ou tirée par un Extracteur posé dessus.\n"
 		+ "Elle paie les améliorations à partir du niveau 3 et la Caserne.")
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 0)
-	essence_label.add_sibling(box)
+	resources.add_sibling(box)
 	workers_label = Label.new()
 	workers_label.add_theme_color_override("font_color", Worker.COLOR)
 	workers_label.add_theme_font_size_override("font_size", 13)
@@ -636,13 +674,14 @@ func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callab
 	_setup_buildings()
 
 
-func _add_resource_label(after: Control, color: Color, tooltip: String) -> Label:
+func _add_resource_label(box: VBoxContainer, color: Color, tooltip: String) -> Label:
 	var label := Label.new()
 	label.custom_minimum_size.x = 96.0
 	label.add_theme_color_override("font_color", color)
+	label.add_theme_font_size_override("font_size", 15)
 	label.mouse_filter = Control.MOUSE_FILTER_STOP
 	label.tooltip_text = tooltip
-	after.add_sibling(label)
+	box.add_child(label)
 	return label
 
 
@@ -756,6 +795,7 @@ func update_conquest(conquest: Conquest) -> void:
 	if end_panel.visible:
 		set_building_shop_open(false)
 		buildings_button.disabled = true
+	_fit_level_label()
 
 
 # --- Défi du jour -------------------------------------------------------------
