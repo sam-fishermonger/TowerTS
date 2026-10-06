@@ -29,8 +29,13 @@ signal options_toggled(open: bool)
 signal towers_chosen(types: Array[TowerData])
 ## Émis quand le joueur choisit un pouvoir actif (bouton, ou touche A/Z/E en AZERTY).
 signal power_selected(power: Power)
-## Mode Conquête : émis quand le joueur recrute un ouvrier (bouton, ou touche R).
+## Mode Conquête : émis quand le joueur recrute un ouvrier (bouton, ou touche R)…
 signal recruit_requested
+## … choisit un bâtiment à poser (-1 = aucun)…
+signal building_selected(kind: int)
+## … demande à démolir un bâtiment, ou ferme sa fiche.
+signal demolish_requested(building: Building)
+signal building_details_closed
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
@@ -40,7 +45,7 @@ const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
 const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
 ## Mode Conquête : ce qui change, devant le rappel des commandes.
-const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher : y envoyer les mineurs  ·  R : recruter un ouvrier"
+const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  R : recruter un ouvrier  ·  B : bâtiments"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
 ## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
@@ -85,8 +90,16 @@ var challenge_rules: PanelContainer
 ## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
 ## hors de ce mode).
 var stone_label: Label
+var essence_label: Label
 var workers_label: Label
 var recruit_button: Button
+## … bouton « Bâtiments » à droite de la barre d'achat, barre des bâtiments qu'il ouvre
+## au-dessus, et fiche d'un bâtiment posé.
+var buildings_button: Button
+var building_shop: BuildingShop
+var building_details: BuildingInfoPanel
+## Tours au plus dans la barre d'achat pour que le rappel des commandes s'affiche à côté.
+var _hint_max_towers := 7
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -176,6 +189,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif code == KEY_R and recruit_button:
 		if not recruit_button.disabled:
 			recruit_requested.emit()
+	elif code == KEY_B and building_shop:
+		set_building_shop_open(not building_shop.visible)
+	elif slot >= 0 and building_shop and building_shop.visible:
+		building_shop.toggle_slot(slot)
 	elif slot >= 0:
 		tower_shop.toggle_slot(slot)
 	else:
@@ -258,7 +275,7 @@ func set_tower_types(tower_types: Array[TowerData]) -> void:
 	tower_shop.setup(tower_types)
 	tower_shop.set_gold(_gold)
 	# Avec les tours débloquées dans l'arbre, la barre d'achat prend la place du rappel des commandes.
-	shop_hint.visible = tower_types.size() <= 7
+	shop_hint.visible = tower_types.size() <= _hint_max_towers
 
 
 ## Ouvre le choix des tours, par-dessus tout le reste, jusqu'à ce que le joueur valide.
@@ -529,28 +546,32 @@ func _on_shop_button_hovered(button: TowerShopButton) -> void:
 
 # --- Mode Conquête ----------------------------------------------------------------
 
-## Ajoute la pierre, les ouvriers et le bouton de recrutement à la barre du haut, et le
-## prix en pierre aux cases de la barre d'achat (`stone_cost` : TowerData -> int).
-func setup_conquest(worker_cost: int, stone_cost: Callable) -> void:
-	stone_label = Label.new()
-	stone_label.custom_minimum_size.x = 100.0
-	stone_label.add_theme_color_override("font_color", Conquest.STONE_COLOR)
-	stone_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	stone_label.tooltip_text = "Pierre : minée par les ouvriers dans les rochers et rapportée au QG.\n" \
-		+ "Chaque tour en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs."
-	wave_label.add_sibling(stone_label)
+## Ajoute la pierre, l'essence, les ouvriers et le bouton de recrutement à la barre du
+## haut, le prix en pierre aux cases de la barre d'achat (`stone_cost` : TowerData -> int),
+## l'essence au bouton Améliorer des fiches (`essence_cost` : Tower -> int), et le
+## bouton des bâtiments à droite de la barre d'achat. À appeler avant setup().
+func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callable) -> void:
+	stone_label = _add_resource_label(wave_label, Conquest.STONE_COLOR,
+		"Pierre : minée par les ouvriers dans les rochers et rapportée au QG ou à un Dépôt.\n"
+		+ "Chaque tour et chaque bâtiment en demande, en plus de l'or. Cliquez sur un rocher pour y envoyer les mineurs.")
+	essence_label = _add_resource_label(stone_label, Conquest.ESSENCE_COLOR,
+		"Essence : minée dans les filons de cristaux, ou tirée par un Extracteur posé dessus.\n"
+		+ "Elle paie les améliorations à partir du niveau 3 et la Caserne.")
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 0)
-	stone_label.add_sibling(box)
+	essence_label.add_sibling(box)
 	workers_label = Label.new()
 	workers_label.add_theme_color_override("font_color", Worker.COLOR)
 	workers_label.add_theme_font_size_override("font_size", 13)
 	workers_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	workers_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	workers_label.tooltip_text = "Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus)." \
+		% [Conquest.BASE_WORKERS, Building.HOUSE_WORKERS, Conquest.MAX_WORKERS]
 	box.add_child(workers_label)
 	recruit_button = Button.new()
 	recruit_button.text = "Recruter · %d or (R)" % worker_cost
-	recruit_button.tooltip_text = "Un ouvrier de plus, au QG : il mine la pierre et bâtit les tours."
+	recruit_button.tooltip_text = "Un ouvrier de plus, au QG : il mine la pierre et l'essence, et bâtit tours et bâtiments."
 	recruit_button.focus_mode = Control.FOCUS_NONE
 	recruit_button.add_theme_font_size_override("font_size", 13)
 	# Bordure aux couleurs des ouvriers : le bouton se détache de la barre du haut.
@@ -558,18 +579,134 @@ func setup_conquest(worker_cost: int, stone_cost: Callable) -> void:
 	recruit_button.pressed.connect(recruit_requested.emit)
 	box.add_child(recruit_button)
 	tower_shop.stone_cost = stone_cost
+	# Le bouton des bâtiments prend une case dans la barre du bas.
+	tower_shop.max_width = TowerShop.MAX_WIDTH - TowerShopButton.SLOT_SIZE.x - 22.0
+	_hint_max_towers = 6
+	tower_details.essence_cost = essence_cost
 	next_wave_button.tooltip_text = "Les vagues partent seules à la fin du compte à rebours. " \
 		+ "Les lancer avant rapporte la prime habituelle."
+	_setup_buildings()
 
 
-## Pierre, ouvriers (sur le maximum), secondes avant la prochaine vague (négatif : pas
-## de compte à rebours) et si l'on peut recruter.
-func update_conquest(stone: int, workers: int, max_workers: int, countdown: float, can_recruit: bool) -> void:
-	stone_label.text = "Pierre : %d" % stone
-	workers_label.text = "Ouvriers : %d / %d" % [workers, max_workers]
-	recruit_button.disabled = not can_recruit or end_panel.visible
+func _add_resource_label(after: Control, color: Color, tooltip: String) -> Label:
+	var label := Label.new()
+	label.custom_minimum_size.x = 96.0
+	label.add_theme_color_override("font_color", color)
+	label.mouse_filter = Control.MOUSE_FILTER_STOP
+	label.tooltip_text = tooltip
+	after.add_sibling(label)
+	return label
+
+
+## Bouton « Bâtiments » (case de la barre d'achat), barre des bâtiments et fiche d'un
+## bâtiment posé.
+func _setup_buildings() -> void:
+	buildings_button = Button.new()
+	buildings_button.custom_minimum_size = TowerShopButton.SLOT_SIZE
+	buildings_button.toggle_mode = true
+	buildings_button.focus_mode = Control.FOCUS_NONE
+	buildings_button.tooltip_text = "Dépôt, Maison, Extracteur, Barricade et Caserne : posés comme les tours, bâtis par les ouvriers."
+	UiStyle.apply_styles(buildings_button, UiStyle.slot_styles(Conquest.STONE_COLOR))
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override(&"separation", 0)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	buildings_button.add_child(column)
+	var icon := BuildingShop.BuildingIcon.new()
+	icon.kind = Building.Kind.HOUSE
+	icon.custom_minimum_size = Vector2.ONE * BuildingShop.ICON_SIZE
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(icon)
+	var title := Label.new()
+	title.text = "Bâtiments"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override(&"font_size", 13)
+	title.add_theme_color_override(&"font_color", Conquest.STONE_COLOR)
+	column.add_child(title)
+	var key := Label.new()
+	key.text = "B"
+	key.add_theme_font_size_override(&"font_size", 11)
+	key.add_theme_color_override(&"font_color", Color(1, 1, 1, 0.55))
+	key.position = Vector2(5, 1)
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	buildings_button.add_child(key)
+	buildings_button.toggled.connect(set_building_shop_open)
+	tower_shop.add_sibling(buildings_button)
+	building_shop = BuildingShop.new()
+	building_shop.visible = false
+	add_child(building_shop)
+	move_child(building_shop, bottom_bar.get_index() + 1)
+	building_shop.building_selected.connect(building_selected.emit)
+	building_details = BuildingInfoPanel.new()
+	add_child(building_details)
+	move_child(building_details, tower_details.get_index() + 1)
+	building_details.demolish_requested.connect(demolish_requested.emit)
+	building_details.close_requested.connect(building_details_closed.emit)
+
+
+## Ouvre ou ferme la barre des bâtiments, au-dessus du bouton « Bâtiments ». La fermer
+## abandonne le bâtiment choisi.
+func set_building_shop_open(open: bool) -> void:
+	if building_shop == null or (open and end_panel.visible):
+		return
+	buildings_button.set_pressed_no_signal(open)
+	if open == building_shop.visible:
+		return
+	building_shop.visible = open
+	if open:
+		building_shop.reset_size()
+		_place_building_shop.call_deferred()
+	else:
+		building_selected.emit(-1)
+
+
+func _place_building_shop() -> void:
+	var anchor := buildings_button.get_global_rect()
+	var screen := get_viewport().get_visible_rect()
+	building_shop.reset_size()
+	var x := clampf(anchor.end.x - building_shop.size.x, 8.0, screen.size.x - building_shop.size.x - 8.0)
+	building_shop.position = Vector2(x, bottom_bar.get_global_rect().position.y - building_shop.size.y - 6.0)
+
+
+## Bâtiment choisi (-1 = aucun) : sa case enfoncée. Quand le choix est abandonné (posé
+## ou annulé), la barre des bâtiments se referme et les chiffres reviennent aux tours.
+func set_selected_building(kind: int) -> void:
+	if building_shop == null:
+		return
+	building_shop.set_selected(kind)
+	if kind < 0 and building_shop.visible:
+		buildings_button.set_pressed_no_signal(false)
+		building_shop.visible = false
+
+
+## Fiche d'un bâtiment posé (null = la fermer).
+func show_building_details(building: Building) -> void:
+	if building_details == null:
+		return
+	if building:
+		building_details.bounds = get_play_area()
+		building_details.conquest = building.conquest
+		building_details.show_building(building)
+	else:
+		building_details.close()
+
+
+## Pierre, essence, ouvriers (sur le maximum), compte à rebours de la prochaine vague et
+## bâtiments qu'on peut payer.
+func update_conquest(conquest: Conquest) -> void:
+	stone_label.text = "Pierre : %d" % conquest.stone
+	essence_label.text = "Essence : %d" % conquest.essence
+	workers_label.text = "Ouvriers : %d / %d" % [conquest.get_workers().size(), conquest.get_max_workers()]
+	recruit_button.disabled = not conquest.can_recruit() or end_panel.visible
+	var countdown := conquest.wave_countdown
 	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else "Vague dans %d s" % ceili(countdown)
-	tower_shop.set_stone(stone)
+	tower_shop.set_stone(conquest.stone)
+	tower_details.set_essence(conquest.essence)
+	building_shop.refresh(conquest.level.gold, conquest.stone, conquest.essence)
+	if end_panel.visible:
+		set_building_shop_open(false)
+		buildings_button.disabled = true
 
 
 # --- Défi du jour -------------------------------------------------------------

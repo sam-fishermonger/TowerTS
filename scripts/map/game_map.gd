@@ -118,6 +118,12 @@ func get_occupant(cell: Vector2i) -> Node:
 	return _occupants.get(cell)
 
 
+## Bloque une case sans y dessiner d'obstacle (mode Conquête : un filon d'essence,
+## dessiné par le mode lui-même).
+func block_cell(cell: Vector2i) -> void:
+	_blocked[cell] = true
+
+
 ## Retire le rocher d'une case (mode Conquête : il a été miné) : la case devient
 ## constructible.
 func remove_rock(cell: Vector2i) -> void:

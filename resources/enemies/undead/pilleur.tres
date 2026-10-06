@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/undead/goule.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Pilleur de tombes"
+description = "Goule affamée qui quitte le chemin pour s'en prendre aux vivants qui travaillent, et aux murs qui les abritent."
+max_health = 130.0
+armor = 1.0
+speed = 90.0
+reward = 12
+damage = 1
+color = Color(1, 0.55, 0.2, 1)
+radius = 11.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.0
+raider = true
+raid_radius = 130.0
+raid_damage = 35.0

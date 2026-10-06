@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/mecha/chenillard.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Récupérateur"
+description = "Engin de ferraille qui sort du chemin pour démonter ouvriers et bâtiments, sous une carcasse blindée."
+max_health = 110.0
+armor = 2.0
+speed = 80.0
+reward = 10
+damage = 1
+color = Color(1, 0.55, 0.2, 1)
+radius = 11.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.2
+raider = true
+raid_radius = 130.0
+raid_damage = 30.0

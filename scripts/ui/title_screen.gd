@@ -12,8 +12,6 @@ const LEXICON_SCREEN := "res://scenes/ui/lexicon_screen.tscn"
 const DAILY_CHALLENGE_SCREEN := "res://scenes/ui/daily_challenge_screen.tscn"
 const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 const ACHIEVEMENTS_SCREEN := "res://scenes/ui/achievements_screen.tscn"
-## Niveau du mode Conquête (prototype : un seul niveau).
-const CONQUEST_LEVEL := "res://scenes/levels/conquest_01.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## Agrandissement d'un bouton survolé ou qui a le focus.
@@ -68,7 +66,7 @@ func _ready() -> void:
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
-	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(CONQUEST_LEVEL))
+	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN))
 	editor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))

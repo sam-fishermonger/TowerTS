@@ -41,6 +41,15 @@ const BOSS_COLOR := Color(1.0, 0.35, 0.3)
 ## tour qui en a une (TowerData.detection_range). Les dégâts de zone le touchent quand même.
 @export var stealthy := false
 
+@export_group("Pillage")
+## Pillard (mode Conquête) : il quitte le chemin pour frapper un ouvrier ou un bâtiment
+## à portée, puis y revient (voir Enemy).
+@export var raider := false
+## Portée à laquelle il repère sa cible, en pixels.
+@export var raid_radius := 130.0
+## Dégâts par seconde qu'il fait à un ouvrier ou à un bâtiment.
+@export var raid_damage := 30.0
+
 @export_group("Division")
 ## Ennemi qui apparaît à sa place quand il est détruit (aucun si vide).
 @export var split_into: EnemyData
@@ -117,6 +126,8 @@ func get_abilities() -> Array[String]:
 			roundi(ELITE_REWARD)])
 	if flying:
 		result.append("Volant : survole le chemin en coupant les virages. Mortier, Lance-flammes et nuages ne l'atteignent pas.")
+	if raider:
+		result.append("Pillard : quitte le chemin pour frapper les ouvriers et les bâtiments à portée (mode Conquête), puis y revient.")
 	if stealthy:
 		result.append("Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même.")
 	if armor > 0.0:

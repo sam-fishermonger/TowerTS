@@ -42,6 +42,15 @@ const DETECTOR_GROUP := "stealth_detectors"
 const FLIGHT_CURVE_META := &"flight_curve"
 ## Lissages du trajet des volants (voir get_flight_curve()).
 const FLIGHT_SMOOTHING_PASSES := 3
+## Pillards : secondes au plus loin du chemin, puis avant de repartir piller, et entre
+## deux recherches de cible.
+const RAID_MAX_TIME := 8.0
+const RAID_COOLDOWN := 3.0
+const RAID_SEARCH_INTERVAL := 0.5
+const RAID_COLOR := Color(1.0, 0.55, 0.2)
+
+## Pillard : sur le chemin, en route vers sa cible, ou de retour vers le chemin.
+enum RaidState { NONE, GOING, RETURNING }
 
 @export var data: EnemyData
 
@@ -96,6 +105,13 @@ var holder: Node2D
 var _consecrated_left := 0.0
 ## Furtif : vrai tant qu'il est à portée de détection d'une tour.
 var _revealed := false
+## Pillard : ouvrier ou bâtiment visé, état du pillage, point du chemin où revenir,
+## secondes depuis le départ et avant la prochaine recherche.
+var raid_target: Node2D
+var _raid_state := RaidState.NONE
+var _raid_return := Vector2.ZERO
+var _raid_time := 0.0
+var _raid_cooldown := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -222,6 +238,8 @@ func _process(delta: float) -> void:
 	if data.stealthy:
 		_update_detection()
 	if is_held():
+		return
+	if data.raider and _update_raid(delta):
 		return
 	progress += get_speed() * delta
 	if progress >= _path_length:
@@ -417,6 +435,68 @@ func _update_healing(delta: float) -> void:
 			enemy.healed.emit(enemy, amount)
 
 
+func is_raiding() -> bool:
+	return _raid_state != RaidState.NONE
+
+
+## Pillard : cherche une cible à portée, va la frapper, puis revient sur le chemin là où
+## il l'a quitté. Renvoie true tant qu'il est hors du chemin (il n'y avance pas).
+func _update_raid(delta: float) -> bool:
+	if _raid_state == RaidState.NONE:
+		_raid_cooldown -= delta
+		if _raid_cooldown > 0.0:
+			return false
+		raid_target = _find_raid_target()
+		if raid_target == null:
+			_raid_cooldown = RAID_SEARCH_INTERVAL
+			return false
+		_raid_state = RaidState.GOING
+		_raid_return = global_position
+		_raid_time = 0.0
+	var step := get_speed() * delta
+	if _raid_state == RaidState.GOING:
+		_raid_time += delta
+		if not is_instance_valid(raid_target) or not raid_target.can_be_raided() or _raid_time > RAID_MAX_TIME:
+			_raid_state = RaidState.RETURNING
+		elif global_position.distance_to(raid_target.global_position) > data.radius + 14.0:
+			_move_toward(raid_target.global_position, step)
+		else:
+			raid_target.take_damage(data.raid_damage * delta)
+	if _raid_state == RaidState.RETURNING and _move_toward(_raid_return, step):
+		_raid_state = RaidState.NONE
+		raid_target = null
+		_raid_cooldown = RAID_COOLDOWN
+		_update_position()
+	return true
+
+
+## L'ouvrier ou le bâtiment le plus proche à portée (null si aucun).
+func _find_raid_target() -> Node2D:
+	var best: Node2D = null
+	var best_distance := data.raid_radius
+	for node in get_tree().get_nodes_in_group(Conquest.RAID_TARGET_GROUP):
+		var target := node as Node2D
+		var distance := global_position.distance_to(target.global_position)
+		if distance <= best_distance and target.can_be_raided():
+			best = target
+			best_distance = distance
+	return best
+
+
+## Marche tout droit vers un point. Renvoie true une fois arrivé.
+func _move_toward(point: Vector2, step: float) -> bool:
+	var offset := point - global_position
+	if offset.length() <= step:
+		global_position = point
+		return true
+	var heading := offset.angle()
+	if not is_equal_approx(heading, _heading):
+		_heading = heading
+		queue_redraw()
+	global_position += offset.normalized() * step
+	return false
+
+
 ## Furtif : révélé tant qu'une tour qui détecte l'a à portée de détection.
 func _update_detection() -> void:
 	var revealed := false
@@ -482,6 +562,8 @@ func _draw() -> void:
 		draw_circle(mark, 5.5, Color(0.25, 0.2, 0.05, 0.8))
 		draw_line(mark + Vector2(0, -4), mark + Vector2(0, 4), CONSECRATED_COLOR, 2.0)
 		draw_line(mark + Vector2(-3, -1.5), mark + Vector2(3, -1.5), CONSECRATED_COLOR, 2.0)
+	if data.raider:
+		_draw_torch()
 	if data.texture:
 		# L'image déborde un peu du rayon de collision (ombre, pattes).
 		var size := data.radius * 2.6 * data.sprite_scale
@@ -501,6 +583,16 @@ func _draw() -> void:
 			var offset := Vector2.from_angle(TAU * i / data.split_count - PI / 2.0) * data.radius * 0.45
 			draw_circle(offset, data.radius * 0.28, data.split_into.color.darkened(0.15))
 	_draw_ice()
+
+
+## Pillard : un halo orangé sous lui et une torche à son côté.
+func _draw_torch() -> void:
+	draw_circle(Vector2.ZERO, data.radius * 1.3, Color(RAID_COLOR, 0.16 if not is_raiding() else 0.3))
+	var hand := Vector2(data.radius * 0.95, data.radius * 0.35)
+	draw_line(hand, hand + Vector2(3, -10), Color(0.45, 0.3, 0.15), 2.5)
+	var flame := hand + Vector2(3.5, -12)
+	draw_colored_polygon(PackedVector2Array([flame + Vector2(-3.5, 1), flame + Vector2(0, -7), flame + Vector2(3.5, 1)]), RAID_COLOR)
+	draw_circle(flame + Vector2(0, -1), 2.0, Color(1.0, 0.9, 0.4))
 
 
 ## Gelé : une gangue de glace par-dessus l'ennemi.

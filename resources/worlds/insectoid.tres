@@ -11,6 +11,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/frelon.tres" id="f0_frelon"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/mante.tres" id="f1_mante"]
 [ext_resource type="TileSet" path="res://resources/tilesets/insectoid.tres" id="t_tileset"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/pillarde.tres" id="r0_pillarde"]
 
 [resource]
 script = ExtResource("1_world")
@@ -19,5 +20,6 @@ description = "Insectoïdes et xénomorphes : des essaims rapides, des carapaces
 color = Color(0.62, 0.42, 0.75, 1)
 enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_larve"), ExtResource("e1_rodeur"), ExtResource("e2_scarabee"), ExtResource("e3_ravageur"), ExtResource("e4_couveuse"), ExtResource("f0_frelon"), ExtResource("f1_mante")])
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_reine")])
+raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_pillarde")])
 levels = Array[String](["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn", "res://scenes/levels/level_03.tscn", "res://scenes/levels/level_04.tscn", "res://scenes/levels/level_05.tscn", "res://scenes/levels/level_06.tscn"])
 tileset = ExtResource("t_tileset")

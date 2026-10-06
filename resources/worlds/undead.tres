@@ -11,6 +11,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/undead/abomination.tres" id="e6_abomination"]
 [ext_resource type="Resource" path="res://resources/enemies/undead/liche.tres" id="b0_liche"]
 [ext_resource type="TileSet" path="res://resources/tilesets/undead.tres" id="t_tileset"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/pilleur.tres" id="r0_pilleur"]
 
 [resource]
 script = ExtResource("1_world")
@@ -19,5 +20,6 @@ description = "Morts-vivants : des squelettes, des charognes pleines d'asticots,
 color = Color(0.72, 0.55, 0.95, 1)
 enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_squelette"), ExtResource("e1_goule"), ExtResource("e2_chevalier"), ExtResource("e3_charogne"), ExtResource("e4_asticot"), ExtResource("e5_momie"), ExtResource("e6_abomination")])
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_liche")])
+raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_pilleur")])
 levels = Array[String](["res://scenes/levels/undead_01.tscn", "res://scenes/levels/undead_02.tscn", "res://scenes/levels/undead_03.tscn", "res://scenes/levels/undead_04.tscn", "res://scenes/levels/undead_05.tscn", "res://scenes/levels/undead_06.tscn"])
 tileset = ExtResource("t_tileset")
