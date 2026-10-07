@@ -15,24 +15,34 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 
 Pas besoin d'installer Godot pour jouer : GitHub construit le jeu tout seul (workflow `.github/workflows/build.yml`).
 
-- **Dernière version** : à chaque push sur `main`, la page [Releases](https://github.com/sam-fishermonger/TowerTS/releases) met à jour la pré-release **« Dernière version (main) »** avec trois fichiers :
+- **Dernière version** : à chaque push sur `main`, la page [Releases](https://github.com/sam-fishermonger/TowerTS/releases) met à jour la pré-release **« Dernière version (main) »** avec quatre fichiers :
   - `TowerTS-windows.zip` : décompresser puis lancer `TowerTS.exe`. Le jeu n'étant pas signé, Windows peut afficher « Windows a protégé votre ordinateur » : **Informations complémentaires** puis **Exécuter quand même**.
   - `TowerTS-linux.zip` : décompresser puis lancer `TowerTS.x86_64`.
   - `TowerTS-web.zip` : la version navigateur, à déposer telle quelle sur un hébergeur (itch.io, GitHub Pages…). Ouvrir `index.html` directement depuis le disque ne marche pas : il faut un serveur web, par exemple `python3 -m http.server` dans le dossier décompressé, puis http://localhost:8000.
-- **Version numérotée** : créer un tag qui commence par `v` (par exemple `v0.3`, depuis l'onglet Releases de GitHub ou avec `git tag v0.3 && git push origin v0.3`) publie une Release du même nom avec les trois fichiers.
+  - `TowerTS-android.apk` : la version Android (téléphone ou tablette au processeur 64 bits, soit presque tous les appareils depuis 2017). L'ouvrir depuis le téléphone (par exemple en téléchargeant le fichier depuis la page Releases), puis autoriser l'installation d'applications de cette source quand Android le demande. Une nouvelle version s'installe par-dessus l'ancienne en gardant la progression. Le jeu se joue à l'horizontale, au doigt (voir [Comment jouer](#comment-jouer)).
+- **Version numérotée** : créer un tag qui commence par `v` (par exemple `v0.3`, depuis l'onglet Releases de GitHub ou avec `git tag v0.3 && git push origin v0.3`) publie une Release du même nom avec les quatre fichiers.
 - **Sur une PR** : les fichiers construits sont dans l'onglet **Actions**, en bas de la page du run (**Artifacts**).
 
 Les fichiers construits ne sont pas commités dans le dépôt : ils pèsent plus de 100 Mo chacun et changeraient à chaque modification, ce qui alourdirait l'historique git pour toujours.
 
 ### Exporter soi-même
 
-Les réglages d'export sont dans `export_presets.cfg` (Windows, Linux et Web). Dans l'éditeur : **Éditeur > Gérer les modèles d'export** (une fois, pour télécharger les modèles de Godot 4.7.2), puis **Projet > Exporter**. En ligne de commande :
+Les réglages d'export sont dans `export_presets.cfg` (Windows, Linux, Web et Android). Dans l'éditeur : **Éditeur > Gérer les modèles d'export** (une fois, pour télécharger les modèles de Godot 4.7.2), puis **Projet > Exporter**. En ligne de commande :
 
 ```
 godot --headless --path . --export-release "Windows" build/windows/TowerTS.exe
 ```
 
 Le dossier `build/` est ignoré par git.
+
+Pour Android, Godot a aussi besoin du SDK Android (chemin dans **Éditeur > Paramètres de l'éditeur > Export > Android**) et d'une clé de signature. L'APK des Releases est signé avec la clé de test `tools/android/towerts-debug.keystore` (alias `androiddebugkey`, mot de passe `android`) : elle ne protège rien, elle sert seulement à ce que chaque version puisse remplacer la précédente sur le téléphone. Pour publier sur le Play Store, il faudra une vraie clé, gardée secrète (dans les secrets GitHub, pas dans le dépôt). En ligne de commande :
+
+```
+GODOT_ANDROID_KEYSTORE_RELEASE_PATH=tools/android/towerts-debug.keystore \
+GODOT_ANDROID_KEYSTORE_RELEASE_USER=androiddebugkey \
+GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=android \
+godot --headless --path . --export-release "Android" build/android/TowerTS.apk
+```
 
 ## Comment jouer
 
@@ -130,7 +140,7 @@ Le dossier `build/` est ignoré par git.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle.
-- **Options** (écran titre, ou en bas à droite en jeu, ce qui met la partie en pause le temps des réglages) : **Langue** (Français ou English, voir [Langues](#langues)) ; **Musique** et **Sons** ont chacun leur case pour les couper et leur curseur de volume ; **Plein écran** (aussi **F11** ou **Alt + Entrée** à tout moment) ; **Vitesse au départ** : x1, x2 ou x3, la vitesse à laquelle chaque niveau commence. Tout s'applique et s'enregistre tout de suite. Sur la version web, le navigateur ne rouvre pas le plein écran tout seul au lancement : il se redemande dans les Options.
+- **Options** (écran titre, ou en bas à droite en jeu, ce qui met la partie en pause le temps des réglages) : **Langue** (Français ou English, voir [Langues](#langues)) ; **Musique** et **Sons** ont chacun leur case pour les couper et leur curseur de volume ; **Plein écran** (aussi **F11** ou **Alt + Entrée** à tout moment ; absent sur Android, où le jeu occupe déjà tout l'écran) ; **Vitesse au départ** : x1, x2 ou x3, la vitesse à laquelle chaque niveau commence. Tout s'applique et s'enregistre tout de suite. Sur la version web, le navigateur ne rouvre pas le plein écran tout seul au lancement : il se redemande dans les Options.
 - **Au tactile** (téléphone, tablette, version web) : toucher une tour de la barre d'achat, puis une case : l'aperçu de la tour s'y affiche (portée, et en rouge si elle ne peut pas s'y poser) avec « Touchez encore pour poser » ; un second toucher sur la même case la pose, un toucher ailleurs déplace l'aperçu. Toucher encore la tour dans la barre annule. Toucher une tour posée ouvre sa fiche, toucher la carte ailleurs la ferme ; toucher un monstre ouvre la sienne. Dans la sélection des mondes et l'arbre des améliorations, le premier toucher sur un niveau ou une amélioration ouvre sa fiche, le second le lance ou l'achète. Le jeu se joue à l'horizontale : tenu en hauteur, l'écran invite à tourner l'appareil. Le jeu passe tout seul en mode tactile au premier toucher, et revient à la souris dès qu'elle bouge (`scripts/save/game_settings.gd`).
 
 ### Pouvoirs
@@ -352,7 +362,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 
 ```
 project.godot        Configuration du projet
-export_presets.cfg   Réglages d'export (Windows, Linux, Web)
+export_presets.cfg   Réglages d'export (Windows, Linux, Web, Android)
 scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, succès, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)

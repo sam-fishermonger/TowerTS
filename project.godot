@@ -26,6 +26,7 @@ Settings="*res://scripts/save/game_settings.gd"
 window/size/viewport_width=1280
 window/size/viewport_height=800
 window/stretch/mode="canvas_items"
+window/handheld/orientation=4
 
 [gui]
 
@@ -41,3 +42,4 @@ locale/fallback="fr"
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

@@ -108,7 +108,11 @@ func _ready() -> void:
 
 	fullscreen_check = _check("Plein écran", GameSettings.is_fullscreen())
 	fullscreen_check.tooltip_text = "F11 ou Alt + Entrée, à tout moment"
-	_add_row(grid, fullscreen_check, Control.new(), Control.new())
+	var fullscreen_row: Array[Control] = [fullscreen_check, Control.new(), Control.new()]
+	_add_row(grid, fullscreen_row[0], fullscreen_row[1], fullscreen_row[2])
+	# Sur téléphone, le jeu occupe déjà tout l'écran : la ligne n'a pas lieu d'être.
+	for cell in fullscreen_row:
+		cell.visible = not OS.has_feature("mobile")
 	fullscreen_check.toggled.connect(func(on: bool) -> void:
 		GameSettings.set_fullscreen(on)
 		# Le navigateur peut refuser : la case suit la fenêtre.
