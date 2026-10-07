@@ -513,6 +513,11 @@ func _update_detection() -> void:
 		queue_redraw()
 
 
+## Vue de trois quarts : distance parcourue entre deux dessins de la marche.
+const ANIMATION_STEP := 4.0
+var _animation_step := -1
+
+
 func _update_position() -> void:
 	var point := _curve.sample_baked(progress)
 	var offset := Vector2.ZERO
@@ -527,9 +532,13 @@ func _update_position() -> void:
 		if not is_equal_approx(heading, _heading):
 			_heading = heading
 			queue_redraw()
-	if Relief.enabled:
-		# Il sautille en marchant.
-		queue_redraw()
+	if Relief.enabled and not Relief.headless:
+		# Ses pattes bougent en marchant : un dessin tous les quelques pixels suffit (le
+		# dessin en volume coûte cher, le déplacement, lui, ne demande pas de redessiner).
+		var step := int(progress / ANIMATION_STEP)
+		if step != _animation_step:
+			_animation_step = step
+			queue_redraw()
 
 
 func _on_health_depleted() -> void:

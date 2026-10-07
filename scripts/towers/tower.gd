@@ -62,6 +62,7 @@ var _cooldown := 0.0
 var _target: Enemy
 ## En vue de trois quarts, l'arme au repos est tournée vers le bas à droite : elle se voit de profil.
 var _aim_angle := PI * 0.2 if Relief.enabled else -PI / 2.0
+var _drawn_aim_angle := _aim_angle
 
 
 func _ready() -> void:
@@ -112,7 +113,13 @@ func _process(delta: float) -> void:
 		_cooldown = maxf(_cooldown, 0.0)
 		return
 	_aim_angle = global_position.angle_to_point(_target.global_position)
-	queue_redraw()
+	if not Relief.enabled:
+		queue_redraw()
+	elif not Relief.headless and absf(angle_difference(_aim_angle, _drawn_aim_angle)) > 0.06:
+		# Vue de trois quarts : la tour, coûteuse à dessiner, ne se redessine que quand son
+		# arme a assez tourné.
+		_drawn_aim_angle = _aim_angle
+		queue_redraw()
 	# On garde le temps écoulé en trop, et on tire plusieurs fois si l'image a duré plus
 	# d'un tir : la cadence ne dépend ni des FPS ni de la vitesse de jeu.
 	var shots := 0

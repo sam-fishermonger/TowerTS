@@ -15,6 +15,11 @@ const GROUND_SQUASH := 0.72
 const OUTLINE := Color(0.13, 0.1, 0.07)
 
 
+## Le jeu n'est pas affiché (tests, serveur) : les monstres et les tours ne se
+## redessinent pas pour s'animer, ce qui coûte cher en volume.
+static var headless := DisplayServer.get_name() == "headless"
+
+
 static func ellipse(center: Vector2, rx: float, ry: float, from := 0.0, to := TAU, points := 28) -> PackedVector2Array:
 	var result := PackedVector2Array()
 	for i in points + 1:
