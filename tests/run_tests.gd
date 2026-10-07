@@ -151,6 +151,7 @@ func _run() -> void:
 	await _test_end_stats()
 	await _test_achievements()
 	await _test_biome_tiles()
+	await _test_relief()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
 	await _test_levels_04_to_06_with_earned_gold()
@@ -2952,7 +2953,8 @@ func _test_biome_tiles() -> void:
 	print("Tuiles des biomes sur les cartes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	_check(campaign.worlds.all(func(w: World) -> bool: return w.tileset != null), "chaque monde a ses tuiles")
-	var level := await _spawn_level(LEVEL_01)
+	# Le niveau 1-1 est en vue de trois quarts (sans tuiles) : on regarde le 1-2.
+	var level := await _spawn_level(LEVEL_02)
 	var map := level.map
 	_check(map.tileset == campaign.worlds[0].tileset, "la carte prend les tuiles de son monde")
 	var ground: TileMapLayer = map.get_node("Sol")
@@ -2965,7 +2967,7 @@ func _test_biome_tiles() -> void:
 		"des cailloux sur le chemin et un obstacle du biome par case bloquée")
 	var first := _ground_tiles(ground)
 	await _free(level)
-	level = await _spawn_level(LEVEL_01)
+	level = await _spawn_level(LEVEL_02)
 	_check(_ground_tiles(level.map.get_node("Sol")) == first, "la même carte à chaque partie")
 	await _free(level)
 	level = await _spawn_level(MECHA_01)
@@ -2974,6 +2976,32 @@ func _test_biome_tiles() -> void:
 	level = await _spawn_level(load(campaign.worlds[3].levels[0]))
 	_check(level.map.tileset == campaign.worlds[3].tileset and campaign.worlds[3].tileset != campaign.worlds[2].tileset,
 		"La Nécropole aussi")
+	await _free(level)
+
+
+func _test_relief() -> void:
+	print("Vue de trois quarts (niveau 1-1)")
+	var level := await _spawn_level(LEVEL_01)
+	var map := level.map
+	_check(map.relief and Relief.enabled and level.y_sort_enabled and level.towers.y_sort_enabled,
+		"la carte est en vue de trois quarts, triée en profondeur")
+	var decor: Node2D = level.get_node("Decor")
+	var trees := decor.get_children().filter(func(d: DecorItem) -> bool: return d.kind == DecorItem.Kind.TREE)
+	_check(trees.size() > 20, "des arbres sur la carte (%d)" % trees.size())
+	_check(map._decor_by_cell.keys().all(func(c: Vector2i) -> bool: return not map.is_cell_on_path(c)),
+		"jamais de décor sur le chemin")
+	var cell: Vector2i = map._decor_by_cell.keys()[0]
+	var items: Array = map._decor_by_cell[cell]
+	level.gold = 1000
+	var tower := level.place_tower(cell, level.tower_types[0])
+	await process_frame
+	_check(tower != null and items.all(func(d: Variant) -> bool: return not is_instance_valid(d)),
+		"poser une tour abat le décor de sa case")
+	_check(is_equal_approx(tower.global_position.y - (tower.global_position + Relief.turret_offset()).y,
+		Relief.TOWER_HEIGHT + 6.0), "les tirs partent de la tourelle, au-dessus du socle")
+	await _free(level)
+	level = await _spawn_level(LEVEL_02)
+	_check(not Relief.enabled and not level.y_sort_enabled, "les autres niveaux restent vus de dessus")
 	await _free(level)
 
 

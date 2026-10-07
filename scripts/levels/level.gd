@@ -203,6 +203,8 @@ func _ready() -> void:
 	if is_endless:
 		_endless_record_before = Progress.get_endless_waves(scene_file_path)
 	placer.level = self
+	if map.relief:
+		_setup_relief()
 	if conquest_mode and not is_demo:
 		conquest = Conquest.new()
 		conquest.name = "Conquest"
@@ -290,6 +292,24 @@ func _ready() -> void:
 		add_child(tutorial)
 		tutorial.setup(self)
 	Sound.play_music()
+
+
+## Vue de trois quarts : les tours, les monstres, les alliés et le décor sont triés en
+## profondeur (ce qui est plus bas sur l'écran passe devant) ; les tirs, les effets et
+## l'aperçu de pose restent par-dessus.
+func _setup_relief() -> void:
+	y_sort_enabled = true
+	for container in [enemies, allies, towers]:
+		container.y_sort_enabled = true
+	projectiles.z_index = 2
+	effects.z_index = 2
+	placer.z_index = 3
+	var decor := Node2D.new()
+	decor.name = "Decor"
+	decor.y_sort_enabled = true
+	add_child(decor)
+	move_child(decor, towers.get_index())
+	map.populate_decor(decor)
 
 
 ## Titre du niveau dans la barre du haut, avec le mode ou la difficulté (traduit).

@@ -40,6 +40,11 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, tower_data.attack_range, 0.0, TAU, 64, Color(tint, 0.6), 1.5)
 	var half := Tower.SIZE / 2.0
 	var rect := Rect2(-half, -half, Tower.SIZE, Tower.SIZE)
+	if Relief.enabled:
+		draw_rect(rect, Color(tint, 0.25))
+		draw_rect(rect, tint, false, 2.0)
+		Tower.draw_relief(self, tower_data, Vector2.ZERO, Tower.TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.7))
+		return
 	if tower_data.turret_texture:
 		Tower.draw_sprite(self, tower_data, Vector2.ZERO, Tower.SIZE, Tower.TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.65))
 	else:

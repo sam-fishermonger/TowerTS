@@ -36,6 +36,14 @@ extends Node2D
 ## Écart moyen entre deux détails semés sur le chemin, en pixels.
 @export var path_detail_spacing := 56.0
 
+@export_group("Vue de trois quarts")
+## Vue de trois quarts (prototype) : herbe peinte, chemin de terre aux bords irréguliers,
+## arbres et buissons debout que la pose d'une tour abat, tours et monstres en volume
+## triés en profondeur (voir Relief). Le niveau ajoute le décor (populate_decor).
+@export var relief := false
+## Part des cases éloignées du chemin qui reçoivent un arbre (plus au bord de la carte).
+@export_range(0.0, 1.0) var tree_density := 0.2
+
 ## Rangs de la planche de tuiles.
 const GROUND_ROW := 0
 const DECAL_ROW := 1
@@ -44,6 +52,8 @@ const OBSTACLE_ROW := 2
 ## souvent, ceux aux motifs marqués (2 et 6 : grilles, pavés…) rarement.
 const GROUND_WEIGHTS: Array[float] = [8.0, 3.0, 1.0, 3.0, 8.0, 2.0, 1.0, 2.0]
 
+## Terre du chemin en vue de trois quarts.
+const RELIEF_DIRT := Color(0.85, 0.72, 0.5)
 const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/map/base.svg")
 ## Image de rocher en gris clair, teintée avec rock_color.
 const ROCK_TEXTURE: Texture2D = preload("res://assets/sprites/map/rock.svg")
@@ -60,6 +70,12 @@ var _decal_layer: TileMapLayer
 ## Obstacle de chaque case bloquée et détails du chemin (position, angle, tuile).
 var _obstacles := {}
 var _path_details: Array[Dictionary] = []
+## Vue de trois quarts : ronds qui dessinent le chemin (position, rayon), touffes d'herbe
+## et fleurs (position, sorte, teinte), éléments de décor de chaque case.
+var _path_stamps: Array[Vector3] = []
+var _tufts: Array[Dictionary] = []
+var _pebbles: Array[Vector3] = []
+var _decor_by_cell := {}
 
 
 func _ready() -> void:
@@ -73,7 +89,10 @@ func _ready() -> void:
 				_path_cells[cell] = true
 	for cell in blocked_cells:
 		_blocked[cell] = true
-	if tileset:
+	Relief.enabled = relief
+	if relief:
+		_build_relief()
+	elif tileset:
 		_build_decor()
 
 
@@ -108,6 +127,11 @@ func is_cell_buildable(cell: Vector2i) -> bool:
 
 func occupy(cell: Vector2i, node: Node) -> void:
 	_occupants[cell] = node
+	# Vue de trois quarts : la tour abat les arbres et les buissons de sa case.
+	for item in _decor_by_cell.get(cell, []):
+		if is_instance_valid(item):
+			item.queue_free()
+	_decor_by_cell.erase(cell)
 
 
 func release(cell: Vector2i) -> void:
@@ -169,6 +193,8 @@ func get_base_position() -> Vector2:
 
 ## Pose les tuiles du biome : sol, détails, obstacles et cailloux du chemin.
 func _build_decor() -> void:
+	if relief:
+		return
 	for layer in [_ground_layer, _decal_layer]:
 		if layer:
 			remove_child(layer)
@@ -231,9 +257,132 @@ func _tile_texture() -> Texture2D:
 	return (tileset.get_source(0) as TileSetAtlasSource).texture
 
 
+# --- Vue de trois quarts -----------------------------------------------------
+
+## Herbe peinte (un shader sous la carte), bords du chemin et touffes d'herbe.
+func _build_relief() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(owner.scene_file_path if owner else String(name))
+	var ground := ColorRect.new()
+	ground.name = "Herbe"
+	ground.position = grid_origin
+	ground.size = Vector2(columns, rows) * cell_size
+	ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ground.show_behind_parent = true
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://scripts/map/relief_ground.gdshader")
+	material.set_shader_parameter("size", ground.size)
+	material.set_shader_parameter("seed", rng.randf())
+	ground.material = material
+	add_child(ground)
+	# Le chemin est fait de ronds dont le rayon varie doucement : ses bords ondulent.
+	var noise := FastNoiseLite.new()
+	noise.seed = rng.randi()
+	noise.frequency = 0.04
+	for path in paths:
+		var curve := path.curve
+		var distance := 0.0
+		while distance < curve.get_baked_length():
+			var point := to_local(path.to_global(curve.sample_baked(distance)))
+			_path_stamps.append(Vector3(point.x, point.y, path_width / 2.0 + 4.0 + noise.get_noise_1d(distance) * 6.0))
+			if rng.randf() < 0.05:
+				var side := Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, path_width * 0.38)
+				_pebbles.append(Vector3(point.x + side.x, point.y + side.y, rng.randf_range(2.0, 4.0)))
+			distance += 6.0
+	for i in columns * rows * 2:
+		var at := grid_origin + Vector2(rng.randf() * columns, rng.randf() * rows) * cell_size
+		if is_cell_on_path(world_to_cell(to_global(at))):
+			continue
+		_tufts.append({"position": at, "flower": rng.randf() < 0.12, "shade": rng.randf_range(-0.12, 0.12)})
+
+
+## Arbres, buissons et rochers debout, ajoutés à `container` (trié en profondeur avec
+## les tours et les monstres). Les arbres poussent loin du chemin, surtout au bord de la
+## carte ; les buissons le longent.
+func populate_decor(container: Node2D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(owner.scene_file_path if owner else String(name)) + 1
+	for y in rows:
+		for x in columns:
+			var cell := Vector2i(x, y)
+			var center := cell_to_world(cell)
+			if is_cell_blocked(cell):
+				_add_decor(container, cell, DecorItem.Kind.ROCK, center + Vector2(0, 10), rng)
+				continue
+			if is_cell_on_path(cell):
+				continue
+			var near_path := false
+			for dy in range(-1, 2):
+				for dx in range(-1, 2):
+					near_path = near_path or is_cell_on_path(cell + Vector2i(dx, dy))
+			var edge := mini(mini(x, columns - 1 - x), mini(y, rows - 1 - y))
+			var tree_chance := 0.0 if near_path else tree_density * (3.0 if edge == 0 else 1.6 if edge == 1 else 1.0)
+			if rng.randf() < tree_chance:
+				var count := rng.randi_range(1, 3 if edge == 0 else 2)
+				for i in count:
+					var jitter := Vector2(rng.randf_range(-18, 18), rng.randf_range(-4, 22))
+					_add_decor(container, cell, DecorItem.Kind.TREE, center + jitter, rng,
+						rng.randf_range(0.95, 1.25) if count == 1 else rng.randf_range(0.8, 1.05))
+			elif rng.randf() < (0.22 if near_path else 0.1):
+				var jitter := Vector2(rng.randf_range(-18, 18), rng.randf_range(-10, 20))
+				_add_decor(container, cell, DecorItem.Kind.BUSH, center + jitter, rng, rng.randf_range(0.8, 1.2))
+
+
+func _add_decor(container: Node2D, cell: Vector2i, kind: DecorItem.Kind, at: Vector2, rng: RandomNumberGenerator,
+		size := 1.0) -> void:
+	var item := DecorItem.new()
+	item.kind = kind
+	item.scale_factor = size
+	item.shape_seed = rng.randi()
+	item.rock_color = rock_color.lightened(0.3)
+	item.position = container.to_local(at)
+	container.add_child(item)
+	if kind != DecorItem.Kind.ROCK:
+		if not _decor_by_cell.has(cell):
+			_decor_by_cell[cell] = []
+		_decor_by_cell[cell].append(item)
+
+
+## Chemin de terre : ombre sur l'herbe, bord sombre, terre, puis une bande plus claire au
+## milieu, là où l'on marche.
+func _draw_relief_path() -> void:
+	var dirt := RELIEF_DIRT
+	for stamp in _path_stamps:
+		draw_circle(Vector2(stamp.x, stamp.y + 3.0), stamp.z + 4.0, Color(0.1, 0.16, 0.05, 0.3), true, -1.0, true)
+	for stamp in _path_stamps:
+		draw_circle(Vector2(stamp.x, stamp.y), stamp.z + 2.0, dirt.darkened(0.42), true, -1.0, true)
+	for stamp in _path_stamps:
+		draw_circle(Vector2(stamp.x, stamp.y), stamp.z, dirt, true, -1.0, true)
+	for stamp in _path_stamps:
+		draw_circle(Vector2(stamp.x - 2.0, stamp.y - 3.0), stamp.z * 0.55, dirt.lightened(0.1), true, -1.0, true)
+	for pebble in _pebbles:
+		var at := Vector2(pebble.x, pebble.y)
+		draw_colored_polygon(Relief.ellipse(at, pebble.z, pebble.z * 0.6, 0.0, TAU, 10), dirt.darkened(0.25))
+		draw_colored_polygon(Relief.ellipse(at - Vector2(0.5, 0.8), pebble.z * 0.6, pebble.z * 0.35, 0.0, TAU, 8),
+			dirt.lightened(0.25))
+
+
+func _draw_tufts() -> void:
+	for tuft in _tufts:
+		var at: Vector2 = tuft.position
+		if tuft.flower:
+			for i in 3:
+				var petal := at + Vector2.from_angle(TAU * i / 3.0) * 2.5
+				draw_circle(petal, 2.2, Color(1.0, 0.95, 0.7))
+			draw_circle(at, 1.6, Color(1.0, 0.75, 0.2))
+			continue
+		var color := Color(0.25, 0.45, 0.14).lightened(tuft.shade)
+		for i in 3:
+			var x := (i - 1) * 3.0
+			draw_line(at + Vector2(x, 0), at + Vector2(x * 1.6, -6.0 + absf(x) * 0.5), color, 1.5, true)
+
+
 # --- Affichage --------------------------------------------------------------
 
 func _draw() -> void:
+	if relief:
+		_draw_relief()
+		return
 	var grid_size := Vector2(columns, rows) * cell_size
 	var screen := get_viewport_rect().size
 	if tileset:
@@ -268,6 +417,51 @@ func _draw() -> void:
 	if not paths.is_empty():
 		var base := to_local(get_base_position())
 		draw_texture_rect(BASE_TEXTURE, Rect2(base - Vector2(32, 48), Vector2(64, 96)), false)
+
+
+func _draw_relief() -> void:
+	var grid_size := Vector2(columns, rows) * cell_size
+	var screen := get_viewport_rect().size
+	draw_rect(Rect2(0, 0, screen.x, grid_origin.y), background_color)
+	var bottom := grid_origin.y + grid_size.y
+	draw_rect(Rect2(0, bottom, screen.x, maxf(screen.y - bottom, 0.0)), background_color)
+	_draw_tufts()
+	_draw_relief_path()
+	if not paths.is_empty():
+		var base := to_local(get_base_position())
+		_draw_relief_base(base)
+
+
+## Base du joueur en vue de trois quarts : un rempart entre deux tours rondes au toit
+## bleu, porte ouverte sur le chemin.
+func _draw_relief_base(at: Vector2) -> void:
+	var stone := Color(0.7, 0.68, 0.64)
+	var roof := Color(0.25, 0.42, 0.8)
+	Relief.draw_shadow(self, at + Vector2(8, 18), 44.0, 16.0, 0.35)
+	for side in [-1.0, 1.0]:
+		var foot: Vector2 = at + Vector2(side * 19.0, 8.0 - 22.0)
+		var top := Relief.draw_cylinder(self, foot, 11.0, 5.5, 34.0, stone)
+		var cone := PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(15, 2)])
+		draw_colored_polygon(Relief.ellipse(top + Vector2(0, 2), 15.0, 6.0), roof.darkened(0.3))
+		draw_colored_polygon(cone, roof)
+		draw_colored_polygon(PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(-4, 4)]), roof.lightened(0.2))
+		cone.append(cone[0])
+		draw_polyline(cone, Relief.OUTLINE, 2.0, true)
+		draw_line(top + Vector2(0, -26), top + Vector2(0, -38), Relief.OUTLINE, 2.0)
+		draw_colored_polygon(PackedVector2Array([top + Vector2(0, -38), top + Vector2(10, -34), top + Vector2(0, -30)]),
+			Color(1.0, 0.8, 0.2))
+	# Rempart et porte.
+	var wall := Rect2(at + Vector2(-12, -34), Vector2(24, 36))
+	draw_rect(wall, stone.darkened(0.12))
+	for x in 2:
+		draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), stone.darkened(0.12))
+		draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), Relief.OUTLINE, false, 1.5)
+	draw_rect(wall, Relief.OUTLINE, false, 2.0)
+	var door := PackedVector2Array([at + Vector2(-8, 2), at + Vector2(-8, -12)])
+	door.append_array(Relief.ellipse(at + Vector2(0, -12), 8.0, 8.0, PI, TAU, 10))
+	door.append(at + Vector2(8, 2))
+	draw_colored_polygon(door, Color(0.2, 0.13, 0.08))
+	draw_polyline(door, Relief.OUTLINE, 2.0, true)
 
 
 func _draw_rock(center: Vector2) -> void:

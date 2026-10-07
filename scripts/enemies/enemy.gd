@@ -187,6 +187,8 @@ func _ready() -> void:
 	_summon_cooldown = data.summon_interval
 	health_bar.width = data.radius * 2.0
 	health_bar.position = Vector2(0, -data.radius - 8.0)
+	if Relief.enabled:
+		health_bar.position.y -= _relief_lift() + data.radius * 0.1
 	if data.flying:
 		# Il vole au-dessus des tours et des autres monstres.
 		z_index = 1
@@ -525,6 +527,9 @@ func _update_position() -> void:
 		if not is_equal_approx(heading, _heading):
 			_heading = heading
 			queue_redraw()
+	if Relief.enabled:
+		# Il sautille en marchant.
+		queue_redraw()
 
 
 func _on_health_depleted() -> void:
@@ -532,8 +537,16 @@ func _on_health_depleted() -> void:
 	died.emit(self)
 
 
+## Vue de trois quarts : hauteur du corps au-dessus de son point au sol.
+func _relief_lift() -> float:
+	return data.radius * (1.6 if data.flying else 0.55)
+
+
 func _draw() -> void:
-	if data.flying:
+	if Relief.enabled:
+		Relief.draw_shadow(self, Vector2(2, 2), data.radius * (0.7 if data.flying else 0.95),
+			data.radius * (0.3 if data.flying else 0.42), 0.3)
+	elif data.flying:
 		_draw_flying_shadow()
 	if data.is_elite or data.is_boss:
 		_draw_aura()
@@ -567,7 +580,13 @@ func _draw() -> void:
 	if data.texture:
 		# L'image déborde un peu du rayon de collision (ombre, pattes).
 		var size := data.radius * 2.6 * data.sprite_scale
-		draw_set_transform(Vector2.ZERO, _heading)
+		if Relief.enabled:
+			# Vu de biais : l'image, à plat, est écrasée en hauteur et soulevée du sol.
+			var bob := absf(sin(progress * 0.22)) * 2.5 if not is_frozen() else 0.0
+			draw_set_transform_matrix(Transform2D(_heading, Vector2.ZERO).scaled(Vector2(1.0, Relief.GROUND_SQUASH))
+				.translated(Vector2(0, -_relief_lift() - bob)))
+		else:
+			draw_set_transform(Vector2.ZERO, _heading)
 		draw_texture_rect(data.texture, Rect2(-size / 2.0, -size / 2.0, size, size), false,
 			Color(0.6, 0.8, 1.0) if is_slowed() or is_frozen() else Color.WHITE)
 		draw_set_transform(Vector2.ZERO)

@@ -194,6 +194,10 @@ godot --headless --path . -s res://tools/generate_theme.gd
 
 Pour donner la police des titres à un Label d'une scène, mettre `TitreEcran` dans sa propriété « Theme Type Variation ».
 
+### Vue de trois quarts (prototype, niveau 1-1)
+
+Le niveau 1-1 essaie un rendu avec plus de profondeur, façon Kingdom Rush : herbe peinte (`scripts/map/relief_ground.gdshader`), chemin de terre aux bords irréguliers, arbres et buissons debout, tours sur un socle de pierre avec un fût et une tourelle vue de biais, monstres soulevés du sol avec leur ombre, base en petit château. Tout ce qui se tient debout est trié en profondeur : ce qui est plus bas sur l'écran passe devant. Le jeu reste à plat en dessous (positions, portées, chemins) : seul l'affichage change. Poser une tour abat les arbres et buissons de sa case. La vue s'active sur la carte d'un niveau (propriété `relief` de `Map`), et le dessin est réuni dans `scripts/map/relief.gd` et `scripts/map/decor_item.gd`.
+
 ## Sons
 
 Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).
