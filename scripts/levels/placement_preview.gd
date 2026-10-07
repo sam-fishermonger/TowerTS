@@ -43,7 +43,7 @@ func _draw() -> void:
 	if Relief.enabled:
 		draw_rect(rect, Color(tint, 0.25))
 		draw_rect(rect, tint, false, 2.0)
-		Tower.draw_relief(self, tower_data, Vector2.ZERO, Tower.TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.7))
+		Tower.draw_relief(self, tower_data, Vector2.ZERO, PI * 0.2, Color(1, 1, 1, 0.7))
 		return
 	if tower_data.turret_texture:
 		Tower.draw_sprite(self, tower_data, Vector2.ZERO, Tower.SIZE, Tower.TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.65))

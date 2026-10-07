@@ -10,6 +10,11 @@ var color := Color.WHITE
 var stats: TowerData
 
 var _destination := Vector2.ZERO
+## Vue de trois quarts : hauteur à laquelle le tir est dessiné au-dessus de sa position
+## au sol. Il part de la tourelle et descend jusqu'au corps de sa cible.
+var lift := 0.0
+var _start_lift := -1.0
+var _start_distance := 0.0
 
 
 func setup(new_target: Enemy, tower_stats: TowerData) -> void:
@@ -31,6 +36,22 @@ func _process(delta: float) -> void:
 		despawn()
 		return
 	global_position += to_destination.normalized() * step
+	if Relief.enabled and lift > 0.0:
+		_update_lift(to_destination.length(), target if target_alive else null)
+
+
+func _update_lift(distance: float, enemy: Enemy) -> void:
+	if _start_lift < 0.0:
+		_start_lift = lift
+		_start_distance = maxf(distance, 1.0)
+	var end := Creature.body_height(enemy.data) if enemy else 0.0
+	lift = lerpf(end, _start_lift, clampf(distance / _start_distance, 0.0, 1.0))
+	queue_redraw()
+
+
+## Dessine le tir à sa hauteur (vue de trois quarts). À appeler en tête de _draw().
+func _apply_lift() -> void:
+	draw_set_transform(Vector2(0, -lift))
 
 
 ## Effet à l'arrivée. `hit` est la cible si elle est encore en jeu, sinon null.
@@ -50,4 +71,5 @@ func _hit_all_in_radius(radius: float) -> void:
 
 
 func _draw() -> void:
+	_apply_lift()
 	draw_circle(Vector2.ZERO, 4.0, color)

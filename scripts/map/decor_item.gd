@@ -31,7 +31,7 @@ func _draw() -> void:
 func _draw_tree(rng: RandomNumberGenerator) -> void:
 	var s := scale_factor
 	var radius := 26.0 * s
-	Relief.draw_shadow(self, Vector2(10, 2) * s, radius * 1.15, radius * 0.45, 0.3)
+	Relief.draw_shadow(self, Vector2(3, 1) * s, radius * 0.95, radius * 0.38, 0.3)
 	# Tronc, un peu évasé au pied.
 	var trunk := Color(0.42, 0.27, 0.15)
 	var height := 14.0 * s
@@ -52,7 +52,7 @@ func _draw_tree(rng: RandomNumberGenerator) -> void:
 func _draw_bush(rng: RandomNumberGenerator) -> void:
 	var s := scale_factor
 	var radius := 12.0 * s
-	Relief.draw_shadow(self, Vector2(5, 1) * s, radius * 1.35, radius * 0.5, 0.25)
+	Relief.draw_shadow(self, Vector2(2, 1) * s, radius * 1.2, radius * 0.42, 0.25)
 	var blobs: Array[Vector3] = []
 	for i in rng.randi_range(3, 4):
 		var x := lerpf(-radius * 0.8, radius * 0.8, float(i) / 3.0) + rng.randf_range(-2, 2)

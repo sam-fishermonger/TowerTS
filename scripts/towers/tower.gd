@@ -60,7 +60,8 @@ var show_range := false:
 
 var _cooldown := 0.0
 var _target: Enemy
-var _aim_angle := -PI / 2.0
+## En vue de trois quarts, l'arme au repos est tournée vers le bas à droite : elle se voit de profil.
+var _aim_angle := PI * 0.2 if Relief.enabled else -PI / 2.0
 
 
 func _ready() -> void:
@@ -279,16 +280,16 @@ func _draw() -> void:
 ## tourelle.
 func _draw_relief_body() -> void:
 	if not is_built():
-		draw_relief(self, data, Vector2.ZERO, TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.4))
+		draw_relief(self, data, Vector2.ZERO, PI * 0.2, Color(1, 1, 1, 0.4))
 		var radius := SIZE * 0.62
 		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(0, 0, 0, 0.45), 5.0)
 		if build_progress > 0.0:
 			draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
 		return
-	draw_relief(self, data, Vector2.ZERO, TURRET_SCALE + 0.1 * (level - 1), _aim_angle, Color.WHITE, level - 1)
+	draw_relief(self, data, Vector2.ZERO, _aim_angle, Color.WHITE, level - 1)
 	if stats.detects_stealth():
-		draw_detection_eye(self, Relief.turret_offset() + Vector2(16, -12))
-	draw_set_transform(Relief.turret_offset())
+		draw_detection_eye(self, get_muzzle_offset() + Vector2(18, -4))
+	draw_set_transform(get_muzzle_offset())
 	_draw_effects()
 	draw_set_transform(Vector2.ZERO)
 
@@ -367,27 +368,15 @@ static func draw_sprite(canvas: CanvasItem, tower_data: TowerData, center: Vecto
 	canvas.draw_set_transform(Vector2.ZERO)
 
 
-## Vue de trois quarts : socle, fût à la couleur du type de tour (un losange doré par
-## amélioration achetée sur sa face) et tourelle vue de biais, au-dessus de `foot`.
-static func draw_relief(canvas: CanvasItem, tower_data: TowerData, foot: Vector2, turret_scale := TURRET_SCALE,
-		aim_angle := -PI / 2.0, tint := Color.WHITE, upgrades := 0) -> void:
-	var deck := Relief.draw_plinth(canvas, foot, tint)
-	var top := Relief.draw_cylinder(canvas, deck + Vector2(0, 2), 15.0, 7.5, Relief.TOWER_HEIGHT,
-		tower_data.color.darkened(0.3), tint)
-	for i in upgrades:
-		var center := deck + Vector2((i - (upgrades - 1) / 2.0) * 9.0, -4.0)
-		canvas.draw_colored_polygon(PackedVector2Array([center + Vector2(0, -4), center + Vector2(3.5, 0),
-			center + Vector2(0, 4), center + Vector2(-3.5, 0)]), Color(1, 0.85, 0.3) * tint)
-	if tower_data.turret_texture:
-		var turret_size := SIZE * turret_scale * 1.05
-		var angle := aim_angle if tower_data.turret_rotates else 0.0
-		canvas.draw_set_transform_matrix(Transform2D(angle, Vector2.ZERO).scaled(Vector2(1.0, Relief.GROUND_SQUASH + 0.1))
-			.translated(top - Vector2(0, 4)))
-		canvas.draw_texture_rect(tower_data.turret_texture,
-			Rect2(-Vector2.ONE * turret_size / 2.0, Vector2.ONE * turret_size), false, tint)
-		canvas.draw_set_transform(Vector2.ZERO)
-	else:
-		canvas.draw_circle(top - Vector2(0, 6), 11.0, tower_data.color * tint)
+## Vue de trois quarts : la tour dessinée par TowerRelief au-dessus de `foot`.
+static func draw_relief(canvas: CanvasItem, tower_data: TowerData, foot: Vector2, aim_angle := -PI / 2.0,
+		tint := Color.WHITE, upgrades := 0) -> void:
+	TowerRelief.draw(canvas, tower_data, foot, aim_angle, tint, upgrades)
+
+
+## Vue de trois quarts : d'où partent les tirs et les effets de la tour, en haut du donjon.
+func get_muzzle_offset() -> Vector2:
+	return Vector2(0, -TowerRelief.top_height(level - 1)) if Relief.enabled else Vector2.ZERO
 
 
 ## Tourelle dessinée en code, quand le type de tour n'a pas d'image. À redéfinir.

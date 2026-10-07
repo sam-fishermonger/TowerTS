@@ -11,15 +11,8 @@ static var enabled := false
 
 ## Écrasement vertical de ce qui est posé à plat sur le sol (vu de biais).
 const GROUND_SQUASH := 0.72
-## Hauteur du fût des tours, entre le socle et la tourelle.
-const TOWER_HEIGHT := 20.0
 ## Contour sombre des dessins, façon bande dessinée.
 const OUTLINE := Color(0.13, 0.1, 0.07)
-
-
-## Décalage de la tourelle par rapport au pied de la tour : d'où partent les tirs.
-static func turret_offset() -> Vector2:
-	return Vector2(0, -TOWER_HEIGHT - 6.0) if enabled else Vector2.ZERO
 
 
 static func ellipse(center: Vector2, rx: float, ry: float, from := 0.0, to := TAU, points := 28) -> PackedVector2Array:

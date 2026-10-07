@@ -8,7 +8,9 @@ func _attack(enemy: Enemy) -> void:
 	var projectile: Projectile = data.projectile_scene.instantiate()
 	projectile.setup(enemy, stats)
 	_get_container().add_child(projectile)
-	projectile.global_position = global_position + Relief.turret_offset() + Vector2.from_angle(_aim_angle) * SIZE * 0.5
+	projectile.global_position = global_position + Vector2.from_angle(_aim_angle) * SIZE * 0.5
+	# Vue de trois quarts : le tir part du haut de la tour (il reste au sol pour le jeu).
+	projectile.lift = -get_muzzle_offset().y
 
 
 func _draw_shape() -> void:

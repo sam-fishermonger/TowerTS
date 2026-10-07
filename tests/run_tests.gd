@@ -2997,8 +2997,7 @@ func _test_relief() -> void:
 	await process_frame
 	_check(tower != null and items.all(func(d: Variant) -> bool: return not is_instance_valid(d)),
 		"poser une tour abat le décor de sa case")
-	_check(is_equal_approx(tower.global_position.y - (tower.global_position + Relief.turret_offset()).y,
-		Relief.TOWER_HEIGHT + 6.0), "les tirs partent de la tourelle, au-dessus du socle")
+	_check(tower.get_muzzle_offset().y < -30.0, "les tirs partent du haut de la tour, au-dessus du socle")
 	await _free(level)
 	level = await _spawn_level(LEVEL_02)
 	_check(not Relief.enabled and not level.y_sort_enabled, "les autres niveaux restent vus de dessus")

@@ -14,5 +14,6 @@ func _impact(_hit: Enemy) -> void:
 
 
 func _draw() -> void:
+	_apply_lift()
 	draw_circle(Vector2.ZERO, 6.0, color.darkened(0.3))
 	draw_circle(Vector2.ZERO, 3.0, color)
