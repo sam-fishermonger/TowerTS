@@ -176,6 +176,9 @@ func _spawn_soldier() -> void:
 
 func _draw() -> void:
 	var definition := get_definition(kind)
+	if Relief.enabled:
+		_draw_relief()
+		return
 	if not is_built():
 		draw_icon(self, kind, Vector2.ZERO, SIZE, Color(1, 1, 1, 0.35))
 		_draw_scaffolding()
@@ -186,6 +189,24 @@ func _draw() -> void:
 		var top_left := Vector2(-width / 2.0, SIZE / 2.0 - 2.0)
 		draw_rect(Rect2(top_left, Vector2(width, 4)), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(top_left, Vector2(width * maxf(health, 0.0) / max_health, 4)), definition.color.lightened(0.3))
+
+
+## Vue de trois quarts : le bâtiment debout sur sa case (ou son chantier, avec l'arc doré
+## de l'avancement comme pour une tour), et sa barre de vie au-dessus du toit.
+func _draw_relief() -> void:
+	if not is_built():
+		BuildingRelief.draw_site(self, kind, Vector2.ZERO)
+		var radius := SIZE * 0.62
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(0, 0, 0, 0.45), 5.0)
+		if build_progress > 0.0:
+			draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
+	else:
+		BuildingRelief.draw(self, kind, Vector2.ZERO)
+	if health < max_health:
+		var width := SIZE * 0.8
+		var top_left := Vector2(-width / 2.0, -BuildingRelief.top_height(kind) - 10.0)
+		draw_rect(Rect2(top_left - Vector2.ONE, Vector2(width + 2.0, 6)), Relief.OUTLINE)
+		draw_rect(Rect2(top_left, Vector2(width * maxf(health, 0.0) / max_health, 4)), get_definition(kind).color.lightened(0.3))
 
 
 ## Échafaudage et arc doré du chantier, comme pour une tour.
@@ -201,8 +222,8 @@ func _draw_scaffolding() -> void:
 		draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
 
 
-## Dessin d'un bâtiment, centré sur `center`, dans un carré de côté `size` (carte, barre
-## d'achat, lexique).
+## Dessin d'un bâtiment vu de dessus, centré sur `center`, dans un carré de côté `size`
+## (carte à plat, barre d'achat, lexique ; la vue de trois quarts dessine BuildingRelief).
 static func draw_icon(canvas: CanvasItem, building_kind: int, center: Vector2, size: float,
 		modulate := Color.WHITE) -> void:
 	var color: Color = get_definition(building_kind).color * modulate

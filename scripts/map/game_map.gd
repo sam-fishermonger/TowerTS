@@ -134,6 +134,11 @@ func is_cell_buildable(cell: Vector2i) -> bool:
 func occupy(cell: Vector2i, node: Node) -> void:
 	_occupants[cell] = node
 	# Vue de trois quarts : la tour abat les arbres et les buissons de sa case.
+	_clear_decor(cell)
+
+
+## Vue de trois quarts : abat le décor d'une case (sauf son rocher).
+func _clear_decor(cell: Vector2i) -> void:
 	for item in _decor_by_cell.get(cell, []):
 		if is_instance_valid(item):
 			item.queue_free()
@@ -152,6 +157,7 @@ func get_occupant(cell: Vector2i) -> Node:
 ## dessiné par le mode lui-même).
 func block_cell(cell: Vector2i) -> void:
 	_blocked[cell] = true
+	_clear_decor(cell)
 
 
 ## Retire le rocher d'une case (mode Conquête : il a été miné) : la case devient
