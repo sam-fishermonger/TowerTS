@@ -75,6 +75,7 @@ func _run() -> void:
 	# Progression à part, vidée à chaque lancement : les tests ne touchent pas à celle du joueur.
 	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_progress.cfg")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Progress.clear_cache()
 	# Les textes vérifiés sont ceux du jeu en français, quelle que soit la langue du système.
 	GameSettings.apply_language()
 	await _test_title_screen()
@@ -373,6 +374,11 @@ func _test_progress() -> void:
 	var saved := ConfigFile.new()
 	_check(saved.load(Progress.get_save_path()) == OK and saved.get_value("stars", LEVEL_01.resource_path) == 2,
 		"la progression est enregistrée sur le disque")
+	# La progression est gardée en mémoire : modifier une valeur lue ne la change pas.
+	var scores := Progress.get_daily_scores()
+	scores["copie"] = 1
+	_check(not Progress.get_daily_scores().has("copie") and Progress.get_stars(LEVEL_01.resource_path) == 2,
+		"les valeurs lues sont des copies de la progression en mémoire")
 	var screen := await _spawn_world_select()
 	_check(screen.get_level_button(LEVEL_01.resource_path).text == "1-1\n★★☆"
 		and not screen.get_level_button(LEVEL_02.resource_path).disabled,
@@ -2905,6 +2911,7 @@ func _test_achievements() -> void:
 	var save_path := Progress.get_save_path()
 	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_achievements.cfg")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Progress.clear_cache()
 	var ids := Achievements.LIST.map(func(d: Dictionary) -> String: return d.id)
 	_check(ids.size() >= 20 and ids.all(func(id: String) -> bool: return ids.count(id) == 1),
 		"%d succès, chacun son identifiant" % ids.size())
@@ -2976,6 +2983,7 @@ func _test_achievements() -> void:
 		"le bouton Succès de l'écran titre donne le compte")
 	await _free(title)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Progress.clear_cache()
 	Engine.set_meta(Progress.SAVE_PATH_META, save_path)
 
 

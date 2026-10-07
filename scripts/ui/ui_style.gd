@@ -96,9 +96,12 @@ static func slot_styles(accent: Color, margin_left := 0.0, margin_right := 0.0) 
 
 
 ## Pose des styles (par état) sur un bouton.
+## Les styles sont posés d'un coup : le bouton ne se recalcule qu'une fois.
 static func apply_styles(button: Button, styles: Dictionary) -> void:
+	button.begin_bulk_theme_override()
 	for state: StringName in styles:
 		button.add_theme_stylebox_override(state, styles[state])
+	button.end_bulk_theme_override()
 
 
 ## Pose les styles de button_styles() sur un bouton.

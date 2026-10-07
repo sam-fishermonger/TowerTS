@@ -11,6 +11,8 @@ enum { RAPIDES, CORIACES, NOMBREUX, OR_SERRE, VIES_COMPTEES, SANS_AMELIORATION, 
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 const TOWERS_DIR := "res://resources/towers/"
+## Méta du moteur : tours qui peuvent être imposées (voir get_tower_pool()).
+const TOWER_POOL_META := &"daily_tower_pool"
 ## Nom et description de chaque règle, dans l'ordre de l'enum.
 const RULE_NAMES: Array[String] = ["Monstres rapides", "Monstres coriaces", "Hordes", "Bourse serrée",
 	"Vies comptées", "Sans amélioration", "Deux tours seulement"]
@@ -58,8 +60,14 @@ var rules: Array[int] = []
 
 ## Défi d'aujourd'hui (date de l'ordinateur).
 static func today() -> DailyChallenge:
+	return for_date(today_key())
+
+
+## Jour d'aujourd'hui (« 2026-10-06 »), sans tirer le défi (l'écran titre n'a besoin que
+## de la date pour montrer le meilleur score).
+static func today_key() -> String:
 	var date := Time.get_date_dict_from_system()
-	return for_date(date_key_of(date.year, date.month, date.day))
+	return date_key_of(date.year, date.month, date.day)
 
 
 static func date_key_of(year: int, month: int, day: int) -> String:
@@ -92,15 +100,23 @@ static func for_date(key: String) -> DailyChallenge:
 		challenge.tower_paths.append(damage.pop_at(rng.randi_range(0, damage.size() - 1)))
 	for i in utility_count:
 		challenge.tower_paths.append(utility.pop_at(rng.randi_range(0, utility.size() - 1)))
-	challenge.tower_paths.sort_custom(func(a: String, b: String) -> bool:
-		return (load(a) as TowerData).cost < (load(b) as TowerData).cost)
+	# Les tours sont chargées une fois, pas à chaque comparaison du tri.
+	var costs := {}
+	for path in challenge.tower_paths:
+		costs[path] = (load(path) as TowerData).cost
+	challenge.tower_paths.sort_custom(func(a: String, b: String) -> bool: return costs[a] < costs[b])
 	return challenge
 
 
 ## Tours qui peuvent être imposées : toutes celles du jeu, en deux listes : celles qui
 ## font des dégâts, et celles qui servent surtout à autre chose (Bobine, Électroaimant).
 ## Un défi impose au plus UTILITY_TOWERS_MAX de ces dernières, et aucune avec deux tours.
+## Les deux listes sont gardées (méta du moteur, en chemins) : les établir charge toutes
+## les tours du jeu.
 static func get_tower_pool() -> Array:
+	if Engine.has_meta(TOWER_POOL_META):
+		var cached: Array = Engine.get_meta(TOWER_POOL_META)
+		return [(cached[0] as Array[String]).duplicate(), (cached[1] as Array[String]).duplicate()]
 	var damage: Array[String] = []
 	var utility: Array[String] = []
 	var files := Array(ResourceLoader.list_directory(TOWERS_DIR))
@@ -109,6 +125,7 @@ static func get_tower_pool() -> Array:
 		var data := load(TOWERS_DIR + file) as TowerData if file.ends_with(".tres") else null
 		if data:
 			(utility if data.is_support() or data.knockback > 0.0 else damage).append(TOWERS_DIR + file)
+	Engine.set_meta(TOWER_POOL_META, [damage.duplicate(), utility.duplicate()])
 	return [damage, utility]
 
 
