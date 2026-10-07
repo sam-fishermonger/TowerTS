@@ -150,7 +150,7 @@ godot --headless --path . --export-release "Android" build/android/TowerTS.apk
   - **Spécialisations**, payées en étoiles infinies : un atout de plus pour chacune des 12 tours de base et des mondes, en trois branches (voir plus bas). Celle d'une tour des mondes demande d'avoir débloqué la tour. La fiche d'une tour rappelle sa spécialisation, déjà comptée dans ses statistiques.
   - **Pouvoirs** : les trois pouvoirs actifs, payés en étoiles (le Gel s'ouvre avec La Fonderie, les Renforts avec La Cité), et sous chacun deux renforts payés en étoiles infinies (voir plus bas).
 
-  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (4 étoiles pour la première amélioration, jusqu'à 17 pour la Cloche funèbre) : l'arbre complet coûte 287 étoiles, sur les 288 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies, et les renforts des pouvoirs 21. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
+  Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (4 étoiles pour la première amélioration, jusqu'à 20 pour la Cloche funèbre) : l'arbre complet coûte 332 étoiles, sur les 336 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies, et les renforts des pouvoirs 21. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies, toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
 - Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle.
@@ -161,9 +161,9 @@ godot --headless --path . --export-release "Android" build/android/TowerTS.apk
 
 | Pouvoir | Prix | Effet | Recharge | Renforts (étoiles infinies) |
 |---|---|---|---|---|
-| **Météores** | ★ 4 | 6 météores tombent l'un après l'autre dans un rayon de 70 pixels autour du point visé ; chacun fait 80 dégâts à tous les ennemis à 46 pixels de son point de chute. | 40 s | **Pluie battante** (∞ 3) : +50 % de dégâts. **Comètes** (∞ 4) : recharge 30 % plus rapide. |
-| **Gel** | ★ 4, avec La Fonderie | Tous les ennemis de la carte s'arrêtent pendant 3 s (ni marche, ni soins, ni renforts appelés). Un boss ne gèle pas : il ralentit de moitié. | 55 s | **Blizzard** (∞ 3) : 2 s de plus. **Engelures** (∞ 4) : les ennemis gelés subissent 30 % de dégâts en plus. |
-| **Renforts** | ★ 5, avec La Cité | 3 soldats (150 vie, 24 dégâts/s) se postent sur le chemin, au plus près du point visé, pendant 20 s. Chacun arrête un ennemi à sa portée et le combat ; l'ennemi retenu le frappe (12 vie/s par vie qu'il coûterait en passant). Les boss ne s'arrêtent pas, mais un soldat libre les frappe au passage. | 45 s | **Vétérans** (∞ 3) : +50 % de vie et de dégâts. **Escouade** (∞ 4) : 2 soldats de plus. |
+| **Météores** | ★ 5 | 6 météores tombent l'un après l'autre dans un rayon de 70 pixels autour du point visé ; chacun fait 80 dégâts à tous les ennemis à 46 pixels de son point de chute. | 40 s | **Pluie battante** (∞ 3) : +50 % de dégâts. **Comètes** (∞ 4) : recharge 30 % plus rapide. |
+| **Gel** | ★ 5, avec La Fonderie | Tous les ennemis de la carte s'arrêtent pendant 3 s (ni marche, ni soins, ni renforts appelés). Un boss ne gèle pas : il ralentit de moitié. | 55 s | **Blizzard** (∞ 3) : 2 s de plus. **Engelures** (∞ 4) : les ennemis gelés subissent 30 % de dégâts en plus. |
+| **Renforts** | ★ 6, avec La Cité | 3 soldats (150 vie, 24 dégâts/s) se postent sur le chemin, au plus près du point visé, pendant 20 s. Chacun arrête un ennemi à sa portée et le combat ; l'ennemi retenu le frappe (12 vie/s par vie qu'il coûterait en passant). Les boss ne s'arrêtent pas, mais un soldat libre les frappe au passage. | 45 s | **Vétérans** (∞ 3) : +50 % de vie et de dégâts. **Escouade** (∞ 4) : 2 soldats de plus. |
 
 Un pouvoir est une ressource `Power` (`resources/powers/`). L'amélioration qui le débloque a son chemin dans `unlocks_power`, et celles qui le renforcent dans `improves_power`, avec les champs du groupe **Pouvoirs** de `Perk` (dégâts, recharge, durée, nombre, vulnérabilité).
 
@@ -252,14 +252,14 @@ Chaque monde a deux tours à débloquer dans l'arbre des améliorations (onglet 
 
 | Monde | Tour | Prix | Atout |
 |---|---|---|---|
-| La Ruche | **Lance-flammes** | ★ 6 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
-| La Ruche | **Pesticide** | ★ 9 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
-| La Fonderie | **Brouilleur IEM** | ★ 8 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
-| La Fonderie | **Perforateur** | ★ 12 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
-| La Cité | **Franc-tireur** | ★ 11 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
-| La Cité | **Lacrymogène** | ★ 14 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
-| La Nécropole | **Encensoir** | ★ 13 | Braises sacrées qui explosent et brûlent, et **consacrent** ce qu'elles touchent : pendant 4 s, un ennemi consacré ne peut plus se relever. |
-| La Nécropole | **Cloche funèbre** | ★ 17 | Sonne le glas toutes les 3 s environ : son onde **étourdit** tous les ennemis à portée pendant 0,7 s, boss compris. |
+| La Ruche | **Lance-flammes** | ★ 7 | Jet de flammes en cône qui touche tout un essaim et le fait brûler. La brûlure passe sous l'armure (Scarabée). |
+| La Ruche | **Pesticide** | ★ 10 | Grenades qui laissent un nuage de poison sur le chemin pendant 4 s ; le poison passe sous l'armure, et les larves d'une Couveuse naissent dedans. |
+| La Fonderie | **Brouilleur IEM** | ★ 9 | Onde qui fait 5 fois plus de dégâts aux boucliers d'énergie, qui ne se rechargent plus pendant 4 s. |
+| La Fonderie | **Perforateur** | ★ 14 | Tir instantané qui traverse tous les ennemis alignés en ignorant leur armure (Chenillard, Titan). |
+| La Cité | **Franc-tireur** | ★ 13 | Vise les soigneurs en premier ; un ennemi touché ne peut plus être soigné, ni soigner, pendant 4 s. |
+| La Cité | **Lacrymogène** | ★ 16 | Grenades dont le nuage ralentit les ennemis et empêche tout soin à l'intérieur. |
+| La Nécropole | **Encensoir** | ★ 15 | Braises sacrées qui explosent et brûlent, et **consacrent** ce qu'elles touchent : pendant 4 s, un ennemi consacré ne peut plus se relever. |
+| La Nécropole | **Cloche funèbre** | ★ 20 | Sonne le glas toutes les 3 s environ : son onde **étourdit** tous les ennemis à portée pendant 0,7 s, boss compris. |
 
 Ces effets se règlent dans la ressource de la tour (`TowerData`, groupes **Effets spéciaux**, **Nuage** et **Flammes**) : brûlure ou poison, coups qui ignorent l'armure, dégâts multipliés sur les boucliers, bouclier brouillé, soins bloqués, priorité aux soigneurs, consécration (`revive_block_duration`). Un ralentissement de 100 % (`slow_factor` à 0) étourdit. N'importe quelle tour peut les combiner. La seconde tour d'une branche demande la première, et la branche ne s'ouvre qu'avec son monde (`required_world` de l'amélioration).
 
@@ -269,11 +269,11 @@ Sous les tours des mondes, l'arbre se croise : chaque croisement demande deux to
 
 | Croisement | Demande | Prix | Effet |
 |---|---|---|---|
-| **Arc électrique** | Pesticide + Perforateur | ★ 14 | Débloque l'Arc électrique : un éclair instantané qui rebondit 3 fois d'ennemi en ennemi (le plus proche pas encore touché, à 110 pixels au plus), avec un quart de dégâts en moins à chaque rebond. +50 % de dégâts sur les boucliers d'énergie. Chaque amélioration ajoute un rebond. |
-| **Bobine** | Perforateur + Lacrymogène | ★ 15 | Débloque la Bobine : elle ne tire pas, mais les tours des 8 cases autour d'elle font 25 % de dégâts en plus et tirent 15 % plus vite (+10 points par amélioration, et la dernière agrandit sa portée). Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte. La fiche d'une tour renforcée le dit. |
-| **Électroaimant** | Arc électrique + Bobine | ★ 15 | Débloque l'Électroaimant : son onde fait reculer de 45 pixels tous les ennemis à portée sur leur chemin. Les gros reculent moins (une Couveuse 30 % de moins), et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s : plusieurs Électroaimants ne le bloquent pas sur place. |
-| **Nuage ionisé** | Pesticide + Arc électrique | ★ 12 | L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie pendant 2,5 s. |
-| **Gaz sous tension** | Lacrymogène + Bobine | ★ 12 | La Bobine ralentit de 25 % les ennemis à sa portée et bloque leurs soins, comme le gaz, et le Lacrymogène tire 20 % plus loin et 25 % plus vite. |
+| **Arc électrique** | Pesticide + Perforateur | ★ 16 | Débloque l'Arc électrique : un éclair instantané qui rebondit 3 fois d'ennemi en ennemi (le plus proche pas encore touché, à 110 pixels au plus), avec un quart de dégâts en moins à chaque rebond. +50 % de dégâts sur les boucliers d'énergie. Chaque amélioration ajoute un rebond. |
+| **Bobine** | Perforateur + Lacrymogène | ★ 17 | Débloque la Bobine : elle ne tire pas, mais les tours des 8 cases autour d'elle font 25 % de dégâts en plus et tirent 15 % plus vite (+10 points par amélioration, et la dernière agrandit sa portée). Plusieurs Bobines ne s'additionnent pas : une tour garde le bonus de la plus forte. La fiche d'une tour renforcée le dit. |
+| **Électroaimant** | Arc électrique + Bobine | ★ 17 | Débloque l'Électroaimant : son onde fait reculer de 45 pixels tous les ennemis à portée sur leur chemin. Les gros reculent moins (une Couveuse 30 % de moins), et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s : plusieurs Électroaimants ne le bloquent pas sur place. |
+| **Nuage ionisé** | Pesticide + Arc électrique | ★ 14 | L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie pendant 2,5 s. |
+| **Gaz sous tension** | Lacrymogène + Bobine | ★ 14 | La Bobine ralentit de 25 % les ennemis à sa portée et bloque leurs soins, comme le gaz, et le Lacrymogène tire 20 % plus loin et 25 % plus vite. |
 
 Un croisement qui échange des effets est une amélioration (`Perk`) avec `crossing`, dont `specializes_tower` reçoit les effets, et `partner_effect` une seconde amélioration avec les effets de l'autre tour (son `specializes_tower`). Comme pour les spécialisations, ces effets ne s'appliquent qu'à leur tour, et la fiche de la tour les rappelle (« Croisement : … »).
 

@@ -235,10 +235,11 @@ func _play_until_over(level: Level, max_game_seconds: float, wait_for_clear := f
 
 ## Joue une partie sans or bonus, comme un joueur prudent : les `tower_count` premières
 ## tours de `build_order` ([case, type] par tour) sont achetées dans l'ordre dès que l'or
-## le permet, et chaque vague n'est lancée qu'une fois la carte vidée. La partie est
-## libérée à la fin ; renvoie { won, lives, bought }.
+## le permet, et chaque vague n'est lancée qu'une fois la carte vidée. Avec `upgrade`, une
+## fois toutes les tours posées, l'or qui reste améliore la tour la moins chère à améliorer.
+## La partie est libérée à la fin ; renvoie { won, lives, bought }.
 func _play_build_order(scene: PackedScene, build_order: Array, tower_count: int,
-		max_game_seconds := 1500.0) -> Dictionary:
+		max_game_seconds := 1500.0, upgrade := false) -> Dictionary:
 	var level := await _spawn_level(scene)
 	var bought := [0]
 	await _play_until_over(level, max_game_seconds, true, func() -> void:
@@ -246,7 +247,15 @@ func _play_build_order(scene: PackedScene, build_order: Array, tower_count: int,
 			var item: Array = build_order[bought[0]]
 			if level.place_tower(item[0], item[1]) == null:
 				_check(false, "achat de la tour %d en %s" % [bought[0] + 1, item[0]])
-			bought[0] += 1)
+			bought[0] += 1
+		if upgrade and bought[0] >= tower_count:
+			var cheapest: Tower = null
+			for tower: Tower in level.towers.get_children():
+				if tower.is_alive and tower.can_upgrade() \
+						and (cheapest == null or tower.get_upgrade_cost() < cheapest.get_upgrade_cost()):
+					cheapest = tower
+			if cheapest and level.gold >= cheapest.get_upgrade_cost():
+				level.upgrade_tower(cheapest))
 	var result := { won = level.is_over and level.lives > 0, lives = level.lives, bought = bought[0] }
 	await _free(level)
 	return result
@@ -438,7 +447,8 @@ func _test_perk_tree() -> void:
 
 func _test_perks_in_level() -> void:
 	print("Arbre des améliorations : effets en jeu")
-	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path])
+	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path,
+		LEVEL_04.resource_path])
 	for id in ["tresor", "architecte", "brocanteur", "remparts", "infirmerie", "pillage"]:
 		_check(Perks.buy(Perks.TREE.get_perk(id)), "achat : %s" % Perks.TREE.get_perk(id).display_name)
 	var level := await _spawn_level(LEVEL_01)
@@ -481,7 +491,7 @@ func _test_biome_towers_in_tree() -> void:
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
 	var campaign_stars := campaign.size() * Progress.MAX_LEVEL_STARS
-	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.85,
+	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.9,
 		"l'arbre complet (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [tree.get_total_cost(), campaign_stars])
 	_check(tree.get_total_cost() > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
@@ -3131,10 +3141,10 @@ func _test_level_03_with_earned_gold() -> void:
 
 ## Équilibrage d'un niveau : perdu avec les 6 premières tours de la liste, gagné
 ## avec toute la liste, en n'achetant qu'avec l'or gagné.
-func _check_build_order_balance(scene: PackedScene, build_order: Array) -> void:
+func _check_build_order_balance(scene: PackedScene, build_order: Array, upgrade := false) -> void:
 	var small := await _play_build_order(scene, build_order, 6)
 	_check(not small.won and small.lives == 0, "perdu avec 6 tours seulement")
-	var full := await _play_build_order(scene, build_order, build_order.size())
+	var full := await _play_build_order(scene, build_order, build_order.size(), 1500.0, upgrade)
 	_check(full.won, "la partie est gagnée (vies restantes : %d, tours achetées : %d)" % [full.lives, full.bought])
 
 
@@ -3392,9 +3402,29 @@ func _test_world_levels_balance() -> void:
 	for path: String in WORLD_BUILD_ORDERS:
 		var scene: PackedScene = load(path)
 		var level: Level = scene.instantiate()
-		print("%s : gagnable avec l'or gagné, mais pas avec une petite défense" % level.level_name)
+		print("%s : gagnable avec l'or gagné et l'arbre d'un joueur arrivé là (tours améliorées), mais pas avec une petite défense"
+			% level.level_name)
 		level.free()
-		await _check_build_order_balance(scene, WORLD_BUILD_ORDERS[path])
+		_grant_campaign_perks(path)
+		await _check_build_order_balance(scene, WORLD_BUILD_ORDERS[path], true)
+	Progress.reset_campaign()
+
+
+## Améliorations d'un joueur qui a gagné en Moyen, avec 3 étoiles, les niveaux de la
+## campagne avant `path`, et qui a acheté les moins chères d'abord.
+func _grant_campaign_perks(path: String) -> void:
+	Progress.reset_campaign()
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	for i in campaign.levels.find(path):
+		Progress.record_victory(campaign.levels[i], 3)
+	while true:
+		var cheapest: Perk = null
+		for perk in Perks.TREE.perks:
+			if not perk.paid_with_endless_stars and Perks.can_buy(perk) and (cheapest == null or perk.cost < cheapest.cost):
+				cheapest = perk
+		if cheapest == null:
+			return
+		Perks.buy(cheapest)
 
 
 func _test_level_editor() -> void:

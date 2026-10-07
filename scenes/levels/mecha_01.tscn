@@ -39,6 +39,7 @@ start_delay = 4.0
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w1_1"), SubResource("Group_w1_2")])
 bonus_gold = 15
+health_multiplier = 0.6
 
 [sub_resource type="Resource" id="Group_w2_1"]
 script = ExtResource("4_spawn_group")
@@ -67,6 +68,7 @@ elite = true
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2"), SubResource("Group_w2_elite")])
 bonus_gold = 20
+health_multiplier = 0.66
 
 [sub_resource type="Resource" id="Group_w3_1"]
 script = ExtResource("4_spawn_group")
@@ -86,6 +88,7 @@ start_delay = 4.0
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2")])
 bonus_gold = 25
+health_multiplier = 0.72
 
 [sub_resource type="Resource" id="Group_w4_1"]
 script = ExtResource("4_spawn_group")
@@ -98,6 +101,7 @@ start_delay = 0.0
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1")])
 bonus_gold = 30
+health_multiplier = 0.78
 
 [sub_resource type="Resource" id="Group_w5_1"]
 script = ExtResource("4_spawn_group")
@@ -119,6 +123,7 @@ elite = true
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_elite")])
 bonus_gold = 35
+health_multiplier = 0.84
 
 [sub_resource type="Resource" id="Group_w6_1"]
 script = ExtResource("4_spawn_group")
@@ -145,6 +150,7 @@ start_delay = 8.0
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3")])
 bonus_gold = 0
+health_multiplier = 0.9
 
 [node name="Mecha01" instance=ExtResource("1_level")]
 level_name = "Niveau 2-1"
