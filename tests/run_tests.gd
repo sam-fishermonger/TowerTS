@@ -157,6 +157,7 @@ func _run() -> void:
 	await _test_achievements()
 	await _test_biome_tiles()
 	await _test_relief()
+	await _test_sprite_cache()
 	await _test_level_03_with_earned_gold()
 	await _test_levels_04_to_06_maps()
 	await _test_levels_04_to_06_with_earned_gold()
@@ -3021,6 +3022,44 @@ func _test_relief() -> void:
 	level = await _spawn_level(LEVEL_02, false)
 	_check(not Relief.enabled and not level.y_sort_enabled, "la vue de dessus reste possible (relief décoché)")
 	await _free(level)
+
+
+## Planches des monstres et des tours (SpriteCache) : sans affichage, rien n'est dessiné
+## d'habitude ; on fait ici comme si le jeu était affiché.
+func _test_sprite_cache() -> void:
+	print("Planches des monstres et des tours")
+	Relief.headless = false
+	var level := await _spawn_level(LEVEL_01)
+	var enemy := _add_still_enemy(level, SCARABEE, 0, 200.0)
+	_check(Creature.get_sheet(SCARABEE) == null, "la planche d'un monstre n'est pas prête tout de suite")
+	for i in SpriteCache.BAKE_FRAMES + 1:
+		await process_frame
+	var sheet := Creature.get_sheet(SCARABEE)
+	_check(sheet != null and enemy.material == SpriteCache.get_material(), "puis le monstre la recopie")
+	_check(sheet != null and Creature.get_sheet(SCARABEE.duplicate()) == sheet,
+		"une copie du même monstre partage sa planche")
+	_check(sheet != null and sheet.viewport.size.x <= SpriteCache.MAX_SHEET_WIDTH
+		and sheet.origin.y / sheet.scale >= Creature.top_height(SCARABEE),
+		"la planche tient sur un téléphone et le monstre y tient en entier")
+	_check(Creature.walk_frame(0.0) == 0 and Creature.walk_frame(Creature.WALK_STEP * (Creature.WALK_FRAMES + 1) + 1.0) == 1,
+		"la marche boucle sur ses images")
+	var redraws := [0]
+	enemy.draw.connect(func() -> void: redraws[0] += 1)
+	enemy._set_heading(0.3)
+	await process_frame
+	_check(redraws[0] == 0, "un virage ne redessine pas le monstre")
+	enemy._set_heading(PI)
+	await process_frame
+	_check(redraws[0] == 1, "il se redessine quand il se retourne")
+	level.gold = 1000
+	level.place_tower(Vector2i(5, 5), CANNON)
+	await process_frame
+	for i in SpriteCache.BAKE_FRAMES + 1:
+		await process_frame
+	_check(TowerRelief._get_base_sheet(CANNON, 0) != null, "le donjon d'une tour a sa planche")
+	await _free(level)
+	SpriteCache._instance.clear()
+	Relief.headless = true
 
 
 func _ground_tiles(layer: TileMapLayer) -> Array:

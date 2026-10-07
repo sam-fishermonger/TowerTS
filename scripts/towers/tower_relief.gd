@@ -30,13 +30,33 @@ static func weapon_of(data: TowerData) -> String:
 
 static func draw(canvas: CanvasItem, data: TowerData, foot: Vector2, aim := -PI / 2.0, tint := Color.WHITE,
 		upgrades := 0) -> void:
-	var deck := Relief.draw_plinth(canvas, foot, tint)
-	var top := _draw_keep(canvas, deck + Vector2(0, 2), data.color, tint, upgrades)
-	_draw_merlons(canvas, top, tint, true)
+	# Le socle et le donjon ne bougent pas : ceux des tours posées sont dessinés une fois
+	# dans une planche (SpriteCache), l'arme qui pivote reste dessinée en code.
+	var sheet := _get_base_sheet(data, upgrades) if tint == Color.WHITE else null
+	var top: Vector2
+	if sheet:
+		sheet.draw(canvas, 0, foot)
+		top = foot + Vector2(0, 1.0 - KEEP_HEIGHT - LEVEL_HEIGHT * upgrades)
+	else:
+		top = _draw_base(canvas, data, foot, tint, upgrades)
 	_draw_merlons(canvas, top, tint, false)
 	_draw_weapon(canvas, data, top + Vector2(0, -8), aim if data.turret_rotates else -PI / 2.0, tint)
 	if upgrades >= 2:
 		_draw_banner(canvas, top + Vector2(-KEEP_RX + 2, -2), data.color, tint)
+
+
+## Socle, donjon et créneaux du fond. Renvoie le centre du sommet du donjon.
+static func _draw_base(canvas: CanvasItem, data: TowerData, foot: Vector2, tint: Color, upgrades: int) -> Vector2:
+	var deck := Relief.draw_plinth(canvas, foot, tint)
+	var top := _draw_keep(canvas, deck + Vector2(0, 2), data.color, tint, upgrades)
+	_draw_merlons(canvas, top, tint, true)
+	return top
+
+
+static func _get_base_sheet(data: TowerData, upgrades: int) -> SpriteCache.Sheet:
+	return SpriteCache.get_sheet("tower %s %d" % [data.color, upgrades], 1, Rect2(-44, -64, 92, 94),
+		func(canvas: CanvasItem, _index: int) -> void:
+			_draw_base(canvas, data, Vector2.ZERO, Color.WHITE, upgrades))
 
 
 ## Donjon : cylindre de pierre, joints des pierres, bande de la couleur de la tour sous

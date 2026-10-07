@@ -17,6 +17,8 @@ const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
 const HEAL_COLOR := Color(0.45, 1.0, 0.55)
 ## Durée de l'onde verte dessinée autour d'un soigneur quand il soigne.
 const HEAL_PULSE_DURATION := 0.5
+## Soigneur qui n'a trouvé personne à soigner : secondes avant de chercher de nouveau.
+const HEAL_RETRY := 0.1
 ## Une brûlure ou un poison frappe à ce rythme, en secondes.
 const DOT_TICK := 0.5
 const HEAL_BLOCK_COLOR := Color(0.9, 0.25, 0.3)
@@ -37,6 +39,9 @@ const FROZEN_COLOR := Color(0.7, 0.92, 1.0)
 ## Volants : décalage de l'ombre portée au sol, et transparence d'un furtif caché.
 const FLYING_SHADOW_OFFSET := Vector2(7.0, 12.0)
 const HIDDEN_ALPHA := 0.3
+## Furtif caché dessiné d'une seule image (Creature.get_sheet()) : ses formes ne se
+## superposent plus en s'opacifiant, il lui faut un peu plus d'opacité pour être aussi visible.
+const HIDDEN_SPRITE_ALPHA := 0.45
 ## Groupe des tours qui détectent les furtifs (Tower.DETECTOR_GROUP).
 const DETECTOR_GROUP := "stealth_detectors"
 const FLIGHT_CURVE_META := &"flight_curve"
@@ -192,6 +197,8 @@ func _ready() -> void:
 	health_bar.position = Vector2(0, -data.radius - 8.0)
 	if Relief.enabled:
 		health_bar.position.y = -Creature.top_height(data) - 6.0
+		if not Relief.headless and SpriteCache.enabled:
+			material = SpriteCache.get_material()
 	if data.flying:
 		# Il vole au-dessus des tours et des autres monstres.
 		z_index = 1
@@ -201,7 +208,7 @@ func _ready() -> void:
 		_curve = get_flight_curve(path) if data.flying else path.curve
 	_path_length = _curve.get_baked_length()
 	if data.stealthy:
-		modulate.a = HIDDEN_ALPHA
+		modulate.a = _hidden_alpha()
 		_update_detection()
 	_update_position()
 
@@ -450,8 +457,10 @@ func _update_healing(delta: float) -> void:
 	for enemy in get_alive_in_radius(get_tree(), global_position, data.heal_radius):
 		if enemy != self and enemy.can_be_healed() and enemy.health.health < enemy.health.max_health:
 			patients.append(enemy)
-	# Personne à soigner : il réessaie à l'image suivante, sans attendre.
+	# Personne à soigner : il regarde de nouveau un peu plus tard (chercher à chaque
+	# image, parmi tous les monstres, coûte cher quand ils sont nombreux).
 	if patients.is_empty():
+		_heal_cooldown = HEAL_RETRY
 		return
 	_heal_cooldown = data.heal_interval
 	_summon_cooldown = data.summon_interval
@@ -516,10 +525,7 @@ func _move_toward(point: Vector2, step: float) -> bool:
 	if offset.length() <= step:
 		global_position = point
 		return true
-	var heading := offset.angle()
-	if not is_equal_approx(heading, _heading):
-		_heading = heading
-		queue_redraw()
+	_set_heading(offset.angle())
 	global_position += offset.normalized() * step
 	return false
 
@@ -534,12 +540,16 @@ func _update_detection() -> void:
 			break
 	if revealed != _revealed:
 		_revealed = revealed
-		modulate.a = 1.0 if revealed else HIDDEN_ALPHA
+		modulate.a = 1.0 if revealed else _hidden_alpha()
 		queue_redraw()
 
 
+func _hidden_alpha() -> float:
+	return HIDDEN_SPRITE_ALPHA if material == SpriteCache.get_material() else HIDDEN_ALPHA
+
+
 ## Vue de trois quarts : distance parcourue entre deux dessins de la marche.
-const ANIMATION_STEP := 4.0
+const ANIMATION_STEP := Creature.WALK_STEP
 var _animation_step := -1
 
 
@@ -553,10 +563,7 @@ func _update_position() -> void:
 	global_position = path.to_global(point + offset)
 	var ahead := _curve.sample_baked(minf(progress + 4.0, _path_length))
 	if not ahead.is_equal_approx(point):
-		var heading := point.angle_to_point(ahead)
-		if not is_equal_approx(heading, _heading):
-			_heading = heading
-			queue_redraw()
+		_set_heading(point.angle_to_point(ahead))
 	if Relief.enabled and not Relief.headless:
 		# Ses pattes bougent en marchant : un dessin tous les quelques pixels suffit (le
 		# dessin en volume coûte cher, le déplacement, lui, ne demande pas de redessiner).
@@ -564,6 +571,22 @@ func _update_position() -> void:
 		if step != _animation_step:
 			_animation_step = step
 			queue_redraw()
+
+
+## Change la direction de la marche. Vue de dessus, l'image tourne avec elle ; en trois
+## quarts, le monstre ne fait que regarder à gauche ou à droite : il ne se redessine que
+## quand il se retourne (et pas à chaque virage).
+func _set_heading(heading: float) -> void:
+	if is_equal_approx(heading, _heading):
+		return
+	var turned := _is_facing_left(heading) != _is_facing_left(_heading)
+	_heading = heading
+	if turned or not Relief.enabled:
+		queue_redraw()
+
+
+static func _is_facing_left(heading: float) -> bool:
+	return cos(heading) < -0.1
 
 
 func _on_health_depleted() -> void:
@@ -632,7 +655,11 @@ func _draw() -> void:
 func _draw_relief() -> void:
 	var body := Vector2(0, -Creature.body_height(data))
 	var u := Creature.unit(data)
-	Creature.draw_shadow(self, data)
+	var sheet := Creature.get_sheet(data)
+	if sheet:
+		sheet.draw(self, Creature.SHADOW_FRAME)
+	else:
+		Creature.draw_shadow(self, data)
 	var ground := Vector2(1.0, Relief.GROUND_SQUASH * 0.6)
 	if data.is_elite or data.is_boss:
 		var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
@@ -649,8 +676,12 @@ func _draw_relief() -> void:
 		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), u * 1.5, u * 1.5 * ground.y, 0.0, TAU, 24),
 			Color(RAID_COLOR, 0.18 if not is_raiding() else 0.32))
 	var tint := Color(0.6, 0.8, 1.0) if is_slowed() or is_frozen() else Color.WHITE
-	var facing_left := cos(_heading) < -0.1
-	Creature.draw(self, data, facing_left, progress if not is_frozen() else 0.0, tint)
+	var facing_left := _is_facing_left(_heading)
+	var phase := progress if not is_frozen() else 0.0
+	if sheet:
+		sheet.draw(self, Creature.walk_frame(phase), Vector2.ZERO, facing_left, tint)
+	else:
+		Creature.draw(self, data, facing_left, phase, tint)
 	if is_burning():
 		draw_circle(body, u * 1.1, Color(_dot_color, 0.3), true, -1.0, true)
 	if data.max_shield > 0.0 and health.shield > 0.0:
