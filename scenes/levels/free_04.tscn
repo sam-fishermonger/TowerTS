@@ -39,6 +39,7 @@ path_index = 1
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w1_1"), SubResource("Group_w1_2")])
 bonus_gold = 20
+health_multiplier = 1.0
 
 [sub_resource type="Resource" id="Group_w2_1"]
 script = ExtResource("4_spawn_group")
@@ -60,6 +61,7 @@ path_index = 0
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w2_1"), SubResource("Group_w2_2")])
 bonus_gold = 25
+health_multiplier = 1.25
 
 [sub_resource type="Resource" id="Group_w3_1"]
 script = ExtResource("4_spawn_group")
@@ -72,7 +74,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w3_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_squelette")
-count = 10
+count = 11
 interval = 0.8
 start_delay = 0.0
 path_index = 2
@@ -81,6 +83,7 @@ path_index = 2
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2")])
 bonus_gold = 25
+health_multiplier = 1.5
 
 [sub_resource type="Resource" id="Group_w4_1"]
 script = ExtResource("4_spawn_group")
@@ -93,7 +96,7 @@ path_index = 0
 [sub_resource type="Resource" id="Group_w4_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_goule")
-count = 10
+count = 11
 interval = 0.5
 start_delay = 3.0
 path_index = 2
@@ -102,6 +105,7 @@ path_index = 2
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2")])
 bonus_gold = 25
+health_multiplier = 1.75
 
 [sub_resource type="Resource" id="Group_w5_1"]
 script = ExtResource("4_spawn_group")
@@ -114,7 +118,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w5_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_squelette")
-count = 12
+count = 14
 interval = 0.7
 start_delay = 0.0
 path_index = 2
@@ -123,11 +127,12 @@ path_index = 2
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w5_1"), SubResource("Group_w5_2")])
 bonus_gold = 30
+health_multiplier = 2.0
 
 [sub_resource type="Resource" id="Group_w6_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chevalier")
-count = 6
+count = 7
 interval = 1.4
 start_delay = 0.0
 path_index = 2
@@ -135,7 +140,7 @@ path_index = 2
 [sub_resource type="Resource" id="Group_w6_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_momie")
-count = 5
+count = 6
 interval = 1.8
 start_delay = 0.0
 path_index = 0
@@ -144,6 +149,7 @@ path_index = 0
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2")])
 bonus_gold = 30
+health_multiplier = 2.25
 
 [sub_resource type="Resource" id="Group_w7_1"]
 script = ExtResource("4_spawn_group")
@@ -156,7 +162,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w7_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_goule")
-count = 14
+count = 17
 interval = 0.5
 start_delay = 0.0
 path_index = 0
@@ -164,7 +170,7 @@ path_index = 0
 [sub_resource type="Resource" id="Group_w7_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chevalier")
-count = 6
+count = 7
 interval = 1.4
 start_delay = 4.0
 path_index = 2
@@ -173,11 +179,12 @@ path_index = 2
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3")])
 bonus_gold = 35
+health_multiplier = 2.5
 
 [sub_resource type="Resource" id="Group_w8_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_abomination")
-count = 3
+count = 4
 interval = 4.0
 start_delay = 0.0
 path_index = 2
@@ -185,7 +192,7 @@ path_index = 2
 [sub_resource type="Resource" id="Group_w8_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_momie")
-count = 8
+count = 10
 interval = 1.2
 start_delay = 0.0
 path_index = 0
@@ -193,7 +200,7 @@ path_index = 0
 [sub_resource type="Resource" id="Group_w8_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_charogne")
-count = 4
+count = 5
 interval = 2.0
 start_delay = 0.0
 path_index = 1
@@ -202,6 +209,7 @@ path_index = 1
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubResource("Group_w8_2"), SubResource("Group_w8_3")])
 bonus_gold = 35
+health_multiplier = 2.75
 
 [sub_resource type="Resource" id="Group_w9_1"]
 script = ExtResource("4_spawn_group")
@@ -214,7 +222,7 @@ path_index = 1
 [sub_resource type="Resource" id="Group_w9_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_chevalier")
-count = 8
+count = 10
 interval = 1.2
 start_delay = 0.0
 path_index = 0
@@ -222,7 +230,7 @@ path_index = 0
 [sub_resource type="Resource" id="Group_w9_3"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_squelette")
-count = 16
+count = 20
 interval = 0.5
 start_delay = 4.0
 path_index = 2
@@ -231,6 +239,7 @@ path_index = 2
 script = ExtResource("3_wave_data")
 groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w9_1"), SubResource("Group_w9_2"), SubResource("Group_w9_3")])
 bonus_gold = 0
+health_multiplier = 3.0
 
 [node name="Free04" instance=ExtResource("1_level")]
 level_name = "Le Cimetière"
