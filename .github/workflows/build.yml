@@ -1,6 +1,6 @@
 name: Build
 
-# Construit le jeu pour Windows, Linux et le navigateur.
+# Construit le jeu pour Windows, Linux, le navigateur et Android (APK).
 # - À chaque push sur main : les fichiers sont publiés dans la pré-release « derniere-version ».
 # - À chaque tag v* (ex. v0.3) : une vraie Release du même nom est créée.
 # - Sur une PR ou en lancement manuel : les fichiers restent en artefacts du run.
@@ -49,9 +49,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.TEMPLATES_DIR }}
-          key: godot-templates-${{ env.GODOT_VERSION }}
+          key: godot-templates-${{ env.GODOT_VERSION }}-android
 
-      # L'archive officielle pèse 1,3 Go : on n'en garde que les trois modèles utilisés.
+      # L'archive officielle pèse 1,3 Go : on n'en garde que les quatre modèles utilisés.
       - name: Télécharger les modèles d'export
         if: steps.cache-templates.outputs.cache-hit != 'true'
         run: |
@@ -63,24 +63,51 @@ jobs:
             templates/windows_release_x86_64.exe \
             templates/linux_release.x86_64 \
             templates/web_nothreads_release.zip \
+            templates/android_release.apk \
             -d ${{ env.TEMPLATES_DIR }}
           rm /tmp/templates.tpz
+
+      # L'APK est signé avec une clé de test commitée (tools/android/) : elle ne protège
+      # rien, mais reste la même d'une version à l'autre, ce qui permet d'installer une
+      # mise à jour par-dessus l'ancienne sans perdre la progression. Le SDK Android
+      # (apksigner) est déjà sur les machines GitHub ; Godot le cherche dans ~/Android/Sdk.
+      - name: Préparer l'export Android
+        run: |
+          mkdir -p ~/Android
+          ln -sfn "$ANDROID_HOME" ~/Android/Sdk
+          # Numéro de version : celui du tag (v0.4.0 -> 0.4.0), et un code qui augmente
+          # à chaque construction, comme Android l'exige pour une mise à jour.
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION_NAME="${GITHUB_REF_NAME#v}"
+          else
+            VERSION_NAME="0.0.${GITHUB_RUN_NUMBER}"
+          fi
+          sed -i "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/; s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg
+          grep -E "^version/" export_presets.cfg
 
       - name: Importer le projet
         run: ~/godot/godot --headless --import --path .
 
       - name: Exporter
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ github.workspace }}/tools/android/towerts-debug.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: android
         run: |
-          mkdir -p build/windows build/linux build/web dist
+          mkdir -p build/windows build/linux build/web build/android dist
           ~/godot/godot --headless --path . --export-release "Windows" build/windows/TowerTS.exe
           ~/godot/godot --headless --path . --export-release "Linux" build/linux/TowerTS.x86_64
           ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          ~/godot/godot --headless --path . --export-release "Android" build/android/TowerTS.apk
           test -s build/windows/TowerTS.exe
           test -s build/linux/TowerTS.x86_64
           test -s build/web/index.wasm
+          test -s build/android/TowerTS.apk
           (cd build/windows && zip -q ../../dist/TowerTS-windows.zip TowerTS.exe)
           (cd build/linux && zip -q ../../dist/TowerTS-linux.zip TowerTS.x86_64)
           (cd build/web && zip -qr ../../dist/TowerTS-web.zip .)
+          # L'APK n'est pas zippé : le téléphone l'installe tel quel.
+          cp build/android/TowerTS.apk dist/TowerTS-android.apk
           ls -la dist
 
       - uses: actions/upload-artifact@v4
@@ -98,17 +125,22 @@ jobs:
           name: TowerTS-web
           path: build/web/
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TowerTS-android
+          path: build/android/TowerTS.apk
+
       - name: Publier la dernière version de main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete derniere-version --cleanup-tag --yes || true
-          gh release create derniere-version dist/*.zip \
+          gh release create derniere-version dist/* \
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "Dernière version (main)" \
-            --notes "Construite automatiquement depuis le commit $GITHUB_SHA de main. Windows : décompresser puis lancer TowerTS.exe. Linux : décompresser puis lancer TowerTS.x86_64. Web : à mettre sur un hébergeur (itch.io, GitHub Pages…)."
+            --notes "Construite automatiquement depuis le commit $GITHUB_SHA de main. Windows : décompresser puis lancer TowerTS.exe. Linux : décompresser puis lancer TowerTS.x86_64. Web : à mettre sur un hébergeur (itch.io, GitHub Pages…). Android : ouvrir TowerTS-android.apk depuis le téléphone et autoriser l'installation."
 
       - name: Publier la Release du tag
         if: startsWith(github.ref, 'refs/tags/v')
@@ -118,7 +150,7 @@ jobs:
           # La release peut déjà exister si elle a été créée depuis la page GitHub :
           # on y joint alors les fichiers au lieu d'échouer.
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.zip --title "TowerTS $GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" dist/* --title "TowerTS $GITHUB_REF_NAME" --generate-notes
           fi
