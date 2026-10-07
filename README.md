@@ -2,6 +2,19 @@
 
 Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.org/) (GDScript).
 
+| | |
+|:-:|:-:|
+| ![Écran titre](docs/captures/titre.webp) | ![Choix du monde](docs/captures/mondes.webp) |
+| Écran titre : une partie se joue derrière le menu | Quatre mondes de six niveaux, en quatre difficultés |
+| ![La Ruche](docs/captures/ruche.webp) | ![La Fonderie](docs/captures/fonderie.webp) |
+| La Ruche : insectoïdes et xénomorphes | La Fonderie : robots blindés et boucliers |
+| ![La Cité](docs/captures/cite.webp) | ![La Nécropole](docs/captures/necropole.webp) |
+| La Cité : soldats, gardes et médecins | La Nécropole : morts-vivants |
+| ![Mode Conquête](docs/captures/conquete.webp) | ![Améliorations](docs/captures/ameliorations.webp) |
+| Mode Conquête : ouvriers, pierre et essence | Les étoiles achètent des améliorations |
+| ![Éditeur de niveau](docs/captures/editeur.webp) | |
+| Éditeur de niveau, partage par code | |
+
 ## Prérequis
 
 - Godot **4.7.2-stable** (version standard, pas .NET) : https://godotengine.org/download
@@ -317,6 +330,16 @@ godot --headless --fixed-fps 60 --path . -s res://tests/run_tests.gd
 
 `--fixed-fps 60` fait avancer le jeu du même pas à chaque image : les parties simulées donnent alors toujours le même résultat, quelle que soit la machine.
 
+## Captures d'écran
+
+Les captures du haut de cette page (`docs/captures/`) sont prises par le jeu lui-même : après un changement visible (nouvel écran, nouveau monde, nouveau style), les refaire et les committer avec le changement.
+
+```
+godot --path . --resolution 1280x800 -s res://tools/captures.gd
+```
+
+Il faut une fenêtre : sur une machine sans écran, préfixer par `xvfb-run -a -s "-screen 0 1280x800x24"`. Ajouter `-- titre` (ou un autre nom) ne refait que cette capture. Le script utilise sa propre sauvegarde, effacée à la fin, avec la progression d'un joueur qui a fini le premier monde : celle du joueur n'est pas touchée. Pour ajouter une capture, ajouter une ligne à `SHOTS` dans `tools/captures.gd`, puis l'image au tableau du haut. Le dossier `docs/` a un `.gdignore` : Godot n'importe pas les captures et elles ne partent pas dans le jeu exporté.
+
 ## Architecture
 
 Les objets de jeu héritent de quelques classes de base, et chaque scène ne contient que ce qui lui est propre :
@@ -381,7 +404,8 @@ scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
 scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
 resources/tilesets/  Tuiles de chaque biome (TileSet)
-tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py), textes à traduire (textes_a_traduire.py)
+tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py), textes à traduire (textes_a_traduire.py), captures d'écran (captures.gd)
+docs/captures/       Captures d'écran du README
 translations/        Traductions des textes du jeu (en.po : anglais)
 scripts/save/        Progression enregistrée (Progress), améliorations permanentes achetées (Perks) et succès (Achievements)
 resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
