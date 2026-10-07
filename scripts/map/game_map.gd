@@ -37,10 +37,11 @@ extends Node2D
 @export var path_detail_spacing := 56.0
 
 @export_group("Vue de trois quarts")
-## Vue de trois quarts (prototype) : herbe peinte, chemin de terre aux bords irréguliers,
-## arbres et buissons debout que la pose d'une tour abat, tours et monstres en volume
+## Vue de trois quarts : sol peint, chemin aux bords irréguliers, décor debout du biome
+## (arbres, caisses, tombes…) que la pose d'une tour abat, tours et monstres en volume
 ## triés en profondeur (voir Relief). Le niveau ajoute le décor (populate_decor).
-@export var relief := false
+## Décoché : l'ancienne vue de dessus, en tuiles.
+@export var relief := true
 ## Part des cases éloignées du chemin qui reçoivent un arbre (plus au bord de la carte).
 @export_range(0.0, 1.0) var tree_density := 0.2
 
@@ -52,8 +53,6 @@ const OBSTACLE_ROW := 2
 ## souvent, ceux aux motifs marqués (2 et 6 : grilles, pavés…) rarement.
 const GROUND_WEIGHTS: Array[float] = [8.0, 3.0, 1.0, 3.0, 8.0, 2.0, 1.0, 2.0]
 
-## Terre du chemin en vue de trois quarts.
-const RELIEF_DIRT := Color(0.85, 0.72, 0.5)
 const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/map/base.svg")
 ## Image de rocher en gris clair, teintée avec rock_color.
 const ROCK_TEXTURE: Texture2D = preload("res://assets/sprites/map/rock.svg")
@@ -75,6 +74,13 @@ var _path_details: Array[Dictionary] = []
 var _path_stamps: Array[Vector3] = []
 var _tufts: Array[Dictionary] = []
 var _pebbles: Array[Vector3] = []
+## Pavés (la Cité) et joints des plaques (la Fonderie) : position et sens du chemin.
+var _cobbles: Array[Vector3] = []
+var _seams: Array[Vector4] = []
+var _rocks_by_cell := {}
+var _ground: ColorRect
+## Habillage du monde (BiomeTheme), choisi d'après les tuiles du niveau.
+var _theme: Dictionary = {}
 var _decor_by_cell := {}
 
 
@@ -154,6 +160,9 @@ func remove_rock(cell: Vector2i) -> void:
 	_blocked.erase(cell)
 	blocked_cells.erase(cell)
 	_obstacles.erase(cell)
+	if is_instance_valid(_rocks_by_cell.get(cell)):
+		_rocks_by_cell[cell].queue_free()
+	_rocks_by_cell.erase(cell)
 	queue_redraw()
 
 
@@ -259,7 +268,8 @@ func _tile_texture() -> Texture2D:
 
 # --- Vue de trois quarts -----------------------------------------------------
 
-## Herbe peinte (un shader sous la carte), bords du chemin et touffes d'herbe.
+## Sol peint (un shader sous la carte), bords du chemin, pavés et touffes. Les couleurs
+## viennent du monde (apply_theme), connu une fois les tuiles du niveau posées.
 func _build_relief() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(owner.scene_file_path if owner else String(name))
@@ -275,6 +285,7 @@ func _build_relief() -> void:
 	material.set_shader_parameter("seed", rng.randf())
 	ground.material = material
 	add_child(ground)
+	_ground = ground
 	# Le chemin est fait de ronds dont le rayon varie doucement : ses bords ondulent.
 	var noise := FastNoiseLite.new()
 	noise.seed = rng.randi()
@@ -288,18 +299,45 @@ func _build_relief() -> void:
 			if rng.randf() < 0.05:
 				var side := Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(0.0, path_width * 0.38)
 				_pebbles.append(Vector3(point.x + side.x, point.y + side.y, rng.randf_range(2.0, 4.0)))
+			var ahead := to_local(path.to_global(curve.sample_baked(distance + 2.0)))
+			var angle := point.angle_to_point(ahead) if not ahead.is_equal_approx(point) else 0.0
+			if int(distance) % 12 == 0:
+				for lane in range(-2, 3):
+					var across := Vector2.from_angle(angle + PI / 2.0) * (lane * 9.5 + (3.0 if int(distance) % 24 == 0 else -1.5))
+					_cobbles.append(Vector3(point.x + across.x, point.y + across.y, rng.randf_range(-0.1, 0.1)))
+			if int(distance) % 36 == 0:
+				_seams.append(Vector4(point.x, point.y, angle, 0.0))
 			distance += 6.0
 	for i in columns * rows * 2:
 		var at := grid_origin + Vector2(rng.randf() * columns, rng.randf() * rows) * cell_size
 		if is_cell_on_path(world_to_cell(to_global(at))):
 			continue
-		_tufts.append({"position": at, "flower": rng.randf() < 0.12, "shade": rng.randf_range(-0.12, 0.12)})
+		_tufts.append({"position": at, "flower": rng.randf(), "shade": rng.randf_range(-0.12, 0.12)})
 
 
-## Arbres, buissons et rochers debout, ajoutés à `container` (trié en profondeur avec
-## les tours et les monstres). Les arbres poussent loin du chemin, surtout au bord de la
-## carte ; les buissons le longent.
+## Couleurs et décor du monde de la carte (d'après ses tuiles).
+func apply_theme() -> void:
+	_theme = BiomeTheme.get_theme(BiomeTheme.biome_of(tileset))
+	if _ground:
+		var material := _ground.material as ShaderMaterial
+		material.set_shader_parameter("grass_dark", _theme.grass[0])
+		material.set_shader_parameter("grass", _theme.grass[1])
+		material.set_shader_parameter("grass_light", _theme.grass[2])
+	queue_redraw()
+
+
+func _get_theme() -> Dictionary:
+	if _theme.is_empty():
+		apply_theme()
+	return _theme
+
+
+## Décor debout du monde, ajouté à `container` (trié en profondeur avec les tours et les
+## monstres) : le grand décor (arbres, maisons, cheminées, tombes…) loin du chemin,
+## surtout au bord de la carte, le petit (buissons, caisses…) le long du chemin, et un
+## rocher par case bloquée.
 func populate_decor(container: Node2D) -> void:
+	apply_theme()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(owner.scene_file_path if owner else String(name)) + 1
 	for y in rows:
@@ -318,14 +356,23 @@ func populate_decor(container: Node2D) -> void:
 			var edge := mini(mini(x, columns - 1 - x), mini(y, rows - 1 - y))
 			var tree_chance := 0.0 if near_path else tree_density * (3.0 if edge == 0 else 1.6 if edge == 1 else 1.0)
 			if rng.randf() < tree_chance:
-				var count := rng.randi_range(1, 3 if edge == 0 else 2)
+				var kind := BiomeTheme.pick(_theme.far, rng)
+				# Les grandes pièces (maison, cheminée, termitière) prennent la case à elles seules.
+				var big := kind in [DecorItem.Kind.HOUSE, DecorItem.Kind.CHIMNEY, DecorItem.Kind.HIVE]
+				var count := 1 if big else rng.randi_range(1, 3 if edge == 0 else 2)
 				for i in count:
 					var jitter := Vector2(rng.randf_range(-18, 18), rng.randf_range(-4, 22))
-					_add_decor(container, cell, DecorItem.Kind.TREE, center + jitter, rng,
-						rng.randf_range(0.95, 1.25) if count == 1 else rng.randf_range(0.8, 1.05))
+					if big:
+						jitter = Vector2(rng.randf_range(-6, 2), rng.randf_range(10, 18))
+					_add_decor(container, cell, kind, center + jitter, rng,
+						rng.randf_range(0.95, 1.2) if count == 1 else rng.randf_range(0.8, 1.05))
+					if i == 0 and not big:
+						kind = BiomeTheme.pick(_theme.far, rng)
+						if kind in [DecorItem.Kind.HOUSE, DecorItem.Kind.CHIMNEY, DecorItem.Kind.HIVE]:
+							break
 			elif rng.randf() < (0.22 if near_path else 0.1):
 				var jitter := Vector2(rng.randf_range(-18, 18), rng.randf_range(-10, 20))
-				_add_decor(container, cell, DecorItem.Kind.BUSH, center + jitter, rng, rng.randf_range(0.8, 1.2))
+				_add_decor(container, cell, BiomeTheme.pick(_theme.near, rng), center + jitter, rng, rng.randf_range(0.8, 1.15))
 
 
 func _add_decor(container: Node2D, cell: Vector2i, kind: DecorItem.Kind, at: Vector2, rng: RandomNumberGenerator,
@@ -335,18 +382,22 @@ func _add_decor(container: Node2D, cell: Vector2i, kind: DecorItem.Kind, at: Vec
 	item.scale_factor = size
 	item.shape_seed = rng.randi()
 	item.rock_color = rock_color.lightened(0.3)
+	item.leaves.assign(_get_theme().leaves)
 	item.position = container.to_local(at)
 	container.add_child(item)
-	if kind != DecorItem.Kind.ROCK:
+	if kind == DecorItem.Kind.ROCK:
+		_rocks_by_cell[cell] = item
+	else:
 		if not _decor_by_cell.has(cell):
 			_decor_by_cell[cell] = []
 		_decor_by_cell[cell].append(item)
 
 
-## Chemin de terre : ombre sur l'herbe, bord sombre, terre, puis une bande plus claire au
-## milieu, là où l'on marche.
+## Chemin : ombre sur le sol, bord sombre, terre, puis une bande plus claire au milieu,
+## là où l'on marche ; des pavés à la Cité, des plaques rivetées à la Fonderie.
 func _draw_relief_path() -> void:
-	var dirt := RELIEF_DIRT
+	var theme := _get_theme()
+	var dirt: Color = theme.dirt
 	for stamp in _path_stamps:
 		draw_circle(Vector2(stamp.x, stamp.y + 3.0), stamp.z + 4.0, Color(0.1, 0.16, 0.05, 0.3), true, -1.0, true)
 	for stamp in _path_stamps:
@@ -355,6 +406,24 @@ func _draw_relief_path() -> void:
 		draw_circle(Vector2(stamp.x, stamp.y), stamp.z, dirt, true, -1.0, true)
 	for stamp in _path_stamps:
 		draw_circle(Vector2(stamp.x - 2.0, stamp.y - 3.0), stamp.z * 0.55, dirt.lightened(0.1), true, -1.0, true)
+	match theme.path_style:
+		"cobble":
+			for cobble in _cobbles:
+				var stone := dirt.lerp(Color.WHITE, 0.12 + cobble.z) if int(cobble.x + cobble.y) % 3 else dirt.darkened(0.08)
+				var at := Vector2(cobble.x, cobble.y)
+				draw_colored_polygon(Relief.ellipse(at, 4.6, 3.6, 0.0, TAU, 10), dirt.darkened(0.3))
+				draw_colored_polygon(Relief.ellipse(at - Vector2(0.4, 0.6), 3.8, 2.8, 0.0, TAU, 10), stone)
+			return
+		"plates":
+			for seam in _seams:
+				var across := Vector2.from_angle(seam.z + PI / 2.0) * (path_width / 2.0 - 2.0)
+				var at := Vector2(seam.x, seam.y)
+				draw_line(at - across, at + across, dirt.darkened(0.35), 2.0, true)
+				draw_line(at - across + Vector2(0, 1.5), at + across + Vector2(0, 1.5), dirt.lightened(0.15), 1.0, true)
+				for side in [-0.7, 0.7]:
+					var rivet: Vector2 = at + across * side + Vector2.from_angle(seam.z) * 5.0
+					draw_circle(rivet, 1.8, dirt.darkened(0.4), true, -1.0, true)
+					draw_circle(rivet - Vector2(0.4, 0.5), 0.9, dirt.lightened(0.3), true, -1.0, true)
 	for pebble in _pebbles:
 		var at := Vector2(pebble.x, pebble.y)
 		draw_colored_polygon(Relief.ellipse(at, pebble.z, pebble.z * 0.6, 0.0, TAU, 10), dirt.darkened(0.25))
@@ -362,16 +431,33 @@ func _draw_relief_path() -> void:
 			dirt.lightened(0.25))
 
 
+## Ce qui est semé sur le sol : touffes d'herbe et fleurs, boulons et taches d'huile
+## (la Fonderie), herbe morte et os (la Nécropole).
 func _draw_tufts() -> void:
+	var theme := _get_theme()
 	for tuft in _tufts:
 		var at: Vector2 = tuft.position
-		if tuft.flower:
+		if tuft.flower < theme.flowers:
 			for i in 3:
 				var petal := at + Vector2.from_angle(TAU * i / 3.0) * 2.5
-				draw_circle(petal, 2.2, Color(1.0, 0.95, 0.7))
+				draw_circle(petal, 2.2, theme.flower_color)
 			draw_circle(at, 1.6, Color(1.0, 0.75, 0.2))
 			continue
-		var color := Color(0.25, 0.45, 0.14).lightened(tuft.shade)
+		var color: Color = theme.tuft_color.lightened(tuft.shade)
+		if theme.tufts == "bolts":
+			if tuft.flower > 0.8:
+				draw_colored_polygon(Relief.ellipse(at, 7.0, 3.5, 0.0, TAU, 12), Color(0.08, 0.07, 0.07, 0.35))
+			elif tuft.flower > 0.5:
+				draw_circle(at, 2.2, Color(0.55, 0.55, 0.58), true, -1.0, true)
+				draw_circle(at, 0.9, Color(0.25, 0.25, 0.27), true, -1.0, true)
+			else:
+				draw_line(at, at + Vector2(4, -2), color, 2.0, true)
+			continue
+		if theme.tufts == "dead_grass" and tuft.flower > 0.93:
+			draw_line(at - Vector2(4, 1), at + Vector2(4, -1), Color(0.88, 0.86, 0.78), 2.0, true)
+			for end in [at - Vector2(4, 1), at + Vector2(4, -1)]:
+				draw_circle(end, 1.6, Color(0.88, 0.86, 0.78), true, -1.0, true)
+			continue
 		for i in 3:
 			var x := (i - 1) * 3.0
 			draw_line(at + Vector2(x, 0), at + Vector2(x * 1.6, -6.0 + absf(x) * 0.5), color, 1.5, true)

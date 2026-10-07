@@ -135,9 +135,6 @@ bonus_gold = 0
 level_name = "Niveau 1-1"
 tower_types = Array[ExtResource("5_tower_data")]([ExtResource("6_cannon"), ExtResource("7_gatling"), ExtResource("8_sniper")])
 
-[node name="Map" parent="."]
-relief = true
-
 [node name="EnemyPath" type="Path2D" parent="Map"]
 curve = SubResource("Curve2D_path")
 

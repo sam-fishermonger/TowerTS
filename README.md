@@ -194,9 +194,11 @@ godot --headless --path . -s res://tools/generate_theme.gd
 
 Pour donner la police des titres à un Label d'une scène, mettre `TitreEcran` dans sa propriété « Theme Type Variation ».
 
-### Vue de trois quarts (prototype, niveau 1-1)
+### Vue de trois quarts
 
-Le niveau 1-1 essaie un rendu avec plus de profondeur, façon Kingdom Rush : herbe peinte (`scripts/map/relief_ground.gdshader`), chemin de terre aux bords irréguliers, arbres et buissons debout, tours en petits donjons crénelés sur un socle de pierre, avec leur arme vue de biais (`scripts/towers/tower_relief.gd`), monstres dessinés de profil avec des pattes qui marchent et une ombre juste sous eux (`scripts/enemies/creature.gd`), base en petit château. Tout ce qui se tient debout est trié en profondeur : ce qui est plus bas sur l'écran passe devant. Le jeu reste à plat en dessous (positions, portées, chemins) : seul l'affichage change. Poser une tour abat les arbres et buissons de sa case. La vue s'active sur la carte d'un niveau (propriété `relief` de `Map`), et le dessin est réuni dans `scripts/map/relief.gd` et `scripts/map/decor_item.gd`.
+Toutes les cartes sont dessinées en vue de trois quarts, façon Kingdom Rush. Le sol est peint (`scripts/map/relief_ground.gdshader`) et le chemin a des bords irréguliers. Chaque monde a son décor debout (`scripts/map/biome_theme.gd`, `scripts/map/decor_item.gd`) : arbres, termitières et œufs à La Ruche ; caisses, tonneaux, ferraille et cheminées sur la terre cendrée de La Fonderie, avec un chemin de plaques rivetées ; maisons, réverbères et barrières à La Cité, avec un chemin pavé ; arbres morts, tombes et croix à La Nécropole. Les tours sont de petits donjons crénelés sur un socle de pierre, avec leur arme vue de biais (`scripts/towers/tower_relief.gd`). Les monstres sont dessinés de profil, avec une ombre juste sous eux (`scripts/enemies/creature.gd`). La base est un petit château. Tout ce qui se tient debout est trié en profondeur : ce qui est plus bas sur l'écran passe devant.
+
+Le jeu reste à plat en dessous (positions, portées, chemins) : seul l'affichage change. Poser une tour abat le décor de sa case, sauf les rochers. Décocher la propriété `relief` de `Map` dans un niveau rend l'ancienne vue de dessus, en tuiles.
 
 ## Sons
 

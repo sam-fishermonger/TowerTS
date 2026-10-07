@@ -374,6 +374,12 @@ static func draw_relief(canvas: CanvasItem, tower_data: TowerData, foot: Vector2
 	TowerRelief.draw(canvas, tower_data, foot, aim_angle, tint, upgrades)
 
 
+## Vue de trois quarts : un point de la carte (repère de la tour) vu depuis le haut du
+## donjon, où sont dessinés les effets, soulevé de `height` (le corps d'un monstre).
+func effect_point(local_point: Vector2, height := 10.0) -> Vector2:
+	return local_point - get_muzzle_offset() - Vector2(0, height) if Relief.enabled else local_point
+
+
 ## Vue de trois quarts : d'où partent les tirs et les effets de la tour, en haut du donjon.
 func get_muzzle_offset() -> Vector2:
 	return Vector2(0, -TowerRelief.top_height(level - 1)) if Relief.enabled else Vector2.ZERO

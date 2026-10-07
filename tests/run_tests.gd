@@ -172,9 +172,11 @@ func _check(condition: bool, message: String) -> void:
 		printerr("  ÉCHEC ", message)
 
 
-func _spawn_level(scene: PackedScene) -> Level:
+## `relief` à false : l'ancienne vue de dessus, en tuiles.
+func _spawn_level(scene: PackedScene, relief := true) -> Level:
 	paused = false
 	var level: Level = scene.instantiate()
+	(level.get_node("Map") as GameMap).relief = relief
 	root.add_child(level)
 	await process_frame
 	return level
@@ -2953,8 +2955,8 @@ func _test_biome_tiles() -> void:
 	print("Tuiles des biomes sur les cartes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	_check(campaign.worlds.all(func(w: World) -> bool: return w.tileset != null), "chaque monde a ses tuiles")
-	# Le niveau 1-1 est en vue de trois quarts (sans tuiles) : on regarde le 1-2.
-	var level := await _spawn_level(LEVEL_02)
+	# Les tuiles ne servent qu'à l'ancienne vue de dessus.
+	var level := await _spawn_level(LEVEL_02, false)
 	var map := level.map
 	_check(map.tileset == campaign.worlds[0].tileset, "la carte prend les tuiles de son monde")
 	var ground: TileMapLayer = map.get_node("Sol")
@@ -2967,7 +2969,7 @@ func _test_biome_tiles() -> void:
 		"des cailloux sur le chemin et un obstacle du biome par case bloquée")
 	var first := _ground_tiles(ground)
 	await _free(level)
-	level = await _spawn_level(LEVEL_02)
+	level = await _spawn_level(LEVEL_02, false)
 	_check(_ground_tiles(level.map.get_node("Sol")) == first, "la même carte à chaque partie")
 	await _free(level)
 	level = await _spawn_level(MECHA_01)
@@ -2980,7 +2982,7 @@ func _test_biome_tiles() -> void:
 
 
 func _test_relief() -> void:
-	print("Vue de trois quarts (niveau 1-1)")
+	print("Vue de trois quarts")
 	var level := await _spawn_level(LEVEL_01)
 	var map := level.map
 	_check(map.relief and Relief.enabled and level.y_sort_enabled and level.towers.y_sort_enabled,
@@ -2999,8 +3001,20 @@ func _test_relief() -> void:
 		"poser une tour abat le décor de sa case")
 	_check(tower.get_muzzle_offset().y < -30.0, "les tirs partent du haut de la tour, au-dessus du socle")
 	await _free(level)
-	level = await _spawn_level(LEVEL_02)
-	_check(not Relief.enabled and not level.y_sort_enabled, "les autres niveaux restent vus de dessus")
+	var decors := {}
+	for scene in [LEVEL_02, MECHA_01, HUMANOID_01, load("res://scenes/levels/undead_01.tscn")]:
+		level = await _spawn_level(scene)
+		var kinds := {}
+		for item: DecorItem in level.get_node("Decor").get_children():
+			kinds[item.kind] = true
+		decors[BiomeTheme.biome_of(level.map.tileset)] = kinds
+		await _free(level)
+	_check(decors.keys().size() == 4 and (decors.mecha.has(DecorItem.Kind.CRATE) or decors.mecha.has(DecorItem.Kind.BARREL)),
+		"la Fonderie a ses caisses et ses tonneaux")
+	_check(decors.humanoid.has(DecorItem.Kind.HOUSE) and decors.undead.has(DecorItem.Kind.TOMB)
+		and not decors.undead.has(DecorItem.Kind.HOUSE), "la Cité a ses maisons, la Nécropole ses tombes")
+	level = await _spawn_level(LEVEL_02, false)
+	_check(not Relief.enabled and not level.y_sort_enabled, "la vue de dessus reste possible (relief décoché)")
 	await _free(level)
 
 

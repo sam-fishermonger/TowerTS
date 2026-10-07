@@ -62,8 +62,8 @@ func _draw_effects() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Engine.get_process_frames()
 	for i in _flash_points.size() - 1:
-		var from := to_local(_flash_points[i])
-		var to := to_local(_flash_points[i + 1])
+		var from := effect_point(to_local(_flash_points[i])) if i > 0 else to_local(_flash_points[i])
+		var to := effect_point(to_local(_flash_points[i + 1]))
 		if i == 0:
 			from += from.direction_to(to) * SIZE * 0.4
 		var points := PackedVector2Array([from])

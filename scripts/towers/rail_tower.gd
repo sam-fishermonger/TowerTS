@@ -49,6 +49,7 @@ func _draw_effects() -> void:
 	if _trail_left <= 0.0:
 		return
 	var alpha := _trail_left / TRAIL_DURATION
-	var start := _trail_end.normalized() * SIZE * 0.5
-	draw_line(start, _trail_end, Color(data.color, 0.5 * alpha), 8.0 * alpha + 2.0)
-	draw_line(start, _trail_end, Color(1, 1, 1, alpha), 2.0)
+	var end := effect_point(_trail_end)
+	var start := end.normalized() * SIZE * 0.5
+	draw_line(start, end, Color(data.color, 0.5 * alpha), 8.0 * alpha + 2.0)
+	draw_line(start, end, Color(1, 1, 1, alpha), 2.0)
