@@ -11,6 +11,7 @@ const LEVELS: Array[String] = [
 	"res://scenes/levels/conquest_03.tscn",
 	"res://scenes/levels/conquest_04.tscn",
 	"res://scenes/levels/conquest_05.tscn",
+	"res://scenes/levels/conquest_06.tscn",
 ]
 ## Nom, monde de la campagne (son biome et ses Pillards) et présentation de chaque niveau.
 const INFO: Array[Dictionary] = [
@@ -24,6 +25,8 @@ const INFO: Array[Dictionary] = [
 		description = "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."},
 	{name = "Le Nid de la Reine", world = 0,
 		description = "Dix vagues, un long chemin en spirale autour du QG, et la Reine au bout."},
+	{name = "Le Dédale", world = 0,
+		description = "Pas de chemin : vos tours et vos bâtiments font le labyrinthe, et chaque rocher miné ouvre un passage."},
 ]
 
 

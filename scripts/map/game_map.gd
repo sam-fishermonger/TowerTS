@@ -98,6 +98,10 @@ var _trails: Array[Path2D] = []
 var _path_cells := {}
 var _blocked := {}
 var _occupants := {}
+## Niveau libre : cases occupées que les monstres traversent quand même (une Barricade,
+## qu'ils cassent en passant), et cases par où passent les chemins actuels.
+var _passable := {}
+var _walked_cells := {}
 ## Calques de tuiles du sol et de ses détails (null sans tileset).
 var _ground_layer: TileMapLayer
 var _decal_layer: TileMapLayer
@@ -160,6 +164,12 @@ func is_cell_on_path(cell: Vector2i) -> bool:
 	return _path_cells.has(cell)
 
 
+## Les monstres au sol passent par cette case : sur un chemin tracé, ou, dans un niveau
+## libre, sur le chemin actuel d'un point d'apparition.
+func is_cell_walked(cell: Vector2i) -> bool:
+	return _walked_cells.has(cell) if free_layout else _path_cells.has(cell)
+
+
 func is_cell_blocked(cell: Vector2i) -> bool:
 	return _blocked.has(cell)
 
@@ -171,8 +181,11 @@ func is_cell_buildable(cell: Vector2i) -> bool:
 
 # --- Occupation -------------------------------------------------------------
 
-func occupy(cell: Vector2i, node: Node) -> void:
+## `passable` : niveau libre, les monstres passent quand même par la case (une Barricade).
+func occupy(cell: Vector2i, node: Node, passable := false) -> void:
 	_occupants[cell] = node
+	if passable:
+		_passable[cell] = true
 	# Vue de trois quarts : la tour abat les arbres et les buissons de sa case.
 	_clear_decor(cell)
 	if free_layout:
@@ -189,6 +202,7 @@ func _clear_decor(cell: Vector2i) -> void:
 
 func release(cell: Vector2i) -> void:
 	_occupants.erase(cell)
+	_passable.erase(cell)
 	if free_layout:
 		_refresh_routes()
 
@@ -202,6 +216,8 @@ func get_occupant(cell: Vector2i) -> Node:
 func block_cell(cell: Vector2i) -> void:
 	_blocked[cell] = true
 	_clear_decor(cell)
+	if free_layout and is_node_ready():
+		_refresh_routes()
 
 
 ## Retire le rocher d'une case (mode Conquête : il a été miné) : la case devient
@@ -210,6 +226,8 @@ func remove_rock(cell: Vector2i) -> void:
 	_blocked.erase(cell)
 	blocked_cells.erase(cell)
 	_obstacles.erase(cell)
+	if free_layout:
+		_refresh_routes()
 	if is_instance_valid(_rocks_by_cell.get(cell)):
 		_rocks_by_cell[cell].queue_free()
 	_rocks_by_cell.erase(cell)
@@ -297,8 +315,11 @@ func _spawn_entry(cell: Vector2i) -> Vector2:
 func _refresh_routes() -> void:
 	layout_version += 1
 	_field = _distance_field()
+	_walked_cells.clear()
 	for i in spawn_cells.size():
 		var cells := _route_cells(spawn_cells[i], _field)
+		for cell in cells:
+			_walked_cells[cell] = true
 		var points := PackedVector2Array([_spawn_entry(spawn_cells[i])])
 		for cell in cells:
 			points.append(cell_to_world(cell))
@@ -321,7 +342,8 @@ func _cell_index(cell: Vector2i) -> int:
 ## Case où un monstre peut marcher : ni rocher ni tour (`closed` : une case à compter
 ## comme fermée en plus).
 func _is_walkable(cell: Vector2i, closed := NO_CELL) -> bool:
-	return is_cell_in_grid(cell) and cell != closed and not _blocked.has(cell) and not _occupants.has(cell)
+	return is_cell_in_grid(cell) and cell != closed and not _blocked.has(cell) \
+		and (not _occupants.has(cell) or _passable.has(cell))
 
 
 ## Le pas d'une case à sa voisine est possible : en diagonale, sans couper le coin d'un

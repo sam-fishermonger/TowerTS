@@ -13,8 +13,12 @@ const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 const LOCKED_ALPHA := 0.45
 const STARS_COLOR := Color(0.95, 0.85, 0.45)
+## Ligne « niveau libre » de la fenêtre de détail.
+const FREE_COLOR := "#ffd27a"
 const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
 const LEVEL_BUTTON_WIDTH := 104.0
+## Assez bas pour que les 7 niveaux d'un monde (4 rangées) tiennent sur la carte.
+const LEVEL_BUTTON_HEIGHT := 46.0
 
 ## Cartes du mode infini plutôt que de la campagne.
 var endless_mode := false
@@ -150,7 +154,7 @@ func _make_card(world_index: int) -> Control:
 	card.add_theme_stylebox_override(&"panel", style)
 
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override(&"separation", 12)
+	column.add_theme_constant_override(&"separation", 8)
 	card.add_child(column)
 
 	var number := _label(tr("Monde %d") % (world_index + 1), 16, Color(1, 1, 1, 0.55))
@@ -199,12 +203,12 @@ func _make_card(world_index: int) -> Control:
 	grid.columns = 3 if content_width >= 3 * LEVEL_BUTTON_WIDTH + 16.0 else 2
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	grid.add_theme_constant_override(&"h_separation", 8)
-	grid.add_theme_constant_override(&"v_separation", 8)
+	grid.add_theme_constant_override(&"v_separation", 6)
 	var first := CAMPAIGN.first_level_index(world_index)
 	for i in world.levels.size():
 		var path := world.levels[i]
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(LEVEL_BUTTON_WIDTH, 60)
+		button.custom_minimum_size = Vector2(LEVEL_BUTTON_WIDTH, LEVEL_BUTTON_HEIGHT)
 		if endless_mode:
 			_setup_endless_button(button, path, "%d-%d" % [world_index + 1, i + 1])
 		else:
@@ -288,6 +292,8 @@ func get_level_details(path: String) -> String:
 	lines.append(tr("[color=%s]%d vagues  ·  Or de départ : %d  ·  Vies : %d[/color]") % [EnemyInfo.MUTED,
 		spawner.get_wave_count(), level.starting_gold + bonuses.starting_gold_bonus,
 		level.starting_lives + bonuses.lives_bonus])
+	if (level.get_node("Map") as GameMap).free_layout:
+		lines.append(tr("[color=%s]Niveau libre : pas de chemin, vos tours font le labyrinthe.[/color]") % FREE_COLOR)
 	for i in spawner.get_wave_count():
 		lines.append(tr("[color=%s]V%d[/color]  %s") % [EnemyInfo.MUTED, i + 1, EnemyInfo.wave_line(spawner.waves[i], 18)])
 	if endless_mode:

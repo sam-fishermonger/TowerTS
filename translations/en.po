@@ -2443,3 +2443,69 @@ msgstr "The Graveyard"
 
 msgid "Trois entrées et des morts qui se relèvent : il faut un labyrinthe qui tienne la distance."
 msgstr "Three entrances and dead that rise again: you need a maze that goes the distance."
+
+msgid "Niveau 1-7"
+msgstr "Level 1-7"
+
+msgid "Niveau 2-7"
+msgstr "Level 2-7"
+
+msgid "Niveau 3-7"
+msgstr "Level 3-7"
+
+msgid "Niveau 4-7"
+msgstr "Level 4-7"
+
+msgid "Le Dédale"
+msgstr "The Maze"
+
+msgid "Conquête · Le Dédale"
+msgstr "Conquest · The Maze"
+
+msgid "Pas de chemin : vos tours et vos bâtiments font le labyrinthe, et chaque rocher miné ouvre un passage."
+msgstr "No path: your towers and buildings make the maze, and every rock you mine opens a way through."
+
+msgid "[color=%s]Niveau libre : pas de chemin, vos tours font le labyrinthe.[/color]"
+msgstr "[color=%s]Free level: no path, your towers make the maze.[/color]"
+
+msgid "Carte libre"
+msgstr "Free map"
+
+msgid "Pas de chemin tracé : les monstres partent des terriers et contournent vos tours jusqu'au QG."
+msgstr "No drawn path: monsters leave from the burrows and walk around your towers to the HQ."
+
+msgid "Terriers"
+msgstr "Burrows"
+
+msgid "QG"
+msgstr "HQ"
+
+msgid "Enlever les terriers"
+msgstr "Remove burrows"
+
+msgid "Enlever le QG"
+msgstr "Remove HQ"
+
+msgid "Cliquez sur une case du bord pour poser ou enlever un terrier."
+msgstr "Click an edge cell to place or remove a burrow."
+
+msgid "Cliquez sur une case pour y mettre le QG. Vos tours feront le labyrinthe."
+msgstr "Click a cell to put the HQ there. Your towers will make the maze."
+
+msgid "Posez au moins un terrier, sur une case du bord de la carte."
+msgstr "Place at least one burrow, on an edge cell of the map."
+
+msgid "Pas plus de %d terriers."
+msgstr "No more than %d burrows."
+
+msgid "Les terriers sont sur le bord de la carte, un par case."
+msgstr "Burrows go on the edge of the map, one per cell."
+
+msgid "Posez le QG des monstres à atteindre."
+msgstr "Place the HQ the monsters must reach."
+
+msgid "Le QG ne peut pas être sur un terrier."
+msgstr "The HQ can't be on a burrow."
+
+msgid "Un terrier n'a pas de passage jusqu'au QG : enlevez des rochers."
+msgstr "A burrow has no way to the HQ: remove some rocks."

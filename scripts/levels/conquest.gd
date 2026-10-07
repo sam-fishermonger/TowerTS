@@ -399,7 +399,7 @@ func can_afford_building(kind: int) -> bool:
 
 
 ## La case convient au bâtiment : une case libre, un filon libre (Extracteur) ou une case
-## du chemin (Barricade).
+## du chemin (Barricade ; dans un niveau libre, une case du chemin actuel des monstres).
 func is_cell_suitable(cell: Vector2i, kind: int) -> bool:
 	var map := level.map
 	if not map.is_cell_in_grid(cell) or map.get_occupant(cell) != null:
@@ -408,9 +408,10 @@ func is_cell_suitable(cell: Vector2i, kind: int) -> bool:
 		Building.Placement.VEIN:
 			return veins.has(cell)
 		Building.Placement.PATH:
-			return map.is_cell_on_path(cell) and not map.is_cell_blocked(cell) \
+			return map.is_cell_walked(cell) and not map.is_cell_blocked(cell) \
 				and map.cell_to_world(cell).distance_to(depot_position) > map.cell_size
-	return map.is_cell_buildable(cell)
+	# Niveau libre : un bâtiment est un mur, comme une tour.
+	return map.is_cell_buildable(cell) and not level.blocks_passage(cell)
 
 
 func can_place_building(cell: Vector2i, kind: int) -> bool:
@@ -434,7 +435,9 @@ func place_building(cell: Vector2i, kind: int) -> Building:
 	add_child(building)
 	move_child(building, 0)
 	building.global_position = level.map.cell_to_world(cell)
-	level.map.occupy(cell, building)
+	# Niveau libre : les monstres passent par une Barricade (ils la cassent), pas par les
+	# autres bâtiments.
+	level.map.occupy(cell, building, kind == Building.Kind.BARRICADE)
 	_buildings.append(building)
 	_sites.append(building)
 	Sound.play(&"build")

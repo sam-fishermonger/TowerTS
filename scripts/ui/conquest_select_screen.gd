@@ -192,7 +192,9 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	var path := get_levels()[index]
 	var unlocked := is_level_unlocked(index)
 	var card := PanelContainer.new()
-	card.custom_minimum_size.x = CARD_WIDTH
+	# Avec beaucoup de niveaux, les cartes se resserrent pour tenir sur l'écran.
+	var count := get_levels().size()
+	card.custom_minimum_size.x = minf(CARD_WIDTH, (get_viewport_rect().size.x - 32.0 - 16.0 * (count - 1)) / count)
 	card.add_theme_stylebox_override(&"panel", UiStyle.panel(world.color, 16.0, SIDE_TOP))
 	card.modulate.a = 1.0 if unlocked else LOCKED_ALPHA
 	var column := VBoxContainer.new()
