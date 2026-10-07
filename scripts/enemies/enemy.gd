@@ -622,8 +622,9 @@ func _draw_relief() -> void:
 	if data.max_shield > 0.0 and health.shield > 0.0:
 		var ratio := health.shield / data.max_shield
 		var shield_color := JAMMED_SHIELD_COLOR if health.is_shield_jammed() else SHIELD_COLOR
-		draw_circle(body, u * 1.45, Color(shield_color, 0.12 + 0.12 * ratio), true, -1.0, true)
-		draw_arc(body, u * 1.45, 0.0, TAU, 32, Color(shield_color, 0.35 + 0.45 * ratio), 2.0, true)
+		# Bulle à peine teintée : le robot reste lisible dedans.
+		draw_circle(body, u * 1.45, Color(shield_color, 0.04 + 0.05 * ratio), true, -1.0, true)
+		draw_arc(body, u * 1.45, 0.0, TAU, 40, Color(shield_color, 0.3 + 0.45 * ratio), 1.5, true)
 	if data.raider:
 		draw_set_transform(body + Vector2(0, u * 0.3))
 		_draw_torch_only()
