@@ -16,8 +16,22 @@ const NAMES := {"Pillarde": "pillarde", "Récupérateur": "recuperateur", "Marau
 	"Pilleur de tombes": "pilleur"}
 
 
+## Forme déjà trouvée de chaque type de monstre (identifiant de l'EnemyData -> forme) :
+## elle est demandée plusieurs fois à chaque dessin.
+static var _shapes := {}
+
+
 ## Forme d'un type de monstre : le nom de son fichier, sinon son nom, sinon son image.
 static func shape_of(data: EnemyData) -> String:
+	var id := data.get_instance_id()
+	var shape: String = _shapes.get(id, "")
+	if shape.is_empty():
+		shape = _find_shape(data)
+		_shapes[id] = shape
+	return shape
+
+
+static func _find_shape(data: EnemyData) -> String:
 	var name := data.resource_path.get_file().get_basename()
 	if _is_known(name):
 		return name
@@ -75,6 +89,40 @@ static func draw_shadow(canvas: CanvasItem, data: EnemyData) -> void:
 	var length: float = profile[2] if not profile.is_empty() else (1.25 if shape in ["larve", "mante", "reine", "couveuse"] else 1.0)
 	var size := Vector2(u * length, u * 0.38) * (0.7 if data.flying else 1.0)
 	Relief.draw_shadow(canvas, Vector2(0, 1), size.x, size.y, 0.22 if data.flying else 0.32)
+
+
+## Vue de trois quarts en jeu : la marche de chaque type de monstre est dessinée une
+## fois en WALK_FRAMES images, une tous les WALK_STEP pixels (elle boucle ensuite), plus
+## une image de son ombre (SHADOW_FRAME), dans une planche (SpriteCache).
+const WALK_STEP := 4.0
+const WALK_FRAMES := 24
+const SHADOW_FRAME := WALK_FRAMES
+## Clé de la planche de chaque type de monstre (identifiant de l'EnemyData -> clé) : les
+## élites, copies faites en cours de partie, partagent celle de leurs semblables.
+static var _sheet_keys := {}
+
+
+## Planche du monstre (voir SpriteCache.get_sheet()), ou null : il se dessine en code.
+static func get_sheet(data: EnemyData) -> SpriteCache.Sheet:
+	var id := data.get_instance_id()
+	var key: String = _sheet_keys.get(id, "")
+	if key.is_empty():
+		key = "creature %s %s %s %s" % [shape_of(data), data.color, unit(data), data.flying]
+		_sheet_keys[id] = key
+	var u := unit(data)
+	# Marges larges : ailes, cornes, couronnes et contours dépassent du corps.
+	var above := top_height(data) + u * 0.9
+	return SpriteCache.get_sheet(key, WALK_FRAMES + 1, Rect2(-u * 2.6, -above, u * 5.2, above + u * 0.9),
+		func(canvas: CanvasItem, index: int) -> void:
+			if index == SHADOW_FRAME:
+				draw_shadow(canvas, data)
+			else:
+				draw(canvas, data, false, index * WALK_STEP))
+
+
+## Image de la planche pour une distance parcourue.
+static func walk_frame(phase: float) -> int:
+	return int(fposmod(phase, WALK_STEP * WALK_FRAMES) / WALK_STEP) % WALK_FRAMES
 
 
 ## Dessine le monstre, tourné vers la gauche si `facing_left`. `phase` fait marcher

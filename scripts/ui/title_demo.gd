@@ -62,10 +62,12 @@ func _init() -> void:
 
 func _enter_tree() -> void:
 	Sound.set_effects_muted(true)
+	SpriteCache.set_zoom(CAMERA_ZOOM)
 
 
 func _exit_tree() -> void:
 	Sound.set_effects_muted(false)
+	SpriteCache.set_zoom(1.0)
 
 
 func _ready() -> void:
