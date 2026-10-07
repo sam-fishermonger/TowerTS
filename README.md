@@ -194,6 +194,12 @@ godot --headless --path . -s res://tools/generate_theme.gd
 
 Pour donner la police des titres à un Label d'une scène, mettre `TitreEcran` dans sa propriété « Theme Type Variation ».
 
+### Vue de trois quarts
+
+Toutes les cartes sont dessinées en vue de trois quarts, façon Kingdom Rush. Le sol est peint (`scripts/map/relief_ground.gdshader`) et le chemin a des bords irréguliers. Chaque monde a son décor debout (`scripts/map/biome_theme.gd`, `scripts/map/decor_item.gd`) : arbres, termitières et œufs à La Ruche ; caisses, tonneaux, ferraille et cheminées sur la terre cendrée de La Fonderie, avec un chemin de plaques rivetées ; maisons, réverbères et barrières à La Cité, avec un chemin pavé ; arbres morts, tombes et croix à La Nécropole. Les tours sont de petits donjons crénelés sur un socle de pierre, avec leur arme vue de biais (`scripts/towers/tower_relief.gd`). Les monstres sont dessinés de profil, avec une ombre juste sous eux (`scripts/enemies/creature.gd`). La base est un petit château. Tout ce qui se tient debout est trié en profondeur : ce qui est plus bas sur l'écran passe devant.
+
+Le jeu reste à plat en dessous (positions, portées, chemins) : seul l'affichage change. Poser une tour abat le décor de sa case, sauf les rochers. Décocher la propriété `relief` de `Map` dans un niveau rend l'ancienne vue de dessus, en tuiles.
+
 ## Sons
 
 Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).

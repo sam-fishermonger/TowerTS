@@ -50,7 +50,7 @@ func _draw_effects() -> void:
 	for tower in boosted_towers:
 		if not is_instance_valid(tower) or not tower.is_alive:
 			continue
-		var to := to_local(tower.global_position)
+		var to := effect_point(to_local(tower.global_position), -tower.get_muzzle_offset().y)
 		var from := to.normalized() * SIZE * 0.35
 		to -= to.normalized() * SIZE * 0.35
 		var normal := from.direction_to(to).orthogonal()

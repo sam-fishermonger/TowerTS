@@ -187,6 +187,8 @@ func _ready() -> void:
 	_summon_cooldown = data.summon_interval
 	health_bar.width = data.radius * 2.0
 	health_bar.position = Vector2(0, -data.radius - 8.0)
+	if Relief.enabled:
+		health_bar.position.y = -Creature.top_height(data) - 6.0
 	if data.flying:
 		# Il vole au-dessus des tours et des autres monstres.
 		z_index = 1
@@ -511,6 +513,11 @@ func _update_detection() -> void:
 		queue_redraw()
 
 
+## Vue de trois quarts : distance parcourue entre deux dessins de la marche.
+const ANIMATION_STEP := 4.0
+var _animation_step := -1
+
+
 func _update_position() -> void:
 	var point := _curve.sample_baked(progress)
 	var offset := Vector2.ZERO
@@ -525,6 +532,13 @@ func _update_position() -> void:
 		if not is_equal_approx(heading, _heading):
 			_heading = heading
 			queue_redraw()
+	if Relief.enabled and not Relief.headless:
+		# Ses pattes bougent en marchant : un dessin tous les quelques pixels suffit (le
+		# dessin en volume coûte cher, le déplacement, lui, ne demande pas de redessiner).
+		var step := int(progress / ANIMATION_STEP)
+		if step != _animation_step:
+			_animation_step = step
+			queue_redraw()
 
 
 func _on_health_depleted() -> void:
@@ -533,6 +547,9 @@ func _on_health_depleted() -> void:
 
 
 func _draw() -> void:
+	if Relief.enabled:
+		_draw_relief()
+		return
 	if data.flying:
 		_draw_flying_shadow()
 	if data.is_elite or data.is_boss:
@@ -585,9 +602,67 @@ func _draw() -> void:
 	_draw_ice()
 
 
+## Vue de trois quarts : ombre et halos au sol, le monstre de profil (Creature) tourné
+## vers où il marche, puis ce qui l'entoure (bouclier, glace) à hauteur de son corps.
+func _draw_relief() -> void:
+	var body := Vector2(0, -Creature.body_height(data))
+	var u := Creature.unit(data)
+	Creature.draw_shadow(self, data)
+	var ground := Vector2(1.0, Relief.GROUND_SQUASH * 0.6)
+	if data.is_elite or data.is_boss:
+		var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
+		var color := EnemyData.BOSS_COLOR if data.is_boss else EnemyData.ELITE_COLOR
+		var ring := Relief.ellipse(Vector2(0, 1), u * (1.4 + 0.1 * pulse), u * (1.4 + 0.1 * pulse) * ground.y, 0.0, TAU, 32)
+		draw_colored_polygon(ring, Color(color, 0.12 + 0.1 * pulse))
+		draw_polyline(ring, Color(color, 0.6 + 0.3 * pulse), 2.5 if data.is_boss else 2.0, true)
+	if _heal_pulse_left > 0.0:
+		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
+		var radius := lerpf(data.radius, data.heal_radius, t)
+		draw_polyline(Relief.ellipse(Vector2.ZERO, radius, radius * ground.y, 0.0, TAU, 40),
+			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0, true)
+	if data.raider:
+		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), u * 1.5, u * 1.5 * ground.y, 0.0, TAU, 24),
+			Color(RAID_COLOR, 0.18 if not is_raiding() else 0.32))
+	var tint := Color(0.6, 0.8, 1.0) if is_slowed() or is_frozen() else Color.WHITE
+	var facing_left := cos(_heading) < -0.1
+	Creature.draw(self, data, facing_left, progress if not is_frozen() else 0.0, tint)
+	if is_burning():
+		draw_circle(body, u * 1.1, Color(_dot_color, 0.3), true, -1.0, true)
+	if data.max_shield > 0.0 and health.shield > 0.0:
+		var ratio := health.shield / data.max_shield
+		var shield_color := JAMMED_SHIELD_COLOR if health.is_shield_jammed() else SHIELD_COLOR
+		# Bulle à peine teintée : le robot reste lisible dedans.
+		draw_circle(body, u * 1.45, Color(shield_color, 0.04 + 0.05 * ratio), true, -1.0, true)
+		draw_arc(body, u * 1.45, 0.0, TAU, 40, Color(shield_color, 0.3 + 0.45 * ratio), 1.5, true)
+	if data.raider:
+		draw_set_transform(body + Vector2(0, u * 0.3))
+		_draw_torch_only()
+		draw_set_transform(Vector2.ZERO)
+	var marks := Vector2(0, -Creature.top_height(data) - 14.0)
+	if not can_be_healed():
+		var center := marks + Vector2(8, 0)
+		draw_circle(center, 5.5, HEAL_BLOCK_COLOR)
+		draw_line(center + Vector2(-3, 0), center + Vector2(3, 0), Color.WHITE, 2.0)
+		draw_line(center + Vector2(0, -3), center + Vector2(0, 3), Color.WHITE, 2.0)
+		draw_line(center + Vector2(-4, 4), center + Vector2(4, -4), Color(0.2, 0, 0), 1.5)
+	if is_consecrated():
+		var mark := marks - Vector2(8, 0)
+		draw_circle(mark, 5.5, Color(0.25, 0.2, 0.05, 0.8))
+		draw_line(mark + Vector2(0, -4), mark + Vector2(0, 4), CONSECRATED_COLOR, 2.0)
+		draw_line(mark + Vector2(-3, -1.5), mark + Vector2(3, -1.5), CONSECRATED_COLOR, 2.0)
+	if is_frozen():
+		draw_set_transform(body)
+		_draw_ice()
+		draw_set_transform(Vector2.ZERO)
+
+
 ## Pillard : un halo orangé sous lui et une torche à son côté.
 func _draw_torch() -> void:
 	draw_circle(Vector2.ZERO, data.radius * 1.3, Color(RAID_COLOR, 0.16 if not is_raiding() else 0.3))
+	_draw_torch_only()
+
+
+func _draw_torch_only() -> void:
 	var hand := Vector2(data.radius * 0.95, data.radius * 0.35)
 	draw_line(hand, hand + Vector2(3, -10), Color(0.45, 0.3, 0.15), 2.5)
 	var flame := hand + Vector2(3.5, -12)

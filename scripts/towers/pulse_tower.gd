@@ -44,4 +44,8 @@ func _draw_effects() -> void:
 	if _pulse_time_left > 0.0:
 		var t := 1.0 - _pulse_time_left / PULSE_DURATION
 		var radius := stats.attack_range * (1.0 - t if stats.knockback > 0.0 else t)
-		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(light, 1.0 - t), 3.0)
+		if Relief.enabled:
+			# Vue de trois quarts : l'onde court sur le sol, autour du pied de la tour.
+			draw_polyline(Relief.ellipse(-get_muzzle_offset(), radius, radius, 0.0, TAU, 48), Color(light, 1.0 - t), 3.0, true)
+		else:
+			draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(light, 1.0 - t), 3.0)

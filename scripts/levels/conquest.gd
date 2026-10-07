@@ -74,6 +74,10 @@ var peak_workers := 0
 ## type commun qui ait is_built() (d'où les variables sans type).
 var _sites: Array = []
 var _buildings: Array[Building] = []
+## Vue de trois quarts : les cristaux debout de chaque filon (case -> EssenceVein), triés
+## en profondeur avec le reste, et les jauges des gisements, par-dessus tout.
+var _vein_nodes := {}
+var _gauges: DepositGauges
 
 
 ## Pierre demandée pour un type de tour.
@@ -116,6 +120,8 @@ func setup(owner_level: Level) -> void:
 	for cell in level.essence_cells:
 		veins[cell] = VEIN_ESSENCE
 		level.map.block_cell(cell)
+	if Relief.enabled:
+		_setup_relief()
 	for i in level.conquest_starting_workers:
 		_add_worker(depot_position + Vector2.from_angle(PI * (0.8 + 0.4 * i)) * 30.0)
 	_add_raiders()
@@ -123,6 +129,39 @@ func setup(owner_level: Level) -> void:
 	level.spawner.wave_started.connect(func(_index: int) -> void:
 		wave_countdown = -1.0
 		changed.emit())
+
+
+## Vue de trois quarts : ouvriers et bâtiments (enfants de ce nœud) se trient en
+## profondeur avec les tours et les monstres ; chaque filon devient un groupe de
+## cristaux debout, et les jauges passent par-dessus tout.
+func _setup_relief() -> void:
+	y_sort_enabled = true
+	for cell: Vector2i in veins:
+		var vein := EssenceVein.new()
+		vein.conquest = self
+		vein.cell = cell
+		add_child(vein)
+		vein.global_position = level.map.cell_to_world(cell) + Vector2(0, EssenceVein.FOOT_OFFSET)
+		_vein_nodes[cell] = vein
+	_gauges = DepositGauges.new()
+	_gauges.conquest = self
+	_gauges.z_index = 1
+	add_child(_gauges)
+
+
+## Redessine les gisements : jauges, cristaux et gisement désigné.
+func _refresh_deposits() -> void:
+	queue_redraw()
+	if _gauges:
+		_gauges.queue_redraw()
+	for cell: Vector2i in _vein_nodes.keys():
+		var vein: EssenceVein = _vein_nodes[cell]
+		if not veins.has(cell):
+			vein.queue_free()
+			_vein_nodes.erase(cell)
+		else:
+			vein.queue_redraw()
+
 
 
 ## Ajoute les Pillards du niveau aux vagues (sur des copies : la scène ne change pas),
@@ -204,7 +243,7 @@ func take_resource(cell: Vector2i, amount: int) -> int:
 		level.map.remove_rock(cell)
 		if preferred_rock == cell:
 			preferred_rock = NO_CELL
-	queue_redraw()
+	_refresh_deposits()
 	return taken
 
 
@@ -255,7 +294,7 @@ func set_preferred_rock(cell: Vector2i) -> bool:
 	for worker in get_workers():
 		if worker.is_mining() or (worker.state == Worker.State.IDLE and worker.cargo == 0):
 			worker.go_mine(cell, level.map.cell_to_world(cell))
-	queue_redraw()
+	_refresh_deposits()
 	return true
 
 
@@ -401,6 +440,7 @@ func place_building(cell: Vector2i, kind: int) -> Building:
 	Sound.play(&"build")
 	if preferred_rock == cell:
 		preferred_rock = NO_CELL
+	_refresh_deposits()
 	changed.emit()
 	return building
 
@@ -452,6 +492,7 @@ func _remove_building(building: Building) -> void:
 		level.map.release(building.cell)
 	if level.placer.inspected_building == building:
 		level.placer.inspect_building(null)
+	_refresh_deposits()
 	changed.emit.call_deferred()
 
 
@@ -544,9 +585,22 @@ func _show_text(text: String, color: Color, at: Vector2, font_size: int) -> void
 
 
 ## Sous chaque rocher, une jauge de la pierre restante ; les filons d'essence sont des
-## cristaux, avec leur jauge ; le gisement désigné est entouré.
+## cristaux, avec leur jauge ; le gisement désigné est entouré. Dans la vue de trois
+## quarts, seul ce qui est à plat sur le sol reste ici (lueur des filons, cercle du
+## gisement désigné) : cristaux et jauges ont leurs nœuds (EssenceVein, DepositGauges).
 func _draw() -> void:
 	var map := level.map
+	if Relief.enabled:
+		for cell: Vector2i in veins:
+			var foot := to_local(map.cell_to_world(cell)) + Vector2(0, EssenceVein.FOOT_OFFSET)
+			draw_colored_polygon(Relief.ellipse(foot, map.cell_size * 0.42, map.cell_size * 0.42 * Relief.GROUND_SQUASH * 0.6),
+				Color(ESSENCE_COLOR, 0.22))
+		if has_resource(preferred_rock):
+			var foot := to_local(map.cell_to_world(preferred_rock)) + Vector2(0, 8)
+			var ring := Relief.ellipse(foot, map.cell_size * 0.5, map.cell_size * 0.5 * Relief.GROUND_SQUASH * 0.7, 0.0, TAU, 40)
+			draw_polyline(ring, Color(0, 0, 0, 0.4), 5.0, true)
+			draw_polyline(ring, Color(1.0, 0.82, 0.25), 2.5, true)
+		return
 	for cell: Vector2i in rocks:
 		_draw_gauge(map.cell_to_world(cell), rocks[cell] / float(ROCK_STONE), STONE_COLOR)
 	for cell: Vector2i in veins:
@@ -571,3 +625,56 @@ func _draw_gauge(world_center: Vector2, ratio: float, color: Color) -> void:
 	var top_left := center + Vector2(-width / 2.0, cell_size * 0.5 - 9.0)
 	draw_rect(Rect2(top_left, Vector2(width, 5)), Color(0, 0, 0, 0.6))
 	draw_rect(Rect2(top_left, Vector2(width * ratio, 5)), color)
+
+
+## Vue de trois quarts : les cristaux d'un filon, debout au-dessus de leur pied et triés
+## en profondeur. Sous un Extracteur, ils disparaissent (il a son propre cristal).
+class EssenceVein extends Node2D:
+	## Le pied des cristaux, sous le centre de la case.
+	const FOOT_OFFSET := 8.0
+	## Cristaux du filon : décalage du pied, hauteur, largeur, inclinaison.
+	const CRYSTALS: Array[Vector4] = [Vector4(-13, -4, 20, 9), Vector4(12, -6, 18, 8), Vector4(1, -9, 30, 12),
+		Vector4(-6, 4, 14, 7), Vector4(10, 5, 12, 6)]
+	const LEANS: Array[float] = [-0.25, 0.3, 0.0, -0.1, 0.2]
+
+	var conquest: Conquest
+	var cell := Vector2i.ZERO
+
+	func _draw() -> void:
+		if conquest.level.map.get_occupant(cell) is Building:
+			return
+		Relief.draw_shadow(self, Vector2(4, 0), 24.0, 8.0, 0.28)
+		var color := Conquest.ESSENCE_COLOR
+		for i in CRYSTALS.size():
+			var crystal := CRYSTALS[i]
+			BuildingRelief.draw_crystal(self, Vector2(crystal.x, crystal.y), crystal.z, crystal.w,
+				color if i != 2 else color.lightened(0.1), Color.WHITE, LEANS[i])
+
+
+## Vue de trois quarts : les jauges des gisements (pierre restante d'un rocher, essence
+## d'un filon), au-dessus de chacun et par-dessus tout ce qui passe devant.
+class DepositGauges extends Node2D:
+	## Hauteur des jauges au-dessus du centre de la case : au-dessus du rocher, ou des
+	## cristaux du filon.
+	const ROCK_HEIGHT := 17.0
+	const VEIN_HEIGHT := 34.0
+
+	var conquest: Conquest
+
+	func _draw() -> void:
+		var map := conquest.level.map
+		for cell: Vector2i in conquest.rocks:
+			_draw_gauge(map.cell_to_world(cell) + Vector2(0, -ROCK_HEIGHT), conquest.rocks[cell] / float(Conquest.ROCK_STONE),
+				Conquest.STONE_COLOR)
+		for cell: Vector2i in conquest.veins:
+			if not map.get_occupant(cell) is Building:
+				_draw_gauge(map.cell_to_world(cell) + Vector2(0, -VEIN_HEIGHT),
+					conquest.veins[cell] / float(Conquest.VEIN_ESSENCE), Conquest.ESSENCE_COLOR)
+
+	func _draw_gauge(world_center: Vector2, ratio: float, color: Color) -> void:
+		var width := conquest.level.map.cell_size * 0.55
+		var top_left := to_local(world_center) - Vector2(width / 2.0, 2.0)
+		draw_rect(Rect2(top_left - Vector2.ONE, Vector2(width + 2.0, 6)), Relief.OUTLINE)
+		draw_rect(Rect2(top_left, Vector2(width, 4)), Color(0.2, 0.18, 0.16))
+		draw_rect(Rect2(top_left, Vector2(width * ratio, 4)), color)
+		draw_rect(Rect2(top_left, Vector2(width * ratio, 1.5)), color.lightened(0.4))

@@ -54,6 +54,11 @@ var _goal := Vector2.ZERO
 var _timer := 0.0
 ## Secondes depuis le début du travail en cours, pour l'animation de l'outil.
 var _work_time := 0.0
+## Vue de trois quarts : sens du profil (1 vers la droite, -1 vers la gauche), distance
+## parcourue (pour faire marcher les jambes) et s'il a bougé à la dernière image.
+var _facing := 1.0
+var _stride := 0.0
+var _moving := false
 
 
 func _ready() -> void:
@@ -64,6 +69,7 @@ func _process(delta: float) -> void:
 	_take_contact_damage(delta)
 	if not is_alive:
 		return
+	var before := global_position
 	match state:
 		State.TO_ROCK:
 			if not conquest.has_resource(rock_cell):
@@ -101,6 +107,7 @@ func _process(delta: float) -> void:
 				_finish_order()
 			else:
 				conquest.build(site, delta)
+	_update_pose(global_position - before)
 	queue_redraw()
 
 
@@ -213,6 +220,9 @@ func _take_contact_damage(delta: float) -> void:
 
 
 func _draw() -> void:
+	if Relief.enabled:
+		_draw_relief()
+		return
 	# Ombre, corps et casque.
 	draw_circle(Vector2(0, 3), BODY_RADIUS, Color(0, 0, 0, 0.3))
 	draw_circle(Vector2.ZERO, BODY_RADIUS, Color(0.35, 0.3, 0.25))
@@ -238,6 +248,105 @@ func _draw() -> void:
 		var top_left := Vector2(-width / 2.0, -BODY_RADIUS - 8.0)
 		draw_rect(Rect2(top_left, Vector2(width, 3)), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(top_left, Vector2(width * health / MAX_HEALTH, 3)), Color(0.4, 1.0, 0.45))
+
+
+## Vue de trois quarts : il se tourne vers où il marche, ou vers son ouvrage.
+func _update_pose(moved: Vector2) -> void:
+	_moving = moved.length() > 0.01
+	_stride += moved.length()
+	if absf(moved.x) > 0.01:
+		_facing = signf(moved.x)
+	elif state == State.MINING or state == State.BUILDING:
+		var toward := _goal_target().x - global_position.x
+		if absf(toward) > 1.0:
+			_facing = signf(toward)
+
+
+## Vue de trois quarts : un petit ouvrier de profil, au-dessus de son pied, avec son
+## casque jaune, sa charge sur le dos et sa pioche (son marteau sur un chantier).
+func _draw_relief() -> void:
+	Relief.draw_shadow(self, Vector2(1, 0), 9.0, 3.5, 0.32)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(_facing, 1.0))
+	var outline := Relief.OUTLINE
+	var cloth := Color(0.55, 0.36, 0.2)
+	var skin := Color(0.96, 0.76, 0.58)
+	# Jambes qui marchent : celle du fond d'abord, plus sombre.
+	var step := sin(_stride * 0.3) * 4.0 if _moving else 0.0
+	var hip := Vector2(0, -8)
+	for leg in [-1.0, 1.0]:
+		var foot := Vector2(-step * leg + leg * 0.5, 0)
+		var color := Color(0.3, 0.28, 0.35).darkened(0.35 if leg < 0.0 else 0.0)
+		draw_line(hip, foot, outline, 4.5, true)
+		draw_line(hip, foot, color, 2.5, true)
+		draw_line(foot + Vector2(-1, 0), foot + Vector2(2.5, 0), outline, 3.0, true)
+	# En marchant, l'outil repose sur l'épaule, derrière lui.
+	var working := state == State.MINING or state == State.BUILDING
+	if not working:
+		_draw_tool()
+	# Charge sur le dos : un sac de pierres, ou un cristal d'essence.
+	if cargo > 0 and cargo_kind == Conquest.Ore.ESSENCE:
+		BuildingRelief.draw_crystal(self, Vector2(-6, -8), 15.0, 7.0, Conquest.ESSENCE_COLOR, Color.WHITE, -0.15)
+	elif cargo > 0:
+		draw_circle(Vector2(-6, -14), 5.5, outline, true, -1.0, true)
+		draw_circle(Vector2(-6, -14), 4.2, Color(0.7, 0.62, 0.45), true, -1.0, true)
+		draw_circle(Vector2(-7, -18), 2.6, Conquest.STONE_COLOR, true, -1.0, true)
+	# Corps : une tunique, cernée.
+	var body := Relief.ellipse(Vector2(0, -12.5), 4.8, 6.0, 0.0, TAU, 16)
+	draw_colored_polygon(Relief.ellipse(Vector2(0, -12.5), 6.3, 7.5, 0.0, TAU, 16), outline)
+	draw_colored_polygon(body, cloth)
+	draw_colored_polygon(Relief.ellipse(Vector2(-1.5, -14.5), 2.2, 2.6, 0.0, TAU, 10), cloth.lightened(0.25))
+	draw_line(Vector2(-4.5, -9), Vector2(4.5, -9), Color(0.3, 0.2, 0.12), 1.5)
+	# Tête et casque, visière vers l'avant.
+	var head := Vector2(1, -21)
+	draw_circle(head, 5.0, outline, true, -1.0, true)
+	draw_circle(head, 3.8, skin, true, -1.0, true)
+	draw_circle(head + Vector2(2.0, 0.3), 0.9, outline, true, -1.0, true)
+	var helmet := Relief.ellipse(head + Vector2(0, -0.8), 4.8, 4.6, PI, TAU, 10)
+	helmet.append(head + Vector2(6.5, -0.3))
+	draw_colored_polygon(helmet, COLOR)
+	draw_colored_polygon(Relief.ellipse(head + Vector2(-1.5, -3.2), 1.8, 1.1, 0.0, TAU, 8), COLOR.lightened(0.45))
+	helmet.append(helmet[0])
+	draw_polyline(helmet, outline, 1.5, true)
+	if working:
+		_draw_tool()
+	draw_set_transform(Vector2.ZERO)
+	if health < MAX_HEALTH:
+		var width := 18.0
+		var top_left := Vector2(-width / 2.0, -36.0)
+		draw_rect(Rect2(top_left - Vector2.ONE, Vector2(width + 2.0, 5)), outline)
+		draw_rect(Rect2(top_left, Vector2(width * health / MAX_HEALTH, 3)), Color(0.4, 1.0, 0.45))
+
+
+## Pioche (ou marteau) au bout du bras : elle s'abat au travail, et repose sur l'épaule
+## en marchant.
+func _draw_tool() -> void:
+	var outline := Relief.OUTLINE
+	var shoulder := Vector2(0.5, -15)
+	var working := state == State.MINING or state == State.BUILDING
+	# Angle du manche : levé derrière la tête, puis abattu vers l'avant.
+	var angle := -2.4
+	if working:
+		angle = lerpf(-2.3, 0.5, pow(0.5 + 0.5 * sin(_work_time * 11.0), 2.0))
+	var hand := shoulder + Vector2.from_angle(angle * 0.5 + 0.6) * 5.0
+	draw_line(shoulder, hand, outline, 4.0, true)
+	draw_line(shoulder, hand, Color(0.96, 0.76, 0.58), 2.2, true)
+	var direction := Vector2.from_angle(angle)
+	var tip := hand + direction * 11.0
+	draw_line(hand - direction * 3.0, tip, outline, 3.5, true)
+	draw_line(hand - direction * 3.0, tip, Color(0.6, 0.42, 0.25), 2.0, true)
+	var across := direction.orthogonal()
+	var metal := Color(0.78, 0.8, 0.85)
+	if state == State.BUILDING:
+		var block := PackedVector2Array([tip - across * 3.5 - direction * 1.5, tip + across * 3.5 - direction * 1.5,
+			tip + across * 3.5 + direction * 2.5, tip - across * 3.5 + direction * 2.5])
+		draw_colored_polygon(block, metal.darkened(0.2))
+		block.append(block[0])
+		draw_polyline(block, outline, 1.5, true)
+	else:
+		var pick := PackedVector2Array([tip + across * 6.0 - direction * 2.5, tip + across * 1.5 + direction * 1.5,
+			tip - across * 1.5 + direction * 1.5, tip - across * 6.0 - direction * 2.5])
+		draw_polyline(pick, outline, 3.5, true)
+		draw_polyline(pick, metal, 1.8, true)
 
 
 ## Ce sur quoi l'ouvrier travaille : le rocher ou le chantier.

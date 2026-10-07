@@ -54,7 +54,7 @@ func _draw_effects() -> void:
 	var heat := _get_heat()
 	var core := data.color.lerp(Color.WHITE, 0.3 + 0.5 * heat)
 	if is_instance_valid(_target) and _target.is_alive:
-		var end := to_local(_target.global_position)
+		var end := effect_point(to_local(_target.global_position), Creature.body_height(_target.data))
 		var width := 2.0 + 4.0 * heat
 		draw_line(Vector2.ZERO, end, Color(data.color, 0.5), width + 4.0)
 		draw_line(Vector2.ZERO, end, core, width)

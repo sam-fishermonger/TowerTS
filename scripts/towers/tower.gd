@@ -60,7 +60,9 @@ var show_range := false:
 
 var _cooldown := 0.0
 var _target: Enemy
-var _aim_angle := -PI / 2.0
+## En vue de trois quarts, l'arme au repos est tournée vers le bas à droite : elle se voit de profil.
+var _aim_angle := PI * 0.2 if Relief.enabled else -PI / 2.0
+var _drawn_aim_angle := _aim_angle
 
 
 func _ready() -> void:
@@ -111,7 +113,13 @@ func _process(delta: float) -> void:
 		_cooldown = maxf(_cooldown, 0.0)
 		return
 	_aim_angle = global_position.angle_to_point(_target.global_position)
-	queue_redraw()
+	if not Relief.enabled:
+		queue_redraw()
+	elif not Relief.headless and absf(angle_difference(_aim_angle, _drawn_aim_angle)) > 0.06:
+		# Vue de trois quarts : la tour, coûteuse à dessiner, ne se redessine que quand son
+		# arme a assez tourné.
+		_drawn_aim_angle = _aim_angle
+		queue_redraw()
 	# On garde le temps écoulé en trop, et on tire plusieurs fois si l'image a duré plus
 	# d'un tir : la cadence ne dépend ni des FPS ni de la vitesse de jeu.
 	var shots := 0
@@ -267,9 +275,30 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, stats.attack_range, 0.0, TAU, 64, Color(1, 1, 1, 0.4), 1.5)
 		if stats.detects_stealth():
 			draw_dashed_circle(self, Vector2.ZERO, stats.detection_range, Color(DETECTION_COLOR, 0.7))
+	if Relief.enabled:
+		_draw_relief_body()
+		return
 	_draw_body()
 	if stats.detects_stealth():
 		draw_detection_eye(self, Vector2(SIZE / 2.0 - 7.0, -SIZE / 2.0 + 7.0))
+
+
+## Vue de trois quarts : la tour se dresse sur son socle, ses effets partent de la
+## tourelle.
+func _draw_relief_body() -> void:
+	if not is_built():
+		draw_relief(self, data, Vector2.ZERO, PI * 0.2, Color(1, 1, 1, 0.4))
+		var radius := SIZE * 0.62
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(0, 0, 0, 0.45), 5.0)
+		if build_progress > 0.0:
+			draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
+		return
+	draw_relief(self, data, Vector2.ZERO, _aim_angle, Color.WHITE, level - 1)
+	if stats.detects_stealth():
+		draw_detection_eye(self, get_muzzle_offset() + Vector2(18, -4))
+	draw_set_transform(get_muzzle_offset())
+	_draw_effects()
+	draw_set_transform(Vector2.ZERO)
 
 
 ## Socle et tourelle (images de TowerData, ou formes de remplacement), puis
@@ -344,6 +373,23 @@ static func draw_sprite(canvas: CanvasItem, tower_data: TowerData, center: Vecto
 	canvas.draw_texture_rect(tower_data.turret_texture,
 		Rect2(-Vector2.ONE * turret_size / 2.0, Vector2.ONE * turret_size), false, tint)
 	canvas.draw_set_transform(Vector2.ZERO)
+
+
+## Vue de trois quarts : la tour dessinée par TowerRelief au-dessus de `foot`.
+static func draw_relief(canvas: CanvasItem, tower_data: TowerData, foot: Vector2, aim_angle := -PI / 2.0,
+		tint := Color.WHITE, upgrades := 0) -> void:
+	TowerRelief.draw(canvas, tower_data, foot, aim_angle, tint, upgrades)
+
+
+## Vue de trois quarts : un point de la carte (repère de la tour) vu depuis le haut du
+## donjon, où sont dessinés les effets, soulevé de `height` (le corps d'un monstre).
+func effect_point(local_point: Vector2, height := 10.0) -> Vector2:
+	return local_point - get_muzzle_offset() - Vector2(0, height) if Relief.enabled else local_point
+
+
+## Vue de trois quarts : d'où partent les tirs et les effets de la tour, en haut du donjon.
+func get_muzzle_offset() -> Vector2:
+	return Vector2(0, -TowerRelief.top_height(level - 1)) if Relief.enabled else Vector2.ZERO
 
 
 ## Tourelle dessinée en code, quand le type de tour n'a pas d'image. À redéfinir.

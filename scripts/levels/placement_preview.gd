@@ -30,9 +30,15 @@ func show_building_at(world_position: Vector2, kind: int, valid: bool) -> void:
 func _draw() -> void:
 	var tint := Color(0.3, 1.0, 0.4) if is_valid else Color(1.0, 0.3, 0.3)
 	if building_kind >= 0:
-		Building.draw_icon(self, building_kind, Vector2.ZERO, Building.SIZE, Color(1, 1, 1, 0.7))
 		var half_size := Building.SIZE / 2.0
-		draw_rect(Rect2(-half_size, -half_size, Building.SIZE, Building.SIZE), tint, false, 2.0)
+		var cell_rect := Rect2(-half_size, -half_size, Building.SIZE, Building.SIZE)
+		if Relief.enabled:
+			draw_rect(cell_rect, Color(tint, 0.25))
+			draw_rect(cell_rect, tint, false, 2.0)
+			BuildingRelief.draw(self, building_kind, Vector2.ZERO, Color(1, 1, 1, 0.7))
+			return
+		Building.draw_icon(self, building_kind, Vector2.ZERO, Building.SIZE, Color(1, 1, 1, 0.7))
+		draw_rect(cell_rect, tint, false, 2.0)
 		return
 	if tower_data == null:
 		return
@@ -40,6 +46,11 @@ func _draw() -> void:
 	draw_arc(Vector2.ZERO, tower_data.attack_range, 0.0, TAU, 64, Color(tint, 0.6), 1.5)
 	var half := Tower.SIZE / 2.0
 	var rect := Rect2(-half, -half, Tower.SIZE, Tower.SIZE)
+	if Relief.enabled:
+		draw_rect(rect, Color(tint, 0.25))
+		draw_rect(rect, tint, false, 2.0)
+		Tower.draw_relief(self, tower_data, Vector2.ZERO, PI * 0.2, Color(1, 1, 1, 0.7))
+		return
 	if tower_data.turret_texture:
 		Tower.draw_sprite(self, tower_data, Vector2.ZERO, Tower.SIZE, Tower.TURRET_SCALE, -PI / 2.0, Color(1, 1, 1, 0.65))
 	else:
