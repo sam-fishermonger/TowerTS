@@ -5,6 +5,9 @@ extends Node2D
 ## s'éclaire en pulsant doucement. Si des monstres volants passent par un chemin, leur
 ## trajet (qui coupe les virages) s'affiche en pointillés bleus. Tout s'efface en
 ## fondu quand la première vague démarre.
+## Niveau libre : les chemins suivent le passage laissé par les tours et restent affichés,
+## plus discrets, pendant les vagues ; pendant la pose d'une tour, le chemin qu'auraient
+## les monstres avec elle s'affiche en pointillés (voir show_candidate()).
 
 @export var map: GameMap
 @export var spawner: WaveSpawner
@@ -18,15 +21,23 @@ extends Node2D
 @export var arrow_size := 11.0
 @export var flight_color := Color(0.55, 0.85, 1.0)
 @export var fade_duration := 0.4
+## Niveau libre : opacité des chemins une fois les vagues lancées.
+@export var free_layout_alpha := 0.45
+@export var candidate_color := Color(1.0, 0.6, 0.25)
 
 ## Temps écoulé, en secondes réelles : sert à l'animation.
 var _time := 0.0
 var _fading := false
+## Opacité des chemins (le fondu) ; le chemin de la tour en train d'être posée n'en dépend pas.
+var _alpha := 1.0
 ## Voile lumineux de chaque chemin. Un Line2D plutôt que draw_polyline : ses angles
 ## ne se chevauchent pas, ce qui évite des triangles plus clairs dans les virages.
 var _glows: Array[Line2D] = []
 ## Index des chemins empruntés par des monstres volants.
 var _flight_paths: Array[int] = []
+## Niveau libre : chemins qu'auraient les monstres avec la tour en train d'être posée.
+var _candidate: Array[PackedVector2Array] = []
+var _candidate_cell := GameMap.NO_CELL
 
 
 func _ready() -> void:
@@ -37,13 +48,10 @@ func _ready() -> void:
 	if spawner:
 		_flight_paths = get_flying_path_indices(spawner.waves)
 	if map:
+		if map.free_layout:
+			map.layout_changed.connect(_refresh_glows)
 		for path in map.paths:
 			var glow := Line2D.new()
-			# tessellate() garde un seul point par segment droit : les angles restent nets.
-			var points := PackedVector2Array()
-			for point in path.curve.tessellate():
-				points.append(to_local(path.to_global(point)))
-			glow.points = points
 			glow.width = map.path_width + 12.0
 			glow.joint_mode = Line2D.LINE_JOINT_SHARP
 			glow.antialiased = true
@@ -51,6 +59,35 @@ func _ready() -> void:
 			glow.show_behind_parent = true
 			add_child(glow)
 			_glows.append(glow)
+		_refresh_glows()
+
+
+## Voile de chaque chemin, sur son tracé actuel.
+func _refresh_glows() -> void:
+	for i in _glows.size():
+		var path := map.paths[i]
+		# tessellate() garde un seul point par segment droit : les angles restent nets.
+		var points := PackedVector2Array()
+		for point in path.curve.tessellate():
+			points.append(to_local(path.to_global(point)))
+		_glows[i].points = points
+	if _candidate_cell != GameMap.NO_CELL:
+		var cell := _candidate_cell
+		_candidate_cell = GameMap.NO_CELL
+		show_candidate(cell)
+
+
+## Niveau libre : montre le chemin qu'auraient les monstres avec une tour de plus sur la
+## case (NO_CELL : rien). Renvoie false si cette tour fermerait le passage.
+func show_candidate(cell: Vector2i) -> bool:
+	if cell == _candidate_cell:
+		return cell == GameMap.NO_CELL or not _candidate.is_empty()
+	_candidate_cell = cell
+	_candidate.clear()
+	if cell != GameMap.NO_CELL:
+		_candidate = map.get_routes_with(cell)
+	queue_redraw()
+	return cell == GameMap.NO_CELL or not _candidate.is_empty()
 
 
 func _process(delta: float) -> void:
@@ -58,13 +95,14 @@ func _process(delta: float) -> void:
 	var real_delta := delta / maxf(Engine.time_scale, 0.001)
 	_time += real_delta
 	if _fading:
-		modulate.a = maxf(modulate.a - real_delta / fade_duration, 0.0)
-		if modulate.a == 0.0:
+		var floor_alpha := free_layout_alpha if map and map.free_layout else 0.0
+		_alpha = maxf(_alpha - real_delta / fade_duration, floor_alpha)
+		if _alpha == 0.0:
 			queue_free()
 			return
 	var pulse := 0.5 + 0.5 * sin(_time * TAU / 1.6)
 	for glow in _glows:
-		glow.default_color = Color(glow_color, lerpf(0.12, 0.3, pulse))
+		glow.default_color = Color(glow_color, lerpf(0.12, 0.3, pulse) * _alpha)
 	queue_redraw()
 
 
@@ -90,6 +128,19 @@ func _draw() -> void:
 	for index in _flight_paths:
 		if index < map.paths.size():
 			_draw_flight_line(map.paths[index])
+	for points in _candidate:
+		_draw_candidate(points)
+
+
+## Chemin qu'auraient les monstres avec la tour en train d'être posée : des tirets orange,
+## bien visibles même une fois les chemins estompés.
+func _draw_candidate(points: PackedVector2Array) -> void:
+	var local := PackedVector2Array()
+	for point in points:
+		local.append(to_local(point))
+	var color := Color(candidate_color, 0.95)
+	for i in local.size() - 1:
+		draw_dashed_line(local[i], local[i + 1], color, 4.0, 10.0, true, true)
 
 
 ## Flèches en chevron qui avancent dans le sens de marche des ennemis.
@@ -107,7 +158,7 @@ func _draw_arrows(path: Path2D) -> void:
 		if direction != Vector2.ZERO:
 			# Les flèches apparaissent et disparaissent en fondu aux deux bouts du chemin.
 			var color := arrow_color
-			color.a = 0.9 * clampf(minf(distance, length - distance) / arrow_spacing, 0.0, 1.0)
+			color.a = 0.9 * _alpha * clampf(minf(distance, length - distance) / arrow_spacing, 0.0, 1.0)
 			var back := here - direction * arrow_size
 			var side := direction.orthogonal() * arrow_size
 			draw_polyline(PackedVector2Array([back + side, here, back - side]), color, 4.0, true)
@@ -122,7 +173,7 @@ func _draw_flight_line(path: Path2D) -> void:
 	var distance := fmod(_time * arrow_speed, arrow_spacing / 2.0)
 	while distance < length:
 		var color := flight_color
-		color.a = 0.75 * clampf(minf(distance, length - distance) / arrow_spacing, 0.0, 1.0)
+		color.a = 0.75 * _alpha * clampf(minf(distance, length - distance) / arrow_spacing, 0.0, 1.0)
 		var points := PackedVector2Array()
 		for step in 4:
 			var at := minf(distance + dash * step / 3.0, length)

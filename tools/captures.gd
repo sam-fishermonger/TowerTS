@@ -20,6 +20,7 @@ const SHOTS := {
 	"cite": ["res://scenes/levels/humanoid_04.tscn", 14.0, true],
 	"necropole": ["res://scenes/levels/undead_04.tscn", 14.0, true],
 	"conquete": ["res://scenes/levels/conquest_01.tscn", 8.0, false],
+	"libre": ["res://scenes/levels/free_02.tscn", 9.0, true],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
 }
@@ -72,6 +73,12 @@ func _start_battle(level: Level) -> void:
 	var gold := level.gold
 	level.gold = 100000
 	var map := level.map
+	if map.free_layout:
+		_build_maze(level, 16)
+		level.gold = gold
+		level.set_game_speed(2.0)
+		level.start_next_wave()
+		return
 	var cells: Array[Vector2i] = []
 	for y in map.rows:
 		for x in map.columns:
@@ -91,7 +98,39 @@ func _start_battle(level: Level) -> void:
 	level.start_next_wave()
 
 
+## Niveau libre : pose les tours une à une là où elles allongent le plus le chemin des
+## monstres (sans fermer le passage), pour que la capture montre un labyrinthe.
+func _build_maze(level: Level, count: int) -> void:
+	var map := level.map
+	var types := level.tower_types
+	for i in count if not types.is_empty() else 0:
+		var best := GameMap.NO_CELL
+		var best_length := -1.0
+		for y in map.rows:
+			for x in map.columns:
+				var cell := Vector2i(x, y)
+				if not map.is_cell_buildable(cell) or not _touches_path(map, cell):
+					continue
+				var length := 0.0
+				for points in map.get_routes_with(cell):
+					for p in points.size() - 1:
+						length += points[p].distance_to(points[p + 1])
+				if length > best_length + 0.5:
+					best = cell
+					best_length = length
+		if best == GameMap.NO_CELL or level.place_tower(best, types[i % types.size()]) == null:
+			return
+
+
 func _touches_path(map: GameMap, cell: Vector2i) -> bool:
+	if map.free_layout:
+		# Niveau libre : une case voisine du chemin actuel des monstres.
+		for path in map.paths:
+			for point in path.curve.get_baked_points():
+				if (map.world_to_cell(path.to_global(point)) - cell).abs().x <= 1 \
+						and (map.world_to_cell(path.to_global(point)) - cell).abs().y <= 1:
+					return true
+		return false
 	for dy in [-1, 0, 1]:
 		for dx in [-1, 0, 1]:
 			if map.is_cell_on_path(cell + Vector2i(dx, dy)):

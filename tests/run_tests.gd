@@ -56,6 +56,8 @@ const TUTORIAL := preload("res://scenes/levels/tutorial.tscn")
 const FREEZE_POWER := preload("res://resources/powers/freeze.tres")
 const CONQUEST_SELECT_SCREEN := preload("res://scenes/ui/conquest_select_screen.tscn")
 const PILLARDE := preload("res://resources/enemies/insectoid/pillarde.tres")
+const FREE_01 := preload("res://scenes/levels/free_01.tscn")
+const FREE_SELECT_SCREEN := preload("res://scenes/ui/free_select_screen.tscn")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -146,6 +148,9 @@ func _run() -> void:
 	await _test_conquest_top_bar()
 	await _test_raiders()
 	await _test_conquest_progress()
+	await _test_free_levels()
+	await _test_free_level_enemies()
+	await _test_free_levels_progress()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -4058,3 +4063,177 @@ func _play_conquest_bot(level: Level, tower_count := 99, max_time := 1500.0) -> 
 		"GAGNÉ" if level.is_over and level.lives > 0 else ("PERDU" if level.is_over else "TEMPS"),
 		level.lives, level.starting_lives, level.spawner.current_wave + 1, level.spawner.get_wave_count(),
 		bought, conquest.stone_mined, conquest.essence_mined, conquest.workers_lost, conquest.buildings_lost, elapsed]}
+
+
+# --- Niveaux libres -------------------------------------------------------------
+
+## Longueur du chemin des monstres d'un point d'apparition, en pixels.
+func _route_length(map: GameMap, index := 0) -> float:
+	return map.paths[index].curve.get_baked_length()
+
+
+## Case traversée par une courbe de trajet (repère du chemin).
+func _curve_visits(map: GameMap, curve: Curve2D, cell: Vector2i) -> bool:
+	for point in curve.get_baked_points():
+		if map.world_to_cell(map.paths[0].to_global(point)) == cell:
+			return true
+	return false
+
+
+func _test_free_levels() -> void:
+	print("Niveaux libres : chemin au plus court, les tours font les murs")
+	var level := await _spawn_level(FREE_01)
+	if level.is_choosing_towers:
+		level.choose_towers(level.get_default_tower_choice())
+	var map := level.map
+	level.gold = 100000
+	_check(map.free_layout and map.paths.size() == map.spawn_cells.size() and map.paths.size() == 1,
+		"un chemin par point d'apparition")
+	var curve := map.paths[0].curve
+	var start := map.paths[0].to_global(curve.get_point_position(0))
+	var end := map.paths[0].to_global(curve.get_point_position(curve.point_count - 1))
+	_check(not map.is_cell_in_grid(map.world_to_cell(start)) and map.world_to_cell(end) == map.base_cell
+		and map.get_base_position() == map.cell_to_world(map.base_cell),
+		"les monstres arrivent du bord de l'écran et vont jusqu'au QG")
+	_check(not map.is_cell_buildable(map.spawn_cells[0]) and not map.is_cell_buildable(map.base_cell)
+		and map.is_cell_buildable(Vector2i(9, 4)), "seuls les points d'apparition et le QG sont réservés")
+	# Un mur sur toute la hauteur : la dernière case qui laisse passer est refusée.
+	var before := _route_length(map)
+	var wall: Array[Tower] = []
+	for y in map.rows:
+		var tower := level.place_tower(Vector2i(12, y), CANNON)
+		if tower:
+			wall.append(tower)
+	var gap := Vector2i(12, map.rows - 1)
+	_check(wall.size() == map.rows - 1 and level.blocks_passage(gap) and not level.can_place_tower(gap, CANNON),
+		"une tour qui fermerait le passage est refusée (%d tours posées)" % wall.size())
+	_check(_route_length(map) > before and _curve_visits(map, map.paths[0].curve, gap),
+		"le chemin fait le détour par la seule ouverture (%d → %d px)" % [before, _route_length(map)])
+	# Aperçu : le chemin qu'auraient les monstres, et l'avertissement.
+	var preview: PathPreview = level.get_node("PathPreview")
+	level.placer.select(CANNON)
+	level.placer._update_hover(map.cell_to_world(gap))
+	_check(level.placer.passage_hint.visible and preview._candidate.is_empty() and not level.placer.preview.is_valid,
+		"survoler la dernière ouverture affiche « Fermerait le passage »")
+	level.placer._update_hover(map.cell_to_world(Vector2i(15, 2)))
+	_check(not level.placer.passage_hint.visible and preview._candidate.size() == 1 and level.placer.preview.is_valid,
+		"ailleurs, l'aperçu montre le chemin qu'auraient les monstres")
+	level.placer.select(null)
+	_check(preview._candidate.is_empty(), "l'aperçu du chemin s'efface quand on ne pose plus de tour")
+	# Vendre une tour du mur rouvre le passage.
+	var walled := _route_length(map)
+	level.sell_tower(wall[map.rows / 2])
+	_check(_route_length(map) < walled, "vendre une tour raccourcit le chemin")
+	# Les volants vont tout droit.
+	var flight := Enemy.get_flight_curve(map.paths[0])
+	_check(flight.point_count == 2, "les volants vont tout droit au QG, par-dessus les tours")
+	# Le trajet reste affiché pendant les vagues.
+	level.start_next_wave()
+	for i in 40:
+		await process_frame
+	_check(is_instance_valid(preview) and preview._alpha > 0.0, "le chemin reste affiché, plus discret, pendant les vagues")
+	await _free(level)
+	var flat := await _spawn_level(FREE_01, false)
+	_check(flat.map.paths.size() == 1 and _route_length(flat.map) > 0.0, "un niveau libre se joue aussi en vue de dessus")
+	await _free(flat)
+
+
+func _test_free_level_enemies() -> void:
+	print("Niveaux libres : les monstres changent de chemin quand le passage change")
+	var level := await _spawn_level(FREE_01)
+	var map := level.map
+	level.gold = 100000
+	# Assez solide pour traverser les tours posées pendant le test.
+	var enemy := level.spawner.spawn(LARVE, map.paths[0], 260.0, 1000.0)
+	enemy.lateral_offset = 0.0
+	enemy._update_position()
+	enemy.set_process(false)
+	await process_frame
+	var at := enemy.global_position
+	var ahead := map.world_to_cell(enemy.get_route_position())
+	var cell := Vector2i.ZERO
+	# Une tour posée sur le chemin, quelques cases devant lui.
+	var route_cells: Array[Vector2i] = []
+	for point in enemy.get_route().get_baked_points():
+		var c := map.world_to_cell(map.paths[0].to_global(point))
+		if not route_cells.has(c):
+			route_cells.append(c)
+	cell = route_cells[mini(route_cells.find(ahead) + 3, route_cells.size() - 2)]
+	var old_route := enemy.get_route()
+	_check(level.place_tower(cell, CANNON) != null, "une tour sur le chemin d'un monstre peut être posée")
+	_check(enemy.get_route() != old_route and not _curve_visits(map, enemy.get_route(), cell)
+		and enemy.global_position.distance_to(at) < 1.0 and enemy.progress == 0.0,
+		"le monstre prend un nouveau chemin, depuis là où il est, qui contourne la tour")
+	# Un monstre ne peut pas être muré là où il marche.
+	var walker := level.spawner.spawn(LARVE, map.paths[0], 0.0, 1.0, 1.0, -1,
+		map.get_route_from(map.cell_to_world(Vector2i(7, 0))))
+	walker.set_process(false)
+	_check(level.place_tower(Vector2i(6, 0), CANNON) != null and level.place_tower(Vector2i(8, 0), CANNON) != null,
+		"des tours autour d'un monstre")
+	_check(level.blocks_passage(Vector2i(7, 1)) and level.place_tower(Vector2i(7, 1), CANNON) == null,
+		"la tour qui l'enfermerait est refusée")
+	# Il marche jusqu'au QG par le nouveau chemin.
+	enemy.set_process(true)
+	walker.queue_free()
+	var lives := level.lives
+	var elapsed := 0.0
+	while is_instance_valid(enemy) and enemy.is_alive and elapsed < 60.0:
+		elapsed += await _step()
+	_check(level.lives < lives, "le monstre détourné atteint le QG")
+	# Un monstre qui se divise : les petits suivent son trajet, pas le chemin du point d'apparition.
+	var brood := level.spawner.spawn(COUVEUSE, map.paths[0], 0.0, 1.0, 1.0, -1,
+		map.get_route_from(map.cell_to_world(Vector2i(16, 7))))
+	brood.set_process(false)
+	await process_frame
+	var brood_at := brood.global_position
+	var brood_id := brood.get_instance_id()
+	brood.take_damage(100000.0, true)
+	await process_frame
+	var near := get_nodes_in_group(Enemy.GROUP).filter(func(node: Node) -> bool:
+		return node.get_instance_id() != brood_id and node.is_alive and node.global_position.distance_to(brood_at) < 64.0)
+	_check(not near.is_empty(), "les petits d'une Couveuse apparaissent là où elle est tombée (%d)" % near.size())
+	await _free(level)
+
+
+func _test_free_levels_progress() -> void:
+	print("Niveaux libres : écran de choix, étoiles et niveau suivant")
+	Progress.reset_campaign()
+	var title: Control = TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	_check(title.get_play_buttons().has(title.get_node("%FreeButton")), "le bouton Niveaux libres est dans le menu Jouer")
+	title.get_node("%FreeButton").pressed.emit()
+	await process_frame
+	await process_frame
+	_check(current_scene and current_scene.scene_file_path == FreeLevels.SELECT_SCREEN,
+		"le bouton Niveaux libres ouvre le choix des niveaux")
+	if is_instance_valid(title):
+		title.queue_free()
+	if current_scene:
+		current_scene.queue_free()
+	await process_frame
+	var screen: Control = FREE_SELECT_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(screen.play_buttons.size() == FreeLevels.size() and not screen.play_buttons[0].disabled
+		and screen.play_buttons[1].disabled, "une carte par niveau, seul le premier ouvert")
+	screen.queue_free()
+	for path in FreeLevels.LEVELS:
+		var scene: PackedScene = load(path)
+		var level: Level = scene.instantiate()
+		var map: GameMap = level.get_node("Map")
+		var used := {}
+		for wave in (level.get_node("WaveSpawner") as WaveSpawner).waves:
+			for group in wave.groups:
+				used[group.path_index] = true
+		_check(map.free_layout and used.size() == map.spawn_cells.size() and map.tileset != null,
+			"%s : les vagues partent de chaque point d'apparition" % level.level_name)
+		level.free()
+	var stars_before := Perks.get_earned_stars()
+	var level := await _spawn_level(FREE_01)
+	_check(level.get_next_level() == FreeLevels.LEVELS[1], "le niveau suivant est le deuxième niveau libre")
+	level._end_game(true)
+	_check(Progress.get_stars(FreeLevels.LEVELS[0]) == 3 and FreeLevels.is_unlocked(1)
+		and Perks.get_earned_stars() == stars_before + 3, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
+	await _free(level)
+	Progress.reset_campaign()

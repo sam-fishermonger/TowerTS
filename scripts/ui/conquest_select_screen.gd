@@ -3,6 +3,7 @@ extends Control
 ## par niveau (ConquestLevels), aux couleurs de son monde, avec ses étoiles et son bouton
 ## Jouer. Un niveau s'ouvre en gagnant le précédent. En bas, le choix de la difficulté,
 ## comme pour la campagne : chaque difficulté a ses propres étoiles.
+## Les niveaux libres (free_select_screen.gd) reprennent cet écran avec leurs niveaux.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
@@ -40,8 +41,44 @@ func go_back() -> void:
 
 
 func open_level(index: int) -> void:
-	if ConquestLevels.is_unlocked(index):
-		Level.open(get_tree(), ConquestLevels.LEVELS[index])
+	if is_level_unlocked(index):
+		Level.open(get_tree(), get_levels()[index])
+
+
+# --- Ce qui change d'un mode à l'autre ------------------------------------------
+
+func get_levels() -> Array[String]:
+	return ConquestLevels.LEVELS
+
+
+func get_level_info(index: int) -> Dictionary:
+	return ConquestLevels.INFO[index]
+
+
+func is_level_unlocked(index: int) -> bool:
+	return ConquestLevels.is_unlocked(index)
+
+
+func get_screen_title() -> String:
+	return "Conquête"
+
+
+func get_title_color() -> Color:
+	return Conquest.STONE_COLOR
+
+
+func get_intro() -> String:
+	return ("Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades "
+		+ "et casernes, et protégez votre économie des Pillards. Les vagues partent seules.")
+
+
+## Ligne propre au mode sous la présentation d'un niveau (vide : aucune).
+func get_card_extra(index: int) -> Array:
+	var world := CAMPAIGN.worlds[get_level_info(index).world]
+	if world.raiders.is_empty():
+		return []
+	var raider: EnemyData = world.raiders[0]
+	return [tr("Pillards : %s") % tr(raider.display_name), Enemy.RAID_COLOR]
 
 
 func set_difficulty(difficulty: int) -> void:
@@ -56,18 +93,17 @@ func _build() -> void:
 	add_child(background)
 
 	var title := Label.new()
-	title.text = "Conquête"
+	title.text = get_screen_title()
 	title.theme_type_variation = UiStyle.TITLE_VARIATION
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override(&"font_size", 40)
-	title.add_theme_color_override(&"font_color", Conquest.STONE_COLOR)
+	title.add_theme_color_override(&"font_color", get_title_color())
 	add_child(title)
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 20.0
 
 	var intro := Label.new()
-	intro.text = ("Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades "
-		+ "et casernes, et protégez votre économie des Pillards. Les vagues partent seules.")
+	intro.text = get_intro()
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.add_theme_color_override(&"font_color", MUTED)
@@ -146,15 +182,15 @@ func _refresh() -> void:
 		_cards.remove_child(card)
 		card.queue_free()
 	play_buttons.clear()
-	for i in ConquestLevels.size():
+	for i in get_levels().size():
 		_cards.add_child(_make_card(i, difficulty))
 
 
 func _make_card(index: int, difficulty: int) -> PanelContainer:
-	var info: Dictionary = ConquestLevels.INFO[index]
+	var info: Dictionary = get_level_info(index)
 	var world := CAMPAIGN.worlds[info.world]
-	var path := ConquestLevels.LEVELS[index]
-	var unlocked := ConquestLevels.is_unlocked(index)
+	var path := get_levels()[index]
+	var unlocked := is_level_unlocked(index)
 	var card := PanelContainer.new()
 	card.custom_minimum_size.x = CARD_WIDTH
 	card.add_theme_stylebox_override(&"panel", UiStyle.panel(world.color, 16.0, SIDE_TOP))
@@ -172,10 +208,11 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(description)
-	if not world.raiders.is_empty():
-		var raider: EnemyData = world.raiders[0]
-		var raider_label := _label(tr("Pillards : %s") % tr(raider.display_name), 14, Enemy.RAID_COLOR)
-		column.add_child(raider_label)
+	var extra := get_card_extra(index)
+	if not extra.is_empty():
+		var extra_label := _label(extra[0], 14, extra[1])
+		extra_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		column.add_child(extra_label)
 	var stars := Progress.get_stars(path, difficulty)
 	column.add_child(_label(Progress.star_text(stars), 30, STARS_COLOR))
 	column.add_child(_label(tr("★ %d / %d (4 difficultés)") % [Progress.get_total_stars(path), Progress.MAX_LEVEL_STARS],
@@ -185,7 +222,7 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	play.disabled = not unlocked
 	play.custom_minimum_size = Vector2(0, 44)
 	if not unlocked:
-		play.tooltip_text = tr("Gagner « %s » pour l'ouvrir.") % tr(ConquestLevels.INFO[index - 1].name)
+		play.tooltip_text = tr("Gagner « %s » pour l'ouvrir.") % tr(get_level_info(index - 1).name)
 	play.pressed.connect(open_level.bind(index))
 	column.add_child(play)
 	play_buttons.append(play)

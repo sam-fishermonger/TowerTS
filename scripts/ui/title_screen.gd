@@ -43,6 +43,7 @@ var _konami_label: Label
 @onready var worlds_button: Button = %WorldsButton
 @onready var daily_button: Button = %DailyButton
 @onready var conquest_button: Button = %ConquestButton
+@onready var free_button: Button = %FreeButton
 @onready var editor_button: Button = %EditorButton
 @onready var lexicon_button: Button = %LexiconButton
 @onready var achievements_button: Button = %AchievementsButton
@@ -67,6 +68,7 @@ func _ready() -> void:
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
 	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
 	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN))
+	free_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN))
 	editor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
@@ -81,7 +83,7 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, editor_button,
+	for button in [play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button, editor_button,
 			back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
@@ -94,7 +96,7 @@ func get_main_buttons() -> Array[Button]:
 
 
 func get_play_buttons() -> Array[Button]:
-	return [campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, editor_button, back_button]
+	return [campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button, editor_button, back_button]
 
 
 func is_play_menu_open() -> bool:
