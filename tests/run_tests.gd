@@ -438,7 +438,8 @@ func _test_perk_tree() -> void:
 
 func _test_perks_in_level() -> void:
 	print("Arbre des améliorations : effets en jeu")
-	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path])
+	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path,
+		LEVEL_04.resource_path])
 	for id in ["tresor", "architecte", "brocanteur", "remparts", "infirmerie", "pillage"]:
 		_check(Perks.buy(Perks.TREE.get_perk(id)), "achat : %s" % Perks.TREE.get_perk(id).display_name)
 	var level := await _spawn_level(LEVEL_01)
@@ -481,7 +482,7 @@ func _test_biome_towers_in_tree() -> void:
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
 	var campaign_stars := campaign.size() * Progress.MAX_LEVEL_STARS
-	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.85,
+	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.9,
 		"l'arbre complet (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [tree.get_total_cost(), campaign_stars])
 	_check(tree.get_total_cost() > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
