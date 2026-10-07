@@ -56,6 +56,9 @@ enum RaidState { NONE, GOING, RETURNING }
 
 ## Chemin suivi. À définir avant d'ajouter l'ennemi à l'arbre.
 var path: Path2D
+## Niveau libre : trajet propre (dans le repère du chemin) à suivre au lieu de la courbe
+## du chemin, à définir avant l'ajout (ou set_route()).
+var route: Curve2D
 ## Distance parcourue sur le chemin, en pixels.
 var progress := 0.0
 ## Décalage sur le côté du chemin, en pixels (positif : à droite de la marche). Le
@@ -192,7 +195,10 @@ func _ready() -> void:
 	if data.flying:
 		# Il vole au-dessus des tours et des autres monstres.
 		z_index = 1
-	_curve = get_flight_curve(path) if data.flying else path.curve
+	if route:
+		_curve = route
+	else:
+		_curve = get_flight_curve(path) if data.flying else path.curve
 	_path_length = _curve.get_baked_length()
 	if data.stealthy:
 		modulate.a = HIDDEN_ALPHA
@@ -279,6 +285,25 @@ func freeze(duration: float, vulnerability := 0.0) -> void:
 	_frozen_left = maxf(_frozen_left, duration)
 	_frozen_vulnerability = maxf(_frozen_vulnerability, vulnerability)
 	queue_redraw()
+
+
+## Niveau libre : nouveau trajet (le passage a changé), qui part de là où il est.
+func set_route(curve: Curve2D) -> void:
+	route = curve
+	_curve = curve
+	_path_length = curve.get_baked_length()
+	progress = 0.0
+	_update_position()
+
+
+## Trajet suivi (courbe du chemin, du vol, ou trajet propre), dans le repère du chemin.
+func get_route() -> Curve2D:
+	return _curve
+
+
+## Point du trajet où il en est, sans son décalage sur le côté (repère global).
+func get_route_position() -> Vector2:
+	return path.to_global(_curve.sample_baked(progress))
 
 
 ## Distance restant à parcourir avant la base : plus elle est petite, plus

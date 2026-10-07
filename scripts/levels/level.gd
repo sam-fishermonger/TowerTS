@@ -203,6 +203,8 @@ func _ready() -> void:
 	if is_endless:
 		_endless_record_before = Progress.get_endless_waves(scene_file_path)
 	placer.level = self
+	if map.free_layout:
+		map.layout_changed.connect(_reroute_enemies)
 	if map.relief:
 		_setup_relief()
 	if conquest_mode and not is_demo:
@@ -342,6 +344,8 @@ func get_next_level() -> String:
 		return campaign.levels[0] if campaign and campaign.size() > 0 else ""
 	if conquest_mode:
 		return ConquestLevels.get_next(scene_file_path)
+	if FreeLevels.has(scene_file_path):
+		return FreeLevels.get_next(scene_file_path)
 	return campaign.get_next(scene_file_path) if campaign and not challenge and custom_level.is_empty() else ""
 
 
@@ -418,7 +422,35 @@ func select_tower(data: TowerData) -> void:
 
 func can_place_tower(cell: Vector2i, data: TowerData) -> bool:
 	return data != null and not is_over and map.is_cell_buildable(cell) and gold >= data.get_cost() \
-		and (conquest == null or conquest.can_afford(data))
+		and (conquest == null or conquest.can_afford(data)) and not blocks_passage(cell)
+
+
+## Niveau libre : une tour sur cette case fermerait le passage des monstres vers le QG
+## (depuis un point d'apparition, ou depuis là où marche un monstre).
+func blocks_passage(cell: Vector2i) -> bool:
+	if not map.free_layout or not map.is_cell_buildable(cell):
+		return false
+	var walkers: Array[Vector2i] = []
+	for node in enemies.get_children():
+		var enemy := node as Enemy
+		if enemy and enemy.is_alive and not enemy.data.flying:
+			walkers.append(map.world_to_cell(enemy.get_route_position()))
+	return not map.keeps_passage_open(cell, walkers)
+
+
+## Niveau libre : le passage a changé, chaque monstre qui marche prend le nouveau plus
+## court chemin, depuis là où il est.
+func _reroute_enemies() -> void:
+	for node in enemies.get_children():
+		var enemy := node as Enemy
+		if enemy and enemy.is_alive and not enemy.data.flying and enemy.is_node_ready():
+			enemy.set_route(map.get_route_from(enemy.get_route_position()))
+
+
+## Niveau libre : trajet que suit un monstre né d'un autre (divisé, appelé en renfort,
+## relevé) ; null ailleurs, ou s'il ne se déplace pas comme lui (l'un vole, l'autre non).
+func _route_for(parent: Enemy, data: EnemyData) -> Curve2D:
+	return parent.get_route() if map.free_layout and data.flying == parent.data.flying else null
 
 
 ## Place une tour sur la case si c'est possible. Renvoie la tour, ou null.
@@ -689,6 +721,10 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 	enemy.reached_end.connect(_on_enemy_reached_end)
 	enemy.healed.connect(_on_enemy_healed)
 	enemy.summoned.connect(_on_enemy_summoned)
+	# Niveau libre : un monstre qui suit un trajet d'avant le dernier changement du passage
+	# (relevé après une tour posée) en reprend un à jour.
+	if map.free_layout and not enemy.data.flying and not map.is_route_current(enemy.get_route()):
+		enemy.set_route(map.get_route_from(enemy.get_route_position()))
 	if enemy.data.is_boss:
 		hud.track_boss(enemy)
 
@@ -738,7 +774,7 @@ func _split(enemy: Enemy) -> void:
 	Sound.play(&"enemy_split")
 	for i in data.split_count:
 		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0),
-			enemy.health_multiplier)
+			enemy.health_multiplier, 1.0, -1, _route_for(enemy, data.split_into))
 
 
 ## Un ennemi tombé se relèvera sur place après son délai, avec une partie de sa vie.
@@ -748,16 +784,17 @@ func _start_revive(enemy: Enemy) -> void:
 	effect.radius = enemy.data.radius
 	effect.duration = enemy.data.revive_delay
 	effect.risen.connect(_revive.bind(enemy.data, enemy.path, enemy.progress, enemy.health_multiplier,
-		enemy.revives_left - 1))
+		enemy.revives_left - 1, _route_for(enemy, enemy.data)))
 	stains.add_child(effect)
 	effect.global_position = enemy.global_position
 
 
-func _revive(data: EnemyData, path: Path2D, at_progress: float, health_multiplier: float, revives: int) -> void:
+func _revive(data: EnemyData, path: Path2D, at_progress: float, health_multiplier: float, revives: int,
+		route: Curve2D) -> void:
 	_pending_revives -= 1
 	if is_over:
 		return
-	var enemy := spawner.spawn(data, path, at_progress, health_multiplier, data.revive_health_ratio, revives)
+	var enemy := spawner.spawn(data, path, at_progress, health_multiplier, data.revive_health_ratio, revives, route)
 	Sound.play(&"enemy_split")
 	_show_floating_text(tr("Se relève !"), Color(0.75, 0.55, 1.0), enemy.global_position + Vector2(0, -data.radius - 14.0), 14)
 
@@ -767,7 +804,8 @@ func _on_enemy_summoned(enemy: Enemy) -> void:
 	var data := enemy.data
 	for i in data.summon_count:
 		spawner.spawn(data.summon_enemy, enemy.path,
-			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.health_multiplier)
+			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.health_multiplier,
+			1.0, -1, _route_for(enemy, data.summon_enemy))
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
@@ -914,6 +952,8 @@ func _on_menu_requested() -> void:
 	get_tree().paused = false
 	if conquest_mode:
 		get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN)
+	elif FreeLevels.has(scene_file_path):
+		get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN)
 	else:
 		get_tree().change_scene_to_file(TITLE_SCREEN if custom_level.is_empty() else LEVEL_EDITOR)
 

@@ -38,6 +38,8 @@ var _mouse_position := Vector2.ZERO
 var touch_cell := NO_CELL
 ## « Touchez encore pour poser », au-dessus de l'aperçu, au tactile.
 var touch_hint: Label
+## Niveau libre : « Fermerait le passage », sous l'aperçu d'une tour qui murerait le QG.
+var passage_hint: Label
 
 const NO_CELL := Vector2i(-1000, -1000)
 
@@ -46,15 +48,23 @@ const NO_CELL := Vector2i(-1000, -1000)
 
 func _ready() -> void:
 	preview.visible = false
-	touch_hint = Label.new()
-	touch_hint.add_theme_font_size_override(&"font_size", 16)
-	touch_hint.add_theme_color_override(&"font_outline_color", Color(0, 0, 0, 0.9))
-	touch_hint.add_theme_constant_override(&"outline_size", 6)
-	touch_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	touch_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	touch_hint.z_index = 10
-	touch_hint.visible = false
-	add_child(touch_hint)
+	touch_hint = _make_hint()
+	passage_hint = _make_hint()
+	passage_hint.text = "Fermerait le passage"
+	passage_hint.add_theme_color_override(&"font_color", Color(1.0, 0.5, 0.5))
+
+
+func _make_hint() -> Label:
+	var hint := Label.new()
+	hint.add_theme_font_size_override(&"font_size", 16)
+	hint.add_theme_color_override(&"font_outline_color", Color(0, 0, 0, 0.9))
+	hint.add_theme_constant_override(&"outline_size", 6)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint.z_index = 10
+	hint.visible = false
+	add_child(hint)
+	return hint
 
 
 func select(data: TowerData) -> void:
@@ -212,7 +222,8 @@ func _set_touch_cell(cell: Vector2i) -> void:
 		return
 	var can_place := level.conquest.can_place_building(cell, selected_building) if selected_building >= 0 \
 		else level.can_place_tower(cell, selected_tower)
-	touch_hint.text = "Touchez encore pour poser" if can_place else "Impossible ici"
+	touch_hint.text = "Touchez encore pour poser" if can_place else \
+		"Fermerait le passage" if selected_tower and level.blocks_passage(cell) else "Impossible ici"
 	touch_hint.add_theme_color_override(&"font_color", Color(0.6, 1.0, 0.65) if can_place else Color(1.0, 0.5, 0.5))
 	touch_hint.reset_size()
 	var center := level.map.cell_to_world(cell)
@@ -244,6 +255,7 @@ func _update_hover(world_position: Vector2) -> void:
 		_hovered_tower = hovered
 		_refresh_range(previous)
 		_refresh_range(hovered)
+	_update_passage_preview(cell if selected_tower and map.is_cell_buildable(cell) else NO_CELL)
 	if selected_tower and map.is_cell_in_grid(cell):
 		preview.show_at(map.cell_to_world(cell), selected_tower, level.can_place_tower(cell, selected_tower))
 	elif selected_building >= 0 and map.is_cell_in_grid(cell):
@@ -251,6 +263,25 @@ func _update_hover(world_position: Vector2) -> void:
 			level.conquest.can_place_building(cell, selected_building))
 	else:
 		preview.visible = false
+
+
+## Niveau libre : chemin qu'auraient les monstres avec la tour sur cette case (NO_CELL :
+## aucun), et avertissement si elle fermerait le passage.
+func _update_passage_preview(cell: Vector2i) -> void:
+	if not level.map.free_layout:
+		return
+	var path_preview := level.get_node_or_null("PathPreview") as PathPreview
+	if path_preview:
+		path_preview.show_candidate(cell)
+	# Au tactile, le rappel du second toucher le dit déjà.
+	passage_hint.visible = cell != NO_CELL and not touch_hint.visible and level.blocks_passage(cell)
+	if passage_hint.visible:
+		passage_hint.reset_size()
+		var center := level.map.cell_to_world(cell)
+		# Au-dessus de l'aperçu, sauf sur la première rangée (sous la barre du haut).
+		var below := cell.y == 0
+		passage_hint.global_position = center + Vector2(-passage_hint.size.x / 2.0,
+			Tower.SIZE / 2.0 + 4.0 if below else -Tower.SIZE / 2.0 - passage_hint.size.y - 4.0)
 
 
 ## Zone du pouvoir visé, sous la souris : celle où tombent les météores, ou l'endroit du

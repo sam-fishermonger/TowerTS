@@ -2404,3 +2404,42 @@ msgstr "Conquest · The Queen's Nest"
 
 msgid "%s : %s %s %s"
 msgstr "%s: %s %s %s"
+
+msgid "Niveaux libres"
+msgstr "Open maps"
+
+msgid "Pas de chemin tracé : vos tours sont les murs du labyrinthe."
+msgstr "No set path: your towers are the walls of the maze."
+
+msgid "Pas de chemin tracé : les monstres partent de leurs terriers et vont au QG par le plus court. Vos tours sont des murs : bâtissez un labyrinthe sans jamais fermer le passage. Les volants passent au-dessus."
+msgstr "No set path: monsters leave their burrows and take the shortest way to your HQ. Your towers are walls: build a maze without ever closing the way. Flyers go over it."
+
+msgid "Entrées des monstres : %d"
+msgstr "Monster entrances: %d"
+
+msgid "Fermerait le passage"
+msgstr "Would close the way"
+
+msgid "La Clairière"
+msgstr "The Glade"
+
+msgid "Un seul terrier, le QG en face et presque rien entre les deux : à vous de tracer le chemin."
+msgstr "One burrow, your HQ across the field and almost nothing in between: the path is yours to draw."
+
+msgid "La Cour de l'usine"
+msgstr "The Factory Yard"
+
+msgid "Deux portes crachent des machines blindées. Un même labyrinthe doit les ralentir toutes."
+msgstr "Two gates spit out armored machines. A single maze has to slow them all down."
+
+msgid "La Grand-Place"
+msgstr "The Grand Square"
+
+msgid "Le QG est dans un coin, les rues arrivent de deux côtés et les Aviateurs survolent vos murs."
+msgstr "Your HQ sits in a corner, streets come in from two sides and Aviators fly over your walls."
+
+msgid "Le Cimetière"
+msgstr "The Graveyard"
+
+msgid "Trois entrées et des morts qui se relèvent : il faut un labyrinthe qui tienne la distance."
+msgstr "Three entrances and dead that rise again: you need a maze that goes the distance."

@@ -16,6 +16,17 @@ extends Node2D
 @export var blocked_cells: Array[Vector2i] = []
 @export var path_width := 48.0
 
+@export_group("Niveau libre")
+## Niveau libre : pas de chemin tracé. Les monstres partent des points d'apparition
+## (spawn_cells) et rejoignent le QG (base_cell) par le plus court chemin entre les
+## rochers et les tours, recalculé à chaque tour posée ou vendue : les tours servent de
+## murs. Une tour qui fermerait le passage ne peut pas être posée. Les volants vont tout
+## droit au QG.
+@export var free_layout := false
+## Points d'apparition des monstres (un chemin par point, dans l'ordre : SpawnGroup.path_index).
+@export var spawn_cells: Array[Vector2i] = []
+@export var base_cell := Vector2i(19, 5)
+
 @export_group("Couleurs")
 @export var background_color := Color(0.13, 0.17, 0.13)
 @export var ground_color := Color(0.2, 0.32, 0.2)
@@ -57,8 +68,32 @@ const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/map/base.svg")
 ## Image de rocher en gris clair, teintée avec rock_color.
 const ROCK_TEXTURE: Texture2D = preload("res://assets/sprites/map/rock.svg")
 
-## Chemins des ennemis, dans l'ordre des nœuds enfants.
+## Niveau libre : émis quand le passage change (tour posée ou vendue), une fois les
+## chemins recalculés.
+signal layout_changed
+
+## Niveau libre : déplacements possibles d'une case à l'autre (les droits d'abord : à
+## égalité, les monstres vont tout droit).
+const STEPS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
+	Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]
+const NO_CELL := Vector2i(-1000, -1000)
+## Longueur d'un pas en diagonale, en cases.
+const DIAGONAL_STEP := 1.41421356
+## Méta d'un trajet (Curve2D) de niveau libre : la version du passage pour laquelle il a
+## été calculé (voir layout_version).
+const LAYOUT_VERSION_META := &"layout_version"
+
+## Chemins des ennemis, dans l'ordre des nœuds enfants (niveau libre : un par point
+## d'apparition, recalculé quand le passage change).
 var paths: Array[Path2D] = []
+## Niveau libre : augmente à chaque changement du passage.
+var layout_version := 0
+## Niveau libre : distance de chaque case au QG (INF si elle n'y mène pas), pour le
+## passage actuel.
+var _field := PackedFloat32Array()
+## Niveau libre : bouts de chemin dessinés sur le sol, de l'entrée de chaque point
+## d'apparition à sa case, et une place devant le QG (à la place des chemins).
+var _trails: Array[Path2D] = []
 
 var _path_cells := {}
 var _blocked := {}
@@ -88,7 +123,12 @@ func _ready() -> void:
 	for child in get_children():
 		if child is Path2D:
 			paths.append(child)
-	for path in paths:
+	if free_layout:
+		# Seuls les points d'apparition et le QG sont réservés : le reste est à construire.
+		for cell in spawn_cells + [base_cell]:
+			_path_cells[cell] = true
+		_setup_free_layout()
+	for path in paths if not free_layout else []:
 		for point in path.curve.get_baked_points():
 			var cell := world_to_cell(path.to_global(point))
 			if is_cell_in_grid(cell):
@@ -135,6 +175,8 @@ func occupy(cell: Vector2i, node: Node) -> void:
 	_occupants[cell] = node
 	# Vue de trois quarts : la tour abat les arbres et les buissons de sa case.
 	_clear_decor(cell)
+	if free_layout:
+		_refresh_routes()
 
 
 ## Vue de trois quarts : abat le décor d'une case (sauf son rocher).
@@ -147,6 +189,8 @@ func _clear_decor(cell: Vector2i) -> void:
 
 func release(cell: Vector2i) -> void:
 	_occupants.erase(cell)
+	if free_layout:
+		_refresh_routes()
 
 
 func get_occupant(cell: Vector2i) -> Node:
@@ -197,11 +241,207 @@ func get_closest_path_point(world_position: Vector2) -> Vector2:
 ## Base du joueur (repère global), au bout du premier chemin : sur sa dernière case s'il
 ## finit dans la carte, sinon une case avant la sortie de l'écran.
 func get_base_position() -> Vector2:
+	if free_layout:
+		return cell_to_world(base_cell)
 	var points := _local_points(paths[0])
 	var base := points[points.size() - 1]
 	if not is_cell_in_grid(world_to_cell(to_global(base))):
 		base -= (base - points[points.size() - 2]).normalized() * cell_size
 	return to_global(base)
+
+
+# --- Niveau libre --------------------------------------------------------------
+
+## Un chemin par point d'apparition, et le trajet tout droit des volants.
+func _setup_free_layout() -> void:
+	for i in spawn_cells.size():
+		var path := Path2D.new()
+		path.name = "Route%d" % i
+		add_child(path)
+		paths.append(path)
+		var flight := Curve2D.new()
+		flight.add_point(to_local(_spawn_entry(spawn_cells[i])))
+		flight.add_point(to_local(cell_to_world(base_cell)))
+		path.set_meta(Enemy.FLIGHT_CURVE_META, flight)
+	var base := cell_to_world(base_cell)
+	var trail_ends: Array[PackedVector2Array] = [PackedVector2Array([base + Vector2(-12, -4), base + Vector2(12, 4)])]
+	for cell in spawn_cells:
+		trail_ends.append(PackedVector2Array([_spawn_entry(cell), cell_to_world(cell)]))
+	for ends in trail_ends:
+		var trail := Path2D.new()
+		trail.name = "Trail%d" % _trails.size()
+		trail.curve = Curve2D.new()
+		for point in ends:
+			trail.curve.add_point(to_local(point))
+		add_child(trail)
+		_trails.append(trail)
+	_refresh_routes()
+
+
+## Point d'où arrivent les monstres d'un point d'apparition : une case hors de l'écran
+## s'il est au bord de la carte, son centre sinon.
+func _spawn_entry(cell: Vector2i) -> Vector2:
+	var outward := Vector2.ZERO
+	if cell.x == 0:
+		outward = Vector2.LEFT
+	elif cell.x == columns - 1:
+		outward = Vector2.RIGHT
+	elif cell.y == 0:
+		outward = Vector2.UP
+	elif cell.y == rows - 1:
+		outward = Vector2.DOWN
+	return cell_to_world(cell) + outward * cell_size
+
+
+## Recalcule le passage et le chemin de chaque point d'apparition.
+func _refresh_routes() -> void:
+	layout_version += 1
+	_field = _distance_field()
+	for i in spawn_cells.size():
+		var cells := _route_cells(spawn_cells[i], _field)
+		var points := PackedVector2Array([_spawn_entry(spawn_cells[i])])
+		for cell in cells:
+			points.append(cell_to_world(cell))
+		paths[i].curve = _make_curve(points)
+	layout_changed.emit()
+
+
+func _make_curve(global_points: PackedVector2Array) -> Curve2D:
+	var curve := Curve2D.new()
+	for point in global_points:
+		curve.add_point(to_local(point))
+	curve.set_meta(LAYOUT_VERSION_META, layout_version)
+	return curve
+
+
+func _cell_index(cell: Vector2i) -> int:
+	return cell.y * columns + cell.x
+
+
+## Case où un monstre peut marcher : ni rocher ni tour (`closed` : une case à compter
+## comme fermée en plus).
+func _is_walkable(cell: Vector2i, closed := NO_CELL) -> bool:
+	return is_cell_in_grid(cell) and cell != closed and not _blocked.has(cell) and not _occupants.has(cell)
+
+
+## Le pas d'une case à sa voisine est possible : en diagonale, sans couper le coin d'un
+## obstacle.
+func _can_step(from: Vector2i, step: Vector2i, closed := NO_CELL) -> bool:
+	if step.x == 0 or step.y == 0:
+		return true
+	return _is_walkable(from + Vector2i(step.x, 0), closed) and _is_walkable(from + Vector2i(0, step.y), closed)
+
+
+## Distance de chaque case au QG en marchant (Dijkstra, en cases ; INF si elle n'y mène pas).
+func _distance_field(closed := NO_CELL) -> PackedFloat32Array:
+	var field := PackedFloat32Array()
+	field.resize(columns * rows)
+	field.fill(INF)
+	if not _is_walkable(base_cell, closed):
+		return field
+	field[_cell_index(base_cell)] = 0.0
+	var open: Array[Vector2i] = [base_cell]
+	while not open.is_empty():
+		# File triée par distance décroissante : la plus proche est à la fin.
+		var cell: Vector2i = open.pop_back()
+		var distance := field[_cell_index(cell)]
+		for step in STEPS:
+			var next := cell + step
+			if not _is_walkable(next, closed) or not _can_step(cell, step, closed):
+				continue
+			var next_distance := distance + (1.0 if step.x == 0 or step.y == 0 else DIAGONAL_STEP)
+			if next_distance >= field[_cell_index(next)] - 0.001:
+				continue
+			field[_cell_index(next)] = next_distance
+			open.erase(next)
+			var at := open.size()
+			while at > 0 and field[_cell_index(open[at - 1])] < next_distance:
+				at -= 1
+			open.insert(at, next)
+	return field
+
+
+## Cases du plus court chemin d'une case au QG (la case de départ comprise, même si une
+## tour vient d'y être posée : le monstre en sort). Vide si le QG est inaccessible.
+func _route_cells(from: Vector2i, field: PackedFloat32Array, closed := NO_CELL) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = [from]
+	var cell := from
+	var last_step := Vector2i.ZERO
+	for i in columns * rows:
+		if cell == base_cell:
+			return cells
+		var best := NO_CELL
+		var best_cost := INF
+		for step in STEPS:
+			var next := cell + step
+			if not is_cell_in_grid(next) or not _can_step(cell, step, closed):
+				continue
+			var cost := field[_cell_index(next)] + (1.0 if step.x == 0 or step.y == 0 else DIAGONAL_STEP)
+			# À égalité, il garde sa direction.
+			if cost < best_cost - 0.001 or (best != NO_CELL and absf(cost - best_cost) < 0.001 and step == last_step):
+				best = next
+				best_cost = cost
+		if best == NO_CELL or is_inf(best_cost):
+			return []
+		last_step = best - cell
+		cell = best
+		cells.append(cell)
+	return []
+
+
+## Niveau libre : trajet d'un monstre qui marche, de sa position (sur son trajet, sans
+## son décalage sur le côté) au QG, par le passage actuel.
+func get_route_from(world_position: Vector2) -> Curve2D:
+	var cell := world_to_cell(world_position)
+	cell = Vector2i(clampi(cell.x, 0, columns - 1), clampi(cell.y, 0, rows - 1))
+	var cells := _route_cells(cell, _field)
+	if cells.is_empty():
+		cells = [base_cell]
+	var points := PackedVector2Array([world_position])
+	# Le monstre est déjà dans sa case : il va droit à la suivante.
+	var first := 1 if world_to_cell(world_position) == cells[0] and cells.size() > 1 else 0
+	for i in range(first, cells.size()):
+		points.append(cell_to_world(cells[i]))
+	return _make_curve(points)
+
+
+## Le trajet a été calculé pour le passage actuel.
+func is_route_current(curve: Curve2D) -> bool:
+	return curve.get_meta(LAYOUT_VERSION_META, -1) == layout_version
+
+
+## Niveau libre : une tour sur cette case laisserait un passage vers le QG depuis chaque
+## point d'apparition et depuis chaque case de `walker_cells` (où marchent des monstres).
+## Toujours vrai hors des niveaux libres.
+func keeps_passage_open(cell: Vector2i, walker_cells: Array[Vector2i] = []) -> bool:
+	if not free_layout:
+		return true
+	if cell == base_cell or spawn_cells.has(cell):
+		return false
+	var field := _distance_field(cell)
+	for spawn in spawn_cells:
+		if is_inf(field[_cell_index(spawn)]):
+			return false
+	for walker in walker_cells:
+		if is_cell_in_grid(walker) and _route_cells(walker, field, cell).is_empty():
+			return false
+	return true
+
+
+## Niveau libre : chemins (points du repère global) qu'auraient les monstres de chaque
+## point d'apparition avec une tour de plus sur cette case ; vide si elle fermerait le passage.
+func get_routes_with(cell: Vector2i) -> Array[PackedVector2Array]:
+	var result: Array[PackedVector2Array] = []
+	var field := _distance_field(cell)
+	for spawn in spawn_cells:
+		var cells := _route_cells(spawn, field, cell)
+		if cells.is_empty():
+			return []
+		var points := PackedVector2Array([_spawn_entry(spawn)])
+		for route_cell in cells:
+			points.append(cell_to_world(route_cell))
+		result.append(points)
+	return result
 
 
 # --- Décor ------------------------------------------------------------------
@@ -233,7 +473,7 @@ func _build_decor() -> void:
 					_decal_layer.set_cell(cell, 0, Vector2i(rng.randi_range(0, 7), DECAL_ROW))
 		for cell in blocked_cells:
 			_obstacles[cell] = rng.randi_range(0, 3)
-		for path in paths:
+		for path in paths if not free_layout else []:
 			_scatter_path_details(path, rng)
 	queue_redraw()
 
@@ -296,7 +536,7 @@ func _build_relief() -> void:
 	var noise := FastNoiseLite.new()
 	noise.seed = rng.randi()
 	noise.frequency = 0.04
-	for path in paths:
+	for path in _trails if free_layout else paths:
 		var curve := path.curve
 		var distance := 0.0
 		while distance < curve.get_baked_length():
@@ -350,10 +590,15 @@ func populate_decor(container: Node2D) -> void:
 		for x in columns:
 			var cell := Vector2i(x, y)
 			var center := cell_to_world(cell)
+			if is_cell_blocked(cell) and free_layout and rng.randf() < 0.5:
+				# Niveau libre : les obstacles sont aussi les grands éléments du monde.
+				_add_decor(container, cell, BiomeTheme.pick(_theme.far, rng), center + Vector2(0, 14), rng, 1.15)
+				continue
 			if is_cell_blocked(cell):
 				_add_decor(container, cell, DecorItem.Kind.ROCK, center + Vector2(0, 10), rng)
 				continue
-			if is_cell_on_path(cell):
+			# Niveau libre : rien debout là où les monstres peuvent marcher.
+			if is_cell_on_path(cell) or free_layout:
 				continue
 			var near_path := false
 			for dy in range(-1, 2):
@@ -495,10 +740,12 @@ func _draw() -> void:
 	for cell in blocked_cells:
 		_draw_rock(to_local(cell_to_world(cell)))
 	# Bordure de tous les chemins d'abord, pour que les croisements restent propres.
-	for path in paths:
+	for path in _trails if free_layout else paths:
 		draw_polyline(_local_points(path), path_color.darkened(0.25), path_width + 8.0, true)
-	for path in paths:
+	for path in _trails if free_layout else paths:
 		draw_polyline(_local_points(path), path_color, path_width, true)
+	if free_layout:
+		_draw_spawn_gates()
 	if tileset:
 		var texture := _tile_texture()
 		var size := Vector2(tileset.tile_size)
@@ -519,6 +766,16 @@ func _draw_relief() -> void:
 	draw_rect(Rect2(0, bottom, screen.x, maxf(screen.y - bottom, 0.0)), background_color)
 	_draw_tufts()
 	_draw_relief_path()
+	if free_layout:
+		# Le quadrillage, discret, aide à bâtir le labyrinthe.
+		var line := Color(0, 0, 0, 0.07)
+		for x in range(1, columns):
+			var from := grid_origin + Vector2(x * cell_size, 0)
+			draw_line(from, from + Vector2(0, grid_size.y), line)
+		for y in range(1, rows):
+			var from := grid_origin + Vector2(0, y * cell_size)
+			draw_line(from, from + Vector2(grid_size.x, 0), line)
+		_draw_spawn_gates()
 	if not paths.is_empty():
 		var base := to_local(get_base_position())
 		_draw_relief_base(base)
@@ -554,6 +811,19 @@ func _draw_relief_base(at: Vector2) -> void:
 	door.append(at + Vector2(8, 2))
 	draw_colored_polygon(door, Color(0.2, 0.13, 0.08))
 	draw_polyline(door, Relief.OUTLINE, 2.0, true)
+
+
+## Niveau libre : un terrier sombre sur chaque point d'apparition, d'où sortent les monstres.
+func _draw_spawn_gates() -> void:
+	for cell in spawn_cells:
+		var at := to_local(cell_to_world(cell))
+		var glow := Color(0.85, 0.25, 0.3)
+		draw_colored_polygon(Relief.ellipse(at + Vector2(0, 4), 26.0, 13.0, 0.0, TAU, 24), Color(glow, 0.25))
+		draw_colored_polygon(Relief.ellipse(at + Vector2(0, 3), 20.0, 9.5, 0.0, TAU, 24), Color(0.1, 0.06, 0.08))
+		draw_colored_polygon(Relief.ellipse(at + Vector2(0, 4), 13.0, 5.5, 0.0, TAU, 20), Color(0.3, 0.06, 0.1))
+		var rim := PackedVector2Array(Relief.ellipse(at + Vector2(0, 3), 20.0, 9.5, 0.0, TAU, 24))
+		rim.append(rim[0])
+		draw_polyline(rim, Color(glow, 0.8), 2.0, true)
 
 
 func _draw_rock(center: Vector2) -> void:
