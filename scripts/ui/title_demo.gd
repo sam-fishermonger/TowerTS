@@ -151,8 +151,9 @@ func _think() -> void:
 			_planned_upgrade = null
 	elif _planned_tower and level.gold >= _planned_tower.get_cost():
 		var cell := _best_cell(_planned_tower)
-		if cell != NO_CELL:
-			level.place_tower(cell, _planned_tower)
+		if cell != NO_CELL and level.place_tower(cell, _planned_tower) != null and level.map.free_layout:
+			# Niveau libre : la tour a déplacé le chemin des monstres.
+			_path_points = _sample_paths(level.map)
 		_planned_tower = null
 
 
@@ -181,7 +182,7 @@ func _best_cell(data: TowerData) -> Vector2i:
 	for x in map.columns:
 		for y in map.rows:
 			var cell := Vector2i(x, y)
-			if not map.is_cell_buildable(cell):
+			if not map.is_cell_buildable(cell) or level.blocks_passage(cell):
 				continue
 			var center := map.cell_to_world(cell)
 			var covered := 0

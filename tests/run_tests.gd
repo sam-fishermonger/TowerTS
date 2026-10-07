@@ -13,6 +13,7 @@ const LEVEL_03 := preload("res://scenes/levels/level_03.tscn")
 const LEVEL_04 := preload("res://scenes/levels/level_04.tscn")
 const LEVEL_05 := preload("res://scenes/levels/level_05.tscn")
 const LEVEL_06 := preload("res://scenes/levels/level_06.tscn")
+const LEVEL_07 := preload("res://scenes/levels/level_07.tscn")
 const MECHA_01 := preload("res://scenes/levels/mecha_01.tscn")
 const HUMANOID_01 := preload("res://scenes/levels/humanoid_01.tscn")
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
@@ -52,6 +53,7 @@ const CHEVALIER := preload("res://resources/enemies/undead/chevalier.tres")
 const SQUELETTE := preload("res://resources/enemies/undead/squelette.tres")
 const LICHE := preload("res://resources/enemies/undead/liche.tres")
 const CONQUEST_01 := preload("res://scenes/levels/conquest_01.tscn")
+const CONQUEST_06 := preload("res://scenes/levels/conquest_06.tscn")
 const TUTORIAL := preload("res://scenes/levels/tutorial.tscn")
 const FREEZE_POWER := preload("res://resources/powers/freeze.tres")
 const CONQUEST_SELECT_SCREEN := preload("res://scenes/ui/conquest_select_screen.tscn")
@@ -151,6 +153,8 @@ func _run() -> void:
 	await _test_free_levels()
 	await _test_free_level_enemies()
 	await _test_free_levels_progress()
+	await _test_free_conquest()
+	await _test_free_level_editor()
 	await _test_detail_windows()
 	await _test_lexicon()
 	await _test_end_stats()
@@ -364,13 +368,13 @@ func _test_progress() -> void:
 	_check(screen.get_level_button(LEVEL_01.resource_path).text == "1-1\n★★☆"
 		and not screen.get_level_button(LEVEL_02.resource_path).disabled,
 		"la sélection montre les étoiles et le niveau débloqué")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 72", "la carte du monde compte ses étoiles")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 84", "la carte du monde compte ses étoiles")
 	await _free(screen)
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
 	_check(title.get_node("%CampaignButton").text == "Continuer", "le bouton Campagne devient Continuer")
-	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 288"), "l'écran titre montre les étoiles de la campagne")
+	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 336"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and not Progress.is_unlocked(campaign, 1),
@@ -477,7 +481,7 @@ func _test_biome_towers_in_tree() -> void:
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
 	var campaign_stars := campaign.size() * Progress.MAX_LEVEL_STARS
-	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.9,
+	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.85,
 		"l'arbre complet (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [tree.get_total_cost(), campaign_stars])
 	_check(tree.get_total_cost() > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
@@ -2164,14 +2168,21 @@ func _test_tower_choice() -> void:
 
 
 func _test_worlds() -> void:
-	print("Mondes : quatre biomes de 6 niveaux, débloqués l'un après l'autre")
+	print("Mondes : quatre biomes de 7 niveaux, débloqués l'un après l'autre")
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	_check(campaign.worlds.size() == 4 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 6),
-		"4 mondes de 6 niveaux")
-	_check(campaign.size() == 24 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
-	_check(campaign.get_next(LEVEL_06.resource_path) == MECHA_01.resource_path, "après le niveau 1-6 vient le 2-1")
-	_check(campaign.get_next(campaign.worlds[2].levels[5]) == campaign.worlds[3].levels[0], "après le niveau 3-6 vient le 4-1")
-	_check(campaign.get_next(campaign.worlds[3].levels[5]) == "", "le niveau 4-6 est le dernier")
+	_check(campaign.worlds.size() == 4 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 7),
+		"4 mondes de 7 niveaux")
+	_check(campaign.size() == 28 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
+	_check(campaign.get_next(LEVEL_06.resource_path) == campaign.worlds[0].levels[6]
+		and campaign.get_next(campaign.worlds[0].levels[6]) == MECHA_01.resource_path, "après le niveau 1-6 vient le 1-7, puis le 2-1")
+	_check(campaign.get_next(campaign.worlds[2].levels[6]) == campaign.worlds[3].levels[0], "après le niveau 3-7 vient le 4-1")
+	_check(campaign.get_next(campaign.worlds[3].levels[6]) == "", "le niveau 4-7 est le dernier")
+	# Le dernier niveau de chaque monde est un niveau libre : les tours font le labyrinthe.
+	_check(campaign.worlds.all(func(w: World) -> bool:
+		var level: Level = load(w.levels[6]).instantiate()
+		var free: bool = level.get_node("Map").free_layout
+		level.free()
+		return free), "le niveau 7 de chaque monde est un niveau libre")
 	# Chaque monde n'envoie que ses propres monstres.
 	for w in campaign.worlds.size():
 		var world := campaign.worlds[w]
@@ -2196,8 +2207,8 @@ func _test_worlds() -> void:
 	_check(Progress.get_next_to_play(campaign) == MECHA_01.resource_path, "Continuer ouvre le niveau 2-1")
 	Progress.reset_campaign()
 	# Fin du dernier niveau d'un monde : le bouton annonce le monde suivant.
-	var level := await _spawn_level(LEVEL_06)
-	_check(level.get_next_world_name() == "La Fonderie", "le niveau 1-6 ouvre La Fonderie")
+	var level := await _spawn_level(LEVEL_07)
+	_check(level.get_next_world_name() == "La Fonderie", "le niveau 1-7 ouvre La Fonderie")
 	level._end_game(true)
 	_check(level.hud.next_level_button.visible and level.hud.next_level_button.text == "Monde suivant"
 		and level.hud.end_message.text.contains("La Fonderie"), "l'écran de victoire annonce le nouveau monde")
@@ -2253,7 +2264,7 @@ func _test_endless_mode() -> void:
 	_check(screen.endless_mode and screen.get_node("%Title").text == "Mode infini", "le bouton Mode infini change les cartes")
 	_check(not endless_button.disabled and endless_button.text.ends_with("☆☆☆☆☆")
 		and screen.get_level_button(LEVEL_02.resource_path).disabled, "seul le niveau à 3 étoiles s'ouvre en mode infini")
-	_check(screen.get_card(0).find_child("Stars", true, false).text.contains("0 / 30"), "la carte compte les étoiles infinies du monde")
+	_check(screen.get_card(0).find_child("Stars", true, false).text.contains("0 / 35"), "la carte compte les étoiles infinies du monde")
 	await _free(screen)
 
 	Engine.set_meta(Level.ENDLESS_META, true)
@@ -2476,7 +2487,7 @@ func _test_difficulties() -> void:
 		"choisir Cauchemar l'enregistre et met les boutons à jour")
 	_check(screen.get_level_button(LEVEL_03.resource_path).tooltip_text.contains("★★★  Difficile"),
 		"la bulle d'aide du niveau donne les étoiles de chaque difficulté")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 72", "la carte compte les étoiles des 4 difficultés")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 84", "la carte compte les étoiles des 4 difficultés")
 	screen.set_endless_mode(true)
 	_check(not screen.difficulty_bar.visible, "pas de difficulté en mode infini")
 	await _free(screen)
@@ -2663,7 +2674,8 @@ func _test_bosses() -> void:
 						.all(func(g: SpawnGroup) -> bool: return g.count == 1 and world.bosses.has(g.enemy)),
 						"%s : le boss arrive seul, à la dernière vague" % level.level_name)
 			level.free()
-		_check(boss_levels == [3, 6], "%s : un boss tous les 3 niveaux (%s)" % [world.display_name, boss_levels])
+		_check(boss_levels == [3, 6, 7], "%s : un boss aux niveaux 3 et 6, et au niveau libre qui finit le monde (%s)"
+			% [world.display_name, boss_levels])
 	var level := await _spawn_level(LEVEL_03)
 	var boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 300.0)
 	await process_frame
@@ -3129,7 +3141,7 @@ func _check_build_order_balance(scene: PackedScene, build_order: Array) -> void:
 func _test_levels_04_to_06_maps() -> void:
 	print("Niveaux 4 à 6 : cartes")
 	var expected := [
-		[LEVEL_04, "Niveau 1-4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 1-5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 1-6", 1, 10, MECHA_01],
+		[LEVEL_04, "Niveau 1-4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 1-5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 1-6", 1, 10, LEVEL_07],
 	]
 	for item: Array in expected:
 		var level := await _spawn_level(item[0])
@@ -4117,6 +4129,124 @@ func _curve_visits(map: GameMap, curve: Curve2D, cell: Vector2i) -> bool:
 		if map.world_to_cell(map.paths[0].to_global(point)) == cell:
 			return true
 	return false
+
+
+## Conquête sur une carte libre : bâtiments et rochers minés changent le chemin.
+func _test_free_conquest() -> void:
+	print("Conquête · Le Dédale : bâtiments et rochers font le labyrinthe")
+	var level := await _spawn_level(CONQUEST_06)
+	var map := level.map
+	var conquest := level.conquest
+	_check(map.free_layout and conquest != null and map.paths.size() == 2, "une Conquête sur une carte libre")
+	level.gold = 5000
+	conquest.stone = 1000
+	conquest.essence = 1000
+	var K := Building.Kind
+	var consistent := true
+	for x in map.columns:
+		for y in map.rows:
+			var cell := Vector2i(x, y)
+			if map.is_cell_buildable(cell) and conquest.is_cell_suitable(cell, K.HOUSE) == level.blocks_passage(cell):
+				consistent = false
+	_check(consistent, "une Maison se pose sur une case libre, sauf si elle fermait le passage")
+	# Une Maison est un mur : le chemin la contourne.
+	var walked := Vector2i(-1, -1)
+	for x in range(4, map.columns - 4):
+		for y in map.rows:
+			if walked.x < 0 and map.is_cell_walked(Vector2i(x, y)) and map.is_cell_buildable(Vector2i(x, y)) \
+					and not level.blocks_passage(Vector2i(x, y)):
+				walked = Vector2i(x, y)
+	var version := map.layout_version
+	var house := conquest.place_building(walked, K.HOUSE)
+	_check(house != null and map.layout_version > version and not map.is_cell_walked(walked),
+		"une Maison sur le chemin le fait dévier (%s)" % [walked])
+	# Une Barricade se pose sur le chemin, et les monstres passent par elle.
+	var road := Vector2i(-1, -1)
+	for x in range(4, map.columns - 4):
+		for y in map.rows:
+			if road.x < 0 and conquest.is_cell_suitable(Vector2i(x, y), K.BARRICADE):
+				road = Vector2i(x, y)
+	version = map.layout_version
+	var barricade := conquest.place_building(road, K.BARRICADE)
+	_check(barricade != null and map.is_cell_walked(road), "une Barricade se pose sur le chemin, qui passe toujours par elle")
+	# Un rocher miné ouvre un passage.
+	version = map.layout_version
+	var rock: Vector2i = map.blocked_cells[0]
+	map.remove_rock(rock)
+	_check(map.layout_version > version and not map.is_cell_blocked(rock), "un rocher miné recalcule les chemins")
+	await _free(level)
+
+
+## Éditeur : une carte libre, avec ses terriers et son QG.
+func _test_free_level_editor() -> void:
+	print("Éditeur : carte libre")
+	var data := CustomLevel.create_default()
+	CustomLevel.make_free(data)
+	_check(CustomLevel.validate(data).begins_with("Posez au moins un terrier"), "une carte libre demande des terriers")
+	data.spawns = [Vector2i(0, 2), Vector2i(5, 5)]
+	_check(CustomLevel.validate(data).begins_with("Les terriers sont sur le bord"), "un terrier se pose au bord de la carte")
+	data.spawns = [Vector2i(0, 2), Vector2i(0, 7)]
+	_check(CustomLevel.validate(data).begins_with("Posez le QG"), "une carte libre demande un QG")
+	data.base = Vector2i(18, 5)
+	data.path = []
+	_check(CustomLevel.validate(data).is_empty(), "terriers et QG suffisent, sans chemin tracé")
+	var walled := data.duplicate(true)
+	for y in CustomLevel.ROWS:
+		walled.rocks.append(Vector2i(10, y))
+	_check(CustomLevel.validate(walled).begins_with("Un terrier n'a pas de passage"), "un mur de rochers est refusé")
+	var waves := CustomLevel.build_waves(data)
+	_check(waves[1].groups[0].path_index == 1 and waves[1].groups[1].path_index == 0,
+		"les groupes se partagent les terriers")
+	# Partage par code.
+	var code := CustomLevel.encode(data)
+	var decoded := CustomLevel.decode(code)
+	_check(CustomLevel.is_free(decoded) and decoded.spawns == data.spawns and decoded.base == data.base
+		and decoded.rocks == data.rocks, "le code garde la carte libre")
+	# L'écran de l'éditeur.
+	Progress.set_setting(CustomLevel.LEVELS_SETTING, [])
+	var editor: LevelEditor = load("res://scenes/ui/level_editor.tscn").instantiate()
+	root.add_child(editor)
+	await process_frame
+	editor.set_free(true)
+	_check(editor.current_tool == LevelEditor.EditTool.SPAWNS and editor.spawns_tool_button.visible
+		and not editor.path_tool_button.visible and editor.play_button.disabled, "passer en carte libre montre les outils Terriers et QG")
+	editor.click_cell(Vector2i(6, 6))
+	editor.click_cell(Vector2i(0, 4))
+	editor.click_cell(Vector2i(19, 9))
+	_check(editor.data.spawns == [Vector2i(0, 4), Vector2i(19, 9)], "les terriers se posent au bord (%s)" % [editor.data.spawns])
+	editor.click_cell(Vector2i(19, 9))
+	_check(editor.data.spawns == [Vector2i(0, 4)], "un clic sur un terrier l'enlève")
+	editor.set_tool(LevelEditor.EditTool.BASE)
+	editor.click_cell(Vector2i(0, 4))
+	editor.click_cell(Vector2i(17, 3))
+	_check(editor.data.base == Vector2i(17, 3) and not editor.play_button.disabled, "le QG se pose, hors des terriers, et le niveau se joue")
+	editor.set_tool(LevelEditor.EditTool.ROCKS)
+	editor._painting_rocks = true
+	editor.click_cell(Vector2i(17, 3))
+	editor.click_cell(Vector2i(9, 4))
+	_check(not editor.data.rocks.has(Vector2i(17, 3)) and editor.data.rocks.has(Vector2i(9, 4)), "pas de rocher sur le QG")
+	editor.set_free(false)
+	_check(editor.current_tool == LevelEditor.EditTool.PATH and editor.path_tool_button.visible
+		and not editor.spawns_tool_button.visible, "revenir au chemin tracé")
+	editor.set_free(true)
+	var level_data: Dictionary = editor.data.duplicate(true)
+	await _free(editor)
+	# Jouer la carte libre.
+	level_data.gold = 2000
+	Engine.set_meta(Level.CUSTOM_META, level_data)
+	var level := await _spawn_level(load(Level.EMPTY_LEVEL))
+	_check(level.map.free_layout and level.map.paths.size() == 1 and level.map.base_cell == Vector2i(17, 3)
+		and level.map.is_cell_blocked(Vector2i(9, 4)), "la carte libre se joue : terrier, QG et rochers")
+	if level.is_choosing_towers:
+		level.choose_towers(level.available_tower_types.slice(0, level.tower_limit))
+	var before := _route_length(level.map)
+	var on_route := Vector2i(-1, -1)
+	for y in CustomLevel.ROWS:
+		if on_route.x < 0 and level.map.is_cell_walked(Vector2i(8, y)):
+			on_route = Vector2i(8, y)
+	_check(level.place_tower(on_route, CANNON) != null and _route_length(level.map) > before, "une tour allonge le chemin")
+	await _free(level)
+	Progress.set_setting(CustomLevel.LEVELS_SETTING, [])
 
 
 func _test_free_levels() -> void:

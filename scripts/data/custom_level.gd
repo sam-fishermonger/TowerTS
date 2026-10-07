@@ -14,7 +14,10 @@ extends RefCounted
 ## - rocks : cases bloquées (Vector2i) ;
 ## - gold, lives : or et vies de départ ;
 ## - waves : une vague par élément, { groups = [{ enemy (chemin de l'EnemyData),
-##   count, elite }] }.
+##   count, elite }] } ;
+## - free (facultatif) : carte libre (GameMap.free_layout), sans chemin tracé : les
+##   monstres partent des terriers `spawns` (cases du bord, 1 à MAX_SPAWNS) et vont au
+##   QG `base` (Vector2i) en contournant rochers et tours. `path` est alors ignoré.
 
 const CAMPAIGN_PATH := "res://resources/campaign.tres"
 ## Réglages (Progress) : la liste des niveaux du joueur et celui qui est ouvert.
@@ -48,6 +51,8 @@ const MAX_LIVES := 100
 const MAX_WAVES := 15
 const MAX_GROUPS := 4
 const MAX_COUNT := 200
+## Carte libre : terriers au plus.
+const MAX_SPAWNS := 3
 
 ## Secondes entre deux ennemis d'un groupe : une distance de marche, entre ces bornes.
 const SPAWN_SPACING := 60.0
@@ -312,6 +317,7 @@ static func get_interval(enemy: EnemyData) -> float:
 static func build_waves(data: Dictionary) -> Array[WaveData]:
 	var result: Array[WaveData] = []
 	var waves: Array = data.waves
+	var routes: int = data.spawns.size() if is_free(data) else 1
 	for i in waves.size():
 		var wave := WaveData.new()
 		var groups: Array = waves[i].groups
@@ -324,6 +330,8 @@ static func build_waves(data: Dictionary) -> Array[WaveData]:
 			group.elite = bool(entry.get("elite", false)) and not enemy.is_boss
 			group.interval = get_interval(enemy)
 			group.start_delay = j * GROUP_DELAY
+			# Carte libre : les groupes se partagent les terriers, à tour de rôle.
+			group.path_index = (i + j) % maxi(routes, 1)
 			wave.groups.append(group)
 		wave.bonus_gold = 0 if i == waves.size() - 1 else WAVE_BONUS + i * WAVE_BONUS_STEP
 		result.append(wave)
@@ -351,7 +359,49 @@ static func validate_shape(data: Dictionary) -> String:
 		for group: Variant in wave.groups:
 			if not group is Dictionary or not group.get("enemy") is String:
 				return "Niveau incomplet."
+	if data.get("free", false):
+		if not data.get("spawns") is Array or not data.get("base") is Vector2i:
+			return "Niveau incomplet."
+		for cell: Variant in data.spawns:
+			if not cell is Vector2i:
+				return "Niveau incomplet."
 	return ""
+
+
+## Carte libre : la carte n'a pas de chemin tracé.
+static func is_free(data: Dictionary) -> bool:
+	return bool(data.get("free", false))
+
+
+## Carte libre : niveau sans terrier ni QG encore (celui qu'on obtient en passant en carte libre).
+static func make_free(data: Dictionary) -> void:
+	data.free = true
+	if not data.get("spawns") is Array:
+		data.spawns = []
+	if not data.get("base") is Vector2i:
+		data.base = NO_BASE
+
+
+## Carte libre sans QG posé.
+const NO_BASE := Vector2i(-1, -1)
+
+
+## Carte libre : les cases d'où l'on atteint le QG en marchant (entre les rochers).
+static func reachable_from_base(data: Dictionary) -> Dictionary:
+	var reached := {}
+	var base: Vector2i = data.base
+	if not is_in_grid(base) or data.rocks.has(base):
+		return reached
+	reached[base] = true
+	var open: Array[Vector2i] = [base]
+	while not open.is_empty():
+		var cell: Vector2i = open.pop_back()
+		for step in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var next: Vector2i = cell + step
+			if is_in_grid(next) and not reached.has(next) and not data.rocks.has(next):
+				reached[next] = true
+				open.append(next)
+	return reached
 
 
 ## Ce qui empêche de jouer le niveau, en une phrase ("" s'il est jouable).
@@ -359,6 +409,32 @@ static func validate(data: Dictionary) -> String:
 	var shape := validate_shape(data)
 	if not shape.is_empty():
 		return shape
+	if is_free(data):
+		return _validate_free(data)
+	return _validate_path(data)
+
+
+static func _validate_free(data: Dictionary) -> String:
+	var spawns: Array = data.spawns
+	if spawns.is_empty():
+		return "Posez au moins un terrier, sur une case du bord de la carte."
+	if spawns.size() > MAX_SPAWNS:
+		return String(TranslationServer.translate("Pas plus de %d terriers.")) % MAX_SPAWNS
+	for cell: Vector2i in spawns:
+		if not is_on_edge(cell) or spawns.count(cell) > 1:
+			return "Les terriers sont sur le bord de la carte, un par case."
+	if not is_in_grid(data.base):
+		return "Posez le QG des monstres à atteindre."
+	if spawns.has(data.base):
+		return "Le QG ne peut pas être sur un terrier."
+	var reached := reachable_from_base(data)
+	for cell: Vector2i in spawns:
+		if not reached.has(cell):
+			return "Un terrier n'a pas de passage jusqu'au QG : enlevez des rochers."
+	return _validate_waves(data)
+
+
+static func _validate_path(data: Dictionary) -> String:
 	var path: Array = data.path
 	if path.size() < 2:
 		return "Tracez le chemin : il part du bord de la carte et va jusqu'à la base."
@@ -373,6 +449,10 @@ static func validate(data: Dictionary) -> String:
 	for cell in cells:
 		if cells.count(cell) > 1:
 			return "Le chemin ne doit pas se croiser."
+	return _validate_waves(data)
+
+
+static func _validate_waves(data: Dictionary) -> String:
 	var waves: Array = data.waves
 	if waves.is_empty():
 		return "Ajoutez au moins une vague."
@@ -406,20 +486,31 @@ static func apply(level: Level, data: Dictionary) -> void:
 	var campaign: Campaign = load(CAMPAIGN_PATH)
 	if biome < campaign.worlds.size():
 		map.tileset = campaign.worlds[biome].tileset
-	var cells := expand_path(data.path)
-	var rocks: Array[Vector2i] = []
-	for cell: Vector2i in data.rocks:
-		if is_in_grid(cell) and not cells.has(cell):
-			rocks.append(cell)
-	map.blocked_cells = rocks
+	var spawner: WaveSpawner = level.get_node("WaveSpawner")
+	spawner.waves = build_waves(data)
+	if is_free(data):
+		var spawns: Array[Vector2i] = []
+		spawns.assign(data.spawns)
+		map.free_layout = true
+		map.spawn_cells = spawns
+		map.base_cell = data.base
+		map.blocked_cells = _rocks_without(data.rocks, spawns + [data.base])
+		return
+	map.blocked_cells = _rocks_without(data.rocks, expand_path(data.path))
 	var path := Path2D.new()
 	path.name = "Path0"
 	path.curve = Curve2D.new()
 	for point in get_path_points(data.path):
 		path.curve.add_point(point)
 	map.add_child(path)
-	var spawner: WaveSpawner = level.get_node("WaveSpawner")
-	spawner.waves = build_waves(data)
+
+
+static func _rocks_without(rocks: Array, kept: Array) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for cell: Vector2i in rocks:
+		if is_in_grid(cell) and not kept.has(cell):
+			result.append(cell)
+	return result
 
 
 # --- Partage ---------------------------------------------------------------------
@@ -442,6 +533,13 @@ static func encode(data: Dictionary) -> String:
 		n = clean_name(data.get("name", "")), b = int(data.biome), g = int(data.gold), l = int(data.lives),
 		p = path, r = rocks, w = waves,
 	}
+	if is_free(data):
+		var spawns := []
+		for cell: Vector2i in data.spawns:
+			spawns.append_array([cell.x, cell.y])
+		compact.f = 1
+		compact.s = spawns
+		compact.h = [data.base.x, data.base.y]
 	var bytes := JSON.stringify(compact).to_utf8_buffer()
 	var packed := bytes.compress(FileAccess.COMPRESSION_DEFLATE)
 	return CODE_PREFIX + Marshalls.raw_to_base64(packed).replace("+", "-").replace("/", "_").trim_suffix("=").trim_suffix("=")
@@ -492,6 +590,16 @@ static func decode(code: String) -> Dictionary:
 			wave.groups.append({enemy = enemy.resource_path, count = clampi(_to_int(group[1]), 1, MAX_COUNT),
 				elite = _to_int(group[2]) == 1})
 		data.waves.append(wave)
+	if _to_int(compact.get("f")) == 1:
+		var spawns: Variant = _read_cells(compact.get("s"), MAX_SPAWNS)
+		var base: Variant = _read_cells(compact.get("h"), 1)
+		if spawns == null or base == null or base.size() != 1:
+			return {}
+		data.free = true
+		data.spawns = spawns
+		data.base = base[0]
+	if data.path == null or data.rocks == null:
+		return {}
 	if not validate(data).is_empty():
 		return {}
 	return data

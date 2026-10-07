@@ -1,6 +1,7 @@
 class_name LevelEditor
 extends Control
-## Éditeur de niveau : on trace le chemin des ennemis sur la grille, on pose des
+## Éditeur de niveau : on trace le chemin des ennemis sur la grille (ou, sur une carte
+## libre, on pose les terriers et le QG : les tours feront le labyrinthe), on pose des
 ## rochers, on compose les vagues, puis on joue. Les niveaux du joueur sont enregistrés
 ## avec la progression (CustomLevel) ; l'onglet Niveaux en crée, en ouvre, et les partage
 ## sous forme de code à copier-coller. Une partie finie ramène ici.
@@ -15,7 +16,7 @@ const HINT_COLOR := Color(0.8, 0.85, 0.8)
 const READY_COLOR := Color(0.55, 1.0, 0.6)
 const START_COLOR := Color(0.45, 0.9, 0.5)
 
-enum EditTool { PATH, ROCKS }
+enum EditTool { PATH, ROCKS, SPAWNS, BASE }
 enum Tab { LEVELS, MAP, WAVES }
 
 ## Niveaux du joueur (voir CustomLevel), et le rang de celui qui est ouvert.
@@ -40,6 +41,9 @@ var map_tab: Button
 var waves_tab: Button
 var path_tool_button: Button
 var rocks_tool_button: Button
+var spawns_tool_button: Button
+var base_tool_button: Button
+var free_button: CheckButton
 var clear_button: Button
 var biome_option: OptionButton
 var gold_spin: SpinBox
@@ -156,16 +160,29 @@ func _build() -> void:
 	add_child(bottom)
 	back_button = Button.new()
 	back_button.text = "Retour"
-	back_button.custom_minimum_size = Vector2(140, 52)
+	back_button.custom_minimum_size = Vector2(110, 52)
 	back_button.add_theme_font_size_override("font_size", 22)
 	back_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(TITLE_SCREEN))
 	bottom.add_child(back_button)
+	free_button = CheckButton.new()
+	free_button.text = "Carte libre"
+	free_button.tooltip_text = "Pas de chemin tracé : les monstres partent des terriers et contournent vos tours jusqu'au QG."
+	free_button.add_theme_font_size_override("font_size", 18)
+	free_button.toggled.connect(set_free)
+	bottom.add_child(free_button)
 	var tools := ButtonGroup.new()
 	path_tool_button = _make_toggle("Chemin", tools, bottom)
 	path_tool_button.button_pressed = true
 	path_tool_button.pressed.connect(set_tool.bind(EditTool.PATH))
 	rocks_tool_button = _make_toggle("Rochers", tools, bottom)
 	rocks_tool_button.pressed.connect(set_tool.bind(EditTool.ROCKS))
+	spawns_tool_button = _make_toggle("Terriers", tools, bottom)
+	spawns_tool_button.pressed.connect(set_tool.bind(EditTool.SPAWNS))
+	base_tool_button = _make_toggle("QG", tools, bottom)
+	base_tool_button.pressed.connect(set_tool.bind(EditTool.BASE))
+	# Boutons d'outils à la taille de leur texte : la carte libre en ajoute deux.
+	for button: Button in [path_tool_button, rocks_tool_button, spawns_tool_button, base_tool_button]:
+		button.custom_minimum_size.x = 0
 	clear_button = Button.new()
 	clear_button.custom_minimum_size = Vector2(0, 44)
 	clear_button.pressed.connect(_on_clear_pressed)
@@ -178,7 +195,7 @@ func _build() -> void:
 	bottom.add_child(status_label)
 	play_button = Button.new()
 	play_button.text = "Jouer"
-	play_button.custom_minimum_size = Vector2(180, 52)
+	play_button.custom_minimum_size = Vector2(150, 52)
 	play_button.add_theme_font_size_override("font_size", 26)
 	play_button.pressed.connect(play)
 	bottom.add_child(play_button)
@@ -217,15 +234,36 @@ func set_tool(edit_tool: EditTool) -> void:
 	_refresh()
 
 
+## Passe le niveau ouvert en carte libre (terriers et QG, sans chemin) ou le ramène au
+## chemin tracé. Le chemin est gardé tel quel pendant ce temps.
+func set_free(free: bool) -> void:
+	if free == CustomLevel.is_free(data):
+		return
+	if free:
+		CustomLevel.make_free(data)
+		data.rocks = data.rocks.filter(func(rock: Vector2i) -> bool:
+			return not data.spawns.has(rock) and rock != data.base)
+		current_tool = EditTool.SPAWNS if data.spawns.is_empty() else EditTool.ROCKS
+	else:
+		data.free = false
+		current_tool = EditTool.PATH
+		_set_path(data.path)
+	_refresh()
+
+
+## Outils proposés pour le niveau ouvert : le chemin, ou les terriers et le QG.
+func _tools_for_mode() -> Array[EditTool]:
+	if CustomLevel.is_free(data):
+		return [EditTool.SPAWNS, EditTool.BASE, EditTool.ROCKS]
+	return [EditTool.PATH, EditTool.ROCKS]
+
+
 func show_tab(tab: Tab) -> void:
 	current_tab = tab
 	[levels_tab, map_tab, waves_tab][tab].button_pressed = true
 	map_view.visible = tab == Tab.MAP
 	waves_view.visible = tab == Tab.WAVES
 	levels_view.visible = tab == Tab.LEVELS
-	path_tool_button.visible = tab == Tab.MAP
-	rocks_tool_button.visible = tab == Tab.MAP
-	clear_button.visible = tab == Tab.MAP
 	_pending_delete = -1
 	_notice = ""
 	if tab == Tab.WAVES:
@@ -244,7 +282,18 @@ func _refresh() -> void:
 	biome_option.select(int(data.biome))
 	gold_spin.set_value_no_signal(int(data.gold))
 	lives_spin.set_value_no_signal(int(data.lives))
-	clear_button.text = "Effacer le chemin" if current_tool == EditTool.PATH else "Enlever les rochers"
+	var tools := _tools_for_mode()
+	if not tools.has(current_tool):
+		current_tool = tools[0]
+	var on_map := current_tab == Tab.MAP
+	var tool_buttons := [path_tool_button, rocks_tool_button, spawns_tool_button, base_tool_button]
+	for edit_tool: EditTool in EditTool.values():
+		tool_buttons[edit_tool].visible = on_map and tools.has(edit_tool)
+	tool_buttons[current_tool].set_pressed_no_signal(true)
+	free_button.visible = on_map
+	free_button.set_pressed_no_signal(CustomLevel.is_free(data))
+	clear_button.visible = on_map
+	clear_button.text = ["Effacer le chemin", "Enlever les rochers", "Enlever les terriers", "Enlever le QG"][current_tool]
 	var problem := CustomLevel.validate(data)
 	play_button.disabled = not problem.is_empty()
 	if not _notice.is_empty():
@@ -274,6 +323,10 @@ func _tool_hint() -> String:
 		return tr("Prêt à jouer.")
 	if current_tool == EditTool.PATH:
 		return tr("Cliquez ou glissez pour prolonger le chemin, clic droit pour reculer.")
+	if current_tool == EditTool.SPAWNS:
+		return tr("Cliquez sur une case du bord pour poser ou enlever un terrier.")
+	if current_tool == EditTool.BASE:
+		return tr("Cliquez sur une case pour y mettre le QG. Vos tours feront le labyrinthe.")
 	return tr("Cliquez ou glissez pour poser ou enlever des rochers.")
 
 
@@ -306,10 +359,17 @@ func _on_map_input(event: InputEvent) -> void:
 			_painting_rocks = not data.rocks.has(cell)
 			click_cell(cell)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			if current_tool == EditTool.PATH:
-				undo_path()
-			else:
-				set_rock(cell, false)
+			match current_tool:
+				EditTool.PATH:
+					undo_path()
+				EditTool.ROCKS:
+					set_rock(cell, false)
+				EditTool.SPAWNS:
+					remove_spawn(cell)
+				EditTool.BASE:
+					if data.base == cell:
+						data.base = CustomLevel.NO_BASE
+						_refresh()
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_dragging = false
 	elif event is InputEventMouseMotion and _dragging:
@@ -327,6 +387,15 @@ func click_cell(cell: Vector2i) -> void:
 	if current_tool == EditTool.ROCKS:
 		set_rock(cell, _painting_rocks)
 		return
+	if current_tool == EditTool.SPAWNS:
+		if data.spawns.has(cell):
+			remove_spawn(cell)
+		else:
+			add_spawn(cell)
+		return
+	if current_tool == EditTool.BASE:
+		set_base(cell)
+		return
 	var path: Array = data.path
 	if path.is_empty() and not CustomLevel.is_on_edge(cell):
 		status_label.text = "Le chemin part du bord de la carte : cliquez sur une case du bord."
@@ -341,7 +410,8 @@ func drag_cell(cell: Vector2i) -> void:
 		return
 	if current_tool == EditTool.ROCKS:
 		set_rock(cell, _painting_rocks)
-	elif not data.path.is_empty() and not CustomLevel.expand_path(data.path).has(cell):
+	elif current_tool == EditTool.PATH and not data.path.is_empty() \
+			and not CustomLevel.expand_path(data.path).has(cell):
 		_set_path(CustomLevel.extend_path(data.path, cell))
 
 
@@ -362,8 +432,43 @@ func undo_path() -> void:
 		_set_path(CustomLevel.truncate_path(data.path, cells[-2]))
 
 
+## Carte libre : pose un terrier sur une case du bord (le rocher qui y était disparaît).
+func add_spawn(cell: Vector2i) -> void:
+	if not CustomLevel.is_on_edge(cell):
+		_show_notice(tr("Les terriers sont sur le bord de la carte, un par case."), true)
+		return
+	if data.spawns.size() >= CustomLevel.MAX_SPAWNS:
+		_show_notice(tr("Pas plus de %d terriers.") % CustomLevel.MAX_SPAWNS, true)
+		return
+	if data.spawns.has(cell) or cell == data.base:
+		return
+	data.spawns.append(cell)
+	data.rocks.erase(cell)
+	_refresh()
+
+
+func remove_spawn(cell: Vector2i) -> void:
+	if data.spawns.has(cell):
+		data.spawns.erase(cell)
+		_refresh()
+
+
+## Carte libre : met le QG des monstres sur la case (pas sur un terrier).
+func set_base(cell: Vector2i) -> void:
+	if data.spawns.has(cell):
+		return
+	data.base = cell
+	data.rocks.erase(cell)
+	_refresh()
+
+
 func set_rock(cell: Vector2i, present: bool) -> void:
-	if CustomLevel.expand_path(data.path).has(cell) or data.rocks.has(cell) == present:
+	if data.rocks.has(cell) == present:
+		return
+	if CustomLevel.is_free(data):
+		if data.spawns.has(cell) or data.base == cell:
+			return
+	elif CustomLevel.expand_path(data.path).has(cell):
 		return
 	if present:
 		data.rocks.append(cell)
@@ -373,11 +478,17 @@ func set_rock(cell: Vector2i, present: bool) -> void:
 
 
 func _on_clear_pressed() -> void:
-	if current_tool == EditTool.PATH:
-		_set_path([])
-	else:
-		data.rocks = []
-		_refresh()
+	match current_tool:
+		EditTool.PATH:
+			_set_path([])
+			return
+		EditTool.ROCKS:
+			data.rocks = []
+		EditTool.SPAWNS:
+			data.spawns = []
+		EditTool.BASE:
+			data.base = CustomLevel.NO_BASE
+	_refresh()
 
 
 func _draw_map() -> void:
@@ -391,6 +502,9 @@ func _draw_map() -> void:
 	for rock: Vector2i in data.rocks:
 		map_view.draw_texture_rect(ROCK_TEXTURE, Rect2(Vector2(rock) * size + Vector2.ONE * size * 0.05,
 			Vector2.ONE * size * 0.9), false, Color(colors[3]).lightened(0.45))
+	if CustomLevel.is_free(data):
+		_draw_free_map(colors)
+		return
 	var path: Array = data.path
 	if path.is_empty():
 		# Les cases du bord, où le chemin peut commencer.
@@ -412,6 +526,32 @@ func _draw_map() -> void:
 	if path.size() >= 2:
 		var base := CustomLevel.cell_center(path[-1]) - CustomLevel.GRID_ORIGIN
 		map_view.draw_texture_rect(BASE_TEXTURE, Rect2(base - Vector2(32, 48), Vector2(64, 96)), false)
+
+
+## Carte libre : les terriers (et, à l'outil Terriers, les cases du bord où en poser),
+## le QG, et un voile sur les cases que les rochers coupent du QG.
+func _draw_free_map(colors: Array) -> void:
+	var size := CustomLevel.CELL_SIZE
+	if current_tool == EditTool.SPAWNS and data.spawns.size() < CustomLevel.MAX_SPAWNS:
+		for cell in _edge_cells():
+			if not data.spawns.has(cell) and cell != data.base:
+				map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size).grow(-4), Color(START_COLOR, 0.18))
+	var base: Vector2i = data.base
+	if CustomLevel.is_in_grid(base):
+		var reached := CustomLevel.reachable_from_base(data)
+		for x in CustomLevel.COLUMNS:
+			for y in CustomLevel.ROWS:
+				var cell := Vector2i(x, y)
+				if not reached.has(cell) and not data.rocks.has(cell):
+					map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size), Color(0, 0, 0, 0.3))
+	for cell: Vector2i in data.spawns:
+		var center := CustomLevel.cell_center(cell) - CustomLevel.GRID_ORIGIN
+		map_view.draw_circle(center, 26.0, Color(colors[2]).darkened(0.35))
+		map_view.draw_circle(center, 14.0, START_COLOR)
+	if CustomLevel.is_in_grid(base):
+		var center := CustomLevel.cell_center(base) - CustomLevel.GRID_ORIGIN
+		map_view.draw_circle(center, 28.0, colors[2])
+		map_view.draw_texture_rect(BASE_TEXTURE, Rect2(center - Vector2(32, 48), Vector2(64, 96)), false)
 
 
 ## Petites flèches dans le sens de la marche, au milieu de chaque ligne droite.

@@ -300,7 +300,9 @@ func set_route(curve: Curve2D) -> void:
 	_curve = curve
 	_path_length = curve.get_baked_length()
 	progress = 0.0
-	_update_position()
+	# Un Pillard parti piller reste où il est : il rejoindra le nouveau trajet à son retour.
+	if not is_raiding():
+		_update_position()
 
 
 ## Trajet suivi (courbe du chemin, du vol, ou trajet propre), dans le repère du chemin.

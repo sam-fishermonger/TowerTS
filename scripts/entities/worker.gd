@@ -182,7 +182,7 @@ func _walk(delta: float) -> bool:
 ## ou aucun monstre au sol n'est tout près.
 func _is_safe_to_enter(point: Vector2) -> bool:
 	var map := conquest.level.map
-	if not map.is_cell_on_path(map.world_to_cell(point)) or map.is_cell_on_path(map.world_to_cell(global_position)):
+	if not map.is_cell_walked(map.world_to_cell(point)) or map.is_cell_walked(map.world_to_cell(global_position)):
 		return true
 	for node in get_tree().get_nodes_in_group(Enemy.GROUP):
 		var enemy := node as Enemy
