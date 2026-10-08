@@ -82,6 +82,7 @@ func show_tab(tab: Tab) -> void:
 				_add_entry(tr(data.display_name), data.color.lightened(0.3), null, data, show_tower.bind(data))
 		Tab.ENEMIES:
 			_add_entry("Élites", EnemyData.ELITE_COLOR, null, null, show_elites)
+			_add_entry("Porteurs et coffres", ChestBonus.COLOR, null, null, show_carriers)
 			for world in CAMPAIGN.worlds:
 				_add_header(world.display_name, world.color)
 				for enemy in world.enemies:
@@ -221,6 +222,24 @@ func show_elites() -> void:
 		"[b]Boss[/b]",
 		tr("Un boss par monde, à la dernière vague des niveaux 3 et 6 (plus coriace au 6). Une aura rouge l'entoure, sa vie s'affiche en haut de l'écran, et il appelle des renforts en marchant."),
 	])
+
+
+func show_carriers() -> void:
+	_set_detail_header(tr("Porteurs et coffres"), ChestBonus.COLOR, null, null)
+	var lines: Array[String] = [
+		tr("Dans chaque vague à partir de la deuxième, un monstre porte du butin, et toutes les trois vagues un autre porte un coffre. Leur butin se voit au-dessus de leur tête."),
+		tr("Ils ont %d %% de vie en plus. Détruits, ils lâchent leur butin : cliquez ou touchez-le pour le ramasser avant qu'il disparaisse (%d s). Un porteur qui atteint la base l'emporte.")
+			% [roundi((Enemy.CARRIER_HEALTH - 1.0) * 100.0), roundi(Loot.LIFETIME)],
+		"",
+		_line(tr("Butin"), tr("de l'or, et en Conquête de la pierre ou de l'essence")),
+		"",
+		"[b]%s[/b]" % tr("Coffres"),
+		tr("Un coffre donne un bonus au hasard pour le reste du niveau. Le même bonus peut retomber, jusqu'à 3 fois."),
+	]
+	for definition in ChestBonus.DEFINITIONS:
+		lines.append("[color=#%s]%s[/color]  %s" % [(definition.color as Color).to_html(false), tr(definition.name),
+			tr(definition.description)])
+	detail_text.text = "\n".join(lines)
 
 
 func show_world(index: int) -> void:

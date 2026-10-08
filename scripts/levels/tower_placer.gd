@@ -58,6 +58,8 @@ var _drag_from := Vector2.INF
 var _drag_to := Vector2.ZERO
 var _dragging := false
 var _drag_adds := false
+## Butin sous la souris, cerclé de blanc.
+var _hovered_loot: Loot
 
 @onready var preview: PlacementPreview = $PlacementPreview
 
@@ -178,6 +180,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif selected_power and event.button_index == MOUSE_BUTTON_RIGHT:
 			select_power(null)
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and _pick_loot(event, touch):
+			# Un butin au sol (Loot) se ramasse avant tout le reste.
+			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and selected_building >= 0 and touch and cell != touch_cell:
 			_set_touch_cell(cell if level.map.is_cell_in_grid(cell) else NO_CELL)
 			_update_hover(_to_world(event.position))
@@ -264,6 +269,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## Ramasse le butin sous le clic (ou le toucher). Renvoie false s'il n'y en a pas.
+func _pick_loot(event: InputEventMouseButton, touch: bool) -> bool:
+	var loot := level.find_loot_at(_to_world(event.position), Loot.TOUCH_PICK_RADIUS if touch else Loot.PICK_RADIUS)
+	if loot == null:
+		return false
+	level.collect_loot(loot)
+	_set_touch_cell(NO_CELL)
+	return true
+
+
 func _has_selected_workers() -> bool:
 	return level.conquest != null and not level.conquest.get_selected_workers().is_empty()
 
@@ -331,6 +346,13 @@ func _update_hover(world_position: Vector2) -> void:
 	_mouse_position = world_position
 	if selected_power:
 		queue_redraw()
+	var loot := level.find_loot_at(world_position)
+	if loot != _hovered_loot:
+		if is_instance_valid(_hovered_loot):
+			_hovered_loot.highlighted = false
+		_hovered_loot = loot
+		if loot:
+			loot.highlighted = true
 	var cell := map.world_to_cell(world_position)
 	var hovered := map.get_occupant(cell) as Tower
 	if hovered != _hovered_tower:

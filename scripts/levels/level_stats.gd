@@ -45,6 +45,9 @@ var upgrades_bought := 0
 var towers_sold := 0
 ## Vagues lancées avant d'avoir vidé la carte.
 var early_calls := 0
+## Butins ramassés (Loot), dont les coffres ouverts.
+var loot_collected := 0
+var chests_opened := 0
 ## Durée de la partie, en secondes de jeu (sans la pause ni le choix des tours).
 var duration := 0.0
 ## Mode Conquête : la partie en est une, pierre et essence récoltées, bâtiments bâtis et

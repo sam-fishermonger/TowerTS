@@ -54,6 +54,11 @@ func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
 		"Tours posées": str(stats.towers_built),
 		"Améliorations": str(stats.upgrades_bought),
 	}
+	if stats.loot_collected > 0:
+		var loot := str(stats.loot_collected)
+		if stats.chests_opened > 0:
+			loot += " (%s)" % tr_n("%d coffre", "%d coffres", stats.chests_opened) % stats.chests_opened
+		summary["Butins ramassés"] = loot
 	if stats.conquest:
 		summary["Pierre récoltée"] = LevelStats.format_number(stats.stone_mined)
 		summary["Essence récoltée"] = LevelStats.format_number(stats.essence_mined)

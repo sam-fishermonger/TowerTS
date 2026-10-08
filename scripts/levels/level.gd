@@ -10,6 +10,12 @@ const DAMAGE_TEXT_COLOR := Color(1.0, 0.92, 0.85)
 const GOLD_TEXT_COLOR := Color(1.0, 0.82, 0.25)
 const LIVES_LOST_TEXT_COLOR := Color(1.0, 0.3, 0.3)
 const HEAL_TEXT_COLOR := Color(0.45, 1.0, 0.55)
+## Butin d'un porteur (Loot) : or d'un tas (au moins LOOT_MIN_GOLD, sinon
+## LOOT_GOLD_PER_REWARD fois l'or du monstre), pierre et essence en Conquête.
+const LOOT_MIN_GOLD := 15
+const LOOT_GOLD_PER_REWARD := 3
+const LOOT_STONE := 15
+const LOOT_ESSENCE := 4
 ## Méta du moteur posée juste avant d'ouvrir un niveau en mode infini (voir open()) :
 ## le niveau la lit et l'efface à son lancement.
 const ENDLESS_META := &"level_endless"
@@ -113,6 +119,9 @@ var power_cooldowns: Array[float] = []
 var conquest: Conquest
 ## Bulles du tutoriel (null hors du tutoriel).
 var tutorial: Tutorial
+## Bonus des coffres gagnés pendant la partie : nombre d'exemplaires par identifiant
+## (ChestBonus), dans l'ordre où ils sont tombés.
+var chest_levels := {}
 
 var _wave_bonus_paid := -1
 ## Ennemis tombés qui vont se relever (EnemyData.revive_count) : la vague n'est pas
@@ -125,6 +134,9 @@ var _bonuses: Perk
 ## Monstres et élites détruits déjà ajoutés aux compteurs des succès.
 var _counted_kills := 0
 var _counted_elite_kills := 0
+## Tirage des bonus des coffres (graine du niveau : une partie rejouée de la même façon
+## donne les mêmes bonus).
+var _chest_rng := RandomNumberGenerator.new()
 
 @onready var map: GameMap = $Map
 @onready var stains: Node2D = $Stains
@@ -189,6 +201,8 @@ func _ready() -> void:
 		# Comme pendant le défi, l'arbre des améliorations ne compte pas (voir _exit_tree()).
 		Engine.set_meta(Perks.DISABLED_META, true)
 	spawner.endless = is_endless
+	spawner.carriers = not is_tutorial
+	_chest_rng.seed = hash(scene_file_path + "/coffres")
 	if not is_endless and not is_demo and not challenge and not is_tutorial:
 		difficulty = Difficulty.get_current()
 	if challenge:
@@ -213,6 +227,7 @@ func _ready() -> void:
 		add_child(conquest)
 		move_child(conquest, towers.get_index() + 1)
 		conquest.setup(self)
+		spawner.loot_kinds = [Loot.Kind.GOLD, Loot.Kind.STONE, Loot.Kind.ESSENCE]
 	# Les tours débloquées dans l'arbre des améliorations s'ajoutent à celles du niveau.
 	var types := tower_types.duplicate()
 	for data in Perks.get_unlocked_towers():
@@ -284,7 +299,7 @@ func _ready() -> void:
 	power_cooldowns.resize(powers.size())
 	power_cooldowns.fill(0.0)
 	hud.setup_powers(powers)
-	hud.set_interest_rules(interest_rate, interest_cap)
+	hud.set_interest_rules(get_interest_rate(), get_interest_cap())
 	if challenge:
 		starting_gold = challenge.get_starting_gold(starting_gold)
 		starting_lives = challenge.get_starting_lives(starting_lives)
@@ -471,6 +486,7 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
 	tower.cell = cell
+	refresh_tower_bonuses(tower)
 	map.occupy(cell, tower)
 	gold -= data.get_cost()
 	stats.on_tower_placed(tower)
@@ -543,7 +559,16 @@ func get_towers() -> Array[Tower]:
 
 ## Or rapporté par les intérêts si la carte était vidée maintenant.
 func get_interest() -> int:
-	return mini(floori(maxi(gold, 0) * interest_rate), interest_cap)
+	return mini(floori(maxi(gold, 0) * get_interest_rate()), get_interest_cap())
+
+
+## Part de l'or gardé rapportée par les intérêts, et leur plafond, coffres compris.
+func get_interest_rate() -> float:
+	return interest_rate + get_chest_bonus(ChestBonus.INTEREST) if interest_rate > 0.0 else 0.0
+
+
+func get_interest_cap() -> int:
+	return interest_cap + chest_levels.get(ChestBonus.INTEREST, 0) * ChestBonus.INTEREST_CAP_PER_LEVEL
 
 
 # --- Pouvoirs ---------------------------------------------------------------
@@ -598,7 +623,7 @@ func use_power(power: Power, at := Vector2.ZERO) -> bool:
 				var spread := 0.0 if power.count == 1 else 16.0
 				soldier.global_position = center + Vector2.from_angle(TAU * i / power.count - PI / 2.0) * spread
 			Sound.play(&"build")
-	power_cooldowns[powers.find(power)] = power.cooldown
+	power_cooldowns[powers.find(power)] = power.cooldown * (1.0 - get_chest_bonus(ChestBonus.POWERS))
 	if placer.selected_power == power:
 		placer.select_power(null)
 	return true
@@ -714,13 +739,15 @@ func get_early_call_bonus() -> int:
 
 ## Or versé quand la vague donnée est repoussée, bonus de l'arbre des améliorations compris.
 func get_wave_bonus(index: int) -> int:
-	return roundi(spawner.get_wave(index).bonus_gold * _bonuses.wave_bonus_multiplier)
+	return roundi(spawner.get_wave(index).bonus_gold * _bonuses.wave_bonus_multiplier
+		* (1.0 + get_chest_bonus(ChestBonus.WAVE_GOLD)))
 
 
-## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations (et de l'Atelier
-## en Conquête) compris.
+## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations, des coffres (et
+## de l'Atelier en Conquête) compris.
 func get_enemy_reward(data: EnemyData) -> int:
-	return roundi(data.reward * _bonuses.reward_multiplier * (conquest.get_reward_multiplier() if conquest else 1.0))
+	return roundi(data.reward * _bonuses.reward_multiplier * (conquest.get_reward_multiplier() if conquest else 1.0)
+		* (1.0 + get_chest_bonus(ChestBonus.BOUNTY)))
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:
@@ -750,6 +777,10 @@ func _on_enemy_healed(enemy: Enemy, amount: float) -> void:
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
+	# Un porteur lâche son butin à sa première mort, même s'il va se relever.
+	if enemy.carried >= 0:
+		drop_loot(enemy.carried, enemy.global_position, enemy.data)
+		enemy.carried = -1
 	# Un ennemi qui va se relever ne rapporte rien cette fois : seulement à sa vraie mort.
 	if enemy.can_revive():
 		_start_revive(enemy)
@@ -908,6 +939,109 @@ func _end_game(victory: bool) -> void:
 	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
+
+
+# --- Butin et coffres --------------------------------------------------------
+
+## Fait tomber le butin d'un porteur (Loot.Kind) là où il est mort.
+func drop_loot(kind: int, at: Vector2, data: EnemyData = null) -> Loot:
+	var loot := Loot.new()
+	loot.kind = kind as Loot.Kind
+	match kind:
+		Loot.Kind.GOLD:
+			loot.amount = maxi(LOOT_MIN_GOLD, LOOT_GOLD_PER_REWARD * get_enemy_reward(data) if data else 0)
+		Loot.Kind.STONE:
+			loot.amount = LOOT_STONE
+		Loot.Kind.ESSENCE:
+			loot.amount = LOOT_ESSENCE
+	effects.add_child(loot)
+	# Sur le chemin, un peu à côté du point de chute : deux butins ne se cachent pas.
+	loot.global_position = at + Vector2(randf_range(-6.0, 6.0), randf_range(2.0, 8.0))
+	Sound.play(&"coins", -8.0)
+	return loot
+
+
+## Butin au sol le plus proche d'un point de la carte, à moins de `radius` (null sinon).
+func find_loot_at(at: Vector2, radius := Loot.PICK_RADIUS) -> Loot:
+	var best: Loot = null
+	var best_distance := radius
+	for node in get_tree().get_nodes_in_group(Loot.GROUP):
+		var loot := node as Loot
+		if loot and not loot.is_queued_for_deletion():
+			var distance := loot.global_position.distance_to(at)
+			if distance <= best_distance:
+				best = loot
+				best_distance = distance
+	return best
+
+
+## Ramasse un butin : son or, sa pierre ou son essence, ou le bonus d'un coffre.
+func collect_loot(loot: Loot) -> void:
+	if not is_instance_valid(loot) or loot.is_queued_for_deletion() or is_over:
+		return
+	var at := loot.global_position + Vector2(0, -20)
+	match loot.kind:
+		Loot.Kind.GOLD:
+			gold += loot.amount
+			stats.gold_earned += loot.amount
+			_show_floating_text("+%d" % loot.amount, GOLD_TEXT_COLOR, at, 18)
+		Loot.Kind.STONE:
+			conquest.stone += loot.amount
+			conquest.changed.emit()
+			_show_floating_text(tr("+%d pierre") % loot.amount, Conquest.STONE_COLOR, at, 16)
+		Loot.Kind.ESSENCE:
+			conquest.essence += loot.amount
+			conquest.changed.emit()
+			_show_floating_text(tr("+%d essence") % loot.amount, Conquest.ESSENCE_COLOR, at, 16)
+		Loot.Kind.CHEST:
+			open_chest(at)
+	stats.loot_collected += 1
+	Sound.play(&"coins")
+	loot.queue_free()
+
+
+## Ouvre un coffre : un bonus pour le reste du niveau, tiré parmi ceux qui peuvent encore
+## tomber (de l'or s'ils sont tous au maximum). Renvoie son identifiant (&"" pour l'or).
+func open_chest(at: Vector2) -> StringName:
+	stats.chests_opened += 1
+	var available := ChestBonus.get_available(chest_levels, not powers.is_empty(), interest_rate > 0.0, conquest != null)
+	if available.is_empty():
+		gold += ChestBonus.FALLBACK_GOLD
+		stats.gold_earned += ChestBonus.FALLBACK_GOLD
+		_show_floating_text("+%d" % ChestBonus.FALLBACK_GOLD, GOLD_TEXT_COLOR, at, 18)
+		return &""
+	var id := available[_chest_rng.randi() % available.size()]
+	chest_levels[id] = chest_levels.get(id, 0) + 1
+	var definition := ChestBonus.get_definition(id)
+	match id:
+		ChestBonus.DAMAGE, ChestBonus.RANGE, ChestBonus.FIRE_RATE:
+			for tower in get_towers():
+				refresh_tower_bonuses(tower)
+		ChestBonus.INTEREST:
+			hud.set_interest_rules(get_interest_rate(), get_interest_cap())
+	_refresh_hud()
+	_show_floating_text(tr(definition.name), definition.color, at, 18)
+	hud.show_chest_bonus(definition, chest_levels[id])
+	hud.update_chest_bonuses(chest_levels)
+	return id
+
+
+## Bonus total d'un bonus des coffres (0 s'il n'est pas tombé).
+func get_chest_bonus(id: StringName) -> float:
+	return ChestBonus.get_definition(id).per_level * chest_levels.get(id, 0)
+
+
+## Bonus de la partie d'une tour (dégâts, portée, cadence) : ceux des coffres, et de
+## l'Atelier en Conquête.
+func refresh_tower_bonuses(tower: Tower) -> void:
+	var damage := get_chest_bonus(ChestBonus.DAMAGE)
+	var range_bonus := get_chest_bonus(ChestBonus.RANGE)
+	var fire_rate := get_chest_bonus(ChestBonus.FIRE_RATE)
+	if conquest:
+		damage += conquest.get_research_bonus(Research.TOWER_DAMAGE)
+		range_bonus += conquest.get_research_bonus(Research.TOWER_RANGE)
+		fire_rate += conquest.get_research_bonus(Research.TOWER_FIRE_RATE)
+	tower.set_research(damage, range_bonus, fire_rate)
 
 
 # --- Succès ----------------------------------------------------------------

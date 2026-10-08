@@ -90,6 +90,11 @@ var options_menu: OptionsMenu
 var end_stats: EndStats
 ## Bandeaux des succès débloqués en jeu, en bas de la carte.
 var achievement_toasts: VBoxContainer
+## Bonus des coffres gagnés dans la partie, en haut à gauche de la carte (créé au premier
+## coffre ouvert).
+var chest_panel: PanelContainer
+var _chest_label: RichTextLabel
+var _chest_levels := {}
 ## Boutons des pouvoirs actifs, en haut, à gauche du bouton de vague.
 var power_bar: HBoxContainer
 var power_buttons: Array[PowerButton] = []
@@ -214,6 +219,8 @@ func _notification(what: int) -> void:
 		set_interest_rules.callv(_interest_rules)
 	if not _stats_args.is_empty():
 		update_stats.callv(_stats_args)
+	if chest_panel:
+		update_chest_bonuses(_chest_levels)
 	if recruit_button:
 		recruit_button.text = tr("Recruter · %d or (R)") % _worker_cost
 		if is_instance_valid(_conquest):
@@ -584,9 +591,16 @@ func _center_end_panel() -> void:
 func show_achievement(definition: Dictionary) -> void:
 	if definition.is_empty():
 		return
+	_show_toast(Achievements.COLOR, "%s  %s" % [definition.icon, tr("Succès débloqué : %s") % tr(definition.name)],
+		tr(definition.description))
+
+
+## Bandeau en bas de la carte (succès, coffre ouvert) : un titre de la couleur donnée et
+## une ligne d'explication. Il s'efface tout seul.
+func _show_toast(color: Color, title: String, body: String) -> void:
 	var toast := PanelContainer.new()
 	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := UiStyle.panel(Achievements.COLOR, 16.0, SIDE_LEFT, Color(0.08, 0.07, 0.04, 0.92))
+	var style := UiStyle.panel(color, 16.0, SIDE_LEFT, Color(0.08, 0.07, 0.04, 0.92))
 	style.content_margin_top = 8.0
 	style.content_margin_bottom = 8.0
 	toast.add_theme_stylebox_override(&"panel", style)
@@ -598,8 +612,7 @@ func show_achievement(definition: Dictionary) -> void:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_size_override(&"normal_font_size", 16)
 	label.add_theme_font_size_override(&"bold_font_size", 18)
-	label.text = "[color=#%s][b]%s  %s[/b][/color]\n[color=#ffffffb0]%s[/color]" % [Achievements.COLOR.to_html(false),
-		definition.icon, tr("Succès débloqué : %s") % tr(definition.name), tr(definition.description)]
+	label.text = "[color=#%s][b]%s[/b][/color]\n[color=#ffffffb0]%s[/color]" % [color.to_html(false), title, body]
 	toast.add_child(label)
 	achievement_toasts.add_child(toast)
 	_place_achievement_toasts.call_deferred()
@@ -613,6 +626,59 @@ func show_achievement(definition: Dictionary) -> void:
 		toast.queue_free()
 		_place_achievement_toasts.call_deferred())
 	Sound.play(&"upgrade")
+
+
+## Coffre ouvert : bandeau du bonus gagné (`count` : exemplaires de ce bonus, celui-ci compris).
+func show_chest_bonus(definition: Dictionary, count: int) -> void:
+	var body := tr(definition.description)
+	if count > 1:
+		body += "  " + tr("Au total : %s.") % ChestBonus.describe_total(definition.id, count)
+	_show_toast(definition.color, tr("Coffre : %s") % tr(definition.name), body)
+
+
+## Liste des bonus des coffres gagnés (`levels` : exemplaires par identifiant).
+func update_chest_bonuses(levels: Dictionary) -> void:
+	_chest_levels = levels.duplicate()
+	if chest_panel == null:
+		chest_panel = PanelContainer.new()
+		chest_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var style := UiStyle.panel(ChestBonus.COLOR, 10.0, SIDE_LEFT, Color(0.05, 0.06, 0.08, 0.82))
+		style.content_margin_top = 6.0
+		style.content_margin_bottom = 6.0
+		chest_panel.add_theme_stylebox_override(&"panel", style)
+		_chest_label = RichTextLabel.new()
+		_chest_label.bbcode_enabled = true
+		_chest_label.fit_content = true
+		_chest_label.scroll_active = false
+		_chest_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_chest_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_chest_label.add_theme_font_size_override(&"normal_font_size", 14)
+		_chest_label.add_theme_font_size_override(&"bold_font_size", 14)
+		chest_panel.add_child(_chest_label)
+		add_child(chest_panel)
+		move_child(chest_panel, wave_preview.get_index())
+		wave_preview.resized.connect(_place_chest_panel)
+		wave_preview.visibility_changed.connect(_place_chest_panel)
+	var lines: Array[String] = ["[color=#%s][b]%s[/b][/color]" % [ChestBonus.COLOR.to_html(false), tr("Bonus des coffres")]]
+	for id: StringName in _chest_levels:
+		var definition := ChestBonus.get_definition(id)
+		lines.append("[color=#%s]%s[/color]  [color=#ffffffc0]%s[/color]" % [(definition.color as Color).to_html(false),
+			tr(definition.name), ChestBonus.describe_total(id, _chest_levels[id])])
+	_chest_label.text = "\n".join(lines)
+	chest_panel.visible = not _chest_levels.is_empty()
+	_place_chest_panel.call_deferred()
+
+
+## En haut à droite de la carte, sous l'aperçu de la prochaine vague (ou à sa place
+## quand il n'y en a plus).
+func _place_chest_panel() -> void:
+	if not chest_panel or not is_inside_tree():
+		return
+	chest_panel.reset_size()
+	var top := top_bar.get_global_rect().end.y
+	if wave_preview.visible:
+		top = wave_preview.get_global_rect().end.y
+	chest_panel.position = Vector2(get_viewport().get_visible_rect().size.x - chest_panel.size.x - 8.0, top + 8.0).round()
 
 
 ## Les bandeaux sont centrés, juste au-dessus de la barre du bas.
@@ -1015,6 +1081,10 @@ func show_enemy_details(enemy: Enemy) -> void:
 	var text := "%s  %s\n%s" % [EnemyInfo.icon(enemy.data, 32), EnemyInfo.title(enemy.data),
 		EnemyInfo.stats(enemy.data, enemy.health_multiplier, enemy.speed_multiplier, enemy.health.health,
 		enemy.health.shield)]
+	if enemy.carried >= 0:
+		text += "\n[color=#%s]%s[/color]" % [Enemy.CARRIER_COLOR.to_html(false),
+			tr("Porteur : lâche un coffre à sa mort.") if enemy.carried == Loot.Kind.CHEST
+			else tr("Porteur : lâche du butin à sa mort.")]
 	enemy_details.bounds = get_play_area()
 	var border := EnemyData.BOSS_COLOR if enemy.data.is_boss \
 		else EnemyData.ELITE_COLOR if enemy.data.is_elite else enemy.data.color

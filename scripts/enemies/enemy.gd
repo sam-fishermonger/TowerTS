@@ -53,6 +53,10 @@ const RAID_MAX_TIME := 8.0
 const RAID_COOLDOWN := 3.0
 const RAID_SEARCH_INTERVAL := 0.5
 const RAID_COLOR := Color(1.0, 0.55, 0.2)
+## Porteurs (voir `carried`) : vie multipliée, et taille du butin dessiné au-dessus d'eux.
+const CARRIER_HEALTH := 1.5
+const CARRIER_COLOR := Color(1.0, 0.82, 0.25)
+const CARRIED_SIZE := 0.85
 
 ## Pillard : sur le chemin, en route vers sa cible, ou de retour vers le chemin.
 enum RaidState { NONE, GOING, RETURNING }
@@ -78,6 +82,10 @@ var speed_multiplier := 1.0
 var revives_left := -1
 ## Part de sa vie avec laquelle il apparaît (moins de 1 pour un ennemi qui se relève).
 var health_ratio := 1.0
+## Porteur : butin (Loot.Kind) qu'il porte sur le dos et lâche à sa mort, -1 sinon. Le
+## WaveSpawner en choisit quelques-uns par vague, plus résistants (CARRIER_HEALTH) ; un
+## porteur qui atteint la base emporte son butin.
+var carried := -1
 
 ## Trajet suivi : la courbe du chemin, ou celle du vol pour un volant.
 var _curve: Curve2D
@@ -631,6 +639,8 @@ func _draw() -> void:
 		draw_line(mark + Vector2(-3, -1.5), mark + Vector2(3, -1.5), CONSECRATED_COLOR, 2.0)
 	if data.raider:
 		_draw_torch()
+	if carried >= 0:
+		Loot.draw_item(self, carried, Vector2(0, -data.radius - 2.0), CARRIED_SIZE)
 	if data.texture:
 		# L'image déborde un peu du rayon de collision (ombre, pattes).
 		var size := data.radius * 2.6 * data.sprite_scale
@@ -697,6 +707,9 @@ func _draw_relief() -> void:
 		_draw_torch_only()
 		draw_set_transform(Vector2.ZERO)
 	var marks := Vector2(0, -Creature.top_height(data) - 14.0)
+	if carried >= 0:
+		# Le butin flotte au-dessus de sa barre de vie.
+		Loot.draw_item(self, carried, Vector2(0, -Creature.top_height(data) - 11.0), CARRIED_SIZE)
 	if not can_be_healed():
 		var center := marks + Vector2(8, 0)
 		draw_circle(center, 5.5, HEAL_BLOCK_COLOR)
