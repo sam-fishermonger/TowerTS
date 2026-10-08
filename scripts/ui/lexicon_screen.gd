@@ -94,6 +94,9 @@ func show_tab(tab: Tab) -> void:
 				for raider in world.raiders:
 					_add_entry(tr("%s  ·  Conquête") % tr(raider.display_name), Enemy.RAID_COLOR, raider.texture, null,
 						show_enemy.bind(raider, world))
+				for thief in world.thieves:
+					_add_entry(tr("%s  ·  Conquête") % tr(thief.display_name), Enemy.THIEF_COLOR, thief.texture, null,
+						show_enemy.bind(thief, world))
 		Tab.WORLDS:
 			for i in CAMPAIGN.worlds.size():
 				var world := CAMPAIGN.worlds[i]
@@ -192,7 +195,7 @@ func show_enemy(data: EnemyData, world: World) -> void:
 	if data.is_boss:
 		lines.append("")
 		lines.append(tr("[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]") % MUTED)
-	elif data.raider:
+	elif data.raider or data.thief:
 		lines.append("")
 		lines.append("[color=%s]%s[/color]" % [MUTED, tr("Mode Conquête seulement : il n'apparaît pas dans la campagne.")])
 	elif not data.split_into or data.split_count == 0:
@@ -262,6 +265,11 @@ func show_world(index: int) -> void:
 		lines.append("[b]%s[/b]" % tr("Pillards (mode Conquête)"))
 		for raider in world.raiders:
 			lines.append("%s  %s" % [EnemyInfo.icon(raider, 28), EnemyInfo.title(raider)])
+	if not world.thieves.is_empty():
+		lines.append("")
+		lines.append("[b]%s[/b]" % tr("Voleurs (mode Conquête)"))
+		for thief in world.thieves:
+			lines.append("%s  %s" % [EnemyInfo.icon(thief, 28), EnemyInfo.title(thief)])
 	var towers: Array[String] = []
 	for perk in Perks.TREE.perks:
 		if perk.required_world == index and not perk.unlocks_tower.is_empty():

@@ -135,13 +135,17 @@ static func buy(perk: Perk) -> bool:
 	return true
 
 
-## Code Konami : tous les niveaux gagnés avec 3 étoiles, tous les mondes et modes infinis
-## ouverts avec toutes leurs étoiles infinies, et toutes les améliorations achetées.
+## Code Konami : tous les niveaux gagnés avec 3 étoiles (campagne, Conquête et niveaux
+## libres), tous les mondes et modes infinis ouverts avec toutes leurs étoiles infinies, et
+## toutes les améliorations achetées.
 static func unlock_everything() -> void:
 	var ids := PackedStringArray()
 	for perk in TREE.perks:
 		ids.append(perk.id)
-	Progress.unlock_all(CAMPAIGN.levels, ids)
+	var levels: Array[String] = CAMPAIGN.levels.duplicate()
+	levels.append_array(ConquestLevels.LEVELS)
+	levels.append_array(FreeLevels.LEVELS)
+	Progress.unlock_all(levels, ids)
 
 
 ## Rend toutes les étoiles dépensées.

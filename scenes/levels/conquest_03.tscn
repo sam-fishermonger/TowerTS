@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" path="res://scenes/levels/humanoid_02.tscn" id="1_base"]
 [ext_resource type="TileSet" path="res://resources/tilesets/humanoid.tres" id="2_tileset"]
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/maraudeur.tres" id="3_raider"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/tire_laine.tres" id="v_thief"]
 
 [node name="Conquest03" instance=ExtResource("1_base")]
 level_name = "Conquête · Les Faubourgs"
@@ -13,6 +14,8 @@ conquest_starting_workers = 4
 essence_cells = Array[Vector2i]([Vector2i(12, 8), Vector2i(6, 6)])
 raider = ExtResource("3_raider")
 raiders_per_wave = Array[int]([0, 1, 2, 3, 3, 4, 5])
+thief = ExtResource("v_thief")
+thieves_per_wave = Array[int]([0, 0, 1, 1, 2, 2, 3])
 
 [node name="Map" parent="."]
 blocked_cells = Array[Vector2i]([Vector2i(10, 0), Vector2i(12, 1), Vector2i(13, 1), Vector2i(9, 3), Vector2i(10, 3), Vector2i(14, 3), Vector2i(4, 5), Vector2i(11, 7), Vector2i(13, 9), Vector2i(2, 3), Vector2i(7, 0), Vector2i(17, 1), Vector2i(1, 7), Vector2i(6, 8), Vector2i(15, 8), Vector2i(18, 7), Vector2i(2, 9)])

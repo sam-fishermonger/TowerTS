@@ -163,7 +163,24 @@ func _stage_conquest(level: Level) -> void:
 		if cell.x > rock.x or (cell.x == rock.x and cell.y < rock.y):
 			rock = cell
 	conquest.order_selected(rock)
-	level.placer.inspect_building(workshop)
+	# La Corvée en cours, et un Voleur qui repart d'un Dépôt, le sac plein.
+	conquest.start_corvee(30.0)
+	var path := level.map.get_enemy_path(0)
+	var progress := path.curve.get_baked_length() * 0.12
+	var on_path := level.map.world_to_cell(path.to_global(path.curve.sample_baked(progress)))
+	for offset in [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
+		level.gold = 1000
+		conquest.stone = 1000
+		var depot := conquest.place_building(on_path + offset, Building.Kind.DEPOT)
+		if depot:
+			conquest.build(depot, 999.0)
+			break
+	level.gold = 420
+	conquest.stone = 85
+	create_timer(5.6).timeout.connect(func() -> void:
+		conquest.stone = 105
+		conquest.essence = 11
+		level.spawner.spawn(level.thief, path, progress - 40.0))
 
 
 ## Niveau libre : pose les tours une à une là où elles allongent le plus le chemin des

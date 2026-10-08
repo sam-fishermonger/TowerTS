@@ -100,15 +100,15 @@ func _process(delta: float) -> void:
 				_finish_order()
 			elif _walk(delta):
 				state = State.MINING
-				_timer = (ESSENCE_MINE_TIME if conquest.resource_at(rock_cell) == Conquest.Ore.ESSENCE else MINE_TIME) \
-					/ conquest.get_work_speed()
+				# Le temps s'écoule plus vite avec de bons outils ou pendant la Corvée.
+				_timer = ESSENCE_MINE_TIME if conquest.resource_at(rock_cell) == Conquest.Ore.ESSENCE else MINE_TIME
 				_work_time = 0.0
 		State.MINING:
 			_work_time += delta
 			if not conquest.has_resource(rock_cell):
 				_finish_order()
 			else:
-				_timer -= delta
+				_timer -= delta * conquest.get_work_speed()
 				if _timer <= 0.0:
 					cargo_kind = conquest.resource_at(rock_cell)
 					cargo += conquest.take_resource(rock_cell, maxi(conquest.get_carry(cargo_kind) - cargo, 0))
@@ -292,6 +292,8 @@ func _take_contact_damage(delta: float) -> void:
 func _draw() -> void:
 	if selected:
 		_draw_selection()
+	if conquest.is_corvee():
+		_draw_corvee()
 	if Relief.enabled:
 		_draw_relief()
 		return
@@ -335,6 +337,19 @@ func _draw_selection() -> void:
 	else:
 		draw_arc(Vector2.ZERO, BODY_RADIUS + 4.0, 0.0, TAU, 24, Color(0, 0, 0, 0.45), 4.0)
 		draw_arc(Vector2.ZERO, BODY_RADIUS + 4.0, 0.0, TAU, 24, SELECTED_COLOR, 2.0)
+
+
+## Corvée : un halo orangé à ses pieds et des traits de vitesse derrière lui.
+func _draw_corvee() -> void:
+	var color := Conquest.CORVEE_COLOR
+	if Relief.enabled:
+		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), 13.0, 13.0 * Relief.GROUND_SQUASH, 0.0, TAU, 20), Color(color, 0.3))
+	else:
+		draw_circle(Vector2.ZERO, BODY_RADIUS + 5.0, Color(color, 0.25))
+	var behind := -_facing if Relief.enabled else -1.0
+	for i in 3:
+		var y := -18.0 + i * 5.0 if Relief.enabled else -4.0 + i * 4.0
+		draw_line(Vector2(behind * 8.0, y), Vector2(behind * (13.0 + i * 2.0), y), Color(color, 0.8), 1.5, true)
 
 
 ## Vue de trois quarts : il se tourne vers où il marche, ou vers son ouvrage.

@@ -57,6 +57,8 @@ var stone_mined := 0
 var essence_mined := 0
 var buildings_built := 0
 var workers_lost := 0
+## Pierre et essence emportées par les Voleurs.
+var resources_stolen := 0
 
 
 func on_tower_placed(tower: Tower) -> void:

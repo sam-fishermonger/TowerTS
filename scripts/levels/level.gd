@@ -67,6 +67,9 @@ const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 ## des vagues ; aucun au-delà de la liste). La difficulté change leur nombre.
 @export var raider: EnemyData
 @export var raiders_per_wave: Array[int] = []
+## Voleurs ajoutés aux vagues, de même.
+@export var thief: EnemyData
+@export var thieves_per_wave: Array[int] = []
 
 var gold := 0:
 	set(value):
@@ -331,7 +334,9 @@ func _ready() -> void:
 	starting_lives += _bonuses.lives_bonus
 	if not is_demo:
 		for power in Perks.get_powers():
-			powers.append(power)
+			# La Corvée n'a de bouton qu'en Conquête.
+			if not power.is_conquest_only() or conquest:
+				powers.append(power)
 	power_cooldowns.resize(powers.size())
 	power_cooldowns.fill(0.0)
 	hud.setup_powers(powers)
@@ -692,6 +697,9 @@ func use_power(power: Power, at := Vector2.ZERO) -> bool:
 				var spread := 0.0 if power.count == 1 else 16.0
 				soldier.global_position = center + Vector2.from_angle(TAU * i / power.count - PI / 2.0) * spread
 			Sound.play(&"build")
+		Power.Kind.CORVEE:
+			conquest.start_corvee(power.duration)
+			Sound.play(&"upgrade")
 	power_cooldowns[powers.find(power)] = power.cooldown * (1.0 - get_chest_bonus(ChestBonus.POWERS))
 	if placer.selected_power == power:
 		placer.select_power(null)
@@ -853,6 +861,13 @@ func _on_enemy_died(enemy: Enemy) -> void:
 	if enemy.carried >= 0:
 		drop_loot(enemy.carried, enemy.global_position, enemy.data)
 		enemy.carried = -1
+	# Un Voleur lâche ce qu'il a volé.
+	if enemy.stolen_stone > 0:
+		drop_loot(Loot.Kind.STONE, enemy.global_position, null, enemy.stolen_stone)
+	if enemy.stolen_essence > 0:
+		drop_loot(Loot.Kind.ESSENCE, enemy.global_position, null, enemy.stolen_essence)
+	enemy.stolen_stone = 0
+	enemy.stolen_essence = 0
 	# Un ennemi qui va se relever ne rapporte rien cette fois : seulement à sa vraie mort.
 	if enemy.can_revive():
 		_start_revive(enemy)
@@ -920,6 +935,9 @@ func _on_enemy_summoned(enemy: Enemy) -> void:
 
 
 func _on_enemy_reached_end(enemy: Enemy) -> void:
+	# Un Voleur qui n'a encore rien pillé se sert au QG en passant.
+	if enemy.data.thief and conquest and not enemy.has_stolen:
+		conquest.steal(enemy, conquest.depot_position)
 	stats.lives_lost += mini(enemy.data.damage, lives)
 	lives -= enemy.data.damage
 	Sound.play(&"lives_lost")
@@ -1038,8 +1056,9 @@ func _end_expedition_step(victory: bool) -> void:
 
 # --- Butin et coffres --------------------------------------------------------
 
-## Fait tomber le butin d'un porteur (Loot.Kind) là où il est mort.
-func drop_loot(kind: int, at: Vector2, data: EnemyData = null) -> Loot:
+## Fait tomber le butin d'un porteur (Loot.Kind) là où il est mort (`amount` : une
+## quantité donnée, celle volée par un Voleur).
+func drop_loot(kind: int, at: Vector2, data: EnemyData = null, amount := 0) -> Loot:
 	var loot := Loot.new()
 	loot.kind = kind as Loot.Kind
 	match kind:
@@ -1049,6 +1068,8 @@ func drop_loot(kind: int, at: Vector2, data: EnemyData = null) -> Loot:
 			loot.amount = LOOT_STONE
 		Loot.Kind.ESSENCE:
 			loot.amount = LOOT_ESSENCE
+	if amount > 0:
+		loot.amount = amount
 	effects.add_child(loot)
 	# Sur le chemin, un peu à côté du point de chute : deux butins ne se cachent pas.
 	loot.global_position = at + Vector2(randf_range(-6.0, 6.0), randf_range(2.0, 8.0))
