@@ -1,11 +1,13 @@
 extends Control
 ## Défi du jour (depuis l'écran titre) : le niveau et les règles du jour, les tours
-## imposées, le meilleur score du jour et ceux des derniers jours, et le bouton Jouer.
+## imposées, le meilleur score du jour, l'historique (record, série de jours réussis
+## d'affilée, scores des derniers jours) et le bouton Jouer.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const TITLE_COLOR := Color(0.95, 0.85, 0.45)
 const SCORE_COLOR := Progress.ENDLESS_STAR_COLOR
 const MUTED_COLOR := Color(0.75, 0.8, 0.75)
+const STREAK_COLOR := Color(1.0, 0.72, 0.35)
 ## Jours montrés dans l'historique des scores.
 const HISTORY_DAYS := 7
 const SHORT_MONTHS: Array[String] = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.",
@@ -94,8 +96,13 @@ func _build() -> void:
 
 	column.add_child(HSeparator.new())
 	var best := Progress.get_daily_score(challenge.date_key)
-	_add_label(column, tr("Meilleur score aujourd'hui : %d") % best if best >= 0 else "Pas encore joué aujourd'hui.",
-		22, SCORE_COLOR, true)
+	var today := tr("Meilleur score aujourd'hui : %d") % best if best >= 0 else tr("Pas encore joué aujourd'hui.")
+	if Progress.is_daily_won(challenge.date_key):
+		today += "  ·  " + tr("Défi réussi")
+	_add_label(column, today, 22, SCORE_COLOR, true)
+	var streak := get_streak_text()
+	if not streak.is_empty():
+		_add_label(column, streak, 18, STREAK_COLOR, true)
 	var history := get_history_text()
 	if not history.is_empty():
 		var history_label := _add_label(column, history, 15, MUTED_COLOR, true)
@@ -134,12 +141,26 @@ func get_history_text() -> String:
 	var recent := PackedStringArray()
 	for day: String in days:
 		if day != challenge.date_key and recent.size() < HISTORY_DAYS:
-			recent.append(tr("%s : %d") % [_short_date(day), scores[day]])
+			# Les jours perdus sont marqués d'une croix : ils coupent la série.
+			recent.append(tr("%s : %d") % [_short_date(day), scores[day]]
+				+ ("" if Progress.is_daily_won(day) else " ✕"))
 	var text := tr("Record de tous les défis : %d (%s)") % [scores[best_day], _short_date(best_day)] + "  ·  " \
 		+ (tr("%d défis joués") if days.size() > 1 else tr("%d défi joué")) % days.size()
 	if not recent.is_empty():
 		text += "\n" + tr("Derniers jours : %s") % "   ".join(recent)
 	return text
+
+
+## Série de jours réussis d'affilée (jusqu'à aujourd'hui, ou hier si le défi du jour
+## n'est pas encore réussi) et meilleure série, ou "" si aucun défi n'a été réussi.
+func get_streak_text() -> String:
+	var best := Progress.get_best_daily_streak()
+	if best == 0:
+		return ""
+	var current := Progress.get_daily_streak(challenge.date_key)
+	var text := tr_n("Série : %d jour réussi d'affilée", "Série : %d jours réussis d'affilée",
+		LevelStats.plural_count(current)) % current
+	return text + "  ·  " + tr("meilleure série : %d") % best
 
 
 ## « 6 oct. » pour « 2026-10-06 » (« 10/6 » en anglais : le numéro du mois).

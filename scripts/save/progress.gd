@@ -125,6 +125,22 @@ static func get_world_endless_stars(world: World) -> int:
 	return total
 
 
+## Étoiles infinies gagnées avec des mutateurs sur un niveau (meilleur résultat, voir Mutators).
+static func get_mutator_stars(level_path: String) -> int:
+	return _read("mutator_stars", level_path, 0)
+
+
+## Enregistre une victoire avec des mutateurs. Seul le meilleur résultat est gardé ;
+## renvoie true s'il est battu.
+static func record_mutators(level_path: String, stars: int) -> bool:
+	var config := _load()
+	if stars <= config.get_value("mutator_stars", level_path, 0):
+		return false
+	config.set_value("mutator_stars", level_path, stars)
+	_save(config)
+	return true
+
+
 ## Défi du jour : meilleur score d'un jour (« 2026-10-06 »), -1 s'il n'a pas été joué.
 static func get_daily_score(date_key: String) -> int:
 	return _read("daily", date_key, -1)
@@ -146,8 +162,55 @@ static func get_daily_scores() -> Dictionary:
 	return (_get_data().get("daily", {}) as Dictionary).duplicate(true)
 
 
+## Défi du jour : enregistre un jour réussi (défi gagné).
+static func record_daily_win(date_key: String) -> void:
+	if not _read("daily_won", date_key, false):
+		set_value("daily_won", date_key, true)
+
+
+static func is_daily_won(date_key: String) -> bool:
+	return _read("daily_won", date_key, false)
+
+
+## Défi du jour : jours réussis, triés (« 2026-10-06 »…).
+static func get_daily_wins() -> Array[String]:
+	var result: Array[String] = []
+	for key: String in (_get_data().get("daily_won", {}) as Dictionary):
+		result.append(key)
+	result.sort()
+	return result
+
+
+## Défi du jour : jours réussis d'affilée jusqu'à aujourd'hui. Le défi d'aujourd'hui pas
+## encore réussi ne coupe pas la série : elle compte alors jusqu'à hier.
+static func get_daily_streak(today_key: String) -> int:
+	var day := today_key if is_daily_won(today_key) else previous_day(today_key)
+	var streak := 0
+	while is_daily_won(day):
+		streak += 1
+		day = previous_day(day)
+	return streak
+
+
+## Défi du jour : plus longue série de jours réussis d'affilée.
+static func get_best_daily_streak() -> int:
+	var best := 0
+	var current := 0
+	var last := ""
+	for day in get_daily_wins():
+		current = current + 1 if not last.is_empty() and previous_day(day) == last else 1
+		best = maxi(best, current)
+		last = day
+	return best
+
+
+## Veille d'un jour : « 2026-10-05 » pour « 2026-10-06 ».
+static func previous_day(date_key: String) -> String:
+	return Time.get_date_string_from_unix_time(Time.get_unix_time_from_datetime_string(date_key) - 86400)
+
+
 ## Code Konami : tous les niveaux gagnés avec 3 étoiles dans toutes les difficultés (mondes et modes infinis
-## ouverts), toutes les étoiles infinies, et toutes les améliorations données.
+## ouverts), toutes les étoiles infinies (mode infini et mutateurs), et toutes les améliorations données.
 ## Les meilleurs résultats déjà obtenus sont gardés.
 static func unlock_all(levels: Array[String], perk_ids: PackedStringArray) -> void:
 	var config := _load()
@@ -155,6 +218,7 @@ static func unlock_all(levels: Array[String], perk_ids: PackedStringArray) -> vo
 		for d in Difficulty.COUNT:
 			config.set_value(stars_section(d), path, 3)
 		config.set_value("endless_stars", path, ENDLESS_MAX_STARS)
+		config.set_value("mutator_stars", path, Mutators.MAX_STARS)
 	config.set_value("perks", "owned", perk_ids)
 	_save(config)
 
@@ -203,11 +267,11 @@ static func set_value(section: String, key: String, value: Variant) -> void:
 	_save(config)
 
 
-## Efface les étoiles, les records du mode infini et du défi du jour, et les
+## Efface les étoiles, les records du mode infini, des mutateurs et du défi du jour, et les
 ## améliorations achetées avec (les réglages sont gardés).
 static func reset_campaign() -> void:
 	var config := _load()
-	var sections := ["endless_waves", "endless_stars", "perks", "daily"]
+	var sections := ["endless_waves", "endless_stars", "mutator_stars", "perks", "daily", "daily_won"]
 	for d in Difficulty.COUNT:
 		sections.append(stars_section(d))
 	for section in sections:
