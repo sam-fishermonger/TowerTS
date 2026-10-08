@@ -32,7 +32,7 @@ static func rank_tag(data: EnemyData, elite := false) -> String:
 static func title(data: EnemyData, elite := false) -> String:
 	var color := data.color.lightened(0.35)
 	if data.is_boss:
-		color = EnemyData.BOSS_COLOR
+		color = EnemyData.boss_color()
 	elif elite or data.is_elite:
 		color = EnemyData.ELITE_COLOR
 	var text := "[color=#%s][b]%s[/b][/color]" % [color.to_html(false), data.get_translated_name()]

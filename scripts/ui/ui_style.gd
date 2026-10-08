@@ -32,6 +32,32 @@ const TEXT_FONT: Font = preload("res://assets/fonts/police_interface.tres")
 const TITLE_FONT: Font = preload("res://assets/fonts/police_titres.tres")
 
 
+## Emplacement libre et interdit (aperçu de la tour à poser, rappel au tactile) : vert et
+## rouge, ou bleu et orange en mode daltonien (voir is_colorblind).
+const VALID_COLOR := Color(0.3, 1.0, 0.4)
+const INVALID_COLOR := Color(1.0, 0.3, 0.3)
+const COLORBLIND_VALID_COLOR := Color(0.3, 0.65, 1.0)
+const COLORBLIND_INVALID_COLOR := Color(1.0, 0.6, 0.1)
+
+
+## Méta du moteur : le mode daltonien choisi dans les Options (GameSettings la tient à
+## jour). Les dessins la lisent ici, sans passer par la sauvegarde : les ressources des
+## monstres (EnemyData) ne peuvent pas dépendre de Progress sans boucle de chargement.
+const COLORBLIND_META := &"ui_colorblind"
+
+
+static func is_colorblind() -> bool:
+	return Engine.get_meta(COLORBLIND_META, false)
+
+
+static func valid_color() -> Color:
+	return COLORBLIND_VALID_COLOR if is_colorblind() else VALID_COLOR
+
+
+static func invalid_color() -> Color:
+	return COLORBLIND_INVALID_COLOR if is_colorblind() else INVALID_COLOR
+
+
 ## Panneau : fond ardoise, liseré fin, et un bord épais de la couleur d'accent
 ## (à gauche par défaut, SIDE_TOP pour les cartes).
 static func panel(accent := Color(ACCENT, 0.6), margin := 14.0, edge := SIDE_LEFT,

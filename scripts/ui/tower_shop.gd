@@ -112,3 +112,19 @@ func toggle_slot(index: int) -> void:
 func _on_button_pressed() -> void:
 	var pressed := _group.get_pressed_button() as TowerShopButton
 	tower_selected.emit(pressed.data if pressed else null)
+
+
+## Choisit la tour suivante (step = 1) ou précédente (-1) de la barre, en sautant les
+## cases grisées (LB et RB à la manette). Sans tour choisie, part du bord de la barre.
+func select_neighbour(step: int) -> void:
+	var count := get_child_count()
+	if count == 0:
+		return
+	var pressed := _group.get_pressed_button()
+	var index := pressed.get_index() if pressed else (-1 if step > 0 else count)
+	for i in count:
+		index = posmod(index + step, count)
+		var button := get_child(index) as TowerShopButton
+		if not button.disabled and button != pressed:
+			tower_selected.emit(button.data)
+			return

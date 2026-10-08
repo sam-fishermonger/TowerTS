@@ -82,6 +82,7 @@ func _run() -> void:
 	Progress.clear_cache()
 	# Les textes vérifiés sont ceux du jeu en français, quelle que soit la langue du système.
 	GameSettings.apply_language()
+	GameSettings.apply_accessibility()
 	await _test_title_screen()
 	await _test_progress()
 	await _test_perk_tree()
@@ -96,6 +97,8 @@ func _run() -> void:
 	await _test_tower_upgrade_in_level()
 	await _test_tower_info_panels()
 	await _test_touch_controls()
+	await _test_gamepad()
+	await _test_accessibility()
 	await _test_sell_tower()
 	await _test_target_modes()
 	await _test_level_02_map()
@@ -831,6 +834,135 @@ func _click(level: Level, screen_position: Vector2) -> void:
 	event.pressed = true
 	event.position = screen_position
 	await _send_to_placer(level, event)
+
+
+func _joy_button(index: JoyButton, pressed := true) -> InputEventJoypadButton:
+	var event := InputEventJoypadButton.new()
+	event.button_index = index
+	event.pressed = pressed
+	return event
+
+
+func _test_gamepad() -> void:
+	print("Manette")
+	Gamepad.setup_input_map()
+	_check(InputMap.event_is_action(_joy_button(JOY_BUTTON_A), &"ui_accept")
+		and InputMap.event_is_action(_joy_button(JOY_BUTTON_B), &"ui_cancel"),
+		"A valide et B annule dans les menus")
+	var stick := InputEventJoypadMotion.new()
+	stick.axis = JOY_AXIS_LEFT_X
+	stick.axis_value = -1.0
+	_check(not InputMap.event_is_action(stick, &"ui_left"), "le stick gauche ne sert qu'au pointeur")
+
+	var level := await _spawn_level(LEVEL_01)
+	var hud := level.hud
+	var shop_types: Array[TowerData] = []
+	for button: TowerShopButton in hud.tower_shop.get_children():
+		shop_types.append(button.data)
+	level.gold = 10000
+	await process_frame
+	hud._unhandled_input(_joy_button(JOY_BUTTON_RIGHT_SHOULDER))
+	_check(level.placer.selected_tower == shop_types[0], "RB choisit la première tour de la barre")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_RIGHT_SHOULDER))
+	_check(level.placer.selected_tower == shop_types[1], "RB encore : la tour suivante")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_LEFT_SHOULDER))
+	_check(level.placer.selected_tower == shop_types[0], "LB revient à la précédente")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_START))
+	_check(level.is_paused, "Start met en pause")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_START))
+	_check(not level.is_paused, "et relance la partie")
+	var waves := [0]
+	hud.next_wave_requested.connect(func() -> void: waves[0] += 1)
+	hud._unhandled_input(_joy_button(JOY_BUTTON_Y))
+	_check(waves[0] == 1, "Y lance la vague suivante")
+
+	var manette := root.get_node_or_null(^"Manette") as Gamepad
+	_check(manette != null, "la manette est chargée au démarrage")
+	if manette:
+		level.select_tower(CANNON)
+		var cell := Vector2i(2, 4)
+		var at := level.get_viewport().get_canvas_transform() * level.map.cell_to_world(cell)
+		manette.set_cursor(at)
+		_check(Gamepad.has_cursor() and Gamepad.is_active(), "le pointeur apparaît")
+		manette._input(_joy_button(JOY_BUTTON_A))
+		manette._input(_joy_button(JOY_BUTTON_A, false))
+		for i in 3:
+			await process_frame
+		_check(level.map.get_occupant(cell) is Tower, "A pose la tour sous le pointeur")
+		hud._process(0.0)
+		_check(hud.shop_hint.text == Hud.GAMEPAD_HINT, "le rappel des commandes parle de la manette")
+		var previous_scene := current_scene
+		current_scene = level
+		var from := Gamepad.get_cursor()
+		manette._input(_joy_button(JOY_BUTTON_DPAD_RIGHT))
+		manette._input(_joy_button(JOY_BUTTON_DPAD_RIGHT, false))
+		_check(Gamepad.get_cursor().is_equal_approx(from + Vector2(Gamepad.DPAD_STEP, 0)),
+			"en partie, la croix avance le pointeur d'une case")
+		current_scene = previous_scene
+		var motion := InputEventMouseMotion.new()
+		motion.position = Vector2(5, 5)
+		manette._input(motion)
+		_check(not Gamepad.has_cursor() and not Gamepad.is_active(), "la souris reprend la main")
+	await _free(level)
+
+
+func _test_accessibility() -> void:
+	print("Accessibilité : taille du texte, mode daltonien, vibrations")
+	var options := OptionsMenu.new()
+	root.add_child(options)
+	await process_frame
+	_check(options.text_scale_buttons.size() == GameSettings.TEXT_SCALES.size()
+		and options.text_scale_buttons[0].button_pressed, "les Options proposent la taille du texte (normale au départ)")
+	var label := Label.new()
+	label.text = "Texte"
+	label.add_theme_font_size_override(&"font_size", 20)
+	root.add_child(label)
+	await process_frame
+	options.text_scale_buttons[2].pressed.emit()
+	await process_frame
+	_check(is_equal_approx(GameSettings.get_text_scale(), GameSettings.TEXT_SCALES[2])
+		and label.get_theme_font_size(&"font_size") == roundi(20 * GameSettings.TEXT_SCALES[2]),
+		"le texte déjà affiché grandit tout de suite")
+	label.add_theme_font_size_override(&"font_size", 10)
+	await process_frame
+	await process_frame
+	_check(label.get_theme_font_size(&"font_size") == 13, "une taille posée ensuite par le code grandit aussi")
+	var late := Button.new()
+	late.text = "Plus tard"
+	root.add_child(late)
+	await process_frame
+	var theme_size := ThemeDB.get_project_theme().get_font_size(&"font_size", &"Button") \
+		if ThemeDB.get_project_theme() and ThemeDB.get_project_theme().has_font_size(&"font_size", &"Button") \
+		else ThemeDB.fallback_font_size
+	_check(late.get_theme_font_size(&"font_size") == roundi(theme_size * GameSettings.TEXT_SCALES[2]),
+		"un bouton ouvert ensuite a la taille choisie")
+	options.text_scale_buttons[0].pressed.emit()
+	await process_frame
+	_check(label.get_theme_font_size(&"font_size") == 10 and late.get_theme_font_size(&"font_size") == theme_size,
+		"revenir à la taille normale rend les tailles d'origine")
+	label.free()
+	late.free()
+
+	_check(not UiStyle.is_colorblind() and UiStyle.invalid_color() == UiStyle.INVALID_COLOR,
+		"sans le mode daltonien, une case interdite est rouge")
+	options.colorblind_check.button_pressed = true
+	_check(GameSettings.is_colorblind() and UiStyle.invalid_color() == UiStyle.COLORBLIND_INVALID_COLOR
+		and UiStyle.valid_color() == UiStyle.COLORBLIND_VALID_COLOR
+		and EnemyData.boss_color() == EnemyData.COLORBLIND_BOSS_COLOR,
+		"mode daltonien : bleu et orange, boss magenta")
+	Progress.clear_cache()
+	GameSettings.apply_accessibility()
+	_check(UiStyle.is_colorblind(), "le mode daltonien est enregistré")
+	options.colorblind_check.button_pressed = false
+	_check(EnemyData.boss_color() == EnemyData.BOSS_COLOR, "et se retire")
+
+	_check(Gamepad.is_vibration_enabled() and options.vibration_check.button_pressed and Gamepad.rumble(&"boss"),
+		"les vibrations sont permises au départ")
+	options.vibration_check.button_pressed = false
+	_check(not Gamepad.is_vibration_enabled() and not Gamepad.rumble(&"life_lost"), "la case Vibrations les coupe")
+	Gamepad.set_vibration_enabled(true)
+	options.close()
+	await process_frame
 
 
 func _test_touch_controls() -> void:
