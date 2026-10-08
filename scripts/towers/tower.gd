@@ -312,6 +312,7 @@ func _draw_relief_body() -> void:
 		if build_progress > 0.0:
 			draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
 		return
+	_draw_ground_effects()
 	draw_relief(self, data, Vector2.ZERO, _aim_angle, Color.WHITE, level - 1)
 	if stats.detects_stealth():
 		draw_detection_eye(self, get_muzzle_offset() + Vector2(18, -4))
@@ -413,6 +414,11 @@ func get_muzzle_offset() -> Vector2:
 
 ## Tourelle dessinée en code, quand le type de tour n'a pas d'image. À redéfinir.
 func _draw_shape() -> void:
+	pass
+
+
+## Vue de trois quarts : effets posés au sol, dessinés sous la tour. À redéfinir.
+func _draw_ground_effects() -> void:
 	pass
 
 

@@ -22,7 +22,7 @@ extends RefCounted
 
 ## Section du fichier : identifiant -> date du déblocage (secondes Unix).
 const SECTION := "achievements"
-## Section des compteurs cumulés (monstres, élites détruits).
+## Section des compteurs cumulés (monstres, élites détruits, coffres ouverts…).
 const COUNTERS_SECTION := "achievement_counters"
 const CAMPAIGN_PATH := "res://resources/campaign.tres"
 const COLOR := Color(1.0, 0.78, 0.3)
@@ -79,6 +79,8 @@ const LIST: Array[Dictionary] = [
 		description = "Détruire 50 monstres élites.", counter = "elite_kills", goal = 50},
 	{id = "exterminateur", name = "Exterminateur", icon = "✖",
 		description = "Détruire 5000 monstres.", counter = "kills", goal = 5000},
+	{id = "chasseur_de_tresors", name = "Chasseur de trésors", icon = "▣",
+		description = "Ouvrir 25 coffres.", counter = "chests_opened", goal = 25},
 	{id = "constellation", name = "Constellation", icon = "✦",
 		description = "Obtenir 100 étoiles.", stars = 100},
 	{id = "jardinier", name = "Jardinier", icon = "❦",

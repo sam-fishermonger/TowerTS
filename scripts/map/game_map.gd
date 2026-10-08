@@ -800,52 +800,56 @@ func _draw_relief() -> void:
 		_draw_spawn_gates()
 	if not paths.is_empty():
 		var base := to_local(get_base_position())
-		_draw_relief_base(base)
+		draw_relief_base(self, base)
 
 
 ## Base du joueur en vue de trois quarts : un rempart entre deux tours rondes au toit
 ## bleu, porte ouverte sur le chemin.
-func _draw_relief_base(at: Vector2) -> void:
+static func draw_relief_base(canvas: CanvasItem, at: Vector2) -> void:
 	var stone := Color(0.7, 0.68, 0.64)
 	var roof := Color(0.25, 0.42, 0.8)
-	Relief.draw_shadow(self, at + Vector2(8, 18), 44.0, 16.0, 0.35)
+	Relief.draw_shadow(canvas, at + Vector2(8, 18), 44.0, 16.0, 0.35)
 	for side in [-1.0, 1.0]:
 		var foot: Vector2 = at + Vector2(side * 19.0, 8.0 - 22.0)
-		var top := Relief.draw_cylinder(self, foot, 11.0, 5.5, 34.0, stone)
+		var top := Relief.draw_cylinder(canvas, foot, 11.0, 5.5, 34.0, stone)
 		var cone := PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(15, 2)])
-		draw_colored_polygon(Relief.ellipse(top + Vector2(0, 2), 15.0, 6.0), roof.darkened(0.3))
-		draw_colored_polygon(cone, roof)
-		draw_colored_polygon(PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(-4, 4)]), roof.lightened(0.2))
+		canvas.draw_colored_polygon(Relief.ellipse(top + Vector2(0, 2), 15.0, 6.0), roof.darkened(0.3))
+		canvas.draw_colored_polygon(cone, roof)
+		canvas.draw_colored_polygon(PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(-4, 4)]), roof.lightened(0.2))
 		cone.append(cone[0])
-		draw_polyline(cone, Relief.OUTLINE, 2.0, true)
-		draw_line(top + Vector2(0, -26), top + Vector2(0, -38), Relief.OUTLINE, 2.0)
-		draw_colored_polygon(PackedVector2Array([top + Vector2(0, -38), top + Vector2(10, -34), top + Vector2(0, -30)]),
+		canvas.draw_polyline(cone, Relief.OUTLINE, 2.0, true)
+		canvas.draw_line(top + Vector2(0, -26), top + Vector2(0, -38), Relief.OUTLINE, 2.0)
+		canvas.draw_colored_polygon(PackedVector2Array([top + Vector2(0, -38), top + Vector2(10, -34), top + Vector2(0, -30)]),
 			Color(1.0, 0.8, 0.2))
 	# Rempart et porte.
 	var wall := Rect2(at + Vector2(-12, -34), Vector2(24, 36))
-	draw_rect(wall, stone.darkened(0.12))
+	canvas.draw_rect(wall, stone.darkened(0.12))
 	for x in 2:
-		draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), stone.darkened(0.12))
-		draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), Relief.OUTLINE, false, 1.5)
-	draw_rect(wall, Relief.OUTLINE, false, 2.0)
+		canvas.draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), stone.darkened(0.12))
+		canvas.draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), Relief.OUTLINE, false, 1.5)
+	canvas.draw_rect(wall, Relief.OUTLINE, false, 2.0)
 	var door := PackedVector2Array([at + Vector2(-8, 2), at + Vector2(-8, -12)])
 	door.append_array(Relief.ellipse(at + Vector2(0, -12), 8.0, 8.0, PI, TAU, 10))
 	door.append(at + Vector2(8, 2))
-	draw_colored_polygon(door, Color(0.2, 0.13, 0.08))
-	draw_polyline(door, Relief.OUTLINE, 2.0, true)
+	canvas.draw_colored_polygon(door, Color(0.2, 0.13, 0.08))
+	canvas.draw_polyline(door, Relief.OUTLINE, 2.0, true)
 
 
 ## Niveau libre : un terrier sombre sur chaque point d'apparition, d'où sortent les monstres.
 func _draw_spawn_gates() -> void:
 	for cell in spawn_cells:
-		var at := to_local(cell_to_world(cell))
-		var glow := Color(0.85, 0.25, 0.3)
-		draw_colored_polygon(Relief.ellipse(at + Vector2(0, 4), 26.0, 13.0, 0.0, TAU, 24), Color(glow, 0.25))
-		draw_colored_polygon(Relief.ellipse(at + Vector2(0, 3), 20.0, 9.5, 0.0, TAU, 24), Color(0.1, 0.06, 0.08))
-		draw_colored_polygon(Relief.ellipse(at + Vector2(0, 4), 13.0, 5.5, 0.0, TAU, 20), Color(0.3, 0.06, 0.1))
-		var rim := PackedVector2Array(Relief.ellipse(at + Vector2(0, 3), 20.0, 9.5, 0.0, TAU, 24))
-		rim.append(rim[0])
-		draw_polyline(rim, Color(glow, 0.8), 2.0, true)
+		draw_spawn_gate(self, to_local(cell_to_world(cell)))
+
+
+## Un terrier, centré sur `at`.
+static func draw_spawn_gate(canvas: CanvasItem, at: Vector2) -> void:
+	var glow := Color(0.85, 0.25, 0.3)
+	canvas.draw_colored_polygon(Relief.ellipse(at + Vector2(0, 4), 26.0, 13.0, 0.0, TAU, 24), Color(glow, 0.25))
+	canvas.draw_colored_polygon(Relief.ellipse(at + Vector2(0, 3), 20.0, 9.5, 0.0, TAU, 24), Color(0.1, 0.06, 0.08))
+	canvas.draw_colored_polygon(Relief.ellipse(at + Vector2(0, 4), 13.0, 5.5, 0.0, TAU, 20), Color(0.3, 0.06, 0.1))
+	var rim := PackedVector2Array(Relief.ellipse(at + Vector2(0, 3), 20.0, 9.5, 0.0, TAU, 24))
+	rim.append(rim[0])
+	canvas.draw_polyline(rim, Color(glow, 0.8), 2.0, true)
 
 
 func _draw_rock(center: Vector2) -> void:

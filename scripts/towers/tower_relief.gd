@@ -24,6 +24,16 @@ static func top_height(upgrades := 0) -> float:
 	return 9.0 + KEEP_HEIGHT + LEVEL_HEIGHT * upgrades + 16.0
 
 
+## Centre de la tourelle au sommet du donjon, par rapport au pied de la tour.
+static func turret_head(upgrades := 0) -> Vector2:
+	return Vector2(0, 1.0 - KEEP_HEIGHT - LEVEL_HEIGHT * upgrades - 12.0)
+
+
+## Bout de la lance du Lance-flammes tournée vers `aim`, par rapport au pied de la tour.
+static func flame_nozzle(aim: float, upgrades := 0) -> Vector2:
+	return turret_head(upgrades) + _direction(aim) * 21.0
+
+
 static func weapon_of(data: TowerData) -> String:
 	return data.turret_texture.resource_path.get_file().get_basename() if data.turret_texture else ""
 

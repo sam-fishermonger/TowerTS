@@ -1004,6 +1004,8 @@ func collect_loot(loot: Loot) -> void:
 ## tomber (de l'or s'ils sont tous au maximum). Renvoie son identifiant (&"" pour l'or).
 func open_chest(at: Vector2) -> StringName:
 	stats.chests_opened += 1
+	if counts_achievements():
+		_announce_achievements(Achievements.add_counters({chests_opened = 1}))
 	var available := ChestBonus.get_available(chest_levels, not powers.is_empty(), interest_rate > 0.0, conquest != null)
 	if available.is_empty():
 		gold += ChestBonus.FALLBACK_GOLD
