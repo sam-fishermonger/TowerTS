@@ -27,6 +27,10 @@ const ENDLESS_HEALTH_GROWTH := 1.13
 const ENDLESS_BONUS_GROWTH := 0.1
 ## Écart minimal entre deux ennemis d'un groupe des vagues créées, en secondes.
 const ENDLESS_MIN_INTERVAL := 0.2
+## Porteurs (Enemy.carried) : un porteur de butin dans chaque vague à partir de la
+## deuxième, et un porteur de coffre de plus toutes les CHEST_EVERY vagues (la 3e, la 6e…).
+const LOOT_CARRIERS_FROM_WAVE := 1
+const CHEST_EVERY := 3
 
 @export var map: GameMap
 ## Nœud qui reçoit les ennemis créés.
@@ -41,6 +45,11 @@ var is_spawning := false
 var endless := false
 ## Multiplicateur de la vitesse des ennemis (difficulté).
 var speed_multiplier := 1.0
+## Des porteurs de butin et de coffres arrivent dans les vagues (pas dans le tutoriel).
+var carriers := true
+## Butins (Loot.Kind) que peut porter un porteur de butin : de l'or, et en Conquête de la
+## pierre et de l'essence.
+var loot_kinds: Array[int] = [Loot.Kind.GOLD]
 
 var _queue: Array[Dictionary] = []
 var _elapsed := 0.0
@@ -109,6 +118,8 @@ func start_next_wave() -> void:
 			_queue.append({"time": group.start_delay + i * group.interval, "group": group,
 				"health": wave.health_multiplier * group.health_multiplier})
 	_queue.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.time < b.time)
+	if carriers:
+		_pick_carriers(current_wave)
 	is_spawning = true
 	wave_started.emit(current_wave)
 
@@ -119,7 +130,8 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 	while not _queue.is_empty() and _queue[0].time <= _elapsed:
 		var entry: Dictionary = _queue.pop_front()
-		spawn(entry.group.get_enemy(), map.get_enemy_path(entry.group.path_index), 0.0, entry.health)
+		spawn(entry.group.get_enemy(), map.get_enemy_path(entry.group.path_index), 0.0,
+			entry.health * (Enemy.CARRIER_HEALTH if entry.has("carried") else 1.0), 1.0, -1, null, entry.get("carried", -1))
 	if _queue.is_empty():
 		is_spawning = false
 		wave_spawning_finished.emit(current_wave)
@@ -131,7 +143,7 @@ func _process(delta: float) -> void:
 ## `revives_left` résurrections restantes (-1 : celles de sa ressource). Niveau libre :
 ## `route` est le trajet propre de l'ennemi dont il sort.
 func spawn(data: EnemyData, path: Path2D, progress := 0.0, health_multiplier := 1.0, health_ratio := 1.0,
-		revives_left := -1, route: Curve2D = null) -> Enemy:
+		revives_left := -1, route: Curve2D = null, carried := -1) -> Enemy:
 	var enemy: Enemy = ENEMY_SCENE.instantiate()
 	enemy.data = data
 	enemy.path = path
@@ -141,11 +153,44 @@ func spawn(data: EnemyData, path: Path2D, progress := 0.0, health_multiplier := 
 	enemy.health_ratio = health_ratio
 	enemy.revives_left = revives_left
 	enemy.speed_multiplier = speed_multiplier
+	enemy.carried = carried
 	var spread := get_max_lateral_offset(data)
 	enemy.lateral_offset = _rng.randf_range(-spread, spread)
 	enemy_container.add_child(enemy)
 	enemy_spawned.emit(enemy)
 	return enemy
+
+
+## Choisit les porteurs de la vague parmi les ennemis à venir (pas les boss), vers le
+## milieu de la vague. Le tirage dépend du niveau et de la vague, pas du reste de la
+## partie : une vague rejouée a les mêmes porteurs.
+func _pick_carriers(wave_index: int) -> void:
+	if wave_index < LOOT_CARRIERS_FROM_WAVE:
+		return
+	var candidates: Array[int] = []
+	for i in _queue.size():
+		if not _queue[i].group.enemy.is_boss:
+			candidates.append(i)
+	if candidates.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([owner.scene_file_path if owner else name, wave_index])
+	var picks: Array[int] = [loot_kinds[rng.randi() % loot_kinds.size()]]
+	if (wave_index + 1) % CHEST_EVERY == 0:
+		picks.append(Loot.Kind.CHEST)
+	# Au milieu de la vague : ni le premier arrivé, ni le dernier.
+	var from := candidates.size() / 4
+	var to := maxi(candidates.size() * 3 / 4, from + 1)
+	for kind in picks:
+		var index := candidates[rng.randi_range(from, to - 1)]
+		if _queue[index].has("carried"):
+			# Déjà porteur : on prend le suivant libre.
+			for candidate in candidates:
+				if not _queue[candidate].has("carried"):
+					index = candidate
+					break
+		if not _queue[index].has("carried"):
+			_queue[index].carried = kind
 
 
 ## Décalage maximal sur le côté du chemin pour un ennemi, en pixels.

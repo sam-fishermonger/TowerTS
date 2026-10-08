@@ -45,8 +45,8 @@ var upgrades_locked := false
 ## Le niveau les recalcule quand une tour est posée, améliorée ou vendue.
 var boost_damage := 0.0
 var boost_fire_rate := 0.0
-## Mode Conquête : bonus de dégâts, de portée et de cadence des améliorations de l'Atelier
-## (Research), pour la partie (0 = aucun).
+## Bonus de dégâts, de portée et de cadence pour la partie (0 = aucun) : ceux des coffres
+## (ChestBonus) et, en Conquête, des améliorations de l'Atelier (Research).
 var research_damage := 0.0
 var research_range := 0.0
 var research_fire_rate := 0.0
@@ -105,7 +105,7 @@ func set_boost(damage_bonus: float, fire_rate_bonus: float) -> void:
 	queue_redraw()
 
 
-## Mode Conquête : change les bonus de l'Atelier et recalcule les statistiques.
+## Change les bonus de la partie (coffres, Atelier) et recalcule les statistiques.
 func set_research(damage_bonus: float, range_bonus: float, fire_rate_bonus: float) -> void:
 	if is_equal_approx(damage_bonus, research_damage) and is_equal_approx(range_bonus, research_range) \
 			and is_equal_approx(fire_rate_bonus, research_fire_rate):

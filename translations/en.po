@@ -2637,3 +2637,119 @@ msgid "%d ouvrier choisi"
 msgid_plural "%d ouvriers choisis"
 msgstr[0] "%d worker selected"
 msgstr[1] "%d workers selected"
+
+msgid "Au total : %s."
+msgstr "Total: %s."
+
+msgid "Coffre : %s"
+msgstr "Chest: %s"
+
+msgid "Bonus des coffres"
+msgstr "Chest bonuses"
+
+msgid "Porteur : lâche un coffre à sa mort."
+msgstr "Carrier: drops a chest when destroyed."
+
+msgid "Porteur : lâche du butin à sa mort."
+msgstr "Carrier: drops loot when destroyed."
+
+msgid "Porteurs et coffres"
+msgstr "Carriers and chests"
+
+msgid "Dans chaque vague à partir de la deuxième, un monstre porte du butin, et toutes les trois vagues un autre porte un coffre. Leur butin se voit au-dessus de leur tête."
+msgstr "From the second wave on, one monster in every wave carries loot, and every third wave another one carries a chest. Their loot shows above their heads."
+
+msgid "Ils ont %d %% de vie en plus. Détruits, ils lâchent leur butin : cliquez ou touchez-le pour le ramasser avant qu'il disparaisse (%d s). Un porteur qui atteint la base l'emporte."
+msgstr "They have %d%% more health. When destroyed, they drop their loot: click or tap it to pick it up before it vanishes (%d s). A carrier that reaches the base takes it away."
+
+msgid "Butin"
+msgstr "Loot"
+
+msgid "de l'or, et en Conquête de la pierre ou de l'essence"
+msgstr "gold, and in Conquest stone or essence"
+
+msgid "Coffres"
+msgstr "Chests"
+
+msgid "Un coffre donne un bonus au hasard pour le reste du niveau. Le même bonus peut retomber, jusqu'à 3 fois."
+msgstr "A chest gives a random bonus for the rest of the level. The same bonus can drop again, up to 3 times."
+
+msgid "Butins ramassés"
+msgstr "Loot picked up"
+
+msgid "Poudre noire"
+msgstr "Black Powder"
+
+msgid "Tours : +10 % de dégâts."
+msgstr "Towers: +10% damage."
+
+msgid "Tours : +8 % de portée."
+msgstr "Towers: +8% range."
+
+msgid "Ressorts tendus"
+msgstr "Tight Springs"
+
+msgid "Tours : +8 % de cadence de tir."
+msgstr "Towers: +8% fire rate."
+
+msgid "Bourse du chasseur"
+msgstr "Hunter's Purse"
+
+msgid "Monstres : +20 % d'or."
+msgstr "Monsters: +20% gold."
+
+msgid "Bonus de vague : +25 % d'or."
+msgstr "Wave bonus: +25% gold."
+
+msgid "Coffre-fort"
+msgstr "Strongbox"
+
+msgid "Intérêts : +2 points, et plafond +10 or."
+msgstr "Interest: +2 points, and cap +10 gold."
+
+msgid "Sablier"
+msgstr "Hourglass"
+
+msgid "Pouvoirs : recharge 15 % plus courte."
+msgstr "Powers: 15% shorter cooldown."
+
+msgid "Pioches d'acier"
+msgstr "Steel Picks"
+
+msgid "Ouvriers : minage et construction +20 %."
+msgstr "Workers: mining and building +20%."
+
+msgid "+%d %% dégâts"
+msgstr "+%d%% damage"
+
+msgid "+%d %% portée"
+msgstr "+%d%% range"
+
+msgid "+%d %% cadence"
+msgstr "+%d%% fire rate"
+
+msgid "+%d %% or des monstres"
+msgstr "+%d%% monster gold"
+
+msgid "+%d %% bonus de vague"
+msgstr "+%d%% wave bonus"
+
+msgid "+%d %% intérêts"
+msgstr "+%d%% interest"
+
+msgid "-%d %% recharge"
+msgstr "-%d%% cooldown"
+
+msgid "+%d %% travail"
+msgstr "+%d%% work"
+
+msgid "%d coffre"
+msgid_plural "%d coffres"
+msgstr[0] "%d chest"
+msgstr[1] "%d chests"
+
+msgid "Lentilles polies"
+msgstr "Polished Lenses"
+
+msgid "Butin de guerre"
+msgstr "Spoils of War"

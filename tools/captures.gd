@@ -42,6 +42,9 @@ func _run() -> void:
 		root.add_child(node)
 		await process_frame
 		if shot[2]:
+			if shot_name == "ruche":
+				# La troisième vague : un porteur de butin et un porteur de coffre.
+				(node as Level).spawner.current_wave = 1
 			_start_battle(node as Level)
 		elif shot_name == "conquete":
 			_stage_conquest(node as Level)

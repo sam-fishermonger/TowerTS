@@ -140,6 +140,7 @@ func _run() -> void:
 	await _test_specializations()
 	await _test_konami_code()
 	await _test_elites()
+	await _test_carriers_and_chests()
 	await _test_bosses()
 	await _test_necropolis()
 	await _test_level_editor()
@@ -2635,6 +2636,97 @@ func _test_konami_code() -> void:
 	Progress.reset_campaign()
 
 
+func _test_carriers_and_chests() -> void:
+	print("Porteurs de butin et coffres")
+	var level := await _spawn_level(LEVEL_01)
+	var spawner := level.spawner
+	var counts: Array[Dictionary] = []
+	for wave in 3:
+		spawner.start_next_wave()
+		var found := {}
+		for entry in spawner._queue:
+			if entry.has("carried"):
+				found[entry.carried] = found.get(entry.carried, 0) + 1
+		counts.append(found)
+		spawner.is_spawning = false
+	_check(counts[0].is_empty(), "pas de porteur dans la première vague")
+	_check(counts[1] == {Loot.Kind.GOLD: 1}, "un porteur d'or dans la deuxième")
+	_check(counts[2] == {Loot.Kind.GOLD: 1, Loot.Kind.CHEST: 1}, "et un porteur de coffre de plus dans la troisième")
+	spawner._queue.clear()
+	var path := level.map.get_enemy_path(0)
+	var carrier := spawner.spawn(LARVE, path, 200.0, 1.0, 1.0, -1, null, Loot.Kind.GOLD)
+	carrier.set_process(false)
+	_check(carrier.carried == Loot.Kind.GOLD, "le porteur sait ce qu'il porte")
+	carrier.take_damage(99999.0)
+	await process_frame
+	var drops := root.get_tree().get_nodes_in_group(Loot.GROUP)
+	_check(drops.size() == 1, "il lâche son butin à sa mort")
+	var loot := drops[0] as Loot
+	var amount := maxi(Level.LOOT_MIN_GOLD, Level.LOOT_GOLD_PER_REWARD * level.get_enemy_reward(LARVE))
+	_check(loot.kind == Loot.Kind.GOLD and loot.amount == amount, "un tas de %d or" % amount)
+	var gold := level.gold
+	await _click_at(level, loot.global_position + Vector2(8, 0))
+	_check(level.gold == gold + amount and level.stats.loot_collected == 1, "un clic dessus le ramasse")
+	await process_frame
+	_check(root.get_tree().get_nodes_in_group(Loot.GROUP).is_empty(), "et il quitte la carte")
+	var lost := level.drop_loot(Loot.Kind.GOLD, path.to_global(path.curve.sample_baked(300.0)), LARVE)
+	lost._age = Loot.LIFETIME - 0.01
+	await _step()
+	await process_frame
+	_check(not is_instance_valid(lost), "pas ramassé, il disparaît")
+	# Coffres : sans pouvoirs ni Conquête, six bonus possibles, trois fois chacun.
+	var tower := level.place_tower(Vector2i(2, 4), CANNON)
+	var base_damage := tower.stats.damage
+	var base_range := tower.stats.attack_range
+	var wave_bonus := level.get_wave_bonus(0)
+	var chest := level.drop_loot(Loot.Kind.CHEST, level.map.cell_to_world(Vector2i(6, 6)))
+	level.collect_loot(chest)
+	_check(level.stats.chests_opened == 1 and level.chest_levels.size() == 1, "un coffre ouvert donne un bonus")
+	_check(level.hud.chest_panel != null and level.hud.chest_panel.visible, "affiché en haut de la carte")
+	var opened: Array[StringName] = []
+	for i in 17:
+		opened.append(level.open_chest(Vector2.ZERO))
+	_check(not opened.has(ChestBonus.POWERS) and not opened.has(ChestBonus.WORKERS),
+		"ni Sablier sans pouvoir, ni Pioches hors de la Conquête")
+	_check(level.chest_levels.values().all(func(count: int) -> bool: return count == 3) and level.chest_levels.size() == 6,
+		"un même bonus retombe, trois fois au plus")
+	_check(is_equal_approx(tower.stats.damage, base_damage * 1.3) and is_equal_approx(tower.stats.attack_range, base_range * 1.24),
+		"Poudre noire et Lentilles polies : dégâts et portée des tours posées")
+	level.gold = 5000
+	var later: Tower = null
+	for x in 20:
+		for y in 10:
+			if later == null and level.can_place_tower(Vector2i(x, y), CANNON):
+				later = level.place_tower(Vector2i(x, y), CANNON)
+	_check(later != null and is_equal_approx(later.stats.damage, base_damage * 1.3), "et des tours posées ensuite")
+	_check(level.get_enemy_reward(LARVE) == roundi(LARVE.reward * 1.6), "Bourse du chasseur : or des monstres")
+	_check(level.get_wave_bonus(0) == roundi(wave_bonus * 1.75), "Butin de guerre : bonus de vague")
+	_check(is_equal_approx(level.get_interest_rate(), level.interest_rate + 0.06) and level.get_interest_cap() == level.interest_cap + 30,
+		"Coffre-fort : intérêts et plafond")
+	gold = level.gold
+	_check(level.open_chest(Vector2.ZERO) == &"" and level.gold == gold + ChestBonus.FALLBACK_GOLD, "tout au maximum : de l'or")
+	_check(level.hud._chest_label.text.contains("Poudre noire") and level.hud.achievement_toasts.get_child_count() > 0,
+		"liste des bonus et bandeau du coffre")
+	await _free(level)
+
+	level = await _spawn_level(CONQUEST_01)
+	_check(level.spawner.loot_kinds.size() == 3, "Conquête : de l'or, de la pierre ou de l'essence")
+	var stone := level.conquest.stone
+	level.collect_loot(level.drop_loot(Loot.Kind.STONE, level.map.cell_to_world(Vector2i(6, 6))))
+	var essence := level.conquest.essence
+	level.collect_loot(level.drop_loot(Loot.Kind.ESSENCE, level.map.cell_to_world(Vector2i(6, 6))))
+	_check(level.conquest.stone == stone + Level.LOOT_STONE and level.conquest.essence == essence + Level.LOOT_ESSENCE,
+		"pierre et essence ramassées")
+	_check(ChestBonus.get_available({}, false, true, true).has(ChestBonus.WORKERS), "Pioches d'acier possibles en Conquête")
+	level.chest_levels[ChestBonus.WORKERS] = 2
+	_check(is_equal_approx(level.conquest.get_work_speed(), 1.4), "et les ouvriers travaillent plus vite")
+	await _free(level)
+
+	level = await _spawn_level(TUTORIAL)
+	_check(not level.spawner.carriers, "pas de porteurs dans le tutoriel")
+	await _free(level)
+
+
 func _test_elites() -> void:
 	print("Élites")
 	var elite := SCARABEE.make_elite()
@@ -2810,10 +2902,10 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 38 and names[0] == "Élites" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+	_check(names.size() == 39 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
 			and names.has("Frelon") and names.has("Infiltré") and names.any(func(n: String) -> bool: return n.contains("Liche"))
 			and names.has("Pillarde  ·  Conquête"),
-		"onglet Monstres : les élites, les 29 monstres (dont les volants et les furtifs), les 4 boss et les 4 Pillards (%d)"
+		"onglet Monstres : les élites, les porteurs, les 29 monstres (dont les volants et les furtifs), les 4 boss et les 4 Pillards (%d)"
 			% names.size())
 	var raider_entry: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.begins_with("Maraudeur"))[0]
 	raider_entry.pressed.emit()

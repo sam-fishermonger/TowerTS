@@ -708,8 +708,8 @@ func complete_research(id: StringName) -> void:
 
 ## Bonus des tours (dégâts, portée, cadence) donnés aux tours par l'Atelier.
 func apply_research_to_tower(tower: Tower) -> void:
-	tower.set_research(get_research_bonus(Research.TOWER_DAMAGE), get_research_bonus(Research.TOWER_RANGE),
-		get_research_bonus(Research.TOWER_FIRE_RATE))
+	# Le niveau y ajoute ceux des coffres.
+	level.refresh_tower_bonuses(tower)
 
 
 func get_worker_speed() -> float:
@@ -718,7 +718,7 @@ func get_worker_speed() -> float:
 
 ## Vitesse de minage et de construction des ouvriers (1 = sans amélioration).
 func get_work_speed() -> float:
-	return 1.0 + get_research_bonus(Research.WORKER_TOOLS)
+	return 1.0 + get_research_bonus(Research.WORKER_TOOLS) + level.get_chest_bonus(ChestBonus.WORKERS)
 
 
 ## Pierre ou essence portée à chaque voyage.
