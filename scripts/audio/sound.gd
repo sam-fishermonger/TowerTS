@@ -3,12 +3,22 @@ extends Node
 ## Sons et musique. Le nœud est chargé au démarrage (autoload « SoundPlayer ») et
 ## s'utilise par ses fonctions statiques : `Sound.play(&"build")`. Il joue les effets
 ## sur un petit groupe de lecteurs réutilisés, et la musique en boucle d'une scène
-## à l'autre. Les sons et la musique se coupent et se règlent séparément (menu
+## à l'autre : celle de l'écran titre dans les menus, celle du monde en partie. Les sons et la musique se coupent et se règlent séparément (menu
 ## Options) ; les choix sont enregistrés.
 ## (Fonctions statiques plutôt que le nom de l'autoload : les scripts restent
 ## compilables quand l'autoload n'est pas encore là, comme dans les tests.)
 
-const MUSIC: AudioStream = preload("res://assets/audio/music.ogg")
+## Musiques (boucles de Kenney, CC0, voir assets/audio/musique/LICENCES.md) : celle des
+## menus, puis une par biome (BiomeTheme).
+const MUSICS := {
+	&"titre": preload("res://assets/audio/musique/titre.ogg"),
+	&"insectoid": preload("res://assets/audio/musique/ruche.ogg"),
+	&"mecha": preload("res://assets/audio/musique/fonderie.ogg"),
+	&"humanoid": preload("res://assets/audio/musique/cite.ogg"),
+	&"undead": preload("res://assets/audio/musique/necropole.ogg"),
+}
+## Durée du fondu quand la musique change (de l'écran titre à une partie, par exemple).
+const MUSIC_FADE := 0.6
 const SOUNDS := {
 	&"explosion": preload("res://assets/audio/explosion.ogg"),
 	&"enemy_death": preload("res://assets/audio/enemy_death.ogg"),
@@ -40,6 +50,9 @@ var _next_voice := 0
 ## Dernière lecture de chaque son, en millisecondes.
 var _last_played := {}
 var _music_player: AudioStreamPlayer
+## Musique en cours (clé de MUSICS), ou &"" avant la première.
+var _music_track := &""
+var _music_fade: Tween
 
 
 func _ready() -> void:
@@ -77,11 +90,15 @@ static func play_stream(stream: AudioStream, volume_db := 0.0) -> void:
 		player._play_stream(stream, volume_db)
 
 
-## Lance la musique si elle ne joue pas déjà (elle continue d'une scène à l'autre).
-static func play_music() -> void:
+## Lance une musique de MUSICS (celle des menus par défaut). Si elle joue déjà, elle
+## continue d'une scène à l'autre ; sinon elle remplace l'autre après un court fondu.
+static func play_music(track := &"titre") -> void:
 	var player := get_player()
-	if player and player._can_play() and not player._music_player.playing:
-		player._start_music()
+	if player == null or not player._can_play() or not MUSICS.has(track):
+		return
+	if player._music_track == track and player._music_player.playing:
+		return
+	player._switch_music(track)
 
 
 ## Coupe les effets sonores (pas la musique) sans toucher au réglage du joueur :
@@ -152,10 +169,30 @@ func _play_stream(stream: AudioStream, volume_db: float) -> void:
 	voice.play()
 
 
+## Musique d'une partie : celle du biome de sa carte, celle des menus pour la démo de
+## l'écran titre.
+static func level_track(tileset: TileSet, is_demo: bool) -> StringName:
+	return &"titre" if is_demo else StringName(BiomeTheme.biome_of(tileset))
+
+
+func _switch_music(track: StringName) -> void:
+	var was_playing := _music_player.playing and _music_track != &""
+	_music_track = track
+	if _music_fade:
+		_music_fade.kill()
+	if not was_playing:
+		_start_music()
+		return
+	_music_fade = create_tween()
+	_music_fade.tween_property(_music_player, ^"volume_db", -40.0, MUSIC_FADE / 2.0)
+	_music_fade.tween_callback(_start_music)
+
+
 func _start_music() -> void:
-	var stream := MUSIC.duplicate() as AudioStreamOggVorbis
+	var stream := (MUSICS[_music_track] as AudioStream).duplicate() as AudioStreamOggVorbis
 	stream.loop = true
 	_music_player.stream = stream
+	_music_player.volume_db = 0.0
 	_music_player.play()
 
 

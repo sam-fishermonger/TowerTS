@@ -183,6 +183,11 @@ func _ready() -> void:
 	var hint := _label("Chaque niveau commence à la vitesse choisie.", 14, Color(1, 1, 1, 0.5))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(hint)
+	# Crédit demandé par la licence des icônes (CC BY 3.0) ; Kenney (CC0) ne l'exige pas.
+	var credits := _label("Musiques : Kenney (CC0)  ·  Icônes : Lorc, Delapouite et Skoll, game-icons.net (CC BY 3.0)",
+		14, Color(1, 1, 1, 0.5))
+	credits.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(credits)
 
 	close_button = Button.new()
 	close_button.text = "Fermer"

@@ -21,6 +21,8 @@ const TOWER_ICON_SIZE := 40.0
 const TOWER_NODE_WIDTH := 200.0
 ## Images des deux tours dans la case d'un croisement.
 const CROSSING_ICON_SIZE := 34.0
+## Taille de l'icône d'une case sans tour ni pouvoir (Perk.get_icon()).
+const PERK_ICON_SIZE := 32.0
 ## Marge de chaque côté d'une page réduite pour tenir dans l'écran.
 const PAGE_MARGIN := 16.0
 
@@ -177,6 +179,17 @@ func _build_page(root: Control, page_index: int) -> void:
 			power_icon.position = Vector2(9.0, (NODE_SIZE.y - power_icon.size.y) / 2.0)
 			power_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			button.add_child(power_icon)
+		var perk_icon := perk.get_icon() if icon_paths.is_empty() and perk.unlocks_power.is_empty() else null
+		if perk_icon:
+			var picture := TextureRect.new()
+			picture.name = "PerkIcon"
+			picture.texture = perk_icon
+			picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			picture.size = Vector2.ONE * PERK_ICON_SIZE
+			picture.position = Vector2(14.0, (NODE_SIZE.y - PERK_ICON_SIZE) / 2.0)
+			picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			button.add_child(picture)
 		for i in icon_paths.size():
 			var icon := TowerIcon.new()
 			icon.data = load(icon_paths[i])
@@ -271,6 +284,8 @@ func _style_button(button: Button, perk: Perk) -> void:
 		margin_left = CROSSING_ICON_SIZE * 1.6 + 10.0
 	elif not perk.get_tower_path().is_empty() or not perk.unlocks_power.is_empty():
 		margin_left = TOWER_ICON_SIZE + 12.0
+	elif button.has_node(^"PerkIcon"):
+		margin_left = PERK_ICON_SIZE + 20.0
 	# Les couleurs et les styles changent d'un coup : la case ne se recalcule qu'une fois.
 	button.begin_bulk_theme_override()
 	var styles := UiStyle.button_styles(color, margin_left, 12.0)
@@ -284,6 +299,9 @@ func _style_button(button: Button, perk: Perk) -> void:
 		button.add_theme_stylebox_override(style_name, styles[style_name])
 	for icon in button.get_children():
 		icon.modulate.a = 1.0 if owned or Perks.is_unlocked(perk) else 0.4
+	# L'icône blanche prend la couleur de l'état de la case, comme son texte.
+	if button.has_node(^"PerkIcon"):
+		(button.get_node(^"PerkIcon") as CanvasItem).self_modulate = color.lightened(0.35)
 	button.add_theme_color_override("font_color", color.lightened(0.35))
 	button.add_theme_color_override("font_hover_color", color.lightened(0.5))
 	button.add_theme_color_override("font_focus_color", color.lightened(0.35))

@@ -161,7 +161,7 @@ godot --headless --path . --export-release "Android" build/android/TowerTS.apk
   Chaque amélioration se débloque quand celles qui la précèdent sont achetées. Les prix montent le long de chaque branche (4 étoiles pour la première amélioration, jusqu'à 20 pour la Cloche funèbre) : l'arbre sans la page Logistique coûte 332 étoiles, sur les 336 de la campagne dans les quatre difficultés. Les étoiles de Facile et Moyen suffisent pour les premières améliorations et les tours des mondes ; il faut aller chercher celles de Difficile et Cauchemar pour finir l'arbre, et ces deux difficultés demandent justement des améliorations. Les spécialisations coûtent 42 étoiles infinies, et les renforts des pouvoirs 21. Il faut choisir, et **Réinitialiser l'arbre** rend toutes les étoiles pour essayer une autre combinaison. Les améliorations, leurs prix et leurs bonus se règlent dans `resources/perk_tree.tres`.
 
 - **Code Konami** : sur l'écran titre, **↑ ↑ ↓ ↓ ← → ← → B A** débloque tout : tous les niveaux (campagne, Conquête et niveaux libres) gagnés avec 3 étoiles dans les quatre difficultés (donc tous les mondes et tous les modes infinis), toutes les étoiles infinies (mode infini et mutateurs), toutes les améliorations et toutes les spécialisations. **Effacer la progression** revient en arrière. Les lettres suivent la disposition du clavier (le A d'un clavier AZERTY).
-- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur, avec une musique en boucle.
+- Chaque tour a son bruit de tir, et les explosions, les ennemis détruits, les achats, les vagues et la fin de partie ont le leur. Les menus ont leur musique et chaque monde la sienne (boucles de Kenney), avec un court fondu au changement.
 - **Options** (écran titre, ou en bas à droite en jeu, ce qui met la partie en pause le temps des réglages) : **Langue** (Français ou English, voir [Langues](#langues)) ; **Musique** et **Sons** ont chacun leur case pour les couper et leur curseur de volume ; **Plein écran** (aussi **F11** ou **Alt + Entrée** à tout moment ; absent sur Android, où le jeu occupe déjà tout l'écran) ; **Vitesse au départ** : x1, x2 ou x3, la vitesse à laquelle chaque niveau commence ; **Taille du texte** : Normale, Grande (+15 %) ou Très grande (+30 %), pour toute l'interface ; **Mode daltonien** : l'aperçu de la tour à poser passe du vert et rouge au bleu et orange (une case interdite est en plus barrée d'une croix, sa portée en pointillés), l'aura des boss devient magenta avec un second anneau et le halo de soin du Médecin bleu ciel ; **Vibrations** (téléphone et manette) quand on perd une vie et à l'arrivée d'un boss. Tout s'applique et s'enregistre tout de suite. Sur la version web, le navigateur ne rouvre pas le plein écran tout seul au lancement : il se redemande dans les Options.
 - **À la manette** (ordinateur, Android, version web) : le stick gauche mène un pointeur qui fait tout ce que fait la souris (**A** clique dessous, A maintenu tire un cadre en Conquête), la croix passe d'un bouton à l'autre dans les menus (A valide, **B** revient en arrière ou annule). En partie, la croix avance le pointeur d'une case, **LB** / **RB** choisissent la tour précédente ou suivante de la barre, **Y** lance la vague, **X** change la vitesse, **Start** met en pause et **Select** ouvre les Options. Le pointeur s'efface dès que la souris bouge ou qu'on touche l'écran (`scripts/ui/gamepad.gd`, chargé au démarrage sous le nom « Manette »).
 - **Au tactile** (téléphone, tablette, version web) : toucher une tour de la barre d'achat, puis une case : l'aperçu de la tour s'y affiche (portée, et en rouge si elle ne peut pas s'y poser) avec « Touchez encore pour poser » ; un second toucher sur la même case la pose, un toucher ailleurs déplace l'aperçu. Toucher encore la tour dans la barre annule. Toucher une tour posée ouvre sa fiche, toucher la carte ailleurs la ferme ; toucher un monstre ouvre la sienne. Dans la sélection des mondes et l'arbre des améliorations, le premier toucher sur un niveau ou une amélioration ouvre sa fiche, le second le lance ou l'achète. Le jeu se joue à l'horizontale : tenu en hauteur, l'écran invite à tourner l'appareil. Le jeu passe tout seul en mode tactile au premier toucher, et revient à la souris dès qu'elle bouge (`scripts/save/game_settings.gd`).
@@ -226,7 +226,7 @@ Le jeu reste à plat en dessous (positions, portées, chemins) : seul l'affichag
 
 ## Sons
 
-Tous les sons et la musique sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).
+Tous les effets sonores sont synthétisés par `tools/generate_sounds.py` (Python 3 et ffmpeg), sans banque de sons : modifier le script puis le relancer réécrit les fichiers de `assets/audio/`. Les musiques viennent du pack Music Loops de Kenney (CC0) : la liste et le monde de chacune sont dans `assets/audio/musique/LICENCES.md`, le choix dans `Sound.MUSICS`. Le son de tir d'une tour se choisit dans sa ressource (`attack_sound`).
 
 ## Mondes et monstres
 
@@ -425,13 +425,14 @@ scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
 scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
 resources/tilesets/  Tuiles de chaque biome (TileSet)
-tools/               Générateurs des sons (generate_sounds.py) et des tuiles (generate_tilesets.py), textes à traduire (textes_a_traduire.py), captures d'écran (captures.gd)
+tools/               Générateurs des effets sonores (generate_sounds.py) et des tuiles (generate_tilesets.py), textes à traduire (textes_a_traduire.py), captures d'écran (captures.gd)
 docs/captures/       Captures d'écran du README
 translations/        Traductions des textes du jeu (en.po : anglais)
 scripts/save/        Progression enregistrée (Progress), améliorations permanentes achetées (Perks) et succès (Achievements)
 resources/           Campagne et mondes, statistiques des ennemis (un dossier par biome) et des tours (.tres, modifiables dans l'inspecteur)
 tests/               Tests exécutables sans fenêtre
 assets/sprites/      Images et sprites
-assets/audio/        Musiques et effets sonores
+assets/audio/        Effets sonores (générés par generate_sounds.py) et musiques (musique/ : boucles de Kenney, CC0, une par monde, voir LICENCES.md)
+assets/icons/        Icônes de l'arbre des améliorations (game-icons.net, CC BY 3.0, voir LICENCES.md)
 assets/fonts/        Police de l'interface : Open Sans + symboles ★ ☆ ✕ et ceux des succès (voir LICENCES.md)
 ```
