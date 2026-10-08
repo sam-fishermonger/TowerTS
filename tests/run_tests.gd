@@ -141,6 +141,7 @@ func _run() -> void:
 	await _test_konami_code()
 	await _test_elites()
 	await _test_carriers_and_chests()
+	await _test_expedition()
 	await _test_bosses()
 	await _test_necropolis()
 	await _test_level_editor()
@@ -293,6 +294,8 @@ func _test_title_screen() -> void:
 	_check(title.get_node("%DailyButton").text == "Défi du jour", "le bouton Défi du jour existe")
 	_check(title.get_node("%EditorButton").text == "Éditeur de niveau", "le bouton Éditeur de niveau existe")
 	_check(title.get_node("%ConquestButton").text == "Conquête", "le bouton Conquête existe")
+	_check(title.get_node("%ExpeditionButton").disabled and title.get_node("%ExpeditionButton").text.begins_with("Expédition"),
+		"le bouton Expédition attend cinq niveaux débloqués")
 	_check(title.get_node("%CampaignButton").text == "Campagne" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	var cancel := InputEventAction.new()
@@ -2724,6 +2727,93 @@ func _test_carriers_and_chests() -> void:
 
 	level = await _spawn_level(TUTORIAL)
 	_check(not level.spawner.carriers, "pas de porteurs dans le tutoriel")
+	await _free(level)
+
+
+## Mode Expédition : cinq niveaux tirés au sort à la suite, vies gardées, coffres au choix.
+func _test_expedition() -> void:
+	print("Mode Expédition")
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	var pool := campaign.levels
+	var drawn := Expedition.draw_levels(1234, pool)
+	var indices := drawn.map(func(path: String) -> int: return pool.find(path))
+	var tiers_ok := true
+	for i in indices.size():
+		tiers_ok = tiers_ok and indices[i] >= floori(float(i) * pool.size() / 5) \
+			and indices[i] < floori(float(i + 1) * pool.size() / 5)
+	_check(drawn.size() == Expedition.LEVEL_COUNT and tiers_ok, "cinq niveaux, un par tranche de la campagne : %s" % [indices])
+	_check(Expedition.draw_levels(1234, pool) == drawn and Expedition.draw_levels(99, pool) != drawn,
+		"le tirage dépend de la graine")
+	_check(Expedition.is_unlocked() == (Expedition.get_pool().size() >= 5), "ouvert avec cinq niveaux débloqués")
+	var run := Expedition.from_dict(Expedition.create(77).to_dict())
+	_check(run.rng_seed == 77 and run.index == 0 and run.lives == -1, "l'expédition passe d'une scène à l'autre en dictionnaire")
+	var picked := Expedition.pick_choices(ChestBonus.get_available({}, false, true, false), RandomNumberGenerator.new())
+	_check(picked.size() == 3 and picked[0] != picked[1] and picked[1] != picked[2] and picked[0] != picked[2],
+		"un coffre propose trois bonus différents")
+
+	# Deuxième étape : les vies et les bonus de la première sont repris.
+	run = Expedition.new()
+	run.rng_seed = 5
+	run.levels.assign([LEVEL_02.resource_path, LEVEL_01.resource_path, LEVEL_03.resource_path,
+		LEVEL_04.resource_path, LEVEL_05.resource_path])
+	run.index = 1
+	run.lives = 7
+	run.max_lives = 25
+	run.chest_levels = {ChestBonus.DAMAGE: 1}
+	Engine.set_meta(Level.EXPEDITION_META, run.to_dict())
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.expedition != null and not Engine.has_meta(Level.EXPEDITION_META), "le niveau lit l'expédition")
+	_check(level.lives == 7 and level.starting_lives == 25, "les vies restantes passent à l'étape suivante")
+	_check(level.get_title().begins_with("Expédition 2 / 5"), "le titre dit l'étape")
+	_check(level.get_next_level() == LEVEL_03.resource_path, "le niveau suivant est l'étape suivante")
+	var tower := level.place_tower(Vector2i(2, 4), CANNON)
+	var boosted := tower.stats.damage
+	level.chest_levels.clear()
+	level.refresh_tower_bonuses(tower)
+	_check(is_equal_approx(boosted, tower.stats.damage * 1.1), "les bonus des coffres déjà gagnés comptent tout de suite")
+	level.chest_levels = run.chest_levels.duplicate()
+	level.refresh_tower_bonuses(tower)
+	_check(level.hud.chest_panel != null and level.hud.chest_panel.visible, "et s'affichent")
+	level.collect_loot(level.drop_loot(Loot.Kind.CHEST, level.map.cell_to_world(Vector2i(6, 6))))
+	var choice := level.hud.chest_choice
+	_check(choice != null and choice.choices.size() == 3 and paused and level.chest_levels.size() == 1,
+		"un coffre met la partie en pause et propose trois bonus")
+	level.open_chest(Vector2.ZERO)
+	_check(level.hud.chest_choice == choice, "un deuxième coffre attend son tour")
+	var first := choice.choices[0]
+	choice.get_buttons()[0].pressed.emit()
+	_check(level.chest_levels.get(first, 0) == run.chest_levels.get(first, 0) + 1 and level.expedition.chest_levels == level.chest_levels,
+		"le bonus choisi est gardé pour l'expédition")
+	_check(level.hud.chest_choice != null and level.hud.chest_choice != choice and paused, "puis le deuxième coffre propose les siens")
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_2
+	key.pressed = true
+	var second := level.hud.chest_choice.choices[1]
+	level.hud.chest_choice._unhandled_key_input(key)
+	_check(level.chest_levels.get(second, 0) >= 1 and level.hud.chest_choice == null and not paused,
+		"la touche 2 prend le deuxième, et la partie reprend")
+	level.lives = 5
+	level._end_game(true)
+	_check(level.expedition.lives == 5 and level.hud.end_title.text == "Étape réussie !"
+		and level.hud.next_level_button.visible and not level.hud.get_node("%RestartButton").visible,
+		"étape réussie : on passe à la suivante avec 5 vies")
+	await _free(level)
+
+	# Dernière étape perdue : l'expédition s'arrête et son record est gardé.
+	run.index = 4
+	run.lives = 3
+	Engine.set_meta(Level.EXPEDITION_META, run.to_dict())
+	var best := Expedition.get_best()
+	level = await _spawn_level(LEVEL_05)
+	level._end_game(false)
+	_check(level.hud.end_title.text == "Expédition terminée" and not level.hud.next_level_button.visible
+		and level.hud.get_node("%RestartButton").text == "Nouvelle expédition", "défaite : l'expédition est finie")
+	_check(Expedition.get_best() == maxi(best, 4), "record : quatre étapes franchies")
+	await _free(level)
+
+	# Hors expédition, un coffre donne toujours un bonus au hasard, sans choix.
+	level = await _spawn_level(LEVEL_01)
+	_check(level.open_chest(Vector2.ZERO) != &"" and level.hud.chest_choice == null, "ailleurs, pas de choix")
 	await _free(level)
 
 

@@ -44,6 +44,8 @@ signal workers_select_all
 signal workers_sent_home
 signal workers_released
 signal workers_deselected
+## Mode Expédition : émis avec le bonus choisi dans un coffre (ChestChoice).
+signal chest_bonus_chosen(id: StringName)
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
@@ -95,6 +97,8 @@ var achievement_toasts: VBoxContainer
 var chest_panel: PanelContainer
 var _chest_label: RichTextLabel
 var _chest_levels := {}
+## Mode Expédition : choix du bonus d'un coffre ouvert (null sinon).
+var chest_choice: ChestChoice
 ## Boutons des pouvoirs actifs, en haut, à gauche du bouton de vague.
 var power_bar: HBoxContainer
 var power_buttons: Array[PowerButton] = []
@@ -239,7 +243,8 @@ func _notification(what: int) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if not key.pressed or key.echo or end_panel.visible or tower_picker or options_menu:
+	if not key.pressed or key.echo or end_panel.visible or tower_picker or options_menu \
+			or chest_choice:
 		return
 	# Position physique des touches : en AZERTY, la rangée 1, 2, 3 donne « & é " » sans Maj.
 	var code := key.physical_keycode
@@ -571,6 +576,32 @@ func show_endless_end_screen(waves: int, endless_stars: int, new_record := false
 	_end_screen = show_endless_end_screen.bind(waves, endless_stars, new_record)
 
 
+## Écran de fin d'une étape du mode Expédition. `cleared` : étapes réussies (celle-ci
+## comprise après une victoire), sur `total`. Une victoire avant la dernière étape mène à
+## la suivante ; sinon l'expédition est finie, et on peut en lancer une nouvelle.
+func show_expedition_end_screen(victory: bool, cleared: int, total: int, lives: int, new_record := false) -> void:
+	var finished := not victory or cleared >= total
+	show_end_screen(victory, not finished)
+	end_stars.visible = true
+	end_stars.text = "%d / %d" % [cleared, total]
+	end_stars.add_theme_color_override("font_color", Expedition.COLOR)
+	if not finished:
+		end_title.text = "Étape réussie !"
+		end_message.text = tr("Étape %d sur %d franchie.") % [cleared, total] + "\n" \
+			+ tr_n("Il vous reste %d vie pour la suite.", "Il vous reste %d vies pour la suite.",
+				LevelStats.plural_count(lives)) % lives
+		next_level_button.text = "Étape suivante"
+	else:
+		end_title.text = "Expédition réussie !" if victory else "Expédition terminée"
+		end_message.text = tr("Les %d étapes sont franchies.") % total if victory \
+			else tr("Étapes franchies : %d sur %d.") % [cleared, total]
+		if new_record:
+			end_message.text += "\n" + tr("Nouveau record !")
+	%RestartButton.text = "Nouvelle expédition"
+	%RestartButton.visible = finished
+	_end_screen = show_expedition_end_screen.bind(victory, cleared, total, lives, new_record)
+
+
 ## Statistiques de la partie et succès débloqués, à droite de l'écran de fin (à appeler
 ## après show_end_screen ou show_endless_end_screen).
 func show_end_stats(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
@@ -634,6 +665,25 @@ func show_chest_bonus(definition: Dictionary, count: int) -> void:
 	if count > 1:
 		body += "  " + tr("Au total : %s.") % ChestBonus.describe_total(definition.id, count)
 	_show_toast(definition.color, tr("Coffre : %s") % tr(definition.name), body)
+
+
+## Mode Expédition : propose les bonus d'un coffre ouvert, par-dessus la partie.
+func show_chest_choice(choices: Array[StringName], levels: Dictionary) -> void:
+	close_chest_choice()
+	shop_info.close()
+	wave_details.close()
+	enemy_details.close()
+	chest_choice = ChestChoice.new()
+	add_child(chest_choice)
+	chest_choice.setup(choices, levels)
+	chest_choice.chosen.connect(chest_bonus_chosen.emit)
+	Sound.play(&"upgrade")
+
+
+func close_chest_choice() -> void:
+	if chest_choice:
+		chest_choice.queue_free()
+		chest_choice = null
 
 
 ## Liste des bonus des coffres gagnés (`levels` : exemplaires par identifiant).

@@ -2753,3 +2753,56 @@ msgstr "Polished Lenses"
 
 msgid "Butin de guerre"
 msgstr "Spoils of War"
+
+msgid "Expédition"
+msgstr "Expedition"
+
+msgid "Cinq niveaux tirés au sort à la suite, avec les mêmes vies. Les coffres proposent trois bonus, gardés jusqu'au bout."
+msgstr "Five random levels in a row, with the same lives. Chests offer three bonuses, kept until the end."
+
+msgid "Débloquez %d niveaux de la campagne pour partir en expédition."
+msgstr "Unlock %d campaign levels to go on an expedition."
+
+msgid "Expédition %d / %d  ·  %s"
+msgstr "Expedition %d / %d  ·  %s"
+
+msgid "Coffre : choisissez un bonus"
+msgstr "Chest: pick a bonus"
+
+msgid "Il est gardé jusqu'à la fin de l'expédition."
+msgstr "You keep it until the end of the expedition."
+
+msgid "Déjà : %s"
+msgstr "Owned: %s"
+
+msgid "Nouveau"
+msgstr "New"
+
+msgid "Étape réussie !"
+msgstr "Stage cleared!"
+
+msgid "Étape %d sur %d franchie."
+msgstr "Stage %d of %d cleared."
+
+msgid "Il vous reste %d vie pour la suite."
+msgid_plural "Il vous reste %d vies pour la suite."
+msgstr[0] "You have %d life left for what comes next."
+msgstr[1] "You have %d lives left for what comes next."
+
+msgid "Étape suivante"
+msgstr "Next stage"
+
+msgid "Expédition réussie !"
+msgstr "Expedition complete!"
+
+msgid "Expédition terminée"
+msgstr "Expedition over"
+
+msgid "Les %d étapes sont franchies."
+msgstr "All %d stages cleared."
+
+msgid "Étapes franchies : %d sur %d."
+msgstr "Stages cleared: %d of %d."
+
+msgid "Nouvelle expédition"
+msgstr "New expedition"
