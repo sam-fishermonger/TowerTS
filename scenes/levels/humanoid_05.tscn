@@ -18,6 +18,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/transport.tres" id="e_transport"]
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/infiltre.tres" id="e_infiltre"]
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/aviateur.tres" id="e_aviateur"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/saboteur.tres" id="e_saboteur"]
 
 [sub_resource type="Curve2D" id="Curve2D_Path0"]
 _data = {
@@ -123,9 +124,16 @@ interval = 1.5
 start_delay = 3.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w3_saboteur"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_saboteur")
+count = 4
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_3"), SubResource("Group_new_3_0")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_3"), SubResource("Group_new_3_0"), SubResource("Group_w3_saboteur")])
 bonus_gold = 25
 health_multiplier = 1.286
 
@@ -242,9 +250,16 @@ interval = 2.0
 start_delay = 12.0
 path_index = 2
 
+[sub_resource type="Resource" id="Group_w6_saboteur"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_saboteur")
+count = 6
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_6"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3"), SubResource("Group_w6_4")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3"), SubResource("Group_w6_4"), SubResource("Group_w6_saboteur")])
 bonus_gold = 40
 health_multiplier = 1.714
 

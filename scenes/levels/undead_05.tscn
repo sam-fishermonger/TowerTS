@@ -17,6 +17,8 @@
 [ext_resource type="Resource" path="res://resources/enemies/undead/momie.tres" id="e_momie"]
 [ext_resource type="Resource" path="res://resources/enemies/undead/squelette.tres" id="e_squelette"]
 [ext_resource type="Resource" path="res://resources/enemies/undead/asticot.tres" id="e_asticot"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/revenant.tres" id="e_revenant"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/banshee.tres" id="e_banshee"]
 
 [sub_resource type="Curve2D" id="Curve2D_Path0"]
 _data = {
@@ -127,9 +129,16 @@ interval = 0.35
 start_delay = 6.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w3_revenant"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_revenant")
+count = 5
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_3"), SubResource("Group_w3_revenant")])
 bonus_gold = 25
 health_multiplier = 1.343
 
@@ -165,9 +174,16 @@ start_delay = 10.0
 path_index = 2
 elite = true
 
+[sub_resource type="Resource" id="Group_w4_banshee"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_banshee")
+count = 10
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_4"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_3"), SubResource("Group_w4_elite")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_3"), SubResource("Group_w4_elite"), SubResource("Group_w4_banshee")])
 bonus_gold = 30
 health_multiplier = 1.514
 
@@ -268,9 +284,16 @@ start_delay = 14.0
 path_index = 1
 elite = true
 
+[sub_resource type="Resource" id="Group_w7_revenant"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_revenant")
+count = 8
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_7"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_4"), SubResource("Group_w7_elite")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_4"), SubResource("Group_w7_elite"), SubResource("Group_w7_revenant")])
 bonus_gold = 45
 health_multiplier = 2.029
 

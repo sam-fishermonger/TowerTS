@@ -18,6 +18,7 @@ const SHAPES := {
 	"transport": [0.85, 1.05, 1.35],
 	"general": [1.05, 1.65, 0.9],
 	"maraudeur": [1.05, 1.4, 0.8],
+	"saboteur": [1.05, 1.45, 0.8],
 }
 const SKIN := Color(0.96, 0.78, 0.62)
 const BOOTS := Color(0.3, 0.22, 0.16)
@@ -198,6 +199,26 @@ static func draw(canvas: CanvasItem, shape: String, u: float, color: Color, phas
 				Creature.glow(canvas, r.head + Vector2(x, 0.02) * u, maxf(0.06 * u, 1.2), Color(0.4, 1.0, 0.5) * tint)
 			var hand := near_hand(u, r, look)
 			Creature.limb(canvas, PackedVector2Array([hand, hand + Vector2(0.32, -0.18) * u]), maxf(0.07 * u, 1.5), Color(0.8, 0.85, 0.9) * tint)
+		"saboteur":
+			var r := rig(u, feet, phase, 0.34, 0.15)
+			var look := {"cloth": color, "pants": color.darkened(0.15), "skin": skin, "boots": BOOTS * tint, "eyes": dark}
+			figure(canvas, u, r, look, func() -> void:
+				# Sac à dos d'où sort une antenne qui crépite.
+				var pack: Vector2 = r.chest + Vector2(-0.5, -0.05) * u
+				Creature.box(canvas, pack, Vector2(0.38, 0.62) * u, 0.1 * u, Color(0.3, 0.32, 0.3) * tint)
+				Creature.limb(canvas, PackedVector2Array([pack + Vector2(-0.05, -0.3) * u, pack + Vector2(-0.15, -0.95) * u]), 1.5, dark)
+				Creature.glow(canvas, pack + Vector2(-0.15, -0.98) * u, maxf(0.08 * u, 1.6),
+					Color(1.0, 0.85, 0.3) * tint * (0.7 + 0.3 * absf(sin(phase * 0.5)))))
+			# Bretelles de salopette, bonnet, lunettes de soudeur.
+			canvas.draw_line(r.chest + Vector2(-0.2, -0.4) * u, r.chest + Vector2(0.15, 0.3) * u, color.darkened(0.35), 0.1 * u, true)
+			cap(canvas, r.head, 0.46 * u, Color(0.85, 0.45, 0.15) * tint, 0.6)
+			Creature.box(canvas, r.head + Vector2(0.22, -0.08) * u, Vector2(0.42, 0.2) * u, 0.08 * u, Color(0.2, 0.2, 0.22) * tint)
+			Creature.glow(canvas, r.head + Vector2(0.32, -0.08) * u, maxf(0.06 * u, 1.2), Color(0.5, 0.9, 1.0) * tint)
+			# Grosse pince coupante.
+			var hand := near_hand(u, r, look)
+			for side in [-1.0, 1.0]:
+				Creature.limb(canvas, PackedVector2Array([hand, hand + Vector2(0.35, 0.08 * side) * u, hand + Vector2(0.55, -0.02 * side) * u]),
+					maxf(0.07 * u, 1.5), Color(0.75, 0.2, 0.15) * tint)
 		"aviateur":
 			# Il vole : jambes ballantes, réacteur dorsal.
 			var r := rig(u, feet, 0.0, 0.0, 0.2)

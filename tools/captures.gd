@@ -42,9 +42,12 @@ func _run() -> void:
 		root.add_child(node)
 		await process_frame
 		if shot[2]:
-			if shot_name == "ruche":
-				# La troisième vague : un porteur de butin et un porteur de coffre.
-				(node as Level).spawner.current_wave = 1
+			# Une vague qui montre la spécialité du monde : la troisième de La Ruche (un porteur
+			# de butin et un porteur de coffre), les Tunneliers de la quatrième vague de La
+			# Fonderie, les Saboteurs de la Cité, les Banshees de la troisième de La Nécropole.
+			var waves_before := {"ruche": 1, "fonderie": 2, "cite": 2, "necropole": 1}
+			if waves_before.has(shot_name):
+				(node as Level).spawner.current_wave = waves_before[shot_name]
 			_start_battle(node as Level)
 		elif shot_name == "conquete":
 			_stage_conquest(node as Level)

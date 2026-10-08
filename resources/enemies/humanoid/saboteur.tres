@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/humanoid/saboteur.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Saboteur"
+description = "Ingénieur à la pince coupante qui éteint en passant la tour la plus proche."
+max_health = 140.0
+armor = 1.0
+speed = 62.0
+reward = 15
+damage = 1
+color = Color(0.3, 0.4, 0.55, 1)
+radius = 12.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.2
+sabotage_interval = 6.0
+sabotage_radius = 140.0
+sabotage_duration = 4.0

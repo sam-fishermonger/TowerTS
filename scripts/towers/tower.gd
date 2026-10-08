@@ -18,6 +18,11 @@ const SELL_RATIO := 0.7
 ## tirer plusieurs fois dans la même image pour tenir sa cadence.
 const MAX_SHOTS_PER_FRAME := 4
 const DETECTION_COLOR := Color(0.75, 0.55, 1.0)
+## Groupe de toutes les tours posées (le Saboteur y cherche sa cible).
+const GROUP := "towers"
+## Tour sabotée : teinte grise, et étincelles jaunes.
+const SABOTAGED_TINT := Color(0.55, 0.55, 0.6)
+const SPARK_COLOR := Color(1.0, 0.85, 0.3)
 
 ## Ennemi visé en priorité parmi ceux à portée.
 enum TargetMode { FIRST, LAST, STRONGEST, CLOSEST }
@@ -25,6 +30,8 @@ const TARGET_MODE_NAMES: Array[String] = ["Premier", "Dernier", "Le plus fort", 
 
 ## Émis quand la tour monte de niveau.
 signal upgraded(tower: Tower)
+## Émis quand un Saboteur éteint la tour, puis quand elle se rallume.
+signal sabotage_changed(tower: Tower)
 
 @export var data: TowerData
 ## Niveau d'amélioration : 1 à la pose, jusqu'à data.get_max_level().
@@ -54,6 +61,9 @@ var research_fire_rate := 0.0
 ## n'est qu'un chantier que les ouvriers bâtissent. Elle ne tire pas, ne s'améliore pas
 ## et ne détecte pas les furtifs.
 var build_progress := 1.0
+## Secondes pendant lesquelles un Saboteur l'a éteinte : elle ne tire plus et ne détecte
+## plus les furtifs.
+var _sabotaged_left := 0.0
 
 ## Nœud qui reçoit ce que la tour crée en jeu (projectiles, effets). Par défaut, son parent.
 var projectile_container: Node
@@ -71,6 +81,7 @@ var _drawn_aim_angle := _aim_angle
 
 
 func _ready() -> void:
+	add_to_group(GROUP)
 	_refresh_stats()
 
 
@@ -78,7 +89,7 @@ func _ready() -> void:
 ## celles qui détectent les furtifs si elle en est capable.
 func _refresh_stats() -> void:
 	stats = get_stats_at_level(level)
-	if stats.detects_stealth() and is_built():
+	if stats.detects_stealth() and is_built() and not is_sabotaged():
 		add_to_group(Enemy.DETECTOR_GROUP)
 	elif is_in_group(Enemy.DETECTOR_GROUP):
 		remove_from_group(Enemy.DETECTOR_GROUP)
@@ -124,6 +135,15 @@ func is_boosted() -> bool:
 ## La cible est gardée tant qu'elle reste à portée, sauf pour le Franc-tireur, qui la
 ## lâche au moment de tirer si un soigneur est passé à portée entre-temps.
 func _process(delta: float) -> void:
+	if _sabotaged_left > 0.0:
+		_sabotaged_left -= delta
+		_target = null
+		if _sabotaged_left <= 0.0:
+			_refresh_stats()
+			sabotage_changed.emit(self)
+		if not Relief.headless or _sabotaged_left <= 0.0:
+			queue_redraw()
+		return
 	_cooldown -= delta
 	if not _is_valid_target(_target) or (_cooldown <= 0.0 and _should_switch_to_healer()):
 		_target = find_target()
@@ -148,6 +168,23 @@ func _process(delta: float) -> void:
 		shots += 1
 	if shots > 0:
 		Sound.play_stream(data.attack_sound)
+
+
+## Un Saboteur éteint la tour pendant `duration` secondes (la plus longue l'emporte).
+func sabotage(duration: float) -> void:
+	if not is_alive or duration <= 0.0:
+		return
+	var was_sabotaged := is_sabotaged()
+	_sabotaged_left = maxf(_sabotaged_left, duration)
+	_target = null
+	queue_redraw()
+	if not was_sabotaged:
+		_refresh_stats()
+		sabotage_changed.emit(self)
+
+
+func is_sabotaged() -> bool:
+	return _sabotaged_left > 0.0
 
 
 func can_upgrade() -> bool:
@@ -313,7 +350,10 @@ func _draw_relief_body() -> void:
 			draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
 		return
 	_draw_ground_effects()
-	draw_relief(self, data, Vector2.ZERO, _aim_angle, Color.WHITE, level - 1)
+	draw_relief(self, data, Vector2.ZERO, _aim_angle, SABOTAGED_TINT if is_sabotaged() else Color.WHITE, level - 1)
+	if is_sabotaged():
+		_draw_sparks(get_muzzle_offset())
+		return
 	if stats.detects_stealth():
 		draw_detection_eye(self, get_muzzle_offset() + Vector2(18, -4))
 	draw_set_transform(get_muzzle_offset())
@@ -334,6 +374,10 @@ func _draw_body() -> void:
 	else:
 		draw_rect(Rect2(-half, -half, SIZE, SIZE), data.color.darkened(0.35))
 		_draw_shape()
+	if is_sabotaged():
+		draw_rect(Rect2(-half, -half, SIZE, SIZE), Color(0, 0, 0, 0.4))
+		_draw_sparks(Vector2.ZERO)
+		return
 	# Un losange par amélioration achetée, en bas du socle.
 	for i in level - 1:
 		var center := Vector2(-half + 7.0 + i * 10.0, half - 7.0)
@@ -359,6 +403,22 @@ func _draw_construction() -> void:
 	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 40, Color(0, 0, 0, 0.45), 5.0)
 	if build_progress > 0.0:
 		draw_arc(Vector2.ZERO, radius, -PI / 2.0, -PI / 2.0 + TAU * build_progress, 40, Color(1.0, 0.82, 0.25), 4.0)
+
+
+## Tour sabotée : des étincelles qui crépitent, et l'arc du temps restant.
+func _draw_sparks(center: Vector2) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Engine.get_process_frames() / 4 + get_instance_id()
+	for i in 4:
+		var from := center + Vector2(rng.randf_range(-14, 14), rng.randf_range(-12, 8))
+		var points := PackedVector2Array([from])
+		for j in 3:
+			points.append(points[j] + Vector2(rng.randf_range(-6, 6), rng.randf_range(-7, 2)))
+		draw_polyline(points, SPARK_COLOR, 1.5, true)
+	draw_arc(center + Vector2(0, -22), 7.0, -PI / 2.0, -PI / 2.0 + TAU * minf(_sabotaged_left / 4.0, 1.0), 20,
+		SPARK_COLOR, 2.0, true)
+	draw_line(center + Vector2(-3, -25), center + Vector2(3, -19), SPARK_COLOR, 2.0, true)
+	draw_line(center + Vector2(3, -25), center + Vector2(-3, -19), SPARK_COLOR, 2.0, true)
 
 
 ## Cercle en pointillés : la portée de détection des furtifs.

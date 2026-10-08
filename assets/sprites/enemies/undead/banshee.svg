@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Banshee : spectre volant, voiles pâles qui traînent derrière, cheveux au vent, orientée vers la droite. -->
+  <path d="M40 20 Q18 14 4 24 Q14 30 6 38 Q18 40 8 50 Q26 48 40 44 Z" fill="#b6c4d4" opacity="0.85"/>
+  <path d="M38 24 Q22 22 12 28 Q20 32 14 38 Q26 40 38 40 Z" fill="#dfe8f0" opacity="0.7"/>
+  <path d="M34 26 Q20 20 8 18 M34 30 Q20 28 6 30 M34 34 Q22 36 10 42" stroke="#d6dbe6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M42 26 L56 22 M42 38 L56 42" stroke="#e8e2d0" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="40" cy="32" r="10" fill="#e2e9ef"/>
+  <ellipse cx="44" cy="28" rx="2" ry="3" fill="#1c1a24"/>
+  <ellipse cx="44" cy="36" rx="2" ry="3" fill="#1c1a24"/>
+  <circle cx="44" cy="28" r="1" fill="#72ff8c"/>
+  <circle cx="44" cy="36" r="1" fill="#72ff8c"/>
+  <ellipse cx="48" cy="32" rx="2.5" ry="2" fill="#1c1a24"/>
+</svg>
