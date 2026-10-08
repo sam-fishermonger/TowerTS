@@ -267,11 +267,11 @@ static func set_value(section: String, key: String, value: Variant) -> void:
 	_save(config)
 
 
-## Efface les étoiles, les records du mode infini, des mutateurs et du défi du jour, et les
+## Efface les étoiles, les records du mode infini, des mutateurs, du défi du jour et des expéditions, et les
 ## améliorations achetées avec (les réglages sont gardés).
 static func reset_campaign() -> void:
 	var config := _load()
-	var sections := ["endless_waves", "endless_stars", "mutator_stars", "perks", "daily", "daily_won"]
+	var sections := ["endless_waves", "endless_stars", "mutator_stars", "perks", "daily", "daily_won", "expedition"]
 	for d in Difficulty.COUNT:
 		sections.append(stars_section(d))
 	for section in sections:

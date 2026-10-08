@@ -52,7 +52,9 @@ static func clear() -> void:
 static func describe(data: Dictionary) -> String:
 	var name := TranslationServer.translate(data.get("level_name", ""))
 	var mode := ""
-	if not (data.get("challenge", "") as String).is_empty():
+	if not (data.get("expedition", {}) as Dictionary).is_empty():
+		mode = TranslationServer.translate("Expédition")
+	elif not (data.get("challenge", "") as String).is_empty():
 		mode = TranslationServer.translate("Défi du jour")
 	elif data.get("endless", false):
 		mode = TranslationServer.translate("Mode infini")
@@ -75,7 +77,10 @@ static func resume(tree: SceneTree) -> bool:
 		return false
 	Engine.set_meta(Level.RESUME_META, data)
 	var custom: Dictionary = data.get("custom", {})
-	if not custom.is_empty():
+	var expedition: Dictionary = data.get("expedition", {})
+	if not expedition.is_empty():
+		Level.open_expedition(tree, Expedition.from_dict(expedition))
+	elif not custom.is_empty():
 		Level.open_custom(tree, custom)
 	elif not (data.get("challenge", "") as String).is_empty():
 		Engine.set_meta(Level.CHALLENGE_META, data.challenge)

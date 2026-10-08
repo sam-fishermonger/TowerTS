@@ -1,6 +1,7 @@
 extends Control
 ## Écran titre. « Jouer » ouvre le choix du mode : reprendre la campagne (la toute première
-## fois, elle commence par le tutoriel), le tutoriel, la sélection des mondes et des niveaux, le défi du jour, le mode Conquête ou l'éditeur de niveau. Le menu
+## fois, elle commence par le tutoriel), le tutoriel, la sélection des mondes et des niveaux, le défi du jour, le mode Conquête, les niveaux libres,
+## l'Expédition ou l'éditeur de niveau. Le menu
 ## principal ouvre aussi l'arbre des améliorations, le lexique (tours, monstres, mondes), les succès ou les options, ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
 ## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
@@ -48,6 +49,7 @@ var _konami_label: Label
 @onready var daily_button: Button = %DailyButton
 @onready var conquest_button: Button = %ConquestButton
 @onready var free_button: Button = %FreeButton
+@onready var expedition_button: Button = %ExpeditionButton
 @onready var editor_button: Button = %EditorButton
 @onready var lexicon_button: Button = %LexiconButton
 @onready var achievements_button: Button = %AchievementsButton
@@ -74,6 +76,7 @@ func _ready() -> void:
 	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
 	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN))
 	free_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN))
+	expedition_button.pressed.connect(start_expedition)
 	editor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
@@ -88,8 +91,8 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [resume_button, play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button, editor_button,
-			back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
+	for button in [resume_button, play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button,
+			expedition_button, editor_button, back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
 	(resume_button if resume_button.visible else play_button).grab_focus()
@@ -102,7 +105,8 @@ func get_main_buttons() -> Array[Button]:
 
 
 func get_play_buttons() -> Array[Button]:
-	return [campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button, editor_button, back_button]
+	return [campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button, expedition_button,
+		editor_button, back_button]
 
 
 func is_play_menu_open() -> bool:
@@ -229,6 +233,12 @@ func get_campaign_start() -> String:
 	return Progress.get_next_to_play(CAMPAIGN)
 
 
+## Lance une nouvelle expédition (cinq niveaux débloqués tirés au sort, voir Expedition).
+func start_expedition() -> void:
+	if Expedition.is_unlocked():
+		Level.open_expedition(get_tree(), Expedition.create())
+
+
 func open_level(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
@@ -259,6 +269,16 @@ func _refresh() -> void:
 	daily_button.text = tr("Défi du jour")
 	if daily_score >= 0:
 		daily_button.text += "  ·  %d" % daily_score
+	# L'Expédition s'ouvre avec cinq niveaux débloqués ; son record s'affiche ensuite.
+	expedition_button.disabled = not Expedition.is_unlocked()
+	expedition_button.text = tr("Expédition")
+	expedition_button.tooltip_text = tr("Cinq niveaux tirés au sort à la suite, avec les mêmes vies. Les coffres proposent trois bonus, gardés jusqu'au bout.")
+	if expedition_button.disabled:
+		expedition_button.text += "  ·  " + tr("Verrouillé")
+		expedition_button.tooltip_text = tr("Débloquez %d niveaux de la campagne pour partir en expédition.") \
+			% Expedition.LEVEL_COUNT
+	elif Expedition.get_best() > 0:
+		expedition_button.text += "  ·  %d / %d" % [Expedition.get_best(), Expedition.LEVEL_COUNT]
 	# Les objectifs remplis par la progression (arbre, étoiles, code Konami) se débloquent ici.
 	Achievements.check_progress()
 	var unlocked := Achievements.get_unlocked_count()

@@ -28,6 +28,9 @@ const CHALLENGE_META := &"level_challenge"
 ## Méta du moteur posée juste avant d'ouvrir un niveau de l'éditeur (voir open_custom()) :
 ## son dictionnaire (CustomLevel), lu et effacé quand la scène de niveau vide entre dans l'arbre.
 const CUSTOM_META := &"level_custom"
+## Méta du moteur posée juste avant d'ouvrir une étape du mode Expédition (voir
+## open_expedition()) : l'expédition en cours (Expedition.to_dict()), lue et effacée au lancement.
+const EXPEDITION_META := &"level_expedition"
 const EMPTY_LEVEL := "res://scenes/levels/level.tscn"
 ## Méta du moteur posée juste avant de reprendre une partie enregistrée (SavedGame.resume()) :
 ## son dictionnaire, lu et effacé au lancement du niveau, qui remet la partie en l'état.
@@ -114,6 +117,10 @@ var mutators: Array[int] = []
 ## Niveau fait dans l'éditeur (vide sinon, voir CustomLevel) : il ne compte ni pour la
 ## progression ni pour les succès, et la partie finie ramène à l'éditeur.
 var custom_level: Dictionary = {}
+## Mode Expédition : l'expédition dont ce niveau est une étape (null sinon). Les vies
+## viennent de l'étape d'avant, et les coffres proposent des bonus au choix, gardés
+## jusqu'à la fin de l'expédition.
+var expedition: Expedition
 ## Statistiques de la partie, affichées sur l'écran de fin.
 var stats := LevelStats.new()
 ## Succès débloqués pendant la partie (identifiants, voir Achievements).
@@ -148,6 +155,10 @@ var _chest_rng := RandomNumberGenerator.new()
 var _placed_towers: Array[Tower] = []
 ## La partie a été enregistrée (ou reprise) : elle efface sa sauvegarde quand elle finit.
 var _has_saved_game := false
+## Mode Expédition : coffres ouverts pendant qu'un choix de bonus était déjà affiché (ils
+## sont proposés l'un après l'autre), et pause choisie par le joueur avant le choix.
+var _chest_choices_waiting := 0
+var _paused_before_chest := false
 
 @onready var map: GameMap = $Map
 @onready var stains: Node2D = $Stains
@@ -174,6 +185,12 @@ static func open(tree: SceneTree, path: String, endless := false) -> void:
 static func open_challenge(tree: SceneTree, daily: DailyChallenge) -> void:
 	Engine.set_meta(CHALLENGE_META, daily.date_key)
 	tree.change_scene_to_file(daily.level_path)
+
+
+## Ouvre l'étape en cours d'une expédition.
+static func open_expedition(tree: SceneTree, run: Expedition) -> void:
+	Engine.set_meta(EXPEDITION_META, run.to_dict())
+	tree.change_scene_to_file(run.get_level())
 
 
 ## Ouvre un niveau de l'éditeur (dictionnaire de CustomLevel) dans la scène de niveau vide.
@@ -210,6 +227,11 @@ func _ready() -> void:
 		is_endless = false
 		# L'arbre des améliorations ne compte pas pendant le défi (voir _exit_tree()).
 		Engine.set_meta(Perks.DISABLED_META, true)
+	if Engine.has_meta(EXPEDITION_META):
+		expedition = Expedition.from_dict(Engine.get_meta(EXPEDITION_META))
+		Engine.remove_meta(EXPEDITION_META)
+		is_endless = false
+		chest_levels = expedition.chest_levels.duplicate()
 	if is_tutorial:
 		is_endless = false
 		# Comme pendant le défi, l'arbre des améliorations ne compte pas (voir _exit_tree()).
@@ -217,10 +239,14 @@ func _ready() -> void:
 	spawner.endless = is_endless
 	spawner.carriers = not is_tutorial
 	_chest_rng.seed = hash(scene_file_path + "/coffres")
+	if expedition:
+		_chest_rng.seed = hash("%d/%d/coffres" % [expedition.rng_seed, expedition.index])
 	if not is_endless and not is_demo and not challenge and not is_tutorial:
 		difficulty = resumed.get("difficulty", Difficulty.get_current())
-		if custom_level.is_empty() and not conquest_mode and Mutators.applies_to(campaign, scene_file_path):
-			# Une partie reprise garde les mutateurs avec lesquels elle a commencé.
+		# Pas de mutateurs en Expédition : ses règles à elle suffisent. Une partie reprise
+		# garde les mutateurs avec lesquels elle a commencé.
+		if custom_level.is_empty() and not conquest_mode and not expedition \
+				and Mutators.applies_to(campaign, scene_file_path):
 			var saved_mutators: Array = resumed.get("mutators", Mutators.get_active())
 			mutators.assign(saved_mutators)
 	if challenge:
@@ -334,6 +360,8 @@ func _ready() -> void:
 			Progress.get_mutator_stars(scene_file_path), not is_choosing_towers)
 	gold = starting_gold
 	lives = starting_lives
+	if expedition:
+		_setup_expedition()
 	# La démo de l'écran titre garde sa vitesse ; une partie démarre à celle des options.
 	if is_demo:
 		set_game_speed(game_speeds[0] if not game_speeds.is_empty() else 1.0)
@@ -346,6 +374,21 @@ func _ready() -> void:
 	if not resumed.is_empty():
 		restore_saved_game(resumed)
 	Sound.play_music()
+
+
+## Mode Expédition : les vies de départ sont celles de la première étape, et la partie
+## reprend avec celles qui restaient à la fin de l'étape d'avant. Les bonus des coffres
+## déjà gagnés s'affichent et comptent tout de suite.
+func _setup_expedition() -> void:
+	hud.chest_bonus_chosen.connect(choose_chest_bonus)
+	if expedition.max_lives < 0:
+		expedition.max_lives = starting_lives
+	starting_lives = expedition.max_lives
+	lives = expedition.lives if expedition.lives > 0 else starting_lives
+	expedition.lives = lives
+	if not chest_levels.is_empty():
+		hud.update_chest_bonuses(chest_levels)
+		hud.set_interest_rules(get_interest_rate(), get_interest_cap())
 
 
 ## Vue de trois quarts : les tours, les monstres, les alliés et le décor sont triés en
@@ -372,6 +415,9 @@ func get_title() -> String:
 		return tr(level_name)
 	if challenge:
 		return tr("Défi du jour  ·  %s") % tr(level_name)
+	if expedition:
+		return tr("Expédition %d / %d  ·  %s") % [expedition.index + 1, expedition.levels.size(), tr(level_name)] \
+			+ "  ·  " + tr(Difficulty.NAMES[difficulty])
 	if is_endless:
 		return tr("%s  ·  Mode infini") % tr(level_name)
 	if not mutators.is_empty():
@@ -399,6 +445,8 @@ func _exit_tree() -> void:
 
 ## Niveau proposé après une victoire ("" = dernier niveau).
 func get_next_level() -> String:
+	if expedition:
+		return "" if expedition.is_last() else expedition.levels[expedition.index + 1]
 	if is_tutorial:
 		return campaign.levels[0] if campaign and campaign.size() > 0 else ""
 	if conquest_mode:
@@ -995,7 +1043,9 @@ func _end_game(victory: bool) -> void:
 	_count_kills()
 	if conquest and counts_achievements():
 		_announce_achievements(Achievements.add_counters({stone_mined = stats.stone_mined}))
-	if challenge:
+	if expedition:
+		_end_expedition_step(victory)
+	elif challenge:
 		if victory:
 			add_score(lives * DailyChallenge.POINTS_PER_LIFE)
 		var best_before := Progress.get_daily_score(challenge.date_key)
@@ -1034,6 +1084,18 @@ func _end_game(victory: bool) -> void:
 	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
+
+
+## Fin d'une étape de l'expédition : on garde les vies pour la suivante, ou l'expédition
+## s'arrête (défaite, ou dernière étape franchie) et son record est enregistré.
+func _end_expedition_step(victory: bool) -> void:
+	var cleared := expedition.index + (1 if victory else 0)
+	expedition.lives = lives
+	expedition.chest_levels = chest_levels.duplicate()
+	var new_record := false
+	if not victory or expedition.is_last():
+		new_record = Expedition.record(cleared)
+	hud.show_expedition_end_screen(victory, cleared, expedition.levels.size(), lives, new_record)
 
 
 # --- Butin et coffres --------------------------------------------------------
@@ -1096,18 +1158,61 @@ func collect_loot(loot: Loot) -> void:
 
 
 ## Ouvre un coffre : un bonus pour le reste du niveau, tiré parmi ceux qui peuvent encore
-## tomber (de l'or s'ils sont tous au maximum). Renvoie son identifiant (&"" pour l'or).
+## tomber (de l'or s'ils sont tous au maximum). Renvoie son identifiant (&"" pour l'or, ou
+## en Expédition, où le joueur choisit le bonus : voir choose_chest_bonus()).
 func open_chest(at: Vector2) -> StringName:
 	stats.chests_opened += 1
 	if counts_achievements():
 		_announce_achievements(Achievements.add_counters({chests_opened = 1}))
-	var available := ChestBonus.get_available(chest_levels, not powers.is_empty(), interest_rate > 0.0, conquest != null)
+	var available := _get_available_chest_bonuses()
 	if available.is_empty():
 		gold += ChestBonus.FALLBACK_GOLD
 		stats.gold_earned += ChestBonus.FALLBACK_GOLD
 		_show_floating_text("+%d" % ChestBonus.FALLBACK_GOLD, GOLD_TEXT_COLOR, at, 18)
 		return &""
+	if expedition:
+		if hud.chest_choice:
+			_chest_choices_waiting += 1
+		else:
+			_paused_before_chest = is_paused
+			_offer_chest_choice(available)
+		return &""
 	var id := available[_chest_rng.randi() % available.size()]
+	_gain_chest_bonus(id, at)
+	return id
+
+
+func _get_available_chest_bonuses() -> Array[StringName]:
+	return ChestBonus.get_available(chest_levels, not powers.is_empty(), interest_rate > 0.0, conquest != null)
+
+
+## Mode Expédition : la partie s'arrête et le coffre propose ses bonus.
+func _offer_chest_choice(available: Array[StringName]) -> void:
+	set_paused(true)
+	hud.show_chest_choice(Expedition.pick_choices(available, _chest_rng), chest_levels)
+
+
+## Mode Expédition : le joueur garde un des bonus proposés par le coffre, pour toute
+## l'expédition. Un autre coffre ouvert entre-temps propose ensuite les siens ; sinon la
+## partie reprend (si elle tournait avant le coffre).
+func choose_chest_bonus(id: StringName) -> void:
+	if not hud.chest_choice or not hud.chest_choice.choices.has(id):
+		return
+	hud.close_chest_choice()
+	_gain_chest_bonus(id, hud.get_play_area().get_center())
+	expedition.chest_levels = chest_levels.duplicate()
+	var available := _get_available_chest_bonuses()
+	if _chest_choices_waiting > 0 and not available.is_empty():
+		_chest_choices_waiting -= 1
+		_offer_chest_choice(available)
+		return
+	_chest_choices_waiting = 0
+	if not _paused_before_chest:
+		set_paused(false)
+
+
+## Ajoute un exemplaire d'un bonus des coffres et applique son effet tout de suite.
+func _gain_chest_bonus(id: StringName, at: Vector2) -> void:
 	chest_levels[id] = chest_levels.get(id, 0) + 1
 	var definition := ChestBonus.get_definition(id)
 	match id:
@@ -1120,7 +1225,6 @@ func open_chest(at: Vector2) -> StringName:
 	_show_floating_text(tr(definition.name), definition.color, at, 18)
 	hud.show_chest_bonus(definition, chest_levels[id])
 	hud.update_chest_bonuses(chest_levels)
-	return id
 
 
 ## Bonus total d'un bonus des coffres (0 s'il n'est pas tombé).
@@ -1166,7 +1270,7 @@ func can_save_game() -> bool:
 ## La partie est entre deux vagues : carte vidée, bonus versés, rien en route.
 func is_between_waves() -> bool:
 	return not is_over and not is_choosing_towers and not spawner.is_spawning and _alive_enemy_count() == 0 \
-		and _wave_bonus_paid == spawner.current_wave
+		and _wave_bonus_paid == spawner.current_wave and not hud.chest_choice
 
 
 ## Enregistre la partie si elle est entre deux vagues et qu'elle a commencé (une vague
@@ -1201,6 +1305,7 @@ func to_saved_game() -> Dictionary:
 		"endless": is_endless,
 		"challenge": challenge.date_key if challenge else "",
 		"custom": custom_level,
+		"expedition": expedition.to_dict() if expedition else {},
 		"difficulty": difficulty,
 		"mutators": mutators,
 		"wave": spawner.current_wave,
@@ -1294,6 +1399,10 @@ func _on_restart_requested() -> void:
 	# Recommencer, c'est abandonner la partie en cours.
 	if _has_saved_game:
 		SavedGame.clear()
+	if expedition:
+		# L'expédition ne se rejoue pas étape par étape : on en tire une nouvelle.
+		Level.open_expedition(get_tree(), Expedition.create())
+		return
 	if is_endless:
 		Engine.set_meta(ENDLESS_META, true)
 	if challenge:
@@ -1305,15 +1414,22 @@ func _on_restart_requested() -> void:
 
 func _on_next_level_requested() -> void:
 	get_tree().paused = false
+	if expedition and not expedition.is_last():
+		expedition.index += 1
+		Level.open_expedition(get_tree(), expedition)
+		return
 	get_tree().change_scene_to_file(get_next_level())
 
 
 func _on_menu_requested() -> void:
 	get_tree().paused = false
 	autosave()
+	# Expédition quittée en route : les étapes déjà franchies comptent pour le record.
+	if expedition and not is_over:
+		Expedition.record(expedition.index)
 	if conquest_mode:
 		get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN)
-	elif FreeLevels.has(scene_file_path):
+	elif FreeLevels.has(scene_file_path) and not expedition:
 		get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN)
 	else:
 		get_tree().change_scene_to_file(TITLE_SCREEN if custom_level.is_empty() else LEVEL_EDITOR)

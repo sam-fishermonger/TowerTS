@@ -21,6 +21,7 @@ const SHOTS := {
 	"necropole": ["res://scenes/levels/undead_04.tscn", 14.0, true],
 	"conquete": ["res://scenes/levels/conquest_01.tscn", 8.0, false],
 	"libre": ["res://scenes/levels/free_02.tscn", 9.0, true],
+	"expedition": ["res://scenes/levels/mecha_02.tscn", 9.0, true],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
 }
@@ -38,6 +39,8 @@ func _run() -> void:
 		if not only.is_empty() and shot_name not in only:
 			continue
 		var shot: Array = SHOTS[shot_name]
+		if shot_name == "expedition":
+			_prepare_expedition()
 		var node: Node = load(shot[0]).instantiate()
 		root.add_child(node)
 		await process_frame
@@ -52,6 +55,11 @@ func _run() -> void:
 			# Sans focus, pas de fenêtre de détail ouverte sur le premier bouton.
 			root.gui_release_focus()
 		await create_timer(shot[1]).timeout
+		if shot_name == "expedition":
+			# Un coffre ramassé : le choix de son bonus s'ouvre par-dessus la partie.
+			(node as Level).open_chest(Vector2.ZERO)
+			for i in 3:
+				await process_frame
 		await RenderingServer.frame_post_draw
 		var path := OUT_DIR + shot_name + ".webp"
 		root.get_texture().get_image().save_webp(path, true, 0.9)
@@ -74,6 +82,20 @@ func _prepare_progress() -> void:
 	var stars := [3, 3, 3, 3, 3, 3, 3, 3, 2, 3]
 	for i in stars.size():
 		Progress.record_victory(CAMPAIGN.levels[i], stars[i])
+
+
+## Mode Expédition : troisième étape, avec deux bonus de coffre déjà gagnés et des vies
+## perdues en route.
+func _prepare_expedition() -> void:
+	var run := Expedition.new()
+	run.rng_seed = 3
+	run.levels.assign([CAMPAIGN.levels[1], CAMPAIGN.levels[4], "res://scenes/levels/mecha_02.tscn",
+		CAMPAIGN.levels[9], CAMPAIGN.levels[10]])
+	run.index = 2
+	run.max_lives = 20
+	run.lives = 14
+	run.chest_levels = {ChestBonus.DAMAGE: 1, ChestBonus.BOUNTY: 1}
+	Engine.set_meta(Level.EXPEDITION_META, run.to_dict())
 
 
 ## Pose une défense le long du chemin, avec toutes les tours du niveau, puis lance les

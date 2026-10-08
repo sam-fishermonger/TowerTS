@@ -187,6 +187,16 @@ tooltip_text = "Pas de chemin tracé : vos tours sont les murs du labyrinthe."
 theme_override_font_sizes/font_size = 22
 text = "Niveaux libres"
 
+[node name="ExpeditionButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+tooltip_text = "Cinq niveaux tirés au sort à la suite, avec les mêmes vies. Les coffres proposent trois bonus, gardés jusqu'au bout."
+theme_override_font_sizes/font_size = 22
+text = "Expédition"
+
 [node name="EditorButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
 visible = false
