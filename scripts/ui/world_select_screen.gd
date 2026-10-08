@@ -8,6 +8,8 @@ extends Control
 ## étoiles obtenues dans celle-ci, et les cartes celles de toutes les difficultés.
 ## Survoler un niveau (ou lui donner le focus) ouvre sa fenêtre de détail : ses vagues,
 ## avec leurs monstres, élites et boss, dans la difficulté choisie.
+## Le bouton Mutateurs ouvre le choix des mutateurs (Mutators) : des règles du défi du
+## jour qui durcissent les niveaux déjà gagnés, contre des étoiles infinies.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
@@ -40,6 +42,13 @@ var _details_cache := {}
 @onready var mode_hint: Label = %ModeHint
 ## Choix de la difficulté (caché en mode infini, qui se joue toujours en Moyen).
 @onready var difficulty_bar: HBoxContainer = %DifficultyBar
+## Ouvre le choix des mutateurs (caché en mode infini).
+@onready var mutators_button: Button = %MutatorsButton
+
+## Fenêtre du choix des mutateurs (null quand elle est fermée), et sa case de chaque
+## mutateur, par règle.
+var mutators_panel: Control
+var _mutator_checks := {}
 
 
 func _ready() -> void:
@@ -48,6 +57,7 @@ func _ready() -> void:
 	add_child(level_details)
 	_build_difficulty_buttons()
 	mode_button.toggled.connect(set_endless_mode)
+	mutators_button.pressed.connect(open_mutators)
 	set_endless_mode(false)
 	Sound.play_music()
 	var next := get_level_button(Progress.get_next_to_play(CAMPAIGN))
@@ -57,7 +67,10 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_cancel"):
 		get_viewport().set_input_as_handled()
-		go_back()
+		if mutators_panel:
+			close_mutators()
+		else:
+			go_back()
 
 
 func go_back() -> void:
@@ -75,6 +88,9 @@ func set_endless_mode(value: bool) -> void:
 	title_label.text = "Mode infini" if value else "Choisir un monde"
 	title_label.add_theme_color_override(&"font_color", ENDLESS_COLOR if value else STARS_COLOR)
 	difficulty_bar.visible = not value
+	mutators_button.visible = not value
+	if value and mutators_panel:
+		close_mutators()
 	_refresh()
 
 
@@ -113,6 +129,11 @@ func _refresh() -> void:
 	else:
 		mode_hint.text = tr("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau avec 3 étoiles ouvre son mode infini.") \
 			% [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty), Difficulty.describe_tower_limit(difficulty)]
+		var mutators := Mutators.get_active()
+		if not mutators.is_empty():
+			mode_hint.text += "\n" + tr("✦ Mutateurs sur les niveaux déjà gagnés : %s (∞ ★ %d par victoire).") \
+				% [Mutators.names(mutators), Mutators.stars_for(mutators)]
+	_refresh_mutators_button()
 	for card in worlds_box.get_children():
 		worlds_box.remove_child(card)
 		card.queue_free()
@@ -217,6 +238,9 @@ func _make_card(world_index: int) -> Control:
 				tr("Verrouillé") if button.disabled else Progress.star_text(Progress.get_stars(path, Difficulty.get_current()))]
 			if not button.disabled:
 				button.tooltip_text = _level_tooltip(path)
+			if Mutators.applies_to(CAMPAIGN, path) and not Mutators.get_active().is_empty():
+				for color_name in [&"font_color", &"font_hover_color", &"font_focus_color"]:
+					button.add_theme_color_override(color_name, Mutators.COLOR)
 		_level_buttons[path] = button
 		# Au tactile, le premier toucher ouvre la fenêtre de détail, le second le niveau.
 		button.pressed.connect(func() -> void:
@@ -243,6 +267,8 @@ func _level_tooltip(path: String) -> String:
 	var lines: Array[String] = []
 	for d in Difficulty.COUNT:
 		lines.append("%s  %s" % [Progress.star_text(Progress.get_stars(path, d)), tr(Difficulty.NAMES[d])])
+	if Progress.get_stars(path) > 0:
+		lines.append(tr("%s  Mutateurs") % Progress.star_text(Progress.get_mutator_stars(path), Mutators.MAX_STARS))
 	return "\n".join(lines)
 
 
@@ -275,7 +301,10 @@ func show_level_details(path: String) -> void:
 ## puis la composition de chaque vague (élites et boss signalés).
 func get_level_details(path: String) -> String:
 	var difficulty := Difficulty.DEFAULT if endless_mode else Difficulty.get_current()
-	var key := "%s|%d|%s" % [path, difficulty, endless_mode]
+	var mutators: Array[int] = []
+	if not endless_mode and Mutators.applies_to(CAMPAIGN, path):
+		mutators = Mutators.get_active()
+	var key := "%s|%d|%s|%s" % [path, difficulty, endless_mode, mutators]
 	if _details_cache.has(key):
 		return _details_cache[key]
 	var level: Level = load(path).instantiate()
@@ -292,6 +321,9 @@ func get_level_details(path: String) -> String:
 	lines.append(tr("[color=%s]%d vagues  ·  Or de départ : %d  ·  Vies : %d[/color]") % [EnemyInfo.MUTED,
 		spawner.get_wave_count(), level.starting_gold + bonuses.starting_gold_bonus,
 		level.starting_lives + bonuses.lives_bonus])
+	if not mutators.is_empty():
+		lines.append(tr("[color=#%s]✦ Mutateurs : %s  ·  ∞ ★ %d / %d[/color]") % [Mutators.COLOR.to_html(false),
+			Mutators.names(mutators), Progress.get_mutator_stars(path), Mutators.MAX_STARS])
 	if (level.get_node("Map") as GameMap).free_layout:
 		lines.append(tr("[color=%s]Niveau libre : pas de chemin, vos tours font le labyrinthe.[/color]") % FREE_COLOR)
 	for i in spawner.get_wave_count():
@@ -302,6 +334,80 @@ func get_level_details(path: String) -> String:
 	level.free()
 	_details_cache[key] = "\n".join(lines)
 	return _details_cache[key]
+
+
+# --- Mutateurs ----------------------------------------------------------------
+
+## Ouvre la fenêtre du choix des mutateurs, au milieu de l'écran.
+func open_mutators() -> void:
+	if mutators_panel:
+		return
+	level_details.close()
+	# Fond qui assombrit l'écran et prend les clics : rien ne se lance derrière la fenêtre.
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.6)
+	add_child(shade)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mutators_panel = shade
+	var center := CenterContainer.new()
+	shade.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var panel := PanelContainer.new()
+	var style := UiStyle.panel(Mutators.COLOR, 24.0, SIDE_TOP)
+	style.content_margin_left = 36.0
+	style.content_margin_right = 36.0
+	panel.add_theme_stylebox_override(&"panel", style)
+	center.add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 8)
+	column.custom_minimum_size.x = 640.0
+	panel.add_child(column)
+	var title := _label("✦  Mutateurs", 36, Mutators.COLOR)
+	UiStyle.style_title(title)
+	column.add_child(title)
+	var intro := _label(tr("Des règles du défi du jour pour rejouer les niveaux déjà gagnés, dans la difficulté choisie. Chaque mutateur actif rapporte une étoile infinie à la victoire, %d au plus par niveau : elles achètent les spécialisations des tours, dans Améliorations.")
+		% Mutators.MAX_STARS, 16, Color(0.85, 0.88, 0.85))
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(intro)
+	_mutator_checks.clear()
+	var active := Mutators.get_active()
+	for rule in Mutators.LIST:
+		var check := CheckButton.new()
+		check.text = DailyChallenge.describe_rule(rule)
+		check.button_pressed = active.has(rule)
+		check.add_theme_font_size_override(&"font_size", 18)
+		check.toggled.connect(func(on: bool) -> void:
+			Mutators.set_enabled(rule, on)
+			_refresh())
+		column.add_child(check)
+		_mutator_checks[rule] = check
+	var close := Button.new()
+	close.text = "Fermer"
+	close.custom_minimum_size = Vector2(180, 44)
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.pressed.connect(close_mutators)
+	column.add_child(close)
+	(_mutator_checks[Mutators.LIST[0]] as Control).grab_focus()
+
+
+func close_mutators() -> void:
+	if not mutators_panel:
+		return
+	mutators_panel.queue_free()
+	mutators_panel = null
+	_mutator_checks.clear()
+	mutators_button.grab_focus()
+
+
+## Case d'un mutateur dans la fenêtre ouverte (null sinon).
+func get_mutator_check(rule: int) -> CheckButton:
+	return _mutator_checks.get(rule)
+
+
+func _refresh_mutators_button() -> void:
+	var count := Mutators.get_active().size()
+	mutators_button.text = tr("✦  Mutateurs") + ("  ·  %d" % count if count > 0 else "")
+	mutators_button.tooltip_text = tr("Règles du défi du jour sur les niveaux déjà gagnés, contre des étoiles infinies.")
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

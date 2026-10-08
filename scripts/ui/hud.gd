@@ -104,6 +104,13 @@ var power_bar: HBoxContainer
 var power_buttons: Array[PowerButton] = []
 ## Défi du jour : score, dans la barre du haut (null hors défi)…
 var score_label: Label
+## « ✦ Mutateurs » dans la barre du haut (null sans mutateurs), règles en bulle d'aide.
+var mutator_label: Label
+## Panneau des mutateurs à montrer une fois les tours choisies (voir show_mutator_rules()).
+var _pending_rules_panel := Callable()
+## Étoiles des mutateurs de l'écran de fin, [gagnées, meilleur résultat d'avant] (vide sans
+## mutateurs) : ajoutées au texte refait au changement de langue.
+var _mutator_result: Array[int] = []
 ## … et règles, au milieu de la carte jusqu'à la première vague.
 var challenge_rules: PanelContainer
 ## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
@@ -237,6 +244,8 @@ func _notification(what: int) -> void:
 		show_next_wave(_next_wave, _next_wave_early_bonus, _next_wave_number, _next_wave_bonus)
 	elif _end_screen.is_valid():
 		_end_screen.call()
+		if not _mutator_result.is_empty():
+			show_mutator_result(_mutator_result[0], _mutator_result[1])
 		if end_stats.visible:
 			_center_end_panel.call_deferred()
 
@@ -998,17 +1007,47 @@ func show_challenge_rules(rules: Array[String]) -> void:
 	score_label.tooltip_text = "\n".join(rules) + "\n" + DailyChallenge.describe_score()
 	wave_label.add_sibling(score_label)
 	set_score(0)
+	_show_rules_panel(tr("Défi du jour"), Progress.ENDLESS_STAR_COLOR, rules, DailyChallenge.describe_score())
+
+
+## Mutateurs (voir Mutators) : leurs règles au milieu de la carte jusqu'à la première
+## vague (pas tant que le choix des tours est ouvert : `with_panel` à false, puis
+## show_rules_panel_later()), et « ✦ Mutateurs » dans la barre du haut, avec les règles
+## en bulle d'aide. `stars` : étoiles infinies de la victoire ; `best` : déjà obtenues.
+func show_mutator_rules(rules: Array[String], stars: int, best: int, with_panel := true) -> void:
+	var footer := tr("Victoire : ∞ ★ %d (meilleur résultat sur ce niveau : %d / %d).") % [stars, best, Mutators.MAX_STARS]
+	mutator_label = Label.new()
+	mutator_label.text = tr("✦ Mutateurs")
+	mutator_label.add_theme_color_override("font_color", Mutators.COLOR)
+	mutator_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	mutator_label.tooltip_text = "\n".join(rules) + "\n" + footer
+	wave_label.add_sibling(mutator_label)
+	_pending_rules_panel = _show_rules_panel.bind(tr("Mutateurs"), Mutators.COLOR, rules, footer)
+	if with_panel:
+		show_rules_panel_later()
+
+
+## Affiche le panneau des mutateurs gardé par show_mutator_rules(with_panel = false).
+func show_rules_panel_later() -> void:
+	if _pending_rules_panel.is_valid():
+		_pending_rules_panel.call()
+		_pending_rules_panel = Callable()
+
+
+## Panneau de règles au milieu de la carte (défi du jour, mutateurs), effacé au
+## lancement de la première vague (hide_challenge_rules()).
+func _show_rules_panel(title: String, color: Color, rules: Array[String], footer_text: String) -> void:
 	challenge_rules = PanelContainer.new()
-	var style := UiStyle.panel(Progress.ENDLESS_STAR_COLOR, 18.0, SIDE_TOP)
+	var style := UiStyle.panel(color, 18.0, SIDE_TOP)
 	challenge_rules.add_theme_stylebox_override("panel", style)
 	challenge_rules.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	challenge_rules.add_child(column)
 	var heading := Label.new()
-	heading.text = "Défi du jour"
+	heading.text = title
 	heading.add_theme_font_size_override("font_size", 26)
-	heading.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	heading.add_theme_color_override("font_color", color)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
 	for rule in rules:
@@ -1016,7 +1055,7 @@ func show_challenge_rules(rules: Array[String]) -> void:
 		line.text = "•  " + rule
 		column.add_child(line)
 	var footer := Label.new()
-	footer.text = DailyChallenge.describe_score()
+	footer.text = footer_text
 	footer.add_theme_color_override("font_color", Color(0.75, 0.8, 0.75))
 	footer.add_theme_font_size_override("font_size", 14)
 	footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1037,6 +1076,7 @@ func _place_challenge_rules() -> void:
 
 ## Les règles s'effacent au lancement de la première vague (elles restent sur le score).
 func hide_challenge_rules() -> void:
+	_pending_rules_panel = Callable()
 	if not challenge_rules:
 		return
 	var panel := challenge_rules
@@ -1052,9 +1092,9 @@ func set_score(score: int) -> void:
 		score_label.text = tr("Score : %d") % score
 
 
-## Écran de fin du défi du jour : score de la partie, meilleur score du jour, et
-## « Nouveau record » s'il est battu.
-func show_challenge_end_screen(victory: bool, score: int, best: int, new_record := false) -> void:
+## Écran de fin du défi du jour : score de la partie, meilleur score du jour,
+## « Nouveau record » s'il est battu, et la série de jours réussis d'affilée.
+func show_challenge_end_screen(victory: bool, score: int, best: int, new_record := false, streak := 0) -> void:
 	show_end_screen(victory)
 	hide_challenge_rules()
 	end_title.text = "Défi réussi !" if victory else "Défi perdu"
@@ -1064,8 +1104,21 @@ func show_challenge_end_screen(victory: bool, score: int, best: int, new_record 
 	end_message.text += "\n" + tr("Meilleur score du jour : %d") % best
 	if new_record:
 		end_message.text += "\n" + tr("Nouveau record !")
+	if streak > 1:
+		end_message.text += "\n" + tr("Série : %d jours réussis d'affilée !") % streak
 	end_message.text += "\n" + tr("Un nouveau défi demain.")
-	_end_screen = show_challenge_end_screen.bind(victory, score, best, new_record)
+	_end_screen = show_challenge_end_screen.bind(victory, score, best, new_record, streak)
+
+
+## Écran de fin d'une victoire avec des mutateurs (après show_end_screen()) : étoiles
+## infinies gagnées, et celles qui s'ajoutent au meilleur résultat du niveau.
+func show_mutator_result(stars: int, best_before: int) -> void:
+	hide_challenge_rules()
+	end_message.text += "\n" + tr("Mutateurs : ∞ ★ %d / %d") % [stars, Mutators.MAX_STARS]
+	if stars > best_before:
+		end_message.text += "\n" + tr("+%d étoiles infinies à dépenser dans Améliorations.") % (stars - best_before) \
+			if stars - best_before > 1 else "\n" + tr("+1 étoile infinie à dépenser dans Améliorations.")
+	_mutator_result = [stars, best_before]
 
 
 # --- Fenêtres de détail -------------------------------------------------------
