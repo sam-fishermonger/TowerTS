@@ -1093,6 +1093,8 @@ func collect_loot(loot: Loot) -> void:
 ## en Expédition, où le joueur choisit le bonus : voir choose_chest_bonus()).
 func open_chest(at: Vector2) -> StringName:
 	stats.chests_opened += 1
+	if counts_achievements():
+		_announce_achievements(Achievements.add_counters({chests_opened = 1}))
 	var available := _get_available_chest_bonuses()
 	if available.is_empty():
 		gold += ChestBonus.FALLBACK_GOLD

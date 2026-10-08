@@ -1765,6 +1765,12 @@ msgstr "Exterminator"
 msgid "Détruire 5000 monstres."
 msgstr "Destroy 5000 monsters."
 
+msgid "Chasseur de trésors"
+msgstr "Treasure Hunter"
+
+msgid "Ouvrir 25 coffres."
+msgstr "Open 25 chests."
+
 msgid "Constellation"
 msgstr "Constellation"
 

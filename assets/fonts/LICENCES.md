@@ -10,5 +10,5 @@ Rajdhani et Oxanium viennent du dépôt Google Fonts (https://github.com/google/
 `police_interface.tres` (texte) utilise Rajdhani et `police_titres.tres` (titres d'écran) Oxanium ; les deux se rabattent sur Open Sans puis sur `symboles.ttf` pour les caractères qu'elles n'ont pas. Sans elle, ces symboles s'affichent en carrés dans la version web, où il n'y a pas de police système de secours. Pour ajouter un symbole, regénérer le sous-ensemble (paquet Python `fonttools`) :
 
 ```
-pyftsubset DejaVuSans-Bold.ttf --text="★☆✕●→♥♛⚙✪✠▲◆☠◎✖✦❦" --output-file=assets/fonts/symboles.ttf --no-hinting
+pyftsubset DejaVuSans-Bold.ttf --text="★☆✕●→♥♛⚙✪✠▲◆☠◎✖✦❦▣" --output-file=assets/fonts/symboles.ttf --no-hinting
 ```

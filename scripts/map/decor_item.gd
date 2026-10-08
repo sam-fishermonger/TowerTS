@@ -101,24 +101,29 @@ func _draw_blobs(center: Vector2, blobs: Array[Vector3], rng: RandomNumberGenera
 
 
 func _draw_rock(rng: RandomNumberGenerator) -> void:
-	var s := scale_factor
-	Relief.draw_shadow(self, Vector2(2, 3) * s, 26.0 * s, 9.0 * s, 0.3)
+	draw_rock(self, Vector2.ZERO, rng, scale_factor, rock_color)
+
+
+## Rocher (trois pierres) posé sur `foot`, aussi dessiné par l'aperçu de l'éditeur.
+static func draw_rock(canvas: CanvasItem, foot: Vector2, rng: RandomNumberGenerator, size: float, color: Color) -> void:
+	var s := size
+	Relief.draw_shadow(canvas, foot + Vector2(2, 3) * s, 26.0 * s, 9.0 * s, 0.3)
 	for i in 3:
 		var x := (i - 1) * 13.0 * s + rng.randf_range(-3, 3)
 		var r := (14.0 if i == 1 else 10.0) * s
-		var base := Vector2(x, 4.0 * s - (4.0 if i == 1 else 0.0))
+		var base := foot + Vector2(x, 4.0 * s - (4.0 if i == 1 else 0.0))
 		var points := PackedVector2Array()
 		for j in 7:
 			var angle := PI + PI * j / 6.0
 			var radius := r * rng.randf_range(0.85, 1.1)
 			points.append(base + Vector2(cos(angle) * radius, sin(angle) * radius * 1.15))
-		draw_colored_polygon(points, rock_color.darkened(0.15))
+		canvas.draw_colored_polygon(points, color.darkened(0.15))
 		var top := PackedVector2Array()
 		for point in points:
 			top.append(base + (point - base) * 0.72 - Vector2(r * 0.18, r * 0.2))
-		draw_colored_polygon(top, rock_color.lightened(0.15))
+		canvas.draw_colored_polygon(top, color.lightened(0.15))
 		points.append(points[0])
-		draw_polyline(points, Relief.OUTLINE, 2.0, true)
+		canvas.draw_polyline(points, Relief.OUTLINE, 2.0, true)
 
 
 # --- Formes communes ----------------------------------------------------------
