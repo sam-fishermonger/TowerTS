@@ -247,7 +247,7 @@ func _refresh() -> void:
 	# Tant qu'il n'est ni fini ni passé, le tutoriel est conseillé.
 	tutorial_button.text = tr("Tutoriel") if Tutorial.is_done() else tr("Tutoriel  ·  conseillé")
 	# Le meilleur score du défi du jour, s'il a déjà été joué aujourd'hui.
-	var daily_score := Progress.get_daily_score(DailyChallenge.today().date_key)
+	var daily_score := Progress.get_daily_score(DailyChallenge.today_key())
 	daily_button.text = tr("Défi du jour")
 	if daily_score >= 0:
 		daily_button.text += "  ·  %d" % daily_score

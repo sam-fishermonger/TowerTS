@@ -40,6 +40,9 @@ var _buttons := {}
 var _pages: Array[Control] = []
 var _tabs: Array[Button] = []
 var _lock_labels := {}
+## Étoiles à dépenser, { endless: nombre }, comptées une fois par rafraîchissement (les
+## compter demande les étoiles de chaque niveau ; chaque case en a besoin).
+var _available := {false: 0, true: 0}
 
 @onready var tree: Control = %Tree
 @onready var tabs: HBoxContainer = %Tabs
@@ -211,16 +214,17 @@ func is_mixed_page(page_index: int) -> bool:
 
 
 func _refresh() -> void:
+	_available = {false: Perks.get_available_stars(), true: Perks.get_available_stars(true)}
 	var endless := is_endless_page(page)
-	var available := Perks.get_available_stars(endless)
+	var available: int = _available[endless]
 	var spent := Perks.get_spent_stars(endless)
 	stars_label.text = "%s%s   ·   %s   ·   %s" % ["∞ " if endless else "", tr("★ %d à dépenser") % available,
 		(tr("%d dépensées") if spent > 1 else tr("%d dépensée")) % spent,
 		(tr("toutes les spécialisations : %d") if endless else tr("arbre complet : %d")) % Perks.TREE.get_total_cost(endless)]
 	stars_label.add_theme_color_override("font_color", ENDLESS_COLOR if endless else STARS_COLOR)
 	if is_mixed_page(page):
-		stars_label.text = "%s   ·   ∞ %s" % [tr("★ %d à dépenser") % Perks.get_available_stars(),
-			tr("★ %d à dépenser") % Perks.get_available_stars(true)]
+		stars_label.text = "%s   ·   ∞ %s" % [tr("★ %d à dépenser") % _available[false],
+			tr("★ %d à dépenser") % _available[true]]
 	refund_button.disabled = Perks.get_owned_ids().is_empty()
 	for perk in Perks.TREE.perks:
 		_style_button(get_button(perk), perk)
@@ -267,6 +271,8 @@ func _style_button(button: Button, perk: Perk) -> void:
 		margin_left = CROSSING_ICON_SIZE * 1.6 + 10.0
 	elif not perk.get_tower_path().is_empty() or not perk.unlocks_power.is_empty():
 		margin_left = TOWER_ICON_SIZE + 12.0
+	# Les couleurs et les styles changent d'un coup : la case ne se recalcule qu'une fois.
+	button.begin_bulk_theme_override()
 	var styles := UiStyle.button_styles(color, margin_left, 12.0)
 	# Une amélioration acquise garde un fond teinté de sa couleur.
 	for style_name: StringName in [&"normal", &"hover", &"disabled"]:
@@ -282,10 +288,11 @@ func _style_button(button: Button, perk: Perk) -> void:
 	button.add_theme_color_override("font_hover_color", color.lightened(0.5))
 	button.add_theme_color_override("font_focus_color", color.lightened(0.35))
 	button.add_theme_color_override("font_pressed_color", UiStyle.TEXT_PRESSED_COLOR)
+	button.end_bulk_theme_override()
 
 
 func _state_color(perk: Perk) -> Color:
-	var available := Perks.get_available_stars(perk.paid_with_endless_stars)
+	var available: int = _available[perk.paid_with_endless_stars]
 	if Perks.is_owned(perk):
 		return OWNED_COLOR
 	if not Perks.is_unlocked(perk):
@@ -318,7 +325,7 @@ func _show_info(perk: Perk) -> void:
 		return
 	info_name.text = perk.display_name
 	info_description.text = perk.description
-	var available := Perks.get_available_stars(perk.paid_with_endless_stars)
+	var available: int = _available[perk.paid_with_endless_stars]
 	var missing_count := perk.cost - available
 	var missing_text: String
 	if perk.paid_with_endless_stars:

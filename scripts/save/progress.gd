@@ -11,6 +11,9 @@ const DEFAULT_SAVE_PATH := "user://progress.cfg"
 ## pas toucher à la vraie progression. (Pas de `static var` : Godot ne libère pas
 ## proprement les scripts qui en ont à la fermeture.)
 const SAVE_PATH_META := &"progress_save_path"
+## Méta du moteur qui garde le contenu du fichier en mémoire, en simples dictionnaires :
+## { "path": fichier, "data": { section: { clé: valeur } } } (voir _read()).
+const CACHE_META := &"progress_cache"
 ## Étoiles qu'un niveau peut rapporter : 3 par difficulté.
 const MAX_LEVEL_STARS := 3 * Difficulty.COUNT
 ## Étoiles à obtenir sur un niveau (dans une même difficulté) pour ouvrir son mode infini.
@@ -49,21 +52,19 @@ static func stars_section(difficulty: int) -> String:
 ## Meilleur nombre d'étoiles obtenu sur un niveau dans une difficulté, ou sans
 ## difficulté (-1), dans la meilleure (0 s'il n'a jamais été gagné).
 static func get_stars(level_path: String, difficulty := -1) -> int:
-	var config := _load()
 	if difficulty >= 0:
-		return config.get_value(stars_section(difficulty), level_path, 0)
+		return _read(stars_section(difficulty), level_path, 0)
 	var best := 0
 	for d in Difficulty.COUNT:
-		best = maxi(best, config.get_value(stars_section(d), level_path, 0))
+		best = maxi(best, _read(stars_section(d), level_path, 0))
 	return best
 
 
 ## Étoiles obtenues sur un niveau, toutes difficultés confondues (MAX_LEVEL_STARS au plus).
 static func get_total_stars(level_path: String) -> int:
-	var config := _load()
 	var total := 0
 	for d in Difficulty.COUNT:
-		total += config.get_value(stars_section(d), level_path, 0)
+		total += _read(stars_section(d), level_path, 0)
 	return total
 
 
@@ -92,12 +93,12 @@ static func is_endless_unlocked(level_path: String) -> bool:
 
 ## Record de vagues repoussées en mode infini sur un niveau (0 = jamais joué).
 static func get_endless_waves(level_path: String) -> int:
-	return _load().get_value("endless_waves", level_path, 0)
+	return _read("endless_waves", level_path, 0)
 
 
 ## Étoiles infinies obtenues sur un niveau (meilleur résultat).
 static func get_endless_stars(level_path: String) -> int:
-	return _load().get_value("endless_stars", level_path, 0)
+	return _read("endless_stars", level_path, 0)
 
 
 ## Enregistre une partie du mode infini (appelé à chaque vague repoussée). Seuls les
@@ -126,7 +127,7 @@ static func get_world_endless_stars(world: World) -> int:
 
 ## Défi du jour : meilleur score d'un jour (« 2026-10-06 »), -1 s'il n'a pas été joué.
 static func get_daily_score(date_key: String) -> int:
-	return _load().get_value("daily", date_key, -1)
+	return _read("daily", date_key, -1)
 
 
 ## Enregistre un score du défi du jour. Seul le meilleur est gardé ; renvoie true s'il
@@ -142,12 +143,7 @@ static func record_daily(date_key: String, score: int) -> bool:
 
 ## Défi du jour : meilleurs scores de chaque jour joué, { date: score }.
 static func get_daily_scores() -> Dictionary:
-	var config := _load()
-	var result := {}
-	if config.has_section("daily"):
-		for key in config.get_section_keys("daily"):
-			result[key] = config.get_value("daily", key)
-	return result
+	return (_get_data().get("daily", {}) as Dictionary).duplicate(true)
 
 
 ## Code Konami : tous les niveaux gagnés avec 3 étoiles dans toutes les difficultés (mondes et modes infinis
@@ -198,7 +194,7 @@ static func set_setting(key: String, value: Variant) -> void:
 
 
 static func get_value(section: String, key: String, default: Variant) -> Variant:
-	return _load().get_value(section, key, default)
+	return _read(section, key, default)
 
 
 static func set_value(section: String, key: String, value: Variant) -> void:
@@ -220,9 +216,49 @@ static func reset_campaign() -> void:
 	_save(config)
 
 
-## Le fichier est relu à chaque fois : il est minuscule. L'arbre des améliorations le relit
-## une centaine de fois par rafraîchissement (quelques millisecondes), ce qui reste acceptable
-## pour un écran de menu ; en jeu, il n'est lu qu'au lancement et en fin de partie.
+## Valeur lue dans la copie en mémoire du fichier. Le fichier n'est lu qu'une fois : les
+## menus demandent les étoiles de chaque niveau des centaines de fois (l'arbre des
+## améliorations, à chaque case), et relire le fichier à chaque fois ralentissait
+## nettement les changements d'écran sur téléphone et sur le web.
+## Les tableaux et dictionnaires sont rendus en copie : les modifier ne touche pas la copie
+## en mémoire.
+static func _read(section: String, key: String, default: Variant) -> Variant:
+	var value: Variant = (_get_data().get(section, {}) as Dictionary).get(key, default)
+	if value is Array or value is Dictionary:
+		return value.duplicate(true)
+	if typeof(value) >= TYPE_PACKED_BYTE_ARRAY:
+		return value.duplicate()
+	return value
+
+
+## Contenu du fichier en mémoire, { section: { clé: valeur } }, lu au premier besoin (ou
+## quand le fichier de sauvegarde change, voir SAVE_PATH_META).
+static func _get_data() -> Dictionary:
+	var path := get_save_path()
+	var cache: Dictionary = Engine.get_meta(CACHE_META, {})
+	if cache.get("path") != path:
+		cache = _cache_of(_load())
+		Engine.set_meta(CACHE_META, cache)
+	return cache.data
+
+
+static func _cache_of(config: ConfigFile) -> Dictionary:
+	var data := {}
+	for section in config.get_sections():
+		var values := {}
+		for key in config.get_section_keys(section):
+			values[key] = config.get_value(section, key)
+		data[section] = values
+	return {"path": get_save_path(), "data": data}
+
+
+## Oublie la copie en mémoire : le fichier sera relu (il a été effacé ou changé hors du jeu).
+static func clear_cache() -> void:
+	Engine.remove_meta(CACHE_META)
+	Perks.clear_cache()
+
+
+## Lecture du fichier, pour l'écrire ensuite (les lectures passent par _read()).
 static func _load() -> ConfigFile:
 	var config := ConfigFile.new()
 	# Pas de fichier au premier lancement : on part d'une progression vide.
@@ -232,6 +268,7 @@ static func _load() -> ConfigFile:
 
 static func _save(config: ConfigFile) -> void:
 	Perks.clear_cache()
+	Engine.set_meta(CACHE_META, _cache_of(config))
 	var error := config.save(get_save_path())
 	if error != OK:
 		push_warning("Progression non enregistrée (%s) : %s" % [get_save_path(), error_string(error)])

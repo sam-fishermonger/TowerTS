@@ -70,9 +70,19 @@ func _exit_tree() -> void:
 	SpriteCache.set_zoom(1.0)
 
 
+## Le niveau ne se charge qu'après la première image de l'écran titre : le menu s'affiche
+## tout de suite (charger et préparer un niveau prend un moment sur téléphone et sur le
+## web), puis la partie apparaît en fondu derrière lui.
 func _ready() -> void:
 	_rng.randomize()
-	start_level(_pick_level())
+	modulate.a = 0.0
+	get_tree().process_frame.connect(_start_first_level, CONNECT_ONE_SHOT)
+
+
+func _start_first_level() -> void:
+	if level == null:
+		start_level(_pick_level())
+	create_tween().tween_property(self, "modulate:a", 1.0, FADE_DURATION)
 
 
 ## Lance la simulation du niveau donné, à la place du précédent.
