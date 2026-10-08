@@ -156,6 +156,9 @@ msgstr "Life lost and boss arrival (phone, gamepad)"
 msgid "Chaque niveau commence à la vitesse choisie."
 msgstr "Every level starts at the chosen speed."
 
+msgid "Musiques : Kenney (CC0)  ·  Icônes : Lorc, Delapouite et Skoll, game-icons.net (CC BY 3.0)"
+msgstr "Music: Kenney (CC0)  ·  Icons: Lorc, Delapouite and Skoll, game-icons.net (CC BY 3.0)"
+
 msgid "Fermer"
 msgstr "Close"
 

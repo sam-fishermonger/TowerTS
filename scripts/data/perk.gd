@@ -5,6 +5,9 @@ extends Resource
 ## infinies du mode infini. Ses bonus s'appliquent à toutes les parties.
 ## Un champ laissé à sa valeur par défaut n'a aucun effet.
 
+## Dossier des icônes des améliorations (voir get_icon()).
+const ICON_DIR := "res://assets/icons/ameliorations/"
+
 @export var id := ""
 @export var display_name := "Amélioration"
 @export_multiline var description := ""
@@ -151,6 +154,13 @@ func apply_to_power(power) -> void:
 	power.duration += power_duration_bonus
 	power.count += power_count_bonus
 	power.vulnerability += power_vulnerability_bonus
+
+
+## Icône de la case (game-icons.net, voir assets/icons/LICENCES.md) : le fichier qui porte
+## l'identifiant de l'amélioration, s'il existe. Les cases à tour ou à pouvoir n'en ont pas.
+func get_icon() -> Texture2D:
+	var path := ICON_DIR + id + ".svg"
+	return load(path) if ResourceLoader.exists(path) else null
 
 
 ## Chemin de la tour montrée dans la case de l'amélioration (débloquée ou spécialisée), ou "".

@@ -1,4 +1,4 @@
-"""Génère les sons et la musique de TowerTS dans assets/audio/ (fichiers .ogg).
+"""Génère les sons de TowerTS dans assets/audio/ (fichiers .ogg).
 
 Tout est synthétisé ici, sans banque de sons : modifier une ligne puis relancer
     python3 tools/generate_sounds.py
@@ -126,7 +126,8 @@ melody = [7, None, 10, 12, 10, None, 7, 5, 3, None, 5, 7, 3, None, None, None,
 for i, m in enumerate(melody * 2):
     if m is not None:
         add(gain(note(hz(m), beat * 0.9, tri, 1, 0.01, beat * 0.8), 0.22), i * beat)
-files.append(write("music", music, 0.7))
+# La musique du jeu vient maintenant des boucles de Kenney (assets/audio/musique/) : elle
+# n'est plus écrite, mais reste calculée pour ne pas changer le tirage des sons suivants.
 
 # Tours ajoutées après la musique (pour ne pas changer le tirage des sons précédents)
 crackle = gain(highpass(shaped_noise(0.16, 9000, 0.0005, 0.15), 2500), 0.8)

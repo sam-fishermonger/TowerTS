@@ -378,7 +378,7 @@ func _ready() -> void:
 		tutorial.setup(self)
 	if not resumed.is_empty():
 		restore_saved_game(resumed)
-	Sound.play_music()
+	Sound.play_music(Sound.level_track(map.tileset, is_demo))
 
 
 ## Mode Expédition : les vies de départ sont celles de la première étape, et la partie
