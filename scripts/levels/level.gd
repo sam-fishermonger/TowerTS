@@ -238,6 +238,13 @@ func _ready() -> void:
 		hud.building_details_closed.connect(placer.inspect_building.bind(null))
 		placer.building_selection_changed.connect(hud.set_selected_building)
 		placer.building_inspection_changed.connect(hud.show_building_details)
+		hud.research_requested.connect(conquest.start_research)
+		hud.workers_select_all.connect(conquest.toggle_all_workers)
+		hud.workers_sent_home.connect(conquest.send_selected_home)
+		hud.workers_released.connect(conquest.release_selected)
+		hud.workers_deselected.connect(conquest.clear_selection)
+		conquest.selection_changed.connect(func() -> void:
+			hud.show_worker_selection(conquest.get_selected_workers().size()))
 		conquest.changed.connect(_refresh_hud)
 	hud.setup(get_title(), tower_types, game_speeds)
 	if not custom_level.is_empty():
@@ -710,9 +717,10 @@ func get_wave_bonus(index: int) -> int:
 	return roundi(spawner.get_wave(index).bonus_gold * _bonuses.wave_bonus_multiplier)
 
 
-## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations compris.
+## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations (et de l'Atelier
+## en Conquête) compris.
 func get_enemy_reward(data: EnemyData) -> int:
-	return roundi(data.reward * _bonuses.reward_multiplier)
+	return roundi(data.reward * _bonuses.reward_multiplier * (conquest.get_reward_multiplier() if conquest else 1.0))
 
 
 func _on_enemy_spawned(enemy: Enemy) -> void:

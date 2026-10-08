@@ -9,6 +9,9 @@ extends Node2D
 ## s'ajoutent aux vagues et quittent le chemin pour frapper ouvriers et bâtiments.
 ## Les vagues partent seules au bout d'un compte à rebours, qu'on peut toujours devancer
 ## avec « Lancer la vague ».
+## Le joueur peut choisir des ouvriers et les affecter à la main à un gisement, un
+## chantier ou au QG (Worker.Order), à autant qu'il veut sur la même tâche. L'Atelier
+## lance des améliorations (Research) qui valent pour le reste de la partie.
 ## Le niveau crée ce nœud quand il a `conquest_mode`.
 
 enum Ore { STONE, ESSENCE }
@@ -49,6 +52,8 @@ const RAID_TARGET_GROUP := "raid_targets"
 ## Émis quand la pierre, l'essence, les ouvriers, les bâtiments ou le compte à rebours
 ## changent.
 signal changed
+## Émis quand les ouvriers choisis par le joueur changent.
+signal selection_changed
 
 var level: Level
 var stone := 0
@@ -69,6 +74,12 @@ var workers_lost := 0
 var buildings_lost := 0
 ## Ouvriers en même temps, au plus, depuis le début de la partie.
 var peak_workers := 0
+## Niveau atteint de chaque amélioration de l'Atelier (Research), pour cette partie.
+var research_levels := {}
+
+## Ouvriers choisis par le joueur : le prochain clic sur un gisement, un chantier ou le
+## QG leur donne une tâche.
+var _selected: Array[Worker] = []
 
 ## Chantiers pas encore finis : des tours (Tower) et des bâtiments (Building), sans
 ## type commun qui ait is_built() (d'où les variables sans type).
@@ -292,7 +303,7 @@ func set_preferred_rock(cell: Vector2i) -> bool:
 		return false
 	preferred_rock = cell
 	for worker in get_workers():
-		if worker.is_mining() or (worker.state == Worker.State.IDLE and worker.cargo == 0):
+		if worker.order == Worker.Order.AUTO and (worker.is_mining() or (worker.state == Worker.State.IDLE and worker.cargo == 0)):
 			worker.go_mine(cell, level.map.cell_to_world(cell))
 	_refresh_deposits()
 	return true
@@ -328,6 +339,9 @@ func _add_worker(at: Vector2) -> Worker:
 
 
 func _on_worker_killed(worker: Worker) -> void:
+	if _selected.has(worker):
+		_selected.erase(worker)
+		selection_changed.emit.call_deferred()
 	workers_lost += 1
 	level.stats.workers_lost += 1
 	Sound.play(&"lives_lost", -6.0)
@@ -340,6 +354,7 @@ func _on_worker_killed(worker: Worker) -> void:
 ## Paie la pierre d'une tour posée, qui devient un chantier.
 func start_site(tower: Tower) -> void:
 	stone -= stone_cost(tower.data)
+	apply_research_to_tower(tower)
 	tower.start_construction()
 	_sites.append(tower)
 	changed.emit()
@@ -461,6 +476,13 @@ func sell_building(building: Building) -> int:
 	if not is_instance_valid(building) or not building.is_alive or level.is_over:
 		return 0
 	var refund_amounts := get_building_refund(building)
+	if building.research_id != &"":
+		# Atelier démoli en pleine recherche : elle est rendue en entier.
+		var cost := Research.get_cost(building.research_id, building.research_level)
+		refund_amounts.gold += cost.gold
+		refund_amounts.stone += cost.stone
+		refund_amounts.essence += cost.essence
+		building.research_id = &""
 	level.gold += refund_amounts.gold
 	level.stats.gold_earned += refund_amounts.gold
 	stone += refund_amounts.stone
@@ -499,6 +521,225 @@ func _remove_building(building: Building) -> void:
 	changed.emit.call_deferred()
 
 
+# --- Ouvriers choisis -----------------------------------------------------------
+
+func get_selected_workers() -> Array[Worker]:
+	var result: Array[Worker] = []
+	for worker in _selected:
+		if is_instance_valid(worker) and worker.is_alive:
+			result.append(worker)
+	return result
+
+
+## Choisit des ouvriers (`add` : en plus de ceux déjà choisis).
+func select_workers(workers: Array[Worker], add := false) -> void:
+	var chosen := get_selected_workers() if add else ([] as Array[Worker])
+	for worker in workers:
+		if not chosen.has(worker):
+			chosen.append(worker)
+	_set_selection(chosen)
+
+
+## Ajoute un ouvrier aux ouvriers choisis, ou l'en retire s'il l'était.
+func toggle_worker(worker: Worker) -> void:
+	var chosen := get_selected_workers()
+	if chosen.has(worker):
+		chosen.erase(worker)
+	else:
+		chosen.append(worker)
+	_set_selection(chosen)
+
+
+## Choisit tous les ouvriers, ou plus aucun s'ils l'étaient déjà tous.
+func toggle_all_workers() -> void:
+	var workers := get_workers()
+	_set_selection([] as Array[Worker] if get_selected_workers().size() == workers.size() else workers)
+
+
+func clear_selection() -> void:
+	if not _selected.is_empty():
+		_set_selection([] as Array[Worker])
+
+
+func _set_selection(workers: Array[Worker]) -> void:
+	for worker in get_selected_workers():
+		worker.selected = false
+	_selected = workers
+	for worker in workers:
+		worker.selected = true
+	selection_changed.emit()
+
+
+## Ouvrier sous un point de la carte (le plus proche, à `radius` au plus), ou null.
+func worker_at(at: Vector2, radius := Worker.PICK_RADIUS) -> Worker:
+	var best: Worker = null
+	for worker in get_workers():
+		var distance := worker.get_pick_point().distance_to(at)
+		if distance < radius and (best == null or distance < best.get_pick_point().distance_to(at)):
+			best = worker
+	return best
+
+
+## Ouvriers dont le corps est dans un rectangle de la carte.
+func workers_in_rect(rect: Rect2) -> Array[Worker]:
+	var result: Array[Worker] = []
+	for worker in get_workers():
+		if rect.grow(Worker.BODY_RADIUS).has_point(worker.get_pick_point()):
+			result.append(worker)
+	return result
+
+
+## Tâche que donnerait un clic sur cette case aux ouvriers choisis : miner son gisement,
+## bâtir son chantier, rentrer au QG (Worker.Order.AUTO : aucune).
+func order_for_cell(cell: Vector2i) -> Worker.Order:
+	if has_resource(cell):
+		return Worker.Order.MINE
+	var occupant = level.map.get_occupant(cell)
+	if (occupant is Tower or occupant is Building) and occupant.is_alive and not occupant.is_built():
+		return Worker.Order.BUILD
+	if cell == level.map.world_to_cell(depot_position):
+		return Worker.Order.HOME
+	return Worker.Order.AUTO
+
+
+## Affecte les ouvriers choisis à la tâche de la case (voir order_for_cell). Renvoie false
+## s'il n'y a pas d'ouvrier choisi ou pas de tâche sur la case.
+func order_selected(cell: Vector2i) -> bool:
+	var workers := get_selected_workers()
+	var order := order_for_cell(cell)
+	if workers.is_empty() or order == Worker.Order.AUTO:
+		return false
+	var target = level.map.get_occupant(cell) if order == Worker.Order.BUILD else null
+	for i in workers.size():
+		workers[i].assign(order, cell, target, i)
+	var at := level.map.cell_to_world(cell)
+	var texts := {Worker.Order.MINE: tr("Miner ×%d"), Worker.Order.BUILD: tr("Bâtir ×%d"), Worker.Order.HOME: tr("Au QG ×%d")}
+	_show_text(texts[order] % workers.size(), Worker.SELECTED_COLOR, at + Vector2(0, -30), 14)
+	Sound.play(&"build", -10.0)
+	selection_changed.emit()
+	return true
+
+
+## Rend les ouvriers choisis aux ordres automatiques, et les relâche.
+func release_selected() -> void:
+	for worker in get_selected_workers():
+		worker.assign(Worker.Order.AUTO)
+	_set_selection([] as Array[Worker])
+
+
+## Envoie les ouvriers choisis à l'abri au QG.
+func send_selected_home() -> void:
+	for worker in get_selected_workers():
+		worker.assign(Worker.Order.HOME)
+	selection_changed.emit()
+
+
+# --- Atelier : améliorations de la partie ----------------------------------------
+
+func get_research_level(id: StringName) -> int:
+	return research_levels.get(id, 0)
+
+
+## Bonus atteint d'une amélioration : son bonus par niveau fois son niveau.
+func get_research_bonus(id: StringName) -> float:
+	return Research.get_definition(id).per_level * get_research_level(id)
+
+
+## Atelier qui cherche cette amélioration, ou null.
+func get_researching_workshop(id: StringName) -> Building:
+	for workshop in get_buildings(Building.Kind.WORKSHOP):
+		if workshop.research_id == id:
+			return workshop
+	return null
+
+
+## Ce qui empêche de lancer cette amélioration dans cet Atelier ("" : rien).
+func research_blocker(workshop: Building, id: StringName) -> String:
+	if level.is_over or not is_instance_valid(workshop) or not workshop.is_built():
+		return "Atelier pas prêt"
+	if get_research_level(id) >= Research.get_max_level(id):
+		return "Niveau maximum"
+	if get_researching_workshop(id) != null:
+		return "Déjà en recherche"
+	if workshop.research_id != &"":
+		return "Atelier occupé"
+	var cost := Research.get_cost(id, get_research_level(id) + 1)
+	if level.gold < cost.gold or stone < cost.stone or essence < cost.essence:
+		return "Pas assez de ressources"
+	return ""
+
+
+## Paie et lance une amélioration dans un Atelier. Renvoie false si c'est impossible.
+func start_research(workshop: Building, id: StringName) -> bool:
+	if research_blocker(workshop, id) != "":
+		return false
+	var next_level := get_research_level(id) + 1
+	var cost := Research.get_cost(id, next_level)
+	level.gold -= cost.gold
+	level.stats.gold_spent += cost.gold
+	stone -= cost.stone
+	essence -= cost.essence
+	workshop.start_research(id, next_level)
+	Sound.play(&"build")
+	changed.emit()
+	return true
+
+
+## Une amélioration finit sa recherche : elle monte d'un niveau, et ses effets prennent
+## tout de suite (tours et bâtiments déjà posés compris).
+func complete_research(id: StringName) -> void:
+	var before := get_building_health_multiplier()
+	research_levels[id] = get_research_level(id) + 1
+	if id == Research.TOWER_DAMAGE or id == Research.TOWER_RANGE or id == Research.TOWER_FIRE_RATE:
+		for tower in level.get_towers():
+			apply_research_to_tower(tower)
+	elif id == Research.WORLD_FORTIFY:
+		for building in get_buildings():
+			building.scale_health(get_building_health_multiplier() / before)
+	Sound.play(&"upgrade")
+	var definition := Research.get_definition(id)
+	var workshop_at := depot_position
+	for workshop in get_buildings(Building.Kind.WORKSHOP):
+		workshop_at = workshop.global_position
+	_show_text(tr("%s : niveau %d") % [tr(definition.name), get_research_level(id)],
+		Research.CATEGORY_COLORS[definition.category], workshop_at + Vector2(0, -44), 15)
+	changed.emit()
+
+
+## Bonus des tours (dégâts, portée, cadence) donnés aux tours par l'Atelier.
+func apply_research_to_tower(tower: Tower) -> void:
+	tower.set_research(get_research_bonus(Research.TOWER_DAMAGE), get_research_bonus(Research.TOWER_RANGE),
+		get_research_bonus(Research.TOWER_FIRE_RATE))
+
+
+func get_worker_speed() -> float:
+	return Worker.SPEED * (1.0 + get_research_bonus(Research.WORKER_SPEED))
+
+
+## Vitesse de minage et de construction des ouvriers (1 = sans amélioration).
+func get_work_speed() -> float:
+	return 1.0 + get_research_bonus(Research.WORKER_TOOLS)
+
+
+## Pierre ou essence portée à chaque voyage.
+func get_carry(kind: Ore) -> int:
+	var bonus := roundi(get_research_bonus(Research.WORKER_CARRY))
+	return (Worker.ESSENCE_CARRY if kind == Ore.ESSENCE else Worker.CARRY) + bonus
+
+
+func get_reward_multiplier() -> float:
+	return 1.0 + get_research_bonus(Research.WORLD_BOUNTY)
+
+
+func get_building_health_multiplier() -> float:
+	return 1.0 + get_research_bonus(Research.WORLD_FORTIFY)
+
+
+## Secondes entre deux essences d'un Extracteur.
+func get_extract_interval() -> float:
+	return Building.EXTRACT_INTERVAL / (1.0 + get_research_bonus(Research.WORLD_EXTRACTION))
+
+
 # --- Vagues ------------------------------------------------------------------
 
 ## La carte est vidée : la prochaine vague part au bout du compte à rebours.
@@ -533,7 +774,7 @@ func _assign_workers() -> void:
 		while builders < BUILDERS_PER_SITE:
 			var best: Worker = null
 			for worker in workers:
-				var free := worker.state == Worker.State.IDLE or worker.is_mining()
+				var free := worker.order == Worker.Order.AUTO and (worker.state == Worker.State.IDLE or worker.is_mining())
 				if free and (best == null or worker.global_position.distance_squared_to(site.global_position)
 						< best.global_position.distance_squared_to(site.global_position)):
 					best = worker
@@ -542,13 +783,41 @@ func _assign_workers() -> void:
 			best.go_build(site)
 			builders += 1
 	for worker in workers:
-		if worker.state != Worker.State.IDLE:
+		if worker.state != Worker.State.IDLE or _follow_order(worker):
 			continue
 		var cell := _resource_to_mine(worker, workers) if worker.cargo == 0 else NO_CELL
 		if cell != NO_CELL:
 			worker.go_mine(cell, level.map.cell_to_world(cell))
 		elif worker.cargo > 0 or not is_safe(worker.global_position):
 			worker.go_deposit()
+
+
+## Ouvrier inoccupé qui a une tâche donnée à la main : il la reprend (retourne au même
+## gisement, au même chantier, reste au QG) et la fonction renvoie true ; une tâche finie
+## ou devenue impossible le rend aux ordres automatiques (false).
+func _follow_order(worker: Worker) -> bool:
+	match worker.order:
+		Worker.Order.MINE:
+			if worker.cargo > 0:
+				worker.go_deposit()
+				return true
+			if has_resource(worker.order_cell):
+				worker.go_mine(worker.order_cell, level.map.cell_to_world(worker.order_cell))
+				return true
+		Worker.Order.BUILD:
+			var site = worker.order_site
+			if is_instance_valid(site) and site.is_alive and not site.is_built():
+				worker.go_build(site, worker.order_slot)
+				return true
+		Worker.Order.HOME:
+			if worker.cargo > 0 or not is_safe(worker.global_position):
+				worker.go_deposit()
+			return true
+	if worker.order != Worker.Order.AUTO:
+		worker.order = Worker.Order.AUTO
+		worker.order_site = null
+		selection_changed.emit()
+	return false
 
 
 ## Gisement à miner pour un ouvrier : celui désigné par le joueur ; sinon un filon libre
