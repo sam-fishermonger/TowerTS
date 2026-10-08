@@ -7,8 +7,7 @@ extends Control
 ## sous forme de code à copier-coller. Une partie finie ramène ici.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
-const BASE_TEXTURE: Texture2D = preload("res://assets/sprites/map/base.svg")
-const ROCK_TEXTURE: Texture2D = preload("res://assets/sprites/map/rock.svg")
+const GROUND_SHADER: Shader = preload("res://scripts/map/relief_ground.gdshader")
 const BAR_HEIGHT := 64.0
 const BOTTOM_HEIGHT := 96.0
 const ERROR_COLOR := Color(1.0, 0.55, 0.45)
@@ -30,6 +29,8 @@ var current_tool := EditTool.PATH
 var enemy_choices: Array[EnemyData] = []
 
 var map_view: Control
+## Sol peint de l'aperçu (le shader de la carte en vue de trois quarts).
+var map_ground: ColorRect
 var waves_view: ScrollContainer
 var waves_list: VBoxContainer
 var levels_view: VBoxContainer
@@ -60,6 +61,10 @@ var _pending_delete := -1
 ## Message passager (code copié, import raté...) affiché en bas jusqu'à la prochaine action.
 var _notice := ""
 var _notice_is_error := false
+## Habillage du monde choisi (BiomeTheme), et touffes d'herbe semées sur l'aperçu.
+var _theme: Dictionary = {}
+var _theme_biome := -1
+var _tufts: Array[Vector3] = []
 
 
 func _ready() -> void:
@@ -139,6 +144,20 @@ func _build() -> void:
 	map_view.draw.connect(_draw_map)
 	map_view.gui_input.connect(_on_map_input)
 	add_child(map_view)
+	map_ground = ColorRect.new()
+	map_ground.size = map_view.size
+	map_ground.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_ground.show_behind_parent = true
+	var material := ShaderMaterial.new()
+	material.shader = GROUND_SHADER
+	material.set_shader_parameter("size", map_view.size)
+	material.set_shader_parameter("seed", 0.37)
+	map_ground.material = material
+	map_view.add_child(map_ground)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in CustomLevel.COLUMNS * CustomLevel.ROWS * 2:
+		_tufts.append(Vector3(rng.randf() * map_view.size.x, rng.randf() * map_view.size.y, rng.randf()))
 
 	waves_view = ScrollContainer.new()
 	waves_view.position = Vector2(16, BAR_HEIGHT + 8)
@@ -280,6 +299,7 @@ func _refresh() -> void:
 	if not name_edit.has_focus():
 		name_edit.text = str(data.get("name", ""))
 	biome_option.select(int(data.biome))
+	_apply_theme()
 	gold_spin.set_value_no_signal(int(data.gold))
 	lives_spin.set_value_no_signal(int(data.lives))
 	var tools := _tools_for_mode()
@@ -491,51 +511,125 @@ func _on_clear_pressed() -> void:
 	_refresh()
 
 
-func _draw_map() -> void:
-	var colors: Array = CustomLevel.BIOME_COLORS[int(data.biome)]
-	var size := CustomLevel.CELL_SIZE
-	map_view.draw_rect(Rect2(Vector2.ZERO, map_view.size), colors[1])
-	for x in CustomLevel.COLUMNS + 1:
-		map_view.draw_line(Vector2(x * size, 0), Vector2(x * size, map_view.size.y), Color(0, 0, 0, 0.18))
-	for y in CustomLevel.ROWS + 1:
-		map_view.draw_line(Vector2(0, y * size), Vector2(map_view.size.x, y * size), Color(0, 0, 0, 0.18))
-	for rock: Vector2i in data.rocks:
-		map_view.draw_texture_rect(ROCK_TEXTURE, Rect2(Vector2(rock) * size + Vector2.ONE * size * 0.05,
-			Vector2.ONE * size * 0.9), false, Color(colors[3]).lightened(0.45))
-	if CustomLevel.is_free(data):
-		_draw_free_map(colors)
+## Couleurs du sol et du chemin du monde choisi, comme en jeu.
+func _apply_theme() -> void:
+	if _theme_biome == int(data.biome):
 		return
+	_theme_biome = int(data.biome)
+	_theme = CustomLevel.get_biome_theme(_theme_biome)
+	var material := map_ground.material as ShaderMaterial
+	material.set_shader_parameter("grass_dark", _theme.grass[0])
+	material.set_shader_parameter("grass", _theme.grass[1])
+	material.set_shader_parameter("grass_light", _theme.grass[2])
+
+
+## Aperçu de la carte en vue de trois quarts, comme en jeu : sol peint et touffes du
+## monde, chemin de terre (ou pavé…) cerné, rochers et QG debout, triés en profondeur.
+## Le quadrillage reste visible pour tracer.
+func _draw_map() -> void:
+	var size := CustomLevel.CELL_SIZE
+	var free := CustomLevel.is_free(data)
 	var path: Array = data.path
-	if path.is_empty():
+	var cells := {}
+	for cell: Vector2i in CustomLevel.expand_path(path) if not free and path.size() >= 2 else path:
+		cells[cell] = true
+	_draw_tufts(cells)
+	var line := Color(0, 0, 0, 0.12)
+	for x in range(1, CustomLevel.COLUMNS):
+		map_view.draw_line(Vector2(x * size, 0), Vector2(x * size, map_view.size.y), line)
+	for y in range(1, CustomLevel.ROWS):
+		map_view.draw_line(Vector2(0, y * size), Vector2(map_view.size.x, y * size), line)
+	# Ce qui se tient debout (rochers, QG), dessiné du fond vers le devant.
+	var standing: Array[Array] = []
+	for rock: Vector2i in data.rocks:
+		standing.append([CustomLevel.cell_center(rock) - CustomLevel.GRID_ORIGIN + Vector2(0, 10), rock])
+	if free:
+		_draw_free_map(standing)
+	elif path.is_empty():
 		# Les cases du bord, où le chemin peut commencer.
 		for cell in _edge_cells():
-			map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size).grow(-4), Color(START_COLOR, 0.18))
-		return
-	var points := CustomLevel.get_path_points(path)
-	for i in points.size():
-		points[i] -= CustomLevel.GRID_ORIGIN
-	if points.size() == 1:
-		map_view.draw_circle(points[0], 24.0, colors[2])
+			map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size).grow(-4), Color(START_COLOR, 0.25))
 	else:
-		map_view.draw_polyline(points, colors[2], 48.0)
-		for point in points:
-			map_view.draw_circle(point, 24.0, colors[2])
-		_draw_arrows(points)
-	var start := CustomLevel.cell_center(path[0]) - CustomLevel.GRID_ORIGIN
-	map_view.draw_circle(start, 12.0, START_COLOR)
-	if path.size() >= 2:
-		var base := CustomLevel.cell_center(path[-1]) - CustomLevel.GRID_ORIGIN
-		map_view.draw_texture_rect(BASE_TEXTURE, Rect2(base - Vector2(32, 48), Vector2(64, 96)), false)
+		var points := CustomLevel.get_path_points(path)
+		for i in points.size():
+			points[i] -= CustomLevel.GRID_ORIGIN
+		_draw_path(points)
+		if points.size() >= 2:
+			_draw_arrows(points)
+		var start := points[0]
+		map_view.draw_circle(start, 13.0, Relief.OUTLINE, true, -1.0, true)
+		map_view.draw_circle(start, 11.0, START_COLOR, true, -1.0, true)
+		if path.size() >= 2:
+			standing.append([CustomLevel.cell_center(path[-1]) - CustomLevel.GRID_ORIGIN, null])
+	standing.sort_custom(func(a: Array, b: Array) -> bool: return a[0].y < b[0].y)
+	var rock_color: Color = Color(CustomLevel.BIOME_COLORS[int(data.biome)][3]).lightened(0.3)
+	for item in standing:
+		if item[1] == null:
+			GameMap.draw_relief_base(map_view, item[0])
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(item[1])
+		DecorItem.draw_rock(map_view, item[0], rng, 1.0, rock_color)
+
+
+## Touffes d'herbe et fleurs du monde (boulons à la Fonderie), hors du chemin.
+func _draw_tufts(path_cells: Dictionary) -> void:
+	var color: Color = _theme.tuft_color
+	for tuft in _tufts:
+		var at := Vector2(tuft.x, tuft.y)
+		if path_cells.has(Vector2i(at / CustomLevel.CELL_SIZE)):
+			continue
+		if tuft.z < _theme.flowers:
+			for i in 3:
+				map_view.draw_circle(at + Vector2.from_angle(TAU * i / 3.0) * 2.5, 2.2, _theme.flower_color)
+			map_view.draw_circle(at, 1.6, Color(1.0, 0.75, 0.2))
+		elif _theme.tufts == "bolts":
+			map_view.draw_circle(at, 2.2, Color(0.55, 0.55, 0.58), true, -1.0, true)
+			map_view.draw_circle(at, 0.9, Color(0.25, 0.25, 0.27), true, -1.0, true)
+		else:
+			for i in 3:
+				var x := (i - 1) * 3.0
+				map_view.draw_line(at + Vector2(x, 0), at + Vector2(x * 1.6, -6.0 + absf(x) * 0.5), color, 1.5, true)
+
+
+## Chemin comme en jeu : des ronds de terre dont le rayon ondule, avec leur ombre, un
+## bord sombre et une bande plus claire au milieu.
+func _draw_path(points: PackedVector2Array) -> void:
+	var dirt: Color = _theme.dirt
+	var stamps := PackedVector3Array()
+	var noise := FastNoiseLite.new()
+	noise.seed = 3
+	noise.frequency = 0.04
+	var walked := 0.0
+	for i in points.size():
+		var from := points[i]
+		var to := points[i + 1] if i + 1 < points.size() else from
+		var length := from.distance_to(to)
+		var step := 0.0
+		while true:
+			var at := from.lerp(to, step / length) if length > 0.0 else from
+			stamps.append(Vector3(at.x, at.y, 28.0 + noise.get_noise_1d(walked + step) * 6.0))
+			step += 6.0
+			if step >= length:
+				break
+		walked += length
+	for layer in [[Vector2(0, 3), 4.0, Color(0.1, 0.16, 0.05, 0.3)], [Vector2.ZERO, 2.0, dirt.darkened(0.42)],
+			[Vector2.ZERO, 0.0, dirt]]:
+		for stamp in stamps:
+			map_view.draw_circle(Vector2(stamp.x, stamp.y) + layer[0], stamp.z + layer[1], layer[2], true, -1.0, true)
+	for stamp in stamps:
+		map_view.draw_circle(Vector2(stamp.x - 2.0, stamp.y - 3.0), stamp.z * 0.55, dirt.lightened(0.1), true, -1.0, true)
 
 
 ## Carte libre : les terriers (et, à l'outil Terriers, les cases du bord où en poser),
-## le QG, et un voile sur les cases que les rochers coupent du QG.
-func _draw_free_map(colors: Array) -> void:
+## le QG (ajouté à `standing`, dessiné avec les rochers), et un voile sur les cases que
+## les rochers coupent du QG.
+func _draw_free_map(standing: Array[Array]) -> void:
 	var size := CustomLevel.CELL_SIZE
 	if current_tool == EditTool.SPAWNS and data.spawns.size() < CustomLevel.MAX_SPAWNS:
 		for cell in _edge_cells():
 			if not data.spawns.has(cell) and cell != data.base:
-				map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size).grow(-4), Color(START_COLOR, 0.18))
+				map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size).grow(-4), Color(START_COLOR, 0.25))
 	var base: Vector2i = data.base
 	if CustomLevel.is_in_grid(base):
 		var reached := CustomLevel.reachable_from_base(data)
@@ -545,13 +639,9 @@ func _draw_free_map(colors: Array) -> void:
 				if not reached.has(cell) and not data.rocks.has(cell):
 					map_view.draw_rect(Rect2(Vector2(cell) * size, Vector2.ONE * size), Color(0, 0, 0, 0.3))
 	for cell: Vector2i in data.spawns:
-		var center := CustomLevel.cell_center(cell) - CustomLevel.GRID_ORIGIN
-		map_view.draw_circle(center, 26.0, Color(colors[2]).darkened(0.35))
-		map_view.draw_circle(center, 14.0, START_COLOR)
+		GameMap.draw_spawn_gate(map_view, CustomLevel.cell_center(cell) - CustomLevel.GRID_ORIGIN)
 	if CustomLevel.is_in_grid(base):
-		var center := CustomLevel.cell_center(base) - CustomLevel.GRID_ORIGIN
-		map_view.draw_circle(center, 28.0, colors[2])
-		map_view.draw_texture_rect(BASE_TEXTURE, Rect2(center - Vector2(32, 48), Vector2(64, 96)), false)
+		standing.append([CustomLevel.cell_center(base) - CustomLevel.GRID_ORIGIN, null])
 
 
 ## Petites flèches dans le sens de la marche, au milieu de chaque ligne droite.
@@ -563,7 +653,7 @@ func _draw_arrows(points: PackedVector2Array) -> void:
 		var middle := (from + to) / 2.0
 		var side := direction.orthogonal() * 9.0
 		map_view.draw_colored_polygon(PackedVector2Array([middle + direction * 10.0, middle - direction * 6.0 + side,
-			middle - direction * 6.0 - side]), Color(1, 1, 1, 0.55))
+			middle - direction * 6.0 - side]), Color(Color(_theme.dirt).darkened(0.55), 0.75))
 
 
 func _edge_cells() -> Array[Vector2i]:

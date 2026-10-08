@@ -2790,6 +2790,7 @@ func _test_carriers_and_chests() -> void:
 	var base_damage := tower.stats.damage
 	var base_range := tower.stats.attack_range
 	var wave_bonus := level.get_wave_bonus(0)
+	var chests_before := Achievements.get_counter("chests_opened")
 	var chest := level.drop_loot(Loot.Kind.CHEST, level.map.cell_to_world(Vector2i(6, 6)))
 	level.collect_loot(chest)
 	_check(level.stats.chests_opened == 1 and level.chest_levels.size() == 1, "un coffre ouvert donne un bonus")
@@ -2799,6 +2800,7 @@ func _test_carriers_and_chests() -> void:
 		opened.append(level.open_chest(Vector2.ZERO))
 	_check(not opened.has(ChestBonus.POWERS) and not opened.has(ChestBonus.WORKERS),
 		"ni Sablier sans pouvoir, ni Pioches hors de la Conquête")
+	_check(Achievements.get_counter("chests_opened") == chests_before + 18, "les coffres ouverts comptent pour le succès")
 	_check(level.chest_levels.values().all(func(count: int) -> bool: return count == 3) and level.chest_levels.size() == 6,
 		"un même bonus retombe, trois fois au plus")
 	_check(is_equal_approx(tower.stats.damage, base_damage * 1.3) and is_equal_approx(tower.stats.attack_range, base_range * 1.24),
@@ -2815,9 +2817,12 @@ func _test_carriers_and_chests() -> void:
 	_check(is_equal_approx(level.get_interest_rate(), level.interest_rate + 0.06) and level.get_interest_cap() == level.interest_cap + 30,
 		"Coffre-fort : intérêts et plafond")
 	gold = level.gold
+	Progress.set_value(Achievements.COUNTERS_SECTION, "chests_opened", 24)
+	var was_unlocked := Achievements.is_unlocked("chasseur_de_tresors")
 	_check(level.open_chest(Vector2.ZERO) == &"" and level.gold == gold + ChestBonus.FALLBACK_GOLD, "tout au maximum : de l'or")
 	_check(level.hud._chest_label.text.contains("Poudre noire") and level.hud.achievement_toasts.get_child_count() > 0,
 		"liste des bonus et bandeau du coffre")
+	_check(not was_unlocked and Achievements.is_unlocked("chasseur_de_tresors"), "Chasseur de trésors au 25e coffre")
 	await _free(level)
 
 	level = await _spawn_level(CONQUEST_01)
