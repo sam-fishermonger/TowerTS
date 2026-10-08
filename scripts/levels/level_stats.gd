@@ -76,6 +76,16 @@ func on_tower_upgraded(tower: Tower, cost: int) -> void:
 	gold_spent_on_upgrades += cost
 
 
+## Pose annulée (Level.undo_last_placement()) : la tour n'a jamais existé, ni ce qu'elle a coûté.
+func on_tower_undone(tower: Tower) -> void:
+	towers.erase(tower.get_instance_id())
+	var upgrades := tower.get_total_cost() - tower.data.get_cost()
+	towers_built -= 1
+	upgrades_bought -= tower.level - 1
+	gold_spent -= tower.get_total_cost()
+	gold_spent_on_upgrades -= upgrades
+
+
 func on_tower_sold(tower: Tower, value: int) -> void:
 	var record: TowerRecord = towers.get(tower.get_instance_id())
 	if record:
@@ -101,6 +111,50 @@ func on_kill(source_id: int, data: EnemyData) -> void:
 	var record: TowerRecord = towers.get(source_id)
 	if record:
 		record.kills += 1
+
+
+## Compteurs enregistrés avec la partie (SavedGame).
+const SAVED_FIELDS: Array[String] = ["gold_spent", "gold_spent_on_upgrades", "gold_earned", "kills", "elite_kills",
+	"boss_kills", "lives_lost", "towers_built", "upgrades_bought", "towers_sold", "early_calls", "loot_collected",
+	"chests_opened", "duration"]
+
+
+## Statistiques en valeurs simples, pour la partie enregistrée. Les tours y gardent
+## l'identifiant de leur instance (voir from_dict()).
+func to_dict() -> Dictionary:
+	var result := {}
+	for field in SAVED_FIELDS:
+		result[field] = get(field)
+	var records: Array[Dictionary] = []
+	for id: int in towers:
+		var record: TowerRecord = towers[id]
+		records.append({"id": id, "data": record.data.resource_path, "level": record.level,
+			"damage": record.damage, "kills": record.kills, "sold": record.sold})
+	result.towers = records
+	return result
+
+
+## Reprend les statistiques d'une partie enregistrée. `new_ids` donne le nouvel
+## identifiant de chaque tour reposée (les tours vendues prennent un identifiant négatif).
+func from_dict(data: Dictionary, new_ids: Dictionary) -> void:
+	for field in SAVED_FIELDS:
+		if data.has(field):
+			set(field, data[field])
+	towers.clear()
+	var sold_id := -1
+	for entry: Dictionary in data.get("towers", []):
+		if not ResourceLoader.exists(entry.get("data", "")):
+			continue
+		var record := TowerRecord.new(load(entry.data))
+		record.level = entry.get("level", 1)
+		record.damage = entry.get("damage", 0.0)
+		record.kills = entry.get("kills", 0)
+		record.sold = entry.get("sold", false)
+		var id: int = new_ids.get(entry.get("id", 0), 0)
+		if id == 0:
+			id = sold_id
+			sold_id -= 1
+		towers[id] = record
 
 
 func get_total_damage() -> float:

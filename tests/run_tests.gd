@@ -81,6 +81,7 @@ func _run() -> void:
 	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_progress.cfg")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
 	Progress.clear_cache()
+	SavedGame.clear()
 	# Les textes vérifiés sont ceux du jeu en français, quelle que soit la langue du système.
 	GameSettings.apply_language()
 	GameSettings.apply_accessibility()
@@ -101,6 +102,8 @@ func _run() -> void:
 	await _test_gamepad()
 	await _test_accessibility()
 	await _test_sell_tower()
+	await _test_undo_placement()
+	await _test_saved_game()
 	await _test_target_modes()
 	await _test_level_02_map()
 	await _test_level_02_uses_both_paths()
@@ -485,6 +488,7 @@ func _test_perks_in_level() -> void:
 	_check(CANNON.get_cost() == 45 and CANNON.get_upgrade_cost(1) == 36, "Architecte : tours et améliorations 10 % moins chères")
 	var tower := level.place_tower(Vector2i(2, 4), CANNON)
 	_check(tower != null and level.gold == 155, "la pose coûte le prix réduit")
+	tower.refundable = false
 	_check(tower.get_sell_value() == roundi(45 * 0.85), "Brocanteur : la vente rend 85 %")
 	_check(level.get_enemy_reward(LARVE) == roundi(LARVE.reward * 1.2), "Pillage : +20 % d'or par ennemi")
 	level.lives = 20
@@ -1101,12 +1105,181 @@ func _test_tower_info_panels() -> void:
 	await _free(level)
 
 
+func _test_undo_placement() -> void:
+	print("Annuler la dernière pose")
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 1000
+	var first := level.place_tower(Vector2i(2, 4), CANNON)
+	var second := level.place_tower(Vector2i(5, 3), GATLING)
+	level.upgrade_tower(second)
+	var paid := GATLING.get_cost() + GATLING.get_upgrade_cost(1)
+	_check(second.refundable and second.get_sell_value() == paid, "une tour qui vient d'être posée est remboursée en entier")
+	await _click(level, second.global_position)
+	var details := level.hud.tower_details
+	_check(details.sell_button.text == "Annuler la pose  ·  %d or" % paid, "le bouton Vendre devient Annuler la pose")
+	var event := InputEventKey.new()
+	event.keycode = KEY_Z
+	event.physical_keycode = KEY_W
+	event.ctrl_pressed = true
+	event.pressed = true
+	level.hud._unhandled_key_input(event)
+	_check(not second.is_alive and level.gold == 1000 - CANNON.get_cost(), "Ctrl+Z annule la dernière pose, améliorations comprises")
+	_check(level.stats.towers_built == 1 and level.stats.gold_spent == CANNON.get_cost() and level.stats.upgrades_bought == 0
+		and level.stats.towers_sold == 0, "elle ne compte ni comme posée ni comme vendue")
+	_press_key(level, KEY_BACKSPACE)
+	_check(not first.is_alive and level.gold == 1000 and level.map.is_cell_buildable(Vector2i(2, 4)),
+		"Retour arrière annule la pose d'avant")
+	_check(level.undo_last_placement() == 0, "plus rien à annuler")
+	await process_frame
+	var third := level.place_tower(Vector2i(2, 4), CANNON)
+	level.start_next_wave()
+	_check(not third.refundable and third.get_sell_value() == 35, "une fois la vague lancée, la tour se revend 70 %")
+	_check(level.undo_last_placement() == 0 and third.is_alive, "et sa pose ne s'annule plus")
+	var during := level.place_tower(Vector2i(5, 3), CANNON)
+	_check(during.refundable, "une tour posée pendant la vague s'annule…")
+	var waited := 0.0
+	while during.refundable and waited < 60.0:
+		waited += await _step()
+	_check(not during.refundable, "… jusqu'à son premier tir")
+	await _free(level)
+
+
+func _test_saved_game() -> void:
+	print("Partie enregistrée entre deux vagues")
+	SavedGame.clear()
+	var level := await _spawn_level(LEVEL_01)
+	_check(not SavedGame.exists() and not level.autosave(), "rien d'enregistré avant d'avoir commencé")
+	level.gold = 1000
+	var cannon := level.place_tower(Vector2i(3, 3), CANNON)
+	level.place_tower(Vector2i(5, 3), GATLING)
+	level.place_tower(Vector2i(7, 4), SNIPER)
+	level.upgrade_tower(cannon)
+	cannon.set_target_mode(Tower.TargetMode.STRONGEST)
+	_check(SavedGame.exists(), "une tour posée avant la première vague enregistre la partie")
+	level.start_next_wave()
+	_check(not level.autosave(), "pas d'enregistrement pendant une vague")
+	var waited := 0.0
+	while not level.is_between_waves() and waited < 120.0:
+		waited += await _step()
+	var saved := SavedGame.load_data()
+	_check(level.spawner.current_wave == 0 and saved.get("wave") == 0, "la carte vidée, la partie est enregistrée")
+	var gold := level.gold
+	var lives := level.lives
+	var kills := level.stats.kills
+	var damage := level.stats.get_total_damage()
+	var duration := level.stats.duration
+	var wave_text := level.hud.wave_label.text
+	_check(saved.gold == gold and saved.lives == lives and saved.towers.size() == 3, "avec l'or, les vies et les tours")
+	_check(SavedGame.describe(saved) == "Niveau 1-1  ·  Moyen  ·  vague 2 / 5", "décrite par son niveau, son mode et la vague à venir")
+	await _free(level)
+
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	var resume_button: Button = title.get_node("%ResumeButton")
+	_check(resume_button.visible and resume_button.has_focus() and title.get_node("%ResumeInfo").text.ends_with("vague 2 / 5"),
+		"l'écran titre propose de la reprendre")
+	title.show_play_menu(true)
+	_check(not resume_button.visible, "le bouton se cache dans le menu Jouer")
+	title.show_play_menu(false)
+	resume_button.pressed.emit()
+	await process_frame
+	await process_frame
+	level = current_scene as Level
+	_check(level != null and level.scene_file_path == LEVEL_01.resource_path, "Reprendre rouvre le niveau")
+	if level == null:
+		return
+	_check(level.gold == gold and level.lives == lives and level.spawner.current_wave == 0, "même or, mêmes vies, même vague")
+	_check(level.hud.wave_label.text == wave_text, "le HUD en est à la même vague (%s)" % wave_text)
+	var restored := level.map.get_occupant(Vector2i(3, 3)) as Tower
+	_check(level.get_towers().size() == 3 and restored != null and restored.data == CANNON and restored.level == 2
+		and restored.target_mode == Tower.TargetMode.STRONGEST, "les tours reviennent à leur place, améliorées, avec leur cible")
+	_check(not restored.refundable and level.undo_last_placement() == 0, "leurs poses d'avant la vague ne s'annulent plus")
+	_check(level.stats.kills == kills and is_equal_approx(level.stats.get_total_damage(), damage)
+		and absf(level.stats.duration - duration) < 1.0 and level.stats.towers_built == 3, "les statistiques suivent")
+	_check(level.can_start_next_wave(), "la vague suivante peut partir")
+	level.start_next_wave()
+	_check(level.spawner.current_wave == 1, "et c'est la deuxième")
+	level._end_game(false)
+	_check(not SavedGame.exists(), "la partie finie, la sauvegarde est effacée")
+	await _free(level)
+
+	# Mode infini et Conquête.
+	Engine.set_meta(Level.ENDLESS_META, true)
+	level = await _spawn_level(LEVEL_01)
+	level.spawner.current_wave = 7
+	level._wave_bonus_paid = 7
+	_check(level.autosave() and SavedGame.load_data().endless, "le mode infini s'enregistre aussi")
+	await _free(level)
+	SavedGame.resume(self)
+	await process_frame
+	await process_frame
+	level = current_scene as Level
+	_check(level != null and level.is_endless and level.spawner.current_wave == 7, "et se reprend en mode infini")
+	if level:
+		level._on_restart_requested()
+		_check(not SavedGame.exists(), "Recommencer abandonne la partie enregistrée")
+		await process_frame
+		await process_frame
+		if current_scene:
+			await _free(current_scene)
+	var challenge := DailyChallenge.for_date("2026-10-06")
+	Engine.set_meta(Level.CHALLENGE_META, challenge.date_key)
+	level = await _spawn_level(load(challenge.level_path))
+	level.spawner.current_wave = 2
+	level._wave_bonus_paid = 2
+	level.add_score(450)
+	_check(level.autosave() and SavedGame.load_data().challenge == "2026-10-06", "le défi du jour s'enregistre avec sa date")
+	await _free(level)
+	SavedGame.resume(self)
+	await process_frame
+	await process_frame
+	level = current_scene as Level
+	_check(level != null and level.challenge != null and level.challenge.date_key == "2026-10-06" and level.score == 450
+		and level.spawner.current_wave == 2, "et se reprend avec ses règles et son score")
+	if level:
+		await _free(level)
+	SavedGame.clear()
+	var run := Expedition.new()
+	run.rng_seed = 5
+	run.levels.assign([LEVEL_02.resource_path, LEVEL_01.resource_path, LEVEL_03.resource_path,
+		LEVEL_04.resource_path, LEVEL_05.resource_path])
+	run.index = 1
+	run.lives = 7
+	run.max_lives = 25
+	Engine.set_meta(Level.EXPEDITION_META, run.to_dict())
+	level = await _spawn_level(LEVEL_01)
+	level.spawner.current_wave = 1
+	level._wave_bonus_paid = 1
+	level.lives = 6
+	_check(level.autosave() and SavedGame.describe(SavedGame.load_data()).contains("Expédition"),
+		"une étape d'Expédition s'enregistre")
+	await _free(level)
+	SavedGame.resume(self)
+	await process_frame
+	await process_frame
+	level = current_scene as Level
+	_check(level != null and level.expedition != null and level.expedition.index == 1 and level.lives == 6
+		and level.starting_lives == 25 and level.spawner.current_wave == 1, "et se reprend à la même étape, avec ses vies")
+	if level:
+		await _free(level)
+	SavedGame.clear()
+	level = await _spawn_level(CONQUEST_01)
+	level.spawner.current_wave = 0
+	level._wave_bonus_paid = 0
+	_check(not level.can_save_game() and not level.autosave(), "la Conquête ne s'enregistre pas")
+	await _free(level)
+	await _free(title)
+
+
 func _test_sell_tower() -> void:
 	print("Vente des tours")
 	var level := await _spawn_level(LEVEL_01)
 	level.gold = 1000
 	var cell := Vector2i(2, 4)
 	var tower := level.place_tower(cell, CANNON)
+	# Comme après le lancement d'une vague : la pose ne peut plus être annulée.
+	tower.refundable = false
 	_check(tower.get_sell_value() == 35, "une tour neuve se revend 70 %% de son prix (35 or)")
 	level.upgrade_tower(tower)
 	_check(tower.get_total_cost() == 90 and tower.get_sell_value() == 63, "les améliorations comptent dans la revente")

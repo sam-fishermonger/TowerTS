@@ -29,6 +29,8 @@ var _gold := 0
 ## d'une tour (Tower -> int ; vide hors de ce mode).
 var essence_cost := Callable()
 var _essence := 0
+## Le bouton Vendre affiché est celui d'une pose annulable.
+var _shown_refundable := false
 ## Zone de l'écran que la fiche décrit (bouton ou tour).
 var _anchor_rect := Rect2()
 ## true : à côté de la zone (tour posée) ; false : au-dessus ou en dessous (bouton).
@@ -158,7 +160,7 @@ func _refresh() -> void:
 		level_label.visible = true
 		footer_label.visible = false
 		actions.visible = true
-		sell_button.text = tr("Vendre  ·  %d or") % tower.get_sell_value()
+		_refresh_sell_button()
 		target_button.visible = tower.uses_target_mode()
 		target_button.text = tr("Cible : %s") % tr(Tower.TARGET_MODE_NAMES[tower.target_mode])
 	else:
@@ -181,6 +183,22 @@ func _refresh() -> void:
 
 
 ## Bouton Améliorer (tour posée) ou prix en rouge s'il dépasse l'or (aperçu).
+## Pose annulable (jusqu'à la vague suivante ou au premier tir) : la vente rembourse tout,
+## et le bouton le dit.
+func _refresh_sell_button() -> void:
+	_shown_refundable = tower.refundable
+	sell_button.text = (tr("Annuler la pose  ·  %d or") if tower.refundable else tr("Vendre  ·  %d or")) \
+		% tower.get_sell_value()
+	sell_button.tooltip_text = tr("Remboursée en entier tant que la vague suivante n'est pas lancée (Ctrl+Z).") \
+		if tower.refundable else ""
+
+
+## La tour ouverte ne peut plus être remboursée en entier (elle a tiré) : le bouton change.
+func _process(_delta: float) -> void:
+	if visible and is_instance_valid(tower) and tower.refundable != _shown_refundable:
+		_refresh_sell_button()
+
+
 func _refresh_prices() -> void:
 	if not is_instance_valid(tower):
 		footer_label.add_theme_color_override("font_color",

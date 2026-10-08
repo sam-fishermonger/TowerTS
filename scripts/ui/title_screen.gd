@@ -36,6 +36,10 @@ var _konami_progress := 0
 var _konami_label: Label
 
 @onready var play_button: Button = %PlayButton
+## Reprendre la partie enregistrée entre deux vagues (SavedGame), s'il y en a une, et
+## sous le bouton, son niveau et sa vague.
+@onready var resume_button: Button = %ResumeButton
+@onready var resume_info: Label = %ResumeInfo
 @onready var campaign_button: Button = %CampaignButton
 @onready var tutorial_button: Button = %TutorialButton
 @onready var back_button: Button = %BackButton
@@ -63,6 +67,7 @@ var _konami_label: Label
 
 func _ready() -> void:
 	play_button.pressed.connect(show_play_menu.bind(true))
+	resume_button.pressed.connect(func() -> void: SavedGame.resume(get_tree()))
 	back_button.pressed.connect(show_play_menu.bind(false))
 	campaign_button.pressed.connect(func() -> void: open_level(get_campaign_start()))
 	tutorial_button.pressed.connect(func() -> void: open_level(Tutorial.LEVEL_PATH))
@@ -86,14 +91,15 @@ func _ready() -> void:
 	demo.level_started.connect(_on_demo_level_started)
 	if demo.level:
 		_on_demo_level_started(demo.level)
-	for button in [play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button,
+	for button in [resume_button, play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button,
 			expedition_button, editor_button, back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
-	play_button.grab_focus()
+	(resume_button if resume_button.visible else play_button).grab_focus()
 
 
-## Boutons du menu principal, et ceux du choix du mode (sous « Jouer »).
+## Boutons du menu principal (sans Reprendre, affiché seulement avec une partie
+## enregistrée), et ceux du choix du mode (sous « Jouer »).
 func get_main_buttons() -> Array[Button]:
 	return [play_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]
 
@@ -112,10 +118,11 @@ func show_play_menu(open: bool) -> void:
 	for button in get_main_buttons():
 		button.visible = not open
 	quit_button.visible = not open and not OS.has_feature("web")
+	_refresh_resume(not open)
 	for button in get_play_buttons():
 		button.visible = open
 	subtitle.text = "Jouer" if open else "Tower Defense"
-	(campaign_button if open else play_button).grab_focus()
+	(campaign_button if open else resume_button if resume_button.visible else play_button).grab_focus()
 
 
 ## Langue changée dans les Options : les textes fixes se traduisent seuls, les textes
@@ -254,6 +261,7 @@ func _refresh() -> void:
 	if endless_available > 0:
 		perks_button.text += "  ·  ∞ %d" % endless_available
 	reset_button.visible = any_won
+	_refresh_resume(not is_play_menu_open())
 	# Tant qu'il n'est ni fini ni passé, le tutoriel est conseillé.
 	tutorial_button.text = tr("Tutoriel") if Tutorial.is_done() else tr("Tutoriel  ·  conseillé")
 	# Le meilleur score du défi du jour, s'il a déjà été joué aujourd'hui.
@@ -277,6 +285,15 @@ func _refresh() -> void:
 	achievements_button.text = tr("Succès")
 	if unlocked > 0:
 		achievements_button.text += "  ·  %d / %d" % [unlocked, Achievements.LIST.size()]
+
+## Bouton Reprendre : seulement dans le menu principal, et s'il y a une partie enregistrée.
+func _refresh_resume(shown: bool) -> void:
+	var saved := SavedGame.load_data()
+	resume_button.visible = shown and not saved.is_empty()
+	resume_info.visible = resume_button.visible
+	if not saved.is_empty():
+		resume_info.text = SavedGame.describe(saved)
+
 
 ## Le panneau grandit en apparaissant, puis les lignes du menu s'affichent en cascade.
 func _play_intro() -> void:
@@ -315,5 +332,6 @@ func _on_demo_level_started(level: Level) -> void:
 
 func _on_reset_confirmed() -> void:
 	Progress.reset_campaign()
+	SavedGame.clear()
 	_refresh()
 	show_play_menu(false)

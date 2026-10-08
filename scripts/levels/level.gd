@@ -32,6 +32,9 @@ const CUSTOM_META := &"level_custom"
 ## open_expedition()) : l'expédition en cours (Expedition.to_dict()), lue et effacée au lancement.
 const EXPEDITION_META := &"level_expedition"
 const EMPTY_LEVEL := "res://scenes/levels/level.tscn"
+## Méta du moteur posée juste avant de reprendre une partie enregistrée (SavedGame.resume()) :
+## son dictionnaire, lu et effacé au lancement du niveau, qui remet la partie en l'état.
+const RESUME_META := &"level_resume"
 const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 
 @export var level_name := "Niveau"
@@ -151,6 +154,10 @@ var _counted_elite_kills := 0
 ## Tirage des bonus des coffres (graine du niveau : une partie rejouée de la même façon
 ## donne les mêmes bonus).
 var _chest_rng := RandomNumberGenerator.new()
+## Tours posées, de la plus ancienne à la plus récente (pour annuler la dernière pose).
+var _placed_towers: Array[Tower] = []
+## La partie a été enregistrée (ou reprise) : elle efface sa sauvegarde quand elle finit.
+var _has_saved_game := false
 ## Mode Expédition : coffres ouverts pendant qu'un choix de bonus était déjà affiché (ils
 ## sont proposés l'un après l'autre), et pause choisie par le joueur avant le choix.
 var _chest_choices_waiting := 0
@@ -211,6 +218,9 @@ func counts_achievements() -> bool:
 
 
 func _ready() -> void:
+	var resumed: Dictionary = Engine.get_meta(RESUME_META, {})
+	if not resumed.is_empty():
+		Engine.remove_meta(RESUME_META)
 	if Engine.has_meta(ENDLESS_META):
 		is_endless = Engine.get_meta(ENDLESS_META)
 		Engine.remove_meta(ENDLESS_META)
@@ -235,11 +245,13 @@ func _ready() -> void:
 	if expedition:
 		_chest_rng.seed = hash("%d/%d/coffres" % [expedition.rng_seed, expedition.index])
 	if not is_endless and not is_demo and not challenge and not is_tutorial:
-		difficulty = Difficulty.get_current()
-		# Pas de mutateurs en Expédition : ses règles à elle suffisent.
+		difficulty = resumed.get("difficulty", Difficulty.get_current())
+		# Pas de mutateurs en Expédition : ses règles à elle suffisent. Une partie reprise
+		# garde les mutateurs avec lesquels elle a commencé.
 		if custom_level.is_empty() and not conquest_mode and not expedition \
 				and Mutators.applies_to(campaign, scene_file_path):
-			mutators = Mutators.get_active()
+			var saved_mutators: Array = resumed.get("mutators", Mutators.get_active())
+			mutators.assign(saved_mutators)
 	if challenge:
 		spawner.apply_modifiers(challenge.get_health_multiplier(), challenge.get_count_multiplier(),
 			challenge.get_speed_multiplier())
@@ -318,6 +330,7 @@ func _ready() -> void:
 	hud.next_wave_requested.connect(start_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
 	hud.sell_requested.connect(sell_tower)
+	hud.undo_requested.connect(undo_last_placement)
 	hud.tower_details_closed.connect(inspect_tower.bind(null))
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
@@ -325,7 +338,7 @@ func _ready() -> void:
 	hud.power_selected.connect(select_power)
 	placer.power_selection_changed.connect(hud.set_selected_power)
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
-	spawner.wave_started.connect(func(_index: int) -> void: _refresh_hud())
+	spawner.wave_started.connect(func(_index: int) -> void: _on_wave_started())
 	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
 	# Les bonus de l'arbre des améliorations comptent comme des vies de départ : les
 	# étoiles se calculent sur ce total.
@@ -363,6 +376,8 @@ func _ready() -> void:
 		tutorial = Tutorial.new()
 		add_child(tutorial)
 		tutorial.setup(self)
+	if not resumed.is_empty():
+		restore_saved_game(resumed)
 	Sound.play_music()
 
 
@@ -416,9 +431,14 @@ func get_title() -> String:
 
 
 ## Changement de langue (menu Options en jeu) : le titre est composé, le HUD refait le reste.
+## Le jeu passe en arrière-plan (téléphone) ou se ferme : la partie est enregistrée si
+## elle est entre deux vagues.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		hud.level_label.text = get_title()
+	elif what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST,
+			NOTIFICATION_WM_GO_BACK_REQUEST] and is_node_ready():
+		autosave()
 
 
 func _exit_tree() -> void:
@@ -550,8 +570,25 @@ func _route_for(parent: Enemy, data: EnemyData) -> Curve2D:
 func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	if not can_place_tower(cell, data):
 		return null
+	var tower := _add_tower(cell, data)
+	# Jusqu'à la vague suivante (ou son premier tir), la pose peut être annulée.
+	tower.refundable = not is_demo
+	gold -= data.get_cost()
+	stats.on_tower_placed(tower)
+	Sound.play(&"build")
+	if conquest:
+		# En Conquête, la tour n'est qu'un chantier : les ouvriers vont la bâtir.
+		conquest.start_site(tower)
+	refresh_boosts()
+	autosave()
+	return tower
+
+
+## Met une tour sur la carte, sans rien payer (pose, partie reprise), au niveau donné.
+func _add_tower(cell: Vector2i, data: TowerData, at_level := 1) -> Tower:
 	var tower: Tower = data.scene.instantiate()
 	tower.data = data
+	tower.level = at_level
 	tower.upgrades_locked = (challenge != null and not challenge.allows_upgrades()) \
 		or not DailyChallenge.allows_upgrades_of(mutators)
 	tower.projectile_container = projectiles
@@ -562,14 +599,25 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	tower.sabotage_changed.connect(func(_tower: Tower) -> void: refresh_boosts())
 	refresh_tower_bonuses(tower)
 	map.occupy(cell, tower)
-	gold -= data.get_cost()
-	stats.on_tower_placed(tower)
-	Sound.play(&"build")
-	if conquest:
-		# En Conquête, la tour n'est qu'un chantier : les ouvriers vont la bâtir.
-		conquest.start_site(tower)
-	refresh_boosts()
+	_placed_towers.append(tower)
 	return tower
+
+
+## Dernière tour posée dont la pose peut encore être annulée (null sinon).
+func get_undoable_tower() -> Tower:
+	for i in range(_placed_towers.size() - 1, -1, -1):
+		var tower := _placed_towers[i]
+		if is_instance_valid(tower) and tower.is_alive and tower.refundable:
+			return tower
+	return null
+
+
+## Annule la dernière pose : la tour est remboursée en entier (pose et améliorations),
+## tant que la vague suivante n'est pas lancée et qu'elle n'a pas tiré. Renvoie l'or rendu
+## (0 s'il n'y a rien à annuler).
+func undo_last_placement() -> int:
+	var tower := get_undoable_tower()
+	return sell_tower(tower) if tower else 0
 
 
 ## Mode Conquête : un chantier vient d'être fini, la tour entre en jeu.
@@ -598,10 +646,12 @@ func upgrade_tower(tower: Tower) -> bool:
 	stats.on_tower_upgraded(tower, cost)
 	Sound.play(&"upgrade")
 	refresh_boosts()
+	autosave()
 	return true
 
 
-## Vend la tour : elle quitte la carte et rend une partie de son prix.
+## Vend la tour : elle quitte la carte et rend une partie de son prix (tout son prix si
+## sa pose peut encore être annulée, voir Tower.refundable).
 ## Renvoie l'or rendu (0 si la vente est impossible).
 func sell_tower(tower: Tower) -> int:
 	if not is_instance_valid(tower) or not tower.is_alive or is_over:
@@ -612,12 +662,18 @@ func sell_tower(tower: Tower) -> int:
 	map.release(tower.cell)
 	if conquest:
 		conquest.refund(tower)
-	stats.on_tower_sold(tower, value)
-	_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
+	if tower.refundable:
+		stats.on_tower_undone(tower)
+		_show_floating_text(tr("Pose annulée  +%d") % value, GOLD_TEXT_COLOR, tower.global_position, 16)
+	else:
+		stats.on_tower_sold(tower, value)
+		_show_floating_text("+%d" % value, GOLD_TEXT_COLOR, tower.global_position, 16)
+	_placed_towers.erase(tower)
 	tower.despawn()
 	gold += value
 	Sound.play(&"sell")
 	refresh_boosts()
+	autosave()
 	return value
 
 
@@ -783,6 +839,13 @@ func set_game_speed(speed: float) -> void:
 
 
 # --- Vagues et ennemis ----------------------------------------------------
+
+## Une vague part : les poses de l'entracte ne peuvent plus être annulées.
+func _on_wave_started() -> void:
+	for tower in get_towers():
+		tower.refundable = false
+	_refresh_hud()
+
 
 func can_start_next_wave() -> bool:
 	return not is_over and not is_paused and not is_choosing_towers and not spawner.is_spawning \
@@ -984,6 +1047,9 @@ func _check_wave_cleared() -> void:
 		_end_game(true)
 	elif conquest:
 		conquest.on_wave_cleared()
+	else:
+		# Après le coup fatal, compté aux dégâts juste après la mort du dernier monstre.
+		autosave.call_deferred()
 
 
 func _end_game(victory: bool) -> void:
@@ -996,6 +1062,9 @@ func _end_game(victory: bool) -> void:
 	if is_demo:
 		game_over.emit(victory)
 		return
+	if _has_saved_game:
+		SavedGame.clear()
+		_has_saved_game = false
 	_count_kills()
 	if conquest and counts_achievements():
 		_announce_achievements(Achievements.add_counters({stone_mined = stats.stone_mined}))
@@ -1217,6 +1286,125 @@ func _count_kills() -> void:
 	_announce_achievements(Achievements.add_counters({kills = kills, elite_kills = elite_kills}))
 
 
+# --- Partie enregistrée ---------------------------------------------------------
+
+## Les parties de la campagne, des niveaux libres, du mode infini, du défi du jour et de
+## l'éditeur s'enregistrent ; pas le tutoriel, la Conquête (ses ouvriers et ses chantiers
+## travaillent pendant les vagues) ni la partie de l'écran titre.
+func can_save_game() -> bool:
+	return not is_demo and not is_tutorial and not conquest_mode and conquest == null
+
+
+## La partie est entre deux vagues : carte vidée, bonus versés, rien en route.
+func is_between_waves() -> bool:
+	return not is_over and not is_choosing_towers and not spawner.is_spawning and _alive_enemy_count() == 0 \
+		and _wave_bonus_paid == spawner.current_wave and not hud.chest_choice
+
+
+## Enregistre la partie si elle est entre deux vagues et qu'elle a commencé (une vague
+## repoussée ou une tour posée). Renvoie true si elle a été enregistrée.
+func autosave() -> bool:
+	if not can_save_game() or not is_node_ready() or not is_between_waves() \
+			or (spawner.current_wave < 0 and get_towers().is_empty()):
+		return false
+	save_game()
+	return true
+
+
+func save_game() -> void:
+	SavedGame.store(to_saved_game())
+	_has_saved_game = true
+
+
+## La partie en valeurs simples (voir SavedGame) : de quoi la remettre en l'état au début
+## de la vague suivante.
+func to_saved_game() -> Dictionary:
+	var tower_entries: Array[Dictionary] = []
+	for tower in get_towers():
+		tower_entries.append({"id": tower.get_instance_id(), "data": tower.data.resource_path, "cell": tower.cell,
+			"level": tower.level, "target": tower.target_mode, "refundable": tower.refundable})
+	var types := PackedStringArray()
+	for data in tower_types:
+		types.append(data.resource_path)
+	return {
+		"version": SavedGame.VERSION,
+		"path": scene_file_path,
+		"level_name": level_name,
+		"endless": is_endless,
+		"challenge": challenge.date_key if challenge else "",
+		"custom": custom_level,
+		"expedition": expedition.to_dict() if expedition else {},
+		"difficulty": difficulty,
+		"mutators": mutators,
+		"wave": spawner.current_wave,
+		"wave_count": -1 if is_endless else spawner.get_wave_count(),
+		"gold": gold,
+		"lives": lives,
+		"starting_lives": starting_lives,
+		"score": score,
+		"tower_types": types,
+		"towers": tower_entries,
+		"stats": stats.to_dict(),
+		"chest_levels": chest_levels,
+		"power_cooldowns": power_cooldowns,
+		"spawner_rng": spawner._rng.state,
+		"chest_rng": _chest_rng.state,
+		"achievements": unlocked_achievements,
+		"counted_kills": _counted_kills,
+		"counted_elite_kills": _counted_elite_kills,
+		"endless_record_before": _endless_record_before,
+		"saved_at": Time.get_unix_time_from_system(),
+	}
+
+
+## Remet en l'état une partie enregistrée (to_saved_game()), juste après le lancement du niveau.
+func restore_saved_game(data: Dictionary) -> void:
+	_has_saved_game = true
+	var types: Array[TowerData] = []
+	for path: String in data.get("tower_types", PackedStringArray()):
+		if ResourceLoader.exists(path):
+			types.append(load(path))
+	if is_choosing_towers and not types.is_empty():
+		choose_towers(types)
+	chest_levels = data.get("chest_levels", {})
+	spawner.current_wave = data.get("wave", -1)
+	_wave_bonus_paid = spawner.current_wave
+	spawner._rng.state = data.get("spawner_rng", spawner._rng.state)
+	_chest_rng.state = data.get("chest_rng", _chest_rng.state)
+	starting_lives = data.get("starting_lives", starting_lives)
+	var new_ids := {}
+	for entry: Dictionary in data.get("towers", []):
+		if not ResourceLoader.exists(entry.get("data", "")) or not map.is_cell_buildable(entry.get("cell", Vector2i(-1, -1))):
+			continue
+		var tower_data: TowerData = load(entry.data)
+		var tower := _add_tower(entry.cell, tower_data, clampi(entry.get("level", 1), 1, tower_data.get_max_level()))
+		tower.target_mode = entry.get("target", Tower.TargetMode.FIRST)
+		tower.refundable = entry.get("refundable", false)
+		new_ids[entry.get("id", 0)] = tower.get_instance_id()
+	stats.from_dict(data.get("stats", {}), new_ids)
+	var cooldowns: Array = data.get("power_cooldowns", [])
+	if cooldowns.size() == power_cooldowns.size():
+		for i in cooldowns.size():
+			power_cooldowns[i] = cooldowns[i]
+	for id: String in data.get("achievements", []):
+		unlocked_achievements.append(id)
+	_counted_kills = data.get("counted_kills", stats.kills)
+	_counted_elite_kills = data.get("counted_elite_kills", stats.elite_kills)
+	_endless_record_before = data.get("endless_record_before", _endless_record_before)
+	score = data.get("score", 0)
+	if challenge:
+		hud.set_score(score)
+	# Règles du défi ou des mutateurs : affichées jusqu'à la première vague.
+	if spawner.current_wave >= 0:
+		hud.hide_challenge_rules()
+	if not chest_levels.is_empty():
+		hud.set_interest_rules(get_interest_rate(), get_interest_cap())
+		hud.update_chest_bonuses(chest_levels)
+	refresh_boosts()
+	gold = data.get("gold", gold)
+	lives = data.get("lives", lives)
+
+
 ## Débloque des succès (sauf dans la partie de l'écran titre) et annonce ceux qui
 ## ne l'étaient pas encore.
 func unlock_achievements(ids: Array[String]) -> void:
@@ -1236,6 +1424,9 @@ func _announce_achievements(ids: Array[String]) -> void:
 
 func _on_restart_requested() -> void:
 	get_tree().paused = false
+	# Recommencer, c'est abandonner la partie en cours.
+	if _has_saved_game:
+		SavedGame.clear()
 	if expedition:
 		# L'expédition ne se rejoue pas étape par étape : on en tire une nouvelle.
 		Level.open_expedition(get_tree(), Expedition.create())
@@ -1260,6 +1451,7 @@ func _on_next_level_requested() -> void:
 
 func _on_menu_requested() -> void:
 	get_tree().paused = false
+	autosave()
 	# Expédition quittée en route : les étapes déjà franchies comptent pour le record.
 	if expedition and not is_over:
 		Expedition.record(expedition.index)

@@ -80,6 +80,8 @@ func _prepare_progress() -> void:
 	Engine.set_meta(Progress.SAVE_PATH_META, SAVE_PATH)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	Progress.clear_cache()
+	# Pas de partie enregistrée : l'écran titre n'a pas de bouton Reprendre.
+	SavedGame.clear()
 	var stars := [3, 3, 3, 3, 3, 3, 3, 3, 2, 3]
 	for i in stars.size():
 		Progress.record_victory(CAMPAIGN.levels[i], stars[i])
