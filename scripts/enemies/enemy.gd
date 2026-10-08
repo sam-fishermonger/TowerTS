@@ -56,6 +56,10 @@ const RAID_MAX_TIME := 8.0
 const RAID_COOLDOWN := 3.0
 const RAID_SEARCH_INTERVAL := 0.5
 const RAID_COLOR := Color(1.0, 0.55, 0.2)
+## Voleurs : secondes pour vider un Dépôt, secondes au plus loin du chemin, et couleur.
+const THEFT_TIME := 1.5
+const THEFT_MAX_TIME := 12.0
+const THIEF_COLOR := Color(0.4, 0.9, 0.55)
 ## Porteurs (voir `carried`) : vie multipliée, et taille du butin dessiné au-dessus d'eux.
 const CARRIER_HEALTH := 1.5
 const CARRIER_COLOR := Color(1.0, 0.82, 0.25)
@@ -74,7 +78,7 @@ const SABOTAGE_RETRY := 0.25
 const SABOTAGE_FLASH_DURATION := 0.35
 const SABOTAGE_COLOR := Color(1.0, 0.85, 0.3)
 
-## Pillard : sur le chemin, en route vers sa cible, ou de retour vers le chemin.
+## Pillard ou Voleur : sur le chemin, en route vers sa cible, ou de retour vers le chemin.
 enum RaidState { NONE, GOING, RETURNING }
 
 @export var data: EnemyData
@@ -152,6 +156,12 @@ var _burrow_dust_left := 0.0
 var _sabotage_cooldown := 0.0
 var _sabotage_flash_left := 0.0
 var _sabotage_flash_to := Vector2.ZERO
+## Voleur : pierre et essence volées (lâchées à sa mort), et s'il a déjà pillé (un seul
+## pillage par Voleur, même s'il n'a rien trouvé).
+var stolen_stone := 0
+var stolen_essence := 0
+var has_stolen := false
+var _steal_time := 0.0
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -303,7 +313,7 @@ func _process(delta: float) -> void:
 		return
 	if data.burrow_interval > 0.0:
 		_update_burrow(delta)
-	if data.raider and _update_raid(delta):
+	if (data.raider or data.thief) and _update_raid(delta):
 		return
 	progress += get_speed() * delta
 	if progress >= _path_length:
@@ -577,13 +587,16 @@ func is_raiding() -> bool:
 
 
 ## Pillard : cherche une cible à portée, va la frapper, puis revient sur le chemin là où
-## il l'a quitté. Renvoie true tant qu'il est hors du chemin (il n'y avance pas).
+## il l'a quitté. Voleur : de même avec un Dépôt bâti, qu'il pille une fois. Renvoie true
+## tant qu'il est hors du chemin (il n'y avance pas).
 func _update_raid(delta: float) -> bool:
 	if _raid_state == RaidState.NONE:
+		if data.thief and has_stolen:
+			return false
 		_raid_cooldown -= delta
 		if _raid_cooldown > 0.0:
 			return false
-		raid_target = _find_raid_target()
+		raid_target = _find_theft_target() if data.thief else _find_raid_target()
 		if raid_target == null:
 			_raid_cooldown = RAID_SEARCH_INTERVAL
 			return false
@@ -593,10 +606,17 @@ func _update_raid(delta: float) -> bool:
 	var step := get_speed() * delta
 	if _raid_state == RaidState.GOING:
 		_raid_time += delta
-		if not is_instance_valid(raid_target) or not raid_target.can_be_raided() or _raid_time > RAID_MAX_TIME:
+		if not is_instance_valid(raid_target) or not raid_target.can_be_raided() \
+				or _raid_time > (THEFT_MAX_TIME if data.thief else RAID_MAX_TIME):
 			_raid_state = RaidState.RETURNING
-		elif global_position.distance_to(raid_target.global_position) > data.radius + 14.0:
+		elif global_position.distance_to(raid_target.global_position) > data.radius + (24.0 if data.thief else 14.0):
 			_move_toward(raid_target.global_position, step)
+			_steal_time = 0.0
+		elif data.thief:
+			_steal_time += delta
+			if _steal_time >= THEFT_TIME:
+				raid_target.conquest.steal(self, raid_target.global_position)
+				_raid_state = RaidState.RETURNING
 		else:
 			raid_target.take_damage(data.raid_damage * delta)
 	if _raid_state == RaidState.RETURNING and _move_toward(_raid_return, step):
@@ -618,6 +638,27 @@ func _find_raid_target() -> Node2D:
 			best = target
 			best_distance = distance
 	return best
+
+
+## Voleur : le Dépôt bâti le plus proche à portée (null si aucun).
+func _find_theft_target() -> Node2D:
+	var best: Node2D = null
+	var best_distance := data.raid_radius
+	for node in get_tree().get_nodes_in_group(Conquest.THEFT_TARGET_GROUP):
+		var target := node as Node2D
+		var distance := global_position.distance_to(target.global_position)
+		if distance <= best_distance and target.can_be_raided():
+			best = target
+			best_distance = distance
+	return best
+
+
+## Voleur : il emporte ce qu'il a volé (`stone`, `essence`), drapé sur son dos.
+func carry_stolen(stone: int, essence: int) -> void:
+	has_stolen = true
+	stolen_stone += stone
+	stolen_essence += essence
+	queue_redraw()
 
 
 ## Marche tout droit vers un point. Renvoie true une fois arrivé.
@@ -736,6 +777,9 @@ func _draw() -> void:
 		draw_line(mark + Vector2(-3, -1.5), mark + Vector2(3, -1.5), CONSECRATED_COLOR, 2.0)
 	if data.raider:
 		_draw_torch()
+	if data.thief:
+		draw_circle(Vector2.ZERO, data.radius * 1.3, Color(THIEF_COLOR, 0.16 if not is_raiding() else 0.3))
+		_draw_sack(Vector2(-data.radius * 0.7, -data.radius * 0.5), data.radius * 0.75)
 	if carried >= 0:
 		Loot.draw_item(self, carried, Vector2(0, -data.radius - 2.0), CARRIED_SIZE)
 	if data.texture:
@@ -786,9 +830,9 @@ func _draw_relief() -> void:
 		var radius := lerpf(data.radius, data.heal_radius, t)
 		draw_polyline(Relief.ellipse(Vector2.ZERO, radius, radius * ground.y, 0.0, TAU, 40),
 			Color(_heal_color(), 0.6 * (1.0 - t)), 3.0, true)
-	if data.raider:
+	if data.raider or data.thief:
 		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), u * 1.5, u * 1.5 * ground.y, 0.0, TAU, 24),
-			Color(RAID_COLOR, 0.18 if not is_raiding() else 0.32))
+			Color(THIEF_COLOR if data.thief else RAID_COLOR, 0.18 if not is_raiding() else 0.32))
 	var tint := Color(0.6, 0.8, 1.0) if is_slowed() or is_frozen() else Color.WHITE
 	var facing_left := _is_facing_left(_heading)
 	var phase := progress if not is_frozen() else 0.0
@@ -808,6 +852,9 @@ func _draw_relief() -> void:
 		draw_set_transform(body + Vector2(0, u * 0.3))
 		_draw_torch_only()
 		draw_set_transform(Vector2.ZERO)
+	if data.thief:
+		# Le sac sur le dos, du côté opposé à la marche.
+		_draw_sack(body + Vector2(u * (0.7 if facing_left else -0.7), -u * 0.55), u * 0.8)
 	var marks := Vector2(0, -Creature.top_height(data) - 14.0)
 	if carried >= 0:
 		# Le butin flotte au-dessus de sa barre de vie.
@@ -886,6 +933,24 @@ func _draw_torch_only() -> void:
 	var flame := hand + Vector2(3.5, -12)
 	draw_colored_polygon(PackedVector2Array([flame + Vector2(-3.5, 1), flame + Vector2(0, -7), flame + Vector2(3.5, 1)]), RAID_COLOR)
 	draw_circle(flame + Vector2(0, -1), 2.0, Color(1.0, 0.9, 0.4))
+
+
+## Voleur : un sac de toile sur le dos, plat tant qu'il est vide, gonflé et taché de
+## pierre et d'essence une fois qu'il a pillé.
+func _draw_sack(center: Vector2, size: float) -> void:
+	var full := stolen_stone + stolen_essence > 0
+	var r := size * (0.75 if full else 0.5)
+	var cloth := Color(0.62, 0.48, 0.3)
+	draw_circle(center, r + 1.5, Relief.OUTLINE)
+	draw_circle(center, r, cloth)
+	# Le nœud du sac, au-dessus.
+	draw_line(center + Vector2(-r * 0.35, -r * 0.95), center + Vector2(r * 0.35, -r * 0.95), Relief.OUTLINE, 3.0)
+	draw_line(center + Vector2(-r * 0.3, -r * 0.95), center + Vector2(r * 0.3, -r * 0.95), cloth.lightened(0.2), 1.5)
+	if full:
+		if stolen_stone > 0:
+			draw_circle(center + Vector2(-r * 0.3, r * 0.15), r * 0.32, Loot.STONE_COLOR)
+		if stolen_essence > 0:
+			draw_colored_polygon(Conquest.crystal_points(center + Vector2(r * 0.3, 0.0), r * 0.9), Loot.ESSENCE_COLOR)
 
 
 ## Gelé : une gangue de glace par-dessus l'ennemi.

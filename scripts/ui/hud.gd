@@ -63,8 +63,9 @@ const GAMEPAD_HINT := "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·
 const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
-## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
-const POWER_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E]
+## Touches des pouvoirs, par position sur le clavier : Q, W, E, T en QWERTY (A, Z, E, T en
+## AZERTY).
+const POWER_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E, KEY_T]
 
 var _speed_group := ButtonGroup.new()
 var _gold := 0

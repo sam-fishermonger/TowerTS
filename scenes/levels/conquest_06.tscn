@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://resources/towers/frost.tres" id="t4_frost"]
 [ext_resource type="Resource" path="res://resources/towers/beam.tres" id="t5_beam"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/pillarde.tres" id="r_raider"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/chapardeuse.tres" id="v_thief"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/larve.tres" id="e_larve"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/rodeur.tres" id="e_rodeur"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/scarabee.tres" id="e_scarabee"]
@@ -222,6 +223,8 @@ conquest_mode = true
 essence_cells = Array[Vector2i]([Vector2i(12, 5), Vector2i(6, 0)])
 raider = ExtResource("r_raider")
 raiders_per_wave = Array[int]([0, 0, 1, 1, 2, 2, 3, 3])
+thief = ExtResource("v_thief")
+thieves_per_wave = Array[int]([0, 0, 1, 1, 1, 2, 2, 2])
 conquest_starting_stone = 120
 
 [node name="Map" parent="."]

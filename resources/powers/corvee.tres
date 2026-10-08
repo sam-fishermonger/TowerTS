@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Power" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/power.gd" id="1_power"]
+
+[resource]
+script = ExtResource("1_power")
+id = "corvee"
+display_name = "Corvée"
+description = "Mode Conquête : pendant 15 secondes, les ouvriers marchent, minent et bâtissent deux fois plus vite."
+kind = 3
+color = Color(1, 0.75, 0.3, 1)
+cooldown = 60.0
+duration = 15.0

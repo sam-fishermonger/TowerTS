@@ -75,6 +75,13 @@ var base_name := ""
 @export var raid_radius := 130.0
 ## Dégâts par seconde qu'il fait à un ouvrier ou à un bâtiment.
 @export var raid_damage := 30.0
+## Voleur (mode Conquête) : il quitte le chemin pour piller un Dépôt bâti à portée
+## (raid_radius), ou le QG s'il l'atteint, et emporte de la pierre et de l'essence (voir
+## Enemy). Détruit, il lâche ce qu'il a volé.
+@export var thief := false
+## Pierre et essence qu'il emporte, au plus.
+@export var steal_stone := 20
+@export var steal_essence := 5
 
 @export_group("Division")
 ## Ennemi qui apparaît à sa place quand il est détruit (aucun si vide).
@@ -155,6 +162,9 @@ func get_abilities() -> Array[String]:
 		result.append(tr("Volant : survole le chemin en coupant les virages. Mortier, Lance-flammes et nuages ne l'atteignent pas."))
 	if raider:
 		result.append(tr("Pillard : quitte le chemin pour frapper les ouvriers et les bâtiments à portée (mode Conquête), puis y revient."))
+	if thief:
+		result.append(tr("Voleur : quitte le chemin pour piller un Dépôt à portée, ou le QG s'il l'atteint, et emporte %d pierre et %d essence (mode Conquête). Détruit, il lâche son butin.")
+			% [steal_stone, steal_essence])
 	if stealthy:
 		result.append(tr("Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même."))
 	if burrow_interval > 0.0:

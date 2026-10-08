@@ -612,10 +612,141 @@ column = 24.5
 row = 1
 unlocks_tower = "res://resources/towers/bell.tres"
 
+[sub_resource type="Resource" id="Perk_equipe"]
+script = ExtResource("2_perk")
+id = "equipe"
+display_name = "Équipe de renfort"
+description = "Conquête : chaque partie commence avec 1 ouvrier de plus."
+cost = 4
+column = 26.5
+row = 0
+conquest_workers_bonus = 1
+
+[sub_resource type="Resource" id="Perk_dortoirs"]
+script = ExtResource("2_perk")
+id = "dortoirs"
+display_name = "Dortoirs"
+description = "Conquête : 2 ouvriers de plus au maximum."
+cost = 5
+requires = Array[Resource]([SubResource("Perk_equipe")])
+column = 26.0
+row = 1
+conquest_max_workers_bonus = 2
+
+[sub_resource type="Resource" id="Perk_grande_equipe"]
+script = ExtResource("2_perk")
+id = "grande_equipe"
+display_name = "Grande équipe"
+description = "Conquête : chaque partie commence avec encore 1 ouvrier de plus."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_equipe")])
+column = 27.0
+row = 1
+conquest_workers_bonus = 1
+
+[sub_resource type="Resource" id="Perk_pouvoir_corvee"]
+script = ExtResource("2_perk")
+id = "pouvoir_corvee"
+display_name = "Corvée"
+description = "Pouvoir de la Conquête : pendant 15 secondes, les ouvriers marchent, minent et bâtissent deux fois plus vite."
+cost = 8
+requires = Array[Resource]([SubResource("Perk_dortoirs"), SubResource("Perk_grande_equipe")])
+column = 26.5
+row = 2
+unlocks_power = "res://resources/powers/corvee.tres"
+
+[sub_resource type="Resource" id="Perk_reserves"]
+script = ExtResource("2_perk")
+id = "reserves"
+display_name = "Réserves"
+description = "Conquête : chaque partie commence avec 30 pierres de plus."
+cost = 4
+column = 28.5
+row = 0
+conquest_stone_bonus = 30
+
+[sub_resource type="Resource" id="Perk_grand_depot"]
+script = ExtResource("2_perk")
+id = "grand_depot"
+display_name = "Grand Dépôt"
+description = "Conquête : les Voleurs ne peuvent pas prendre les 40 dernières pierres ni les 10 dernières essences."
+cost = 5
+requires = Array[Resource]([SubResource("Perk_reserves")])
+column = 28.0
+row = 1
+conquest_vault_stone = 40
+conquest_vault_essence = 10
+
+[sub_resource type="Resource" id="Perk_relais"]
+script = ExtResource("2_perk")
+id = "relais"
+display_name = "Relais"
+description = "Conquête : les Dépôts bâtis abritent et soignent les ouvriers, comme le QG."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_reserves")])
+column = 29.0
+row = 1
+conquest_depot_shelter = true
+
+[sub_resource type="Resource" id="Perk_chambre_forte"]
+script = ExtResource("2_perk")
+id = "chambre_forte"
+display_name = "Chambre forte"
+description = "Conquête : la réserve à l'abri des Voleurs passe à 100 pierres et 25 essences."
+cost = 8
+requires = Array[Resource]([SubResource("Perk_grand_depot")])
+column = 28.5
+row = 2
+conquest_vault_stone = 60
+conquest_vault_essence = 15
+
+[sub_resource type="Resource" id="Perk_murs_epais"]
+script = ExtResource("2_perk")
+id = "murs_epais"
+display_name = "Murs épais"
+description = "Conquête : les bâtiments ont 25 % de vie en plus."
+cost = 4
+column = 30.5
+row = 0
+conquest_building_health_multiplier = 1.25
+
+[sub_resource type="Resource" id="Perk_charpentiers"]
+script = ExtResource("2_perk")
+id = "charpentiers"
+display_name = "Charpentiers"
+description = "Conquête : les chantiers (tours et bâtiments) avancent 25 % plus vite."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_murs_epais")])
+column = 30.0
+row = 1
+conquest_build_speed_multiplier = 1.25
+
+[sub_resource type="Resource" id="Perk_tailleurs"]
+script = ExtResource("2_perk")
+id = "tailleurs"
+display_name = "Tailleurs de pierre"
+description = "Conquête : les tours demandent 20 % de pierre en moins."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_murs_epais")])
+column = 31.0
+row = 1
+conquest_stone_cost_multiplier = 0.8
+
+[sub_resource type="Resource" id="Perk_pierre_de_taille"]
+script = ExtResource("2_perk")
+id = "pierre_de_taille"
+display_name = "Pierre de taille"
+description = "Conquête : les bâtiments ont encore 40 % de vie en plus."
+cost = 7
+requires = Array[Resource]([SubResource("Perk_charpentiers"), SubResource("Perk_tailleurs")])
+column = 30.5
+row = 2
+conquest_building_health_multiplier = 1.4
+
 [resource]
 script = ExtResource("1_tree")
-branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts", "La Nécropole"])
-branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1), Color(0.72, 0.55, 0.95, 1)])
-branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 1])
-page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations", "Pouvoirs"])
-perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_censer"), SubResource("Perk_bell"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade")])
+branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts", "La Nécropole", "Ouvriers", "Dépôt", "Bâtiments"])
+branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1), Color(0.72, 0.55, 0.95, 1), Color(1, 0.72, 0.25, 1), Color(0.85, 0.65, 0.35, 1), Color(0.4, 0.88, 0.78, 1)])
+branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 4, 4, 4])
+page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations", "Pouvoirs", "Logistique"])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_censer"), SubResource("Perk_bell"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade"), SubResource("Perk_equipe"), SubResource("Perk_dortoirs"), SubResource("Perk_grande_equipe"), SubResource("Perk_pouvoir_corvee"), SubResource("Perk_reserves"), SubResource("Perk_grand_depot"), SubResource("Perk_relais"), SubResource("Perk_chambre_forte"), SubResource("Perk_murs_epais"), SubResource("Perk_charpentiers"), SubResource("Perk_tailleurs"), SubResource("Perk_pierre_de_taille")])

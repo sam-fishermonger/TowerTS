@@ -2274,8 +2274,8 @@ msgstr "Raiders (Conquest mode)"
 msgid "Améliorer  ·  %d or  ·  %d essence"
 msgstr "Upgrade  ·  %d gold  ·  %d essence"
 
-msgid "Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades et casernes, et protégez votre économie des Pillards. Les vagues partent seules."
-msgstr "Gather stone and essence with your workers, build towers, depots, houses, barricades and barracks, and protect your economy from Raiders. Waves start on their own."
+msgid "Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades et casernes, et protégez votre économie des Pillards et des Voleurs. Les vagues partent seules."
+msgstr "Gather stone and essence with your workers, build towers, depots, houses, barricades and barracks, and protect your economy from Raiders and Thieves. Waves start on their own."
 
 msgid "Bâtiments"
 msgstr "Buildings"
@@ -2921,6 +2921,142 @@ msgstr "Borer: every %s s, it digs under the path for %s s. Underground, no towe
 
 msgid "Saboteur : toutes les %s s, il éteint pendant %s s la tour la plus proche à sa portée (elle ne tire plus et ne détecte plus)."
 msgstr "Saboteur: every %s s, shuts down the nearest tower in range for %s s (it stops firing and detecting)."
+# --- Conquête : Voleurs, Corvée et page Logistique ------------------------------
+
+msgid "Voleur : quitte le chemin pour piller un Dépôt à portée, ou le QG s'il l'atteint, et emporte %d pierre et %d essence (mode Conquête). Détruit, il lâche son butin."
+msgstr "Thief: leaves the path to loot a Depot in range, or the HQ if it reaches it, and carries off %d stone and %d essence (Conquest mode). Destroyed, it drops its loot."
+
+msgid "Ouvriers x%s pendant %s s"
+msgstr "Workers x%s for %s s"
+
+msgid "Mode Conquête seulement"
+msgstr "Conquest mode only"
+
+msgid "-%d pierre"
+msgstr "-%d stone"
+
+msgid "-%d essence"
+msgstr "-%d essence"
+
+msgid "Volé ! %s"
+msgstr "Stolen! %s"
+
+msgid "Rien à voler"
+msgstr "Nothing to steal"
+
+msgid "Corvée !"
+msgstr "Rush!"
+
+msgid "Voleurs : %s"
+msgstr "Thieves: %s"
+
+msgid "Voleurs (mode Conquête)"
+msgstr "Thieves (Conquest mode)"
+
+msgid "Volé par les Voleurs"
+msgstr "Taken by Thieves"
+
+msgid "Chapardeuse"
+msgstr "Pilferer"
+
+msgid "Fourmi maigre et rapide : elle file vers les Dépôts, se remplit les mandibules de pierre et d'essence et repart vers la ruche."
+msgstr "Thin, fast ant: it dashes to the Depots, fills its mandibles with stone and essence and heads back to the hive."
+
+msgid "Siphonneur"
+msgstr "Siphoner"
+
+msgid "Petit robot pompeur : il se branche sur les Dépôts pour en aspirer la pierre et l'essence, puis reprend sa route."
+msgstr "Small pumping robot: it plugs into the Depots to suck out their stone and essence, then goes on its way."
+
+msgid "Tire-laine"
+msgstr "Pickpocket"
+
+msgid "Voleur à la tire : il se faufile jusqu'aux Dépôts, remplit son sac et file vers la sortie."
+msgstr "Sneak thief: it slips into the Depots, fills its sack and runs for the exit."
+
+msgid "Détrousseur"
+msgstr "Robber"
+
+msgid "Goule chapardeuse : elle vide les Dépôts de leur pierre et de leur essence et emporte tout dans la tombe."
+msgstr "Thieving ghoul: it empties the Depots of their stone and essence and takes it all to the grave."
+
+msgid "Corvée"
+msgstr "Rush"
+
+msgid "Mode Conquête : pendant 15 secondes, les ouvriers marchent, minent et bâtissent deux fois plus vite."
+msgstr "Conquest mode: for 15 seconds, workers walk, mine and build twice as fast."
+
+msgid "Logistique"
+msgstr "Logistics"
+
+msgid "Équipe de renfort"
+msgstr "Extra Crew"
+
+msgid "Conquête : chaque partie commence avec 1 ouvrier de plus."
+msgstr "Conquest: every game starts with 1 more worker."
+
+msgid "Dortoirs"
+msgstr "Dormitories"
+
+msgid "Conquête : 2 ouvriers de plus au maximum."
+msgstr "Conquest: 2 more workers at most."
+
+msgid "Pouvoir de la Conquête : pendant 15 secondes, les ouvriers marchent, minent et bâtissent deux fois plus vite."
+msgstr "Conquest power: for 15 seconds, workers walk, mine and build twice as fast."
+
+msgid "Grande équipe"
+msgstr "Big Crew"
+
+msgid "Conquête : chaque partie commence avec encore 1 ouvrier de plus."
+msgstr "Conquest: every game starts with yet another worker."
+
+msgid "Réserves"
+msgstr "Reserves"
+
+msgid "Conquête : chaque partie commence avec 30 pierres de plus."
+msgstr "Conquest: every game starts with 30 more stone."
+
+msgid "Grand Dépôt"
+msgstr "Great Depot"
+
+msgid "Conquête : les Voleurs ne peuvent pas prendre les 40 dernières pierres ni les 10 dernières essences."
+msgstr "Conquest: Thieves cannot take the last 40 stone or the last 10 essence."
+
+msgid "Relais"
+msgstr "Relays"
+
+msgid "Conquête : les Dépôts bâtis abritent et soignent les ouvriers, comme le QG."
+msgstr "Conquest: built Depots shelter and heal workers, like the HQ."
+
+msgid "Chambre forte"
+msgstr "Strongroom"
+
+msgid "Conquête : la réserve à l'abri des Voleurs passe à 100 pierres et 25 essences."
+msgstr "Conquest: the reserve safe from Thieves rises to 100 stone and 25 essence."
+
+msgid "Murs épais"
+msgstr "Thick Walls"
+
+msgid "Conquête : les bâtiments ont 25 % de vie en plus."
+msgstr "Conquest: buildings have 25% more health."
+
+msgid "Charpentiers"
+msgstr "Carpenters"
+
+msgid "Conquête : les chantiers (tours et bâtiments) avancent 25 % plus vite."
+msgstr "Conquest: construction sites (towers and buildings) progress 25% faster."
+
+msgid "Tailleurs de pierre"
+msgstr "Stonecutters"
+
+msgid "Conquête : les tours demandent 20 % de pierre en moins."
+msgstr "Conquest: towers need 20% less stone."
+
+msgid "Pierre de taille"
+msgstr "Ashlar"
+
+msgid "Conquête : les bâtiments ont encore 40 % de vie en plus."
+msgstr "Conquest: buildings have another 40% more health."
 
 msgid "Pose annulée  +%d"
 msgstr "Placement undone  +%d"
