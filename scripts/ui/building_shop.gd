@@ -3,7 +3,7 @@ extends PanelContainer
 ## Mode Conquête : barre des bâtiments, ouverte au-dessus de la barre d'achat par le
 ## bouton « Bâtiments » (ou la touche B). Une case par bâtiment (Building) : son dessin,
 ## son nom et son prix ; une seule peut être enfoncée (le bâtiment à poser), et celles
-## qu'on ne peut pas payer sont grisées. Tant qu'elle est ouverte, les touches 1 à 5
+## qu'on ne peut pas payer sont grisées. Tant qu'elle est ouverte, les touches 1 à 6
 ## choisissent ses cases.
 
 ## Émis quand le joueur choisit un bâtiment à poser (-1 = aucun).

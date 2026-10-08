@@ -891,8 +891,8 @@ msgstr "Left click: place the tower  ·  Shift + click: place several  ·  Right
 msgid "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
 msgstr "Tap a tower in the bar, then tap a free tile twice to place it  ·  Tap it again in the bar to cancel  ·  Tap a placed tower for its card, an enemy for its own  ·  An aimed power lands where you tap"
 
-msgid "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  R : recruter un ouvrier  ·  B : bâtiments"
-msgstr "Conquest: towers also cost stone and workers build them  ·  Click a rock or a vein: send the miners there  ·  R: recruit a worker  ·  B: buildings"
+msgid "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
+msgstr "Conquest: towers also cost stone and workers build them  ·  Click a rock or a vein: send the miners there  ·  Click or drag a box over workers, or O: select them  ·  R: recruit a worker  ·  B: buildings"
 
 msgid "Pause"
 msgstr "Pause"
@@ -2206,7 +2206,7 @@ msgid "Démolir  ·  +%d or"
 msgstr "Demolish  ·  +%d gold"
 
 msgid "%d or · %d p · %d e"
-msgstr "%d gold · %d s · %d e"
+msgstr "%d gold · %d st · %d e"
 
 msgid "Chaque difficulté a ses propres étoiles (3 par niveau), qui comptent aussi pour l'arbre des améliorations."
 msgstr "Each difficulty has its own stars (3 per level), which also count for the upgrade tree."
@@ -2375,8 +2375,8 @@ msgstr "Essence: mined from crystal veins, or drawn by an Extractor built on top
 msgid "Un ouvrier de plus, au QG : il mine la pierre et l'essence, et bâtit tours et bâtiments."
 msgstr "One more worker, at HQ: mines stone and essence, and builds towers and buildings."
 
-msgid "Dépôt, Maison, Extracteur, Barricade et Caserne : posés comme les tours, bâtis par les ouvriers."
-msgstr "Depot, House, Extractor, Barricade and Barracks: placed like towers, built by workers."
+msgid "Dépôt, Maison, Extracteur, Barricade, Caserne et Atelier : posés comme les tours, bâtis par les ouvriers."
+msgstr "Depot, House, Extractor, Barricade, Barracks and Workshop: placed like towers, built by workers."
 
 msgid "Rapide et sans scrupules : il fond sur les ouvriers isolés et met le feu aux bâtiments avant de rejoindre la colonne."
 msgstr "Fast and ruthless: he swoops on lone workers and sets buildings on fire before rejoining the column."
@@ -2509,3 +2509,131 @@ msgstr "The HQ can't be on a burrow."
 
 msgid "Un terrier n'a pas de passage jusqu'au QG : enlevez des rochers."
 msgstr "A burrow has no way to the HQ: remove some rocks."
+
+msgid "Atelier"
+msgstr "Workshop"
+
+msgid "Lance des améliorations pour la partie (ouvriers, tours et monde) contre de l'or, de la pierre et de l'essence, une à la fois."
+msgstr "Researches upgrades for this game (workers, towers and world) for gold, stone and essence, one at a time."
+
+msgid "Ouvriers"
+msgstr "Workers"
+
+msgid "Bottes de marche"
+msgstr "Marching boots"
+
+msgid "Ouvriers : +15 % de vitesse de marche par niveau."
+msgstr "Workers: +15% walking speed per level."
+
+msgid "Grandes hottes"
+msgstr "Big baskets"
+
+msgid "Ouvriers : +1 pierre et +1 essence par voyage, par niveau."
+msgstr "Workers: +1 stone and +1 essence per trip, per level."
+
+msgid "Outils affûtés"
+msgstr "Sharpened tools"
+
+msgid "Ouvriers : minage et construction +20 % par niveau."
+msgstr "Workers: +20% mining and building speed per level."
+
+msgid "Poudre raffinée"
+msgstr "Refined powder"
+
+msgid "Tours : +8 % de dégâts par niveau."
+msgstr "Towers: +8% damage per level."
+
+msgid "Lunettes de visée"
+msgstr "Scopes"
+
+msgid "Tours : +6 % de portée par niveau."
+msgstr "Towers: +6% range per level."
+
+msgid "Mécanismes huilés"
+msgstr "Oiled mechanisms"
+
+msgid "Tours : +6 % de cadence de tir par niveau."
+msgstr "Towers: +6% fire rate per level."
+
+msgid "Primes de chasse"
+msgstr "Bounties"
+
+msgid "Monstres : +10 % d'or par niveau."
+msgstr "Monsters: +10% gold per level."
+
+msgid "Fortifications"
+msgstr "Fortifications"
+
+msgid "Bâtiments et Barricades : +30 % de vie par niveau."
+msgstr "Buildings and Barricades: +30% health per level."
+
+msgid "Forages profonds"
+msgstr "Deep drilling"
+
+msgid "Extracteurs : +25 % d'essence par niveau."
+msgstr "Extractors: +25% essence per level."
+
+msgid "Atelier pas prêt"
+msgstr "Workshop not ready"
+
+msgid "Niveau maximum"
+msgstr "Maximum level"
+
+msgid "Déjà en recherche"
+msgstr "Already being researched"
+
+msgid "Atelier occupé"
+msgstr "Workshop busy"
+
+msgid "Pas assez de ressources"
+msgstr "Not enough resources"
+
+msgid "Miner ×%d"
+msgstr "Mine ×%d"
+
+msgid "Bâtir ×%d"
+msgstr "Build ×%d"
+
+msgid "Au QG ×%d"
+msgstr "To HQ ×%d"
+
+msgid "%s : niveau %d"
+msgstr "%s: level %d"
+
+msgid "Recherche : %s, niveau %d  ·  %d s"
+msgstr "Researching: %s, level %d  ·  %d s"
+
+msgid "Choisissez une amélioration à lancer."
+msgstr "Pick an upgrade to research."
+
+msgid "Niveau max"
+msgstr "Max level"
+
+msgid "En cours · %d s"
+msgstr "In progress · %d s"
+
+msgid "Cliquez ici (ou O) pour les choisir tous, puis désignez-leur une tâche sur la carte."
+msgstr "Click here (or O) to select them all, then point them to a task on the map."
+
+msgid "Désignez un rocher, un filon, un chantier ou le QG"
+msgstr "Point to a rock, a vein, a construction site or the HQ"
+
+msgid "Au QG"
+msgstr "To HQ"
+
+msgid "Les ouvriers choisis rentrent au QG et y restent, à l'abri."
+msgstr "The selected workers go back to the HQ and stay there, safe."
+
+msgid "Automatique"
+msgstr "Automatic"
+
+msgid "Les ouvriers choisis reprennent les tâches que le jeu leur donne."
+msgstr "The selected workers go back to the tasks the game gives them."
+
+msgid "Relâcher les ouvriers choisis (Échap)."
+msgstr "Deselect the workers (Esc)."
+
+msgid "%d ouvrier choisi"
+msgid_plural "%d ouvriers choisis"
+msgstr[0] "%d worker selected"
+msgstr[1] "%d workers selected"

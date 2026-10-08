@@ -25,6 +25,8 @@ static func top_height(kind: int) -> float:
 			return 28.0
 		Building.Kind.BARRACKS:
 			return 46.0
+		Building.Kind.WORKSHOP:
+			return 40.0
 	return 32.0
 
 
@@ -41,6 +43,8 @@ static func draw(canvas: CanvasItem, kind: int, foot: Vector2, tint := Color.WHI
 			_draw_barricade(canvas, foot, color, tint)
 		Building.Kind.BARRACKS:
 			_draw_barracks(canvas, foot, color, tint)
+		Building.Kind.WORKSHOP:
+			_draw_workshop(canvas, foot, color, tint)
 
 
 ## Chantier : une dalle de pierre, le bâtiment en transparence, et un échafaudage de
@@ -209,6 +213,54 @@ static func _draw_barracks(canvas: CanvasItem, foot: Vector2, color: Color, tint
 	canvas.draw_circle(rack + Vector2(1, -9), 6.5, Relief.OUTLINE * tint, true, -1.0, true)
 	canvas.draw_circle(rack + Vector2(1, -9), 5.0, color.darkened(0.15) * tint, true, -1.0, true)
 	canvas.draw_circle(rack + Vector2(1, -9), 1.8, Color(1.0, 0.82, 0.3) * tint, true, -1.0, true)
+
+
+## Atelier : un appentis de pierre au toit de planches à la couleur du bâtiment, une
+## grande roue dentée sur la façade, une cheminée de forge et une enclume devant.
+static func _draw_workshop(canvas: CanvasItem, foot: Vector2, color: Color, tint: Color) -> void:
+	Relief.draw_shadow(canvas, foot + Vector2(6, 3), 30.0, 12.0, 0.3 * tint.a)
+	var width := 38.0
+	var depth := 24.0
+	var wall := 17.0
+	# Cheminée de forge au fond, à gauche, avant le reste.
+	var chimney := foot + Vector2(-10, -wall - 2.0) + DEPTH * depth * 0.6
+	_box(canvas, chimney, 7.0, 6.0, 16.0, STONE.darkened(0.15), tint, Color(0.18, 0.14, 0.12))
+	canvas.draw_circle(chimney + Vector2(1, -22), 3.5, Color(0.8, 0.8, 0.82, 0.55) * tint, true, -1.0, true)
+	canvas.draw_circle(chimney + Vector2(4, -28), 4.5, Color(0.8, 0.8, 0.82, 0.4) * tint, true, -1.0, true)
+	var corner := _box(canvas, foot + Vector2(0, -1), width, depth, wall, STONE, tint)
+	# Grande baie ouverte sur l'établi, éclairée par la forge.
+	var bay := Rect2(corner + Vector2(4, -12), Vector2(14, 12))
+	canvas.draw_rect(bay, Color(0.2, 0.13, 0.1) * tint)
+	canvas.draw_rect(Rect2(bay.position + Vector2(2, 7), Vector2(10, 3)), Color(1.0, 0.55, 0.2) * tint)
+	canvas.draw_rect(bay, Relief.OUTLINE * tint, false, 1.5)
+	# Roue dentée sur la façade.
+	var gear := corner + Vector2(width - 10.0, -wall * 0.55)
+	Building._draw_gear(canvas, gear, 6.5, Color(0.85, 0.85, 0.9) * tint, Relief.OUTLINE * tint)
+	# Toit en appentis : un pan de planches qui descend vers l'avant.
+	var d := DEPTH * depth
+	var eave_left := corner + Vector2(-3, -wall + 1.0)
+	var eave_right := corner + Vector2(width + 3, -wall + 1.0)
+	var back_left := corner + Vector2(-3, -wall - 9.0) + d
+	var back_right := corner + Vector2(width + 3, -wall - 9.0) + d
+	var gable := PackedVector2Array([corner + Vector2(width, -wall), corner + Vector2(width, -wall) + d,
+		corner + Vector2(width, -wall - 9.0) + d])
+	canvas.draw_colored_polygon(gable, STONE.darkened(0.38) * tint)
+	gable.append(gable[0])
+	canvas.draw_polyline(gable, Relief.OUTLINE * tint, 2.0, true)
+	var roof := PackedVector2Array([eave_left, eave_right, back_right, back_left])
+	canvas.draw_colored_polygon(roof, color.darkened(0.1) * tint)
+	for t in [0.25, 0.5, 0.75]:
+		canvas.draw_line(eave_left.lerp(eave_right, t), back_left.lerp(back_right, t), color.darkened(0.35) * tint, 1.5)
+	roof.append(roof[0])
+	canvas.draw_polyline(roof, Relief.OUTLINE * tint, 2.0, true)
+	# Enclume devant, à droite.
+	var anvil := foot + Vector2(17, 13)
+	_box(canvas, anvil, 5.0, 4.0, 6.0, WOOD, tint, WOOD.lightened(0.2))
+	var top := PackedVector2Array([anvil + Vector2(-8, -6), anvil + Vector2(7, -6), anvil + Vector2(9, -9),
+		anvil + Vector2(-5, -9), anvil + Vector2(-10, -8)])
+	canvas.draw_colored_polygon(top, Color(0.4, 0.42, 0.48) * tint)
+	top.append(top[0])
+	canvas.draw_polyline(top, Relief.OUTLINE * tint, 1.5, true)
 
 
 # --- Pièces ---------------------------------------------------------------------

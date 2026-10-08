@@ -148,6 +148,8 @@ func _run() -> void:
 	await _test_tutorial()
 	await _test_conquest_buildings()
 	await _test_conquest_hud()
+	await _test_conquest_worker_orders()
+	await _test_conquest_workshop()
 	await _test_conquest_top_bar()
 	await _test_raiders()
 	await _test_conquest_progress()
@@ -3977,6 +3979,210 @@ func _test_conquest_hud() -> void:
 	_check(not is_instance_valid(house) and not hud.building_details.visible, "Démolir retire le bâtiment et ferme sa fiche")
 	await _click(level, level.get_viewport().get_canvas_transform() * level.map.cell_to_world(Vector2i(13, 8)))
 	_check(conquest.preferred_rock == Vector2i(13, 8), "un clic sur un filon y envoie les mineurs")
+	await _free(level)
+
+
+## Clic (ou toucher) sur la carte, avec Maj si demandé.
+func _click_at(level: Level, world_position: Vector2, shift := false, button := MOUSE_BUTTON_LEFT) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = true
+	event.shift_pressed = shift
+	event.position = level.get_viewport().get_canvas_transform() * world_position
+	await _send_to_placer(level, event)
+
+
+func _test_conquest_worker_orders() -> void:
+	print("Mode Conquête : ouvriers choisis et affectés à la main")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	var hud := level.hud
+	var workers := conquest.get_workers()
+	for worker in workers:
+		worker.set_process(false)
+	# Un clic choisit un ouvrier, Maj + clic en ajoute un autre.
+	await _click_at(level, workers[0].get_pick_point())
+	_check(conquest.get_selected_workers() == [workers[0]] and workers[0].selected and hud.worker_bar.visible
+		and hud._worker_bar_label.text.begins_with("1 ouvrier choisi"), "un clic sur un ouvrier le choisit")
+	await _click_at(level, workers[1].get_pick_point(), true)
+	_check(conquest.get_selected_workers().size() == 2 and hud._worker_bar_label.text.begins_with("2 ouvriers choisis"),
+		"Maj + clic en ajoute un")
+	await _click_at(level, workers[1].get_pick_point())
+	_check(conquest.get_selected_workers() == [workers[1]] and not workers[0].selected, "un clic seul ne garde que lui")
+	_press_key(level, KEY_O)
+	_check(conquest.get_selected_workers().size() == workers.size(), "O les choisit tous")
+	_press_key(level, KEY_O)
+	_check(conquest.get_selected_workers().is_empty() and not hud.worker_bar.visible, "O de nouveau les relâche")
+	hud.workers_label.pressed.emit()
+	_check(conquest.get_selected_workers().size() == workers.size(), "le compteur des ouvriers les choisit tous")
+	var cancel := InputEventAction.new()
+	cancel.action = &"ui_cancel"
+	cancel.pressed = true
+	await _send_to_placer(level, cancel)
+	_check(conquest.get_selected_workers().is_empty(), "Échap les relâche")
+	# Un cadre tiré depuis une case vide choisit les ouvriers qu'il entoure.
+	var empty := Vector2i(14, 4)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	var canvas := level.get_viewport().get_canvas_transform()
+	press.position = canvas * level.map.cell_to_world(empty)
+	await _send_to_placer(level, press)
+	var corner := Vector2(INF, INF)
+	var far_corner := -corner
+	for worker in workers:
+		corner = corner.min(worker.global_position - Vector2(20, 30))
+		far_corner = far_corner.max(worker.global_position + Vector2(20, 20))
+	var start := level.map.cell_to_world(empty)
+	var end := far_corner if start.x < far_corner.x else corner
+	var motion := InputEventMouseMotion.new()
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	motion.position = canvas * end
+	await _send_to_placer(level, motion)
+	_check(level.placer._dragging, "un appui qui glisse depuis une case vide tire un cadre")
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.position = motion.position
+	await _send_to_placer(level, release)
+	var inside := conquest.workers_in_rect(Rect2(start, Vector2.ZERO).expand(end))
+	_check(not inside.is_empty() and conquest.get_selected_workers().size() == inside.size() and not level.placer._dragging,
+		"le cadre choisit les ouvriers qu'il entoure (%d)" % inside.size())
+	await _click_at(level, level.map.cell_to_world(empty))
+	await _send_to_placer(level, release)
+	_check(conquest.get_selected_workers().is_empty(), "un clic sur une case vide les relâche")
+	# Au tactile, chaque toucher sur un ouvrier l'ajoute aux autres.
+	GameSettings.set_touch_mode(true)
+	await _click_at(level, workers[0].get_pick_point() + Vector2(14, 0))
+	await _click_at(level, workers[2].get_pick_point())
+	_check(conquest.get_selected_workers().size() == 2, "au tactile, chaque toucher ajoute un ouvrier")
+	await _click_at(level, workers[2].get_pick_point())
+	_check(conquest.get_selected_workers() == [workers[0]], "et le retire s'il était choisi")
+	GameSettings.set_touch_mode(false)
+	for worker in workers:
+		worker.set_process(true)
+	# Un clic sur un rocher y envoie les ouvriers choisis, et eux seuls.
+	conquest.select_workers([workers[0], workers[1]])
+	var rock: Vector2i = conquest.rocks.keys()[0]
+	for cell: Vector2i in conquest.rocks:
+		if cell.distance_to(Vector2i(17, 7)) > rock.distance_to(Vector2i(17, 7)):
+			rock = cell
+	await _click_at(level, level.map.cell_to_world(rock))
+	_check(workers[0].order == Worker.Order.MINE and workers[1].order == Worker.Order.MINE and workers[0].order_cell == rock
+		and workers[2].order == Worker.Order.AUTO and conquest.preferred_rock == Conquest.NO_CELL,
+		"un clic sur un rocher y affecte les ouvriers choisis")
+	var elapsed := 0.0
+	while conquest.rocks.get(rock, 0) > Conquest.ROCK_STONE - 2 * Worker.CARRY and elapsed < 60.0:
+		elapsed += await _step()
+	_check(conquest.rocks.get(rock, 0) <= Conquest.ROCK_STONE - 2 * Worker.CARRY, "les deux minent le rocher lointain (%.0f s)" % elapsed)
+	_check(workers[0].order == Worker.Order.MINE and workers[0].order_cell == rock, "et s'y tiennent, voyage après voyage")
+	# Plusieurs ouvriers sur le même chantier : plus que les 2 des ordres automatiques.
+	level.gold = 2000
+	conquest.stone = 1000
+	var house := conquest.place_building(empty, Building.Kind.HOUSE)
+	for worker in workers:
+		worker.global_position = house.global_position + Vector2(0, 50)
+	conquest.select_workers(workers)
+	await _click_at(level, level.map.cell_to_world(empty), false, MOUSE_BUTTON_RIGHT)
+	_check(workers.all(func(worker: Worker) -> bool: return worker.order == Worker.Order.BUILD and worker.order_site == house),
+		"un clic droit sur un chantier y affecte les ouvriers choisis")
+	elapsed = 0.0
+	var most_builders := 0
+	while is_instance_valid(house) and not house.is_built() and elapsed < 60.0:
+		most_builders = maxi(most_builders, workers.filter(func(worker: Worker) -> bool:
+			return worker.state == Worker.State.BUILDING and worker.site == house).size())
+		elapsed += await _step()
+	_check(house.is_built() and most_builders == 3 and most_builders > Conquest.BUILDERS_PER_SITE,
+		"les %d ouvriers bâtissent ensemble la Maison (%.0f s)" % [most_builders, elapsed])
+	await _step()
+	await _step()
+	_check(workers.all(func(worker: Worker) -> bool: return worker.order == Worker.Order.AUTO),
+		"le chantier fini, ils reviennent aux ordres automatiques")
+	# Au QG, puis Automatique.
+	hud.workers_sent_home.emit()
+	elapsed = 0.0
+	while not workers.all(func(worker: Worker) -> bool: return conquest.is_safe(worker.global_position) and worker.cargo == 0) \
+			and elapsed < 60.0:
+		elapsed += await _step()
+	for i in 20:
+		await _step()
+	_check(workers.all(func(worker: Worker) -> bool: return worker.order == Worker.Order.HOME and conquest.is_safe(worker.global_position)),
+		"« Au QG » les fait rentrer, et ils y restent")
+	hud.workers_released.emit()
+	_check(workers.all(func(worker: Worker) -> bool: return worker.order == Worker.Order.AUTO)
+		and conquest.get_selected_workers().is_empty() and not hud.worker_bar.visible, "« Automatique » les rend au jeu et les relâche")
+	await _free(level)
+
+
+func _test_conquest_workshop() -> void:
+	print("Mode Conquête : Atelier et améliorations de la partie")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	var hud := level.hud
+	level.gold = 5000
+	conquest.stone = 2000
+	conquest.essence = 200
+	var tower := level.place_tower(Vector2i(14, 2), CANNON)
+	conquest.build(tower, 999.0)
+	var base_damage := tower.stats.damage
+	var base_range := tower.stats.attack_range
+	var workshop := conquest.place_building(Vector2i(14, 4), Building.Kind.WORKSHOP)
+	_check(workshop != null and conquest.research_blocker(workshop, Research.TOWER_DAMAGE) != "", "un Atelier en chantier ne cherche rien")
+	_finish_building(workshop)
+	level.placer.inspect_building(workshop)
+	await process_frame
+	var panel := hud.building_details
+	_check(panel.visible and panel._research_box.visible and panel.size.x >= BuildingInfoPanel.WORKSHOP_WIDTH
+		and not panel.get_research_button(Research.TOWER_DAMAGE).disabled, "la fiche de l'Atelier montre ses améliorations")
+	var gold := level.gold
+	panel.get_research_button(Research.TOWER_DAMAGE).pressed.emit()
+	await process_frame
+	var cost := Research.get_cost(Research.TOWER_DAMAGE, 1)
+	_check(workshop.research_id == Research.TOWER_DAMAGE and level.gold == gold - cost.gold, "son bouton lance la recherche, payée")
+	_check(panel.get_research_button(Research.WORKER_SPEED).disabled and panel._research_status.text.begins_with("Recherche : Poudre raffinée"),
+		"un Atelier ne cherche qu'une amélioration à la fois")
+	var second := conquest.place_building(Vector2i(11, 3), Building.Kind.WORKSHOP)
+	_finish_building(second)
+	_check(not conquest.start_research(second, Research.TOWER_DAMAGE) and conquest.start_research(second, Research.WORKER_SPEED),
+		"un second Atelier cherche autre chose, pas la même")
+	var elapsed := 0.0
+	while workshop.research_id != &"" and elapsed < 30.0:
+		elapsed += await _step()
+	_check(conquest.get_research_level(Research.TOWER_DAMAGE) == 1 and is_equal_approx(tower.stats.damage, base_damage * 1.08),
+		"Poudre raffinée finie : +8 %% de dégâts pour les tours posées (%.0f s)" % elapsed)
+	var later := level.place_tower(Vector2i(16, 2), CANNON)
+	conquest.build(later, 999.0)
+	_check(is_equal_approx(later.stats.damage, base_damage * 1.08), "et pour celles posées ensuite")
+	while second.research_id != &"" and elapsed < 60.0:
+		elapsed += await _step()
+	_check(is_equal_approx(conquest.get_worker_speed(), Worker.SPEED * 1.15), "Bottes de marche : les ouvriers vont plus vite")
+	conquest.start_research(workshop, Research.TOWER_RANGE)
+	conquest.start_research(second, Research.WORLD_FORTIFY)
+	var house := conquest.place_building(Vector2i(9, 6), Building.Kind.HOUSE)
+	_finish_building(house)
+	var house_health := house.max_health
+	while (workshop.research_id != &"" or second.research_id != &"") and elapsed < 120.0:
+		elapsed += await _step()
+	_check(is_equal_approx(tower.stats.attack_range, base_range * 1.06), "Lunettes de visée : +6 % de portée")
+	_check(is_equal_approx(house.max_health, house_health * 1.3) and is_equal_approx(house.health, house.max_health),
+		"Fortifications : les bâtiments posés gagnent de la vie")
+	var reward := level.get_enemy_reward(PILLARDE)
+	conquest.research_levels[Research.WORLD_BOUNTY] = 2
+	_check(level.get_enemy_reward(PILLARDE) == roundi(PILLARDE.reward * 1.2) and level.get_enemy_reward(PILLARDE) >= reward,
+		"Primes de chasse : les monstres rapportent plus d'or")
+	conquest.research_levels[Research.WORKER_CARRY] = 1
+	_check(conquest.get_carry(Conquest.Ore.STONE) == Worker.CARRY + 1 and conquest.get_carry(Conquest.Ore.ESSENCE) == Worker.ESSENCE_CARRY + 1,
+		"Grandes hottes : une pierre et une essence de plus par voyage")
+	conquest.research_levels[Research.WORLD_EXTRACTION] = 2
+	_check(is_equal_approx(conquest.get_extract_interval(), Building.EXTRACT_INTERVAL / 1.5), "Forages profonds : Extracteurs plus rapides")
+	# Niveau maximum, et Atelier démoli en pleine recherche : elle est rendue.
+	conquest.research_levels[Research.TOWER_FIRE_RATE] = Research.get_max_level(Research.TOWER_FIRE_RATE)
+	_check(conquest.research_blocker(workshop, Research.TOWER_FIRE_RATE) == "Niveau maximum", "une amélioration s'arrête à son niveau maximum")
+	gold = level.gold
+	var stone := conquest.stone
+	conquest.start_research(workshop, Research.WORKER_TOOLS)
+	var refund := conquest.get_building_refund(workshop)
+	conquest.sell_building(workshop)
+	_check(level.gold == gold + refund.gold and conquest.stone == stone + refund.stone, "démoli en pleine recherche, l'Atelier la rend")
 	await _free(level)
 
 

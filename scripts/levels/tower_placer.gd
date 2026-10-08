@@ -8,6 +8,10 @@ extends Node2D
 ## une case montre l'aperçu de la tour (et si elle peut s'y poser), un second toucher sur
 ## la même case la pose. Un pouvoir visé se lance là où l'on touche. Toucher la carte
 ## hors d'une tour ferme la fiche ouverte.
+## Mode Conquête : un clic sur un ouvrier le choisit (Maj + clic, ou un toucher, l'ajoute
+## aux autres), un cadre tiré depuis une case vide choisit tous ceux qu'il entoure, et un
+## clic sur un gisement, un chantier ou le QG y envoie les ouvriers choisis (un clic droit
+## aussi). Un clic sur une case vide, ou Échap, les relâche.
 
 ## Émis quand la tour sélectionnée change (null = aucune).
 signal selection_changed(data: TowerData)
@@ -42,6 +46,18 @@ var touch_hint: Label
 var passage_hint: Label
 
 const NO_CELL := Vector2i(-1000, -1000)
+## Pixels à l'écran au-delà desquels un appui qui glisse devient un cadre de sélection.
+const DRAG_THRESHOLD := 10.0
+## Au tactile, un ouvrier se choisit d'un peu plus loin (le doigt cache la cible).
+const TOUCH_PICK_RADIUS := 28.0
+const SELECTION_COLOR := Color(0.45, 1.0, 0.55)
+
+## Mode Conquête : cadre de sélection des ouvriers, de l'appui (à l'écran, Vector2.INF :
+## aucun) au point actuel, et s'il ajoute aux ouvriers déjà choisis (Maj).
+var _drag_from := Vector2.INF
+var _drag_to := Vector2.ZERO
+var _dragging := false
+var _drag_adds := false
 
 @onready var preview: PlacementPreview = $PlacementPreview
 
@@ -140,7 +156,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if level == null or level.is_over:
 		return
 	if event is InputEventMouseMotion:
+		if _drag_from != Vector2.INF and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+			_drag_to = event.position
+			if not _dragging and _drag_to.distance_to(_drag_from) > DRAG_THRESHOLD:
+				_dragging = true
+			if _dragging:
+				queue_redraw()
+				get_viewport().set_input_as_handled()
 		refresh()
+	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
+			and _drag_from != Vector2.INF:
+		_finish_drag(event.position)
+		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and event.pressed:
 		var cell := level.map.world_to_cell(_to_world(event.position))
 		var touch := GameSettings.is_touch_mode() or event.device == InputEvent.DEVICE_ID_EMULATION
@@ -180,6 +207,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				refresh()
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and level.conquest and _pick_worker(event, touch):
+			get_viewport().set_input_as_handled()
+		elif (event.button_index == MOUSE_BUTTON_LEFT or (event.button_index == MOUSE_BUTTON_RIGHT and selected_tower == null)) \
+				and level.conquest and level.conquest.order_selected(cell):
+			# Mode Conquête : les ouvriers choisis vont au gisement, au chantier ou au QG.
+			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_RIGHT and selected_tower == null and _has_selected_workers():
+			level.conquest.clear_selection()
+			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and level.map.get_occupant(cell) is Building:
 			inspect_building(level.map.get_occupant(cell))
 			get_viewport().set_input_as_handled()
@@ -192,6 +228,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_LEFT and level.map.get_occupant(cell) is Tower:
 			inspect(level.map.get_occupant(cell))
 			get_viewport().set_input_as_handled()
+		elif event.button_index == MOUSE_BUTTON_LEFT and level.conquest and level.map.is_cell_in_grid(cell) \
+				and level.map.get_occupant(cell) == null:
+			# Mode Conquête : un appui sur une case vide commence peut-être un cadre de
+			# sélection ; relâché sans glisser, il relâche les ouvriers choisis.
+			_drag_from = event.position
+			_drag_to = event.position
+			_dragging = false
+			_drag_adds = event.shift_pressed
+			if touch:
+				inspect(null)
+				inspect_building(null)
+			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_LEFT and touch and (inspected_tower or inspected_building):
 			inspect(null)
 			inspect_building(null)
@@ -200,7 +248,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			select(null)
 			get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel") and (selected_tower or selected_power or inspected_tower
-			or selected_building >= 0 or inspected_building):
+			or selected_building >= 0 or inspected_building or _has_selected_workers()):
 		if selected_power:
 			select_power(null)
 		elif selected_tower:
@@ -209,9 +257,44 @@ func _unhandled_input(event: InputEvent) -> void:
 			select_building(-1)
 		elif inspected_building:
 			inspect_building(null)
-		else:
+		elif inspected_tower:
 			inspect(null)
+		else:
+			level.conquest.clear_selection()
 		get_viewport().set_input_as_handled()
+
+
+func _has_selected_workers() -> bool:
+	return level.conquest != null and not level.conquest.get_selected_workers().is_empty()
+
+
+## Mode Conquête : un clic sur un ouvrier le choisit seul ; Maj + clic, ou un toucher,
+## l'ajoute aux ouvriers choisis (ou l'en retire). Renvoie false s'il n'y a pas d'ouvrier là.
+func _pick_worker(event: InputEventMouseButton, touch: bool) -> bool:
+	var worker := level.conquest.worker_at(_to_world(event.position), TOUCH_PICK_RADIUS if touch else Worker.PICK_RADIUS)
+	if worker == null:
+		return false
+	if touch or event.shift_pressed:
+		level.conquest.toggle_worker(worker)
+	else:
+		level.conquest.select_workers([worker])
+	inspect(null)
+	inspect_building(null)
+	return true
+
+
+## Fin d'un appui sur une case vide : un cadre choisit les ouvriers qu'il entoure, un
+## simple clic relâche les ouvriers choisis (sauf avec Maj).
+func _finish_drag(screen_position: Vector2) -> void:
+	if _dragging:
+		var from := _to_world(_drag_from)
+		var rect := Rect2(from, Vector2.ZERO).expand(_to_world(screen_position))
+		level.conquest.select_workers(level.conquest.workers_in_rect(rect), _drag_adds)
+	elif not _drag_adds:
+		level.conquest.clear_selection()
+	_drag_from = Vector2.INF
+	_dragging = false
+	queue_redraw()
 
 
 ## Arme (ou désarme, avec NO_CELL) le second toucher, et place son rappel.
@@ -284,9 +367,14 @@ func _update_passage_preview(cell: Vector2i) -> void:
 			Tower.SIZE / 2.0 + 4.0 if below else -Tower.SIZE / 2.0 - passage_hint.size.y - 4.0)
 
 
-## Zone du pouvoir visé, sous la souris : celle où tombent les météores, ou l'endroit du
-## chemin où les soldats prendront position.
+## Cadre de sélection des ouvriers (mode Conquête), et zone du pouvoir visé, sous la
+## souris : celle où tombent les météores, ou l'endroit du chemin où les soldats
+## prendront position.
 func _draw() -> void:
+	if _dragging and level:
+		var rect := Rect2(to_local(_to_world(_drag_from)), Vector2.ZERO).expand(to_local(_to_world(_drag_to)))
+		draw_rect(rect, Color(SELECTION_COLOR, 0.12))
+		draw_rect(rect, Color(SELECTION_COLOR, 0.85), false, 1.5)
 	if selected_power == null or level == null:
 		return
 	var color := selected_power.color

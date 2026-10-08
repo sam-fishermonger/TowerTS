@@ -43,6 +43,8 @@ func _run() -> void:
 		await process_frame
 		if shot[2]:
 			_start_battle(node as Level)
+		elif shot_name == "conquete":
+			_stage_conquest(node as Level)
 		elif shot_name != "titre":
 			# Sans focus, pas de fenêtre de détail ouverte sur le premier bouton.
 			root.gui_release_focus()
@@ -98,6 +100,42 @@ func _start_battle(level: Level) -> void:
 	level.gold = gold
 	level.set_game_speed(2.0)
 	level.start_next_wave()
+
+
+## Conquête : quelques tours et bâtiments déjà bâtis, deux ouvriers choisis envoyés miner
+## un rocher, et la fiche de l'Atelier ouverte sur une recherche en cours.
+func _stage_conquest(level: Level) -> void:
+	var conquest := level.conquest
+	level.gold = 100000
+	conquest.stone = 10000
+	conquest.essence = 100
+	var cannon: TowerData = level.tower_types[0]
+	for cell in [Vector2i(14, 4), Vector2i(11, 3), Vector2i(14, 7)]:
+		var tower := level.place_tower(cell, cannon)
+		if tower:
+			conquest.build(tower, 999.0)
+	var site := level.place_tower(Vector2i(16, 2), level.tower_types[1])
+	if site:
+		conquest.build(site, Conquest.build_time(site) * 0.4)
+	for item in [[Vector2i(12, 6), Building.Kind.WORKSHOP], [Vector2i(10, 7), Building.Kind.HOUSE]]:
+		var building := conquest.place_building(item[0], item[1])
+		if building:
+			conquest.build(building, 999.0)
+	var workshop: Building = conquest.get_buildings(Building.Kind.WORKSHOP)[0]
+	conquest.research_levels[Research.WORKER_SPEED] = 1
+	conquest.research_levels[Research.TOWER_DAMAGE] = 1
+	conquest.start_research(workshop, Research.TOWER_RANGE)
+	level.gold = 420
+	conquest.stone = 85
+	conquest.essence = 6
+	var workers := conquest.get_workers()
+	conquest.select_workers([workers[0], workers[1]])
+	var rock: Vector2i = conquest.rocks.keys()[0]
+	for cell: Vector2i in conquest.rocks:
+		if cell.x > rock.x or (cell.x == rock.x and cell.y < rock.y):
+			rock = cell
+	conquest.order_selected(rock)
+	level.placer.inspect_building(workshop)
 
 
 ## Niveau libre : pose les tours une à une là où elles allongent le plus le chemin des

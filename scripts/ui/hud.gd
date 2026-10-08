@@ -33,9 +33,17 @@ signal power_selected(power: Power)
 signal recruit_requested
 ## … choisit un bâtiment à poser (-1 = aucun)…
 signal building_selected(kind: int)
-## … demande à démolir un bâtiment, ou ferme sa fiche.
+## … demande à démolir un bâtiment, ou ferme sa fiche…
 signal demolish_requested(building: Building)
 signal building_details_closed
+## … lance une amélioration dans un Atelier…
+signal research_requested(workshop: Building, id: StringName)
+## … choisit tous les ouvriers (compteur des ouvriers, ou touche O), et envoie les
+## ouvriers choisis au QG, les rend aux ordres automatiques ou les relâche.
+signal workers_select_all
+signal workers_sent_home
+signal workers_released
+signal workers_deselected
 
 ## Durée de l'effet de perte de vies, en secondes réelles (indépendante de la vitesse de jeu).
 const DAMAGE_FLASH_DURATION := 0.6
@@ -47,7 +55,7 @@ const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
 const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
 ## Mode Conquête : ce qui change, devant le rappel des commandes.
-const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  R : recruter un ouvrier  ·  B : bâtiments"
+const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
 ## Touches des pouvoirs, par position sur le clavier : Q, W, E en QWERTY (A, Z, E en AZERTY).
@@ -93,8 +101,12 @@ var challenge_rules: PanelContainer
 ## hors de ce mode).
 var stone_label: Label
 var essence_label: Label
-var workers_label: Label
+var workers_label: Button
 var recruit_button: Button
+## … et barre des ouvriers choisis, au-dessus de la barre d'achat, à gauche.
+var worker_bar: PanelContainer
+var _worker_bar_label: Label
+var _worker_bar_count := 0
 ## Derniers arguments de update_stats() et set_interest_rules(), pour
 ## réécrire leurs textes au changement de langue.
 var _stats_args := []
@@ -206,6 +218,7 @@ func _notification(what: int) -> void:
 		recruit_button.text = tr("Recruter · %d or (R)") % _worker_cost
 		if is_instance_valid(_conquest):
 			update_conquest(_conquest)
+		show_worker_selection(_worker_bar_count)
 	set_score(_score)
 	if not end_panel.visible:
 		# L'aperçu de vague ne se refait que si son texte change : on l'oublie.
@@ -236,6 +249,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			recruit_requested.emit()
 	elif code == KEY_B and building_shop:
 		set_building_shop_open(not building_shop.visible)
+	elif code == KEY_O and workers_label:
+		workers_select_all.emit()
 	elif slot >= 0 and building_shop and building_shop.visible:
 		building_shop.toggle_slot(slot)
 	elif slot >= 0:
@@ -646,13 +661,20 @@ func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callab
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 0)
 	resources.add_sibling(box)
-	workers_label = Label.new()
-	workers_label.add_theme_color_override("font_color", Worker.COLOR)
+	# Le compteur des ouvriers est un bouton : il les choisit tous (au tactile surtout).
+	workers_label = Button.new()
+	workers_label.flat = true
+	workers_label.focus_mode = Control.FOCUS_NONE
+	for state in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_focus_color"]:
+		workers_label.add_theme_color_override(state, Worker.COLOR if state == &"font_color" else Worker.COLOR.lightened(0.35))
 	workers_label.add_theme_font_size_override("font_size", 13)
-	workers_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	workers_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	workers_label.add_theme_constant_override(&"h_separation", 0)
+	for state in [&"normal", &"hover", &"pressed", &"focus"]:
+		workers_label.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	workers_label.tooltip_text = tr("Ouvriers en jeu, sur le maximum : %d, et %d de plus par Maison bâtie (%d au plus).") \
-		% [Conquest.BASE_WORKERS, Building.HOUSE_WORKERS, Conquest.MAX_WORKERS]
+		% [Conquest.BASE_WORKERS, Building.HOUSE_WORKERS, Conquest.MAX_WORKERS] \
+		+ "\n" + tr("Cliquez ici (ou O) pour les choisir tous, puis désignez-leur une tâche sur la carte.")
+	workers_label.pressed.connect(workers_select_all.emit)
 	box.add_child(workers_label)
 	recruit_button = Button.new()
 	_worker_cost = worker_cost
@@ -692,7 +714,7 @@ func _setup_buildings() -> void:
 	buildings_button.custom_minimum_size = TowerShopButton.SLOT_SIZE
 	buildings_button.toggle_mode = true
 	buildings_button.focus_mode = Control.FOCUS_NONE
-	buildings_button.tooltip_text = "Dépôt, Maison, Extracteur, Barricade et Caserne : posés comme les tours, bâtis par les ouvriers."
+	buildings_button.tooltip_text = "Dépôt, Maison, Extracteur, Barricade, Caserne et Atelier : posés comme les tours, bâtis par les ouvriers."
 	UiStyle.apply_styles(buildings_button, UiStyle.slot_styles(Conquest.STONE_COLOR))
 	var column := VBoxContainer.new()
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 2)
@@ -730,6 +752,56 @@ func _setup_buildings() -> void:
 	move_child(building_details, tower_details.get_index() + 1)
 	building_details.demolish_requested.connect(demolish_requested.emit)
 	building_details.close_requested.connect(building_details_closed.emit)
+	building_details.research_requested.connect(research_requested.emit)
+	_setup_worker_bar()
+
+
+## Barre des ouvriers choisis : combien, ce qu'on peut leur désigner, et les boutons
+## « Au QG », « Automatique » et ✕ (les relâcher).
+func _setup_worker_bar() -> void:
+	worker_bar = PanelContainer.new()
+	worker_bar.visible = false
+	worker_bar.add_theme_stylebox_override(&"panel", UiStyle.panel(Worker.SELECTED_COLOR, 8.0, SIDE_LEFT))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 8)
+	worker_bar.add_child(row)
+	_worker_bar_label = Label.new()
+	_worker_bar_label.add_theme_font_size_override(&"font_size", 13)
+	_worker_bar_label.add_theme_color_override(&"font_color", Worker.SELECTED_COLOR)
+	_worker_bar_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_worker_bar_label)
+	for item in [["Au QG", "Les ouvriers choisis rentrent au QG et y restent, à l'abri.", workers_sent_home],
+			["Automatique", "Les ouvriers choisis reprennent les tâches que le jeu leur donne.", workers_released],
+			["✕", "Relâcher les ouvriers choisis (Échap).", workers_deselected]]:
+		var button := Button.new()
+		button.text = item[0]
+		button.tooltip_text = item[1]
+		button.focus_mode = Control.FOCUS_NONE
+		button.add_theme_font_size_override(&"font_size", 13)
+		UiStyle.style_button(button, Worker.SELECTED_COLOR, 10.0, 6.0)
+		button.pressed.connect((item[2] as Signal).emit)
+		row.add_child(button)
+	add_child(worker_bar)
+	move_child(worker_bar, bottom_bar.get_index() + 1)
+
+
+## Ouvriers choisis (0 = aucun : la barre se cache).
+func show_worker_selection(count: int) -> void:
+	if worker_bar == null:
+		return
+	_worker_bar_count = count
+	worker_bar.visible = count > 0 and not end_panel.visible
+	if not worker_bar.visible:
+		return
+	_worker_bar_label.text = tr_n("%d ouvrier choisi", "%d ouvriers choisis", count) % count + "  ·  " \
+		+ tr("Désignez un rocher, un filon, un chantier ou le QG")
+	worker_bar.reset_size()
+	_place_worker_bar.call_deferred()
+
+
+func _place_worker_bar() -> void:
+	worker_bar.reset_size()
+	worker_bar.position = Vector2(8.0, bottom_bar.get_global_rect().position.y - worker_bar.size.y - 6.0)
 
 
 ## Ouvre ou ferme la barre des bâtiments, au-dessus du bouton « Bâtiments ». La fermer
@@ -795,6 +867,7 @@ func update_conquest(conquest: Conquest) -> void:
 	if end_panel.visible:
 		set_building_shop_open(false)
 		buildings_button.disabled = true
+		worker_bar.visible = false
 	_fit_level_label()
 
 
