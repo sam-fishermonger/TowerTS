@@ -166,6 +166,13 @@ static func get_enemy_choices() -> Array[EnemyData]:
 	return result
 
 
+## Habillage de la vue de trois quarts (BiomeTheme) du monde d'indice `biome`.
+static func get_biome_theme(biome: int) -> Dictionary:
+	var campaign: Campaign = load(CAMPAIGN_PATH)
+	var tileset: TileSet = campaign.worlds[biome].tileset if biome >= 0 and biome < campaign.worlds.size() else null
+	return BiomeTheme.get_theme(BiomeTheme.biome_of(tileset))
+
+
 static func get_biome_names() -> Array[String]:
 	var result: Array[String] = []
 	var campaign: Campaign = load(CAMPAIGN_PATH)

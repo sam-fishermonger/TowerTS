@@ -141,29 +141,63 @@ func get_towers() -> Array[TowerData]:
 
 
 func get_speed_multiplier() -> float:
-	return SPEED_MULTIPLIER if has_rule(RAPIDES) else 1.0
+	return speed_multiplier_of(rules)
 
 
 func get_health_multiplier() -> float:
-	return HEALTH_MULTIPLIER if has_rule(CORIACES) else 1.0
+	return health_multiplier_of(rules)
 
 
 func get_count_multiplier() -> float:
-	return COUNT_MULTIPLIER if has_rule(NOMBREUX) else 1.0
+	return count_multiplier_of(rules)
 
 
 ## Or de départ du niveau avec les règles du défi.
 func get_starting_gold(level_gold: int) -> int:
-	return roundi(level_gold * GOLD_MULTIPLIER) if has_rule(OR_SERRE) else level_gold
+	return starting_gold_of(rules, level_gold)
 
 
 ## Vies de départ du niveau avec les règles du défi.
 func get_starting_lives(level_lives: int) -> int:
-	return mini(level_lives, COUNTED_LIVES) if has_rule(VIES_COMPTEES) else level_lives
+	return starting_lives_of(rules, level_lives)
 
 
 func allows_upgrades() -> bool:
-	return not has_rule(SANS_AMELIORATION)
+	return allows_upgrades_of(rules)
+
+
+# Effets d'une liste de règles : ceux du défi, et ceux des mutateurs (Mutators), qui
+# reprennent ses règles sur les niveaux déjà gagnés.
+
+static func speed_multiplier_of(rule_list: Array[int]) -> float:
+	return SPEED_MULTIPLIER if rule_list.has(RAPIDES) else 1.0
+
+
+static func health_multiplier_of(rule_list: Array[int]) -> float:
+	return HEALTH_MULTIPLIER if rule_list.has(CORIACES) else 1.0
+
+
+static func count_multiplier_of(rule_list: Array[int]) -> float:
+	return COUNT_MULTIPLIER if rule_list.has(NOMBREUX) else 1.0
+
+
+static func starting_gold_of(rule_list: Array[int], level_gold: int) -> int:
+	return roundi(level_gold * GOLD_MULTIPLIER) if rule_list.has(OR_SERRE) else level_gold
+
+
+static func starting_lives_of(rule_list: Array[int], level_lives: int) -> int:
+	return mini(level_lives, COUNTED_LIVES) if rule_list.has(VIES_COMPTEES) else level_lives
+
+
+static func allows_upgrades_of(rule_list: Array[int]) -> bool:
+	return not rule_list.has(SANS_AMELIORATION)
+
+
+## « Monstres rapides : les monstres vont 30 % plus vite. » (traduit).
+static func describe_rule(rule: int) -> String:
+	var text := TranslationServer.translate(RULE_TEXTS[rule])
+	return TranslationServer.translate("%s : %s") % [TranslationServer.translate(RULE_NAMES[rule]),
+		text.left(1).to_lower() + text.substr(1)]
 
 
 ## « Niveau 2-4 · La Fonderie ».
@@ -196,8 +230,7 @@ func describe_rules() -> Array[String]:
 		% towers]
 	for rule in rules:
 		if rule != DEUX_TOURS:
-			var text := tr(RULE_TEXTS[rule])
-			result.append(tr("%s : %s") % [tr(RULE_NAMES[rule]), text.left(1).to_lower() + text.substr(1)])
+			result.append(describe_rule(rule))
 	result.append(tr("Sans l'arbre des améliorations : tout le monde joue avec les mêmes tours."))
 	return result
 

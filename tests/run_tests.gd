@@ -139,6 +139,8 @@ func _run() -> void:
 	await _test_spawn_spread()
 	await _test_endless_mode()
 	await _test_daily_challenge()
+	await _test_daily_history()
+	await _test_mutators()
 	await _test_difficulties()
 	await _test_specializations()
 	await _test_konami_code()
@@ -2565,6 +2567,8 @@ func _test_daily_challenge() -> void:
 	_check(Progress.get_daily_score(key) == expected and level.hud.end_title.text == "Défi réussi !"
 		and level.hud.end_stars.text == "%d points" % expected, "le score est enregistré et affiché")
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles")
+	_check(Progress.is_daily_won(key) and level.hud.end_message.text.contains("Série : 1 jour") == false,
+		"le jour réussi est enregistré (pas de série annoncée pour un seul jour)")
 	await _free(level)
 	_check(not Engine.has_meta(Perks.DISABLED_META) and Perks.get_bonuses().starting_gold_bonus > 0,
 		"l'arbre compte de nouveau après le défi")
@@ -2580,6 +2584,113 @@ func _test_daily_challenge() -> void:
 	await _free(screen)
 	Progress.reset_campaign()
 	_check(Progress.get_daily_scores().is_empty(), "Effacer la progression efface les scores du défi")
+
+
+func _test_daily_history() -> void:
+	print("Défi du jour : historique et série")
+	Progress.reset_campaign()
+	_check(Progress.previous_day("2026-03-01") == "2026-02-28" and Progress.previous_day("2026-01-01") == "2025-12-31",
+		"la veille d'un jour")
+	_check(Progress.get_daily_streak("2026-10-08") == 0 and Progress.get_best_daily_streak() == 0, "pas de série sans défi réussi")
+	for day in ["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-05", "2026-10-06", "2026-10-07"]:
+		Progress.record_daily(day, 1000)
+		Progress.record_daily_win(day)
+	Progress.record_daily("2026-10-04", 300)
+	_check(Progress.get_daily_streak("2026-10-08") == 3, "le défi d'aujourd'hui pas encore réussi ne coupe pas la série")
+	Progress.record_daily_win("2026-10-08")
+	_check(Progress.get_daily_streak("2026-10-08") == 4 and Progress.get_daily_streak("2026-10-10") == 0,
+		"la série compte jusqu'à aujourd'hui, et s'arrête au premier jour manqué")
+	_check(Progress.get_best_daily_streak() == 4, "meilleure série")
+	var screen: Control = load("res://scenes/ui/daily_challenge_screen.tscn").instantiate()
+	root.add_child(screen)
+	await process_frame
+	var today := DailyChallenge.today_key()
+	var expected_streak := Progress.get_daily_streak(today)
+	_check(screen.get_streak_text().begins_with("Série : %d jour" % expected_streak)
+		and screen.get_streak_text().ends_with("meilleure série : %d" % Progress.get_best_daily_streak()),
+		"l'écran du défi montre la série et la meilleure série")
+	var history: String = screen.get_history_text()
+	_check(not history.contains("1000 ✕") and history.contains("300 ✕"),
+		"les jours perdus sont marqués dans l'historique")
+	await _free(screen)
+	Progress.reset_campaign()
+	_check(Progress.get_daily_wins().is_empty() and Progress.get_best_daily_streak() == 0,
+		"Effacer la progression efface les jours réussis")
+
+
+func _test_mutators() -> void:
+	print("Mutateurs")
+	Progress.reset_campaign()
+	Mutators.set_active([])
+	var path := LEVEL_01.resource_path
+	var raw: Level = LEVEL_01.instantiate()
+	var level_gold := raw.starting_gold
+	raw.free()
+	Mutators.set_active([DailyChallenge.NOMBREUX, DailyChallenge.RAPIDES, DailyChallenge.OR_SERRE, DailyChallenge.SANS_AMELIORATION])
+	_check(Mutators.get_active() == [DailyChallenge.RAPIDES, DailyChallenge.NOMBREUX, DailyChallenge.OR_SERRE,
+		DailyChallenge.SANS_AMELIORATION], "les mutateurs choisis sont enregistrés")
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.mutators.is_empty() and level.gold == level_gold and level.hud.mutator_label == null,
+		"pas de mutateurs sur un niveau pas encore gagné")
+	await _free(level)
+
+	Progress.record_victory(path, 2)
+	var earned_before := Perks.get_earned_stars(true)
+	level = await _spawn_level(LEVEL_01)
+	_check(level.mutators.size() == 4 and level.difficulty == Difficulty.MOYEN, "les mutateurs s'appliquent au niveau déjà gagné")
+	_check(is_equal_approx(level.spawner.speed_multiplier, DailyChallenge.SPEED_MULTIPLIER)
+		and level.gold == roundi(level_gold * DailyChallenge.GOLD_MULTIPLIER), "monstres rapides, bourse serrée")
+	_check(level.hud.mutator_label != null and level.hud.challenge_rules != null and level.hud.level_label.text.ends_with("✦ 4"),
+		"le HUD montre les mutateurs")
+	level.gold = 2000
+	var tower := level.place_tower(Vector2i(4, 1), level.tower_types[0])
+	_check(tower and not level.upgrade_tower(tower), "Sans amélioration : les tours ne s'améliorent pas")
+	level.start_next_wave()
+	_check(level.hud.challenge_rules == null, "les règles s'effacent à la première vague")
+	for node in get_nodes_in_group(Enemy.GROUP):
+		node.queue_free()
+	level.spawner.current_wave = level.spawner.get_wave_count() - 1
+	level.spawner.is_spawning = false
+	level.spawner._queue.clear()
+	await process_frame
+	level._check_wave_cleared()
+	_check(level.is_over and Progress.get_mutator_stars(path) == Mutators.MAX_STARS
+		and Perks.get_earned_stars(true) == earned_before + Mutators.MAX_STARS,
+		"la victoire rapporte une étoile infinie par mutateur, %d au plus" % Mutators.MAX_STARS)
+	_check(level.hud.end_message.text.contains("+3 étoiles infinies") and Progress.get_stars(path) > 0,
+		"l'écran de fin le dit, et les étoiles du niveau comptent toujours")
+	await _free(level)
+	_check(not Progress.record_mutators(path, 1) and Progress.get_mutator_stars(path) == Mutators.MAX_STARS,
+		"seul le meilleur résultat est gardé")
+
+	# Ni en mode infini, ni au défi du jour.
+	Engine.set_meta(Level.ENDLESS_META, true)
+	level = await _spawn_level(LEVEL_01)
+	_check(level.mutators.is_empty(), "pas de mutateurs en mode infini")
+	await _free(level)
+
+	# Le choix des mutateurs, sur l'écran des mondes.
+	Mutators.set_active([])
+	var screen: Control = WORLD_SELECT_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(screen.mutators_button.text == "✦  Mutateurs" and not screen.get_level_button(path).has_theme_color_override(&"font_color"),
+		"aucun mutateur au départ")
+	screen.open_mutators()
+	_check(screen.mutators_panel != null and screen.get_mutator_check(DailyChallenge.CORIACES) != null
+		and screen.get_mutator_check(DailyChallenge.DEUX_TOURS) == null, "la fenêtre propose les règles du défi")
+	screen.get_mutator_check(DailyChallenge.CORIACES).button_pressed = true
+	_check(Mutators.get_active() == [DailyChallenge.CORIACES] and screen.mutators_button.text.ends_with("1")
+		and screen.get_level_button(path).has_theme_color_override(&"font_color")
+		and screen.mode_hint.text.contains("Monstres coriaces"), "cocher un mutateur l'active, et marque les niveaux déjà gagnés")
+	_check(screen.get_level_details(path).contains("✦ Mutateurs : Monstres coriaces"), "la fenêtre de détail le dit")
+	screen.close_mutators()
+	screen.set_endless_mode(true)
+	_check(not screen.mutators_button.visible, "pas de mutateurs en mode infini")
+	await _free(screen)
+	Mutators.set_active([])
+	Progress.reset_campaign()
+	_check(Progress.get_mutator_stars(path) == 0, "Effacer la progression efface les étoiles des mutateurs")
 
 
 func _test_difficulties() -> void:
@@ -2828,6 +2939,7 @@ func _test_carriers_and_chests() -> void:
 	var base_damage := tower.stats.damage
 	var base_range := tower.stats.attack_range
 	var wave_bonus := level.get_wave_bonus(0)
+	var chests_before := Achievements.get_counter("chests_opened")
 	var chest := level.drop_loot(Loot.Kind.CHEST, level.map.cell_to_world(Vector2i(6, 6)))
 	level.collect_loot(chest)
 	_check(level.stats.chests_opened == 1 and level.chest_levels.size() == 1, "un coffre ouvert donne un bonus")
@@ -2837,6 +2949,7 @@ func _test_carriers_and_chests() -> void:
 		opened.append(level.open_chest(Vector2.ZERO))
 	_check(not opened.has(ChestBonus.POWERS) and not opened.has(ChestBonus.WORKERS),
 		"ni Sablier sans pouvoir, ni Pioches hors de la Conquête")
+	_check(Achievements.get_counter("chests_opened") == chests_before + 18, "les coffres ouverts comptent pour le succès")
 	_check(level.chest_levels.values().all(func(count: int) -> bool: return count == 3) and level.chest_levels.size() == 6,
 		"un même bonus retombe, trois fois au plus")
 	_check(is_equal_approx(tower.stats.damage, base_damage * 1.3) and is_equal_approx(tower.stats.attack_range, base_range * 1.24),
@@ -2853,9 +2966,12 @@ func _test_carriers_and_chests() -> void:
 	_check(is_equal_approx(level.get_interest_rate(), level.interest_rate + 0.06) and level.get_interest_cap() == level.interest_cap + 30,
 		"Coffre-fort : intérêts et plafond")
 	gold = level.gold
+	Progress.set_value(Achievements.COUNTERS_SECTION, "chests_opened", 24)
+	var was_unlocked := Achievements.is_unlocked("chasseur_de_tresors")
 	_check(level.open_chest(Vector2.ZERO) == &"" and level.gold == gold + ChestBonus.FALLBACK_GOLD, "tout au maximum : de l'or")
 	_check(level.hud._chest_label.text.contains("Poudre noire") and level.hud.achievement_toasts.get_child_count() > 0,
 		"liste des bonus et bandeau du coffre")
+	_check(not was_unlocked and Achievements.is_unlocked("chasseur_de_tresors"), "Chasseur de trésors au 25e coffre")
 	await _free(level)
 
 	level = await _spawn_level(CONQUEST_01)

@@ -107,6 +107,10 @@ var is_choosing_towers := false
 var challenge: DailyChallenge
 ## Défi du jour : points marqués jusqu'ici (voir DailyChallenge).
 var score := 0
+## Mutateurs actifs (règles du défi, voir Mutators) : seulement sur un niveau de la
+## campagne déjà gagné, hors mode infini. Ils s'ajoutent à la difficulté, et la victoire
+## rapporte des étoiles infinies.
+var mutators: Array[int] = []
 ## Niveau fait dans l'éditeur (vide sinon, voir CustomLevel) : il ne compte ni pour la
 ## progression ni pour les succès, et la partie finie ramène à l'éditeur.
 var custom_level: Dictionary = {}
@@ -215,9 +219,17 @@ func _ready() -> void:
 	_chest_rng.seed = hash(scene_file_path + "/coffres")
 	if not is_endless and not is_demo and not challenge and not is_tutorial:
 		difficulty = resumed.get("difficulty", Difficulty.get_current())
+		if custom_level.is_empty() and not conquest_mode and Mutators.applies_to(campaign, scene_file_path):
+			# Une partie reprise garde les mutateurs avec lesquels elle a commencé.
+			var saved_mutators: Array = resumed.get("mutators", Mutators.get_active())
+			mutators.assign(saved_mutators)
 	if challenge:
 		spawner.apply_modifiers(challenge.get_health_multiplier(), challenge.get_count_multiplier(),
 			challenge.get_speed_multiplier())
+	elif not mutators.is_empty():
+		spawner.apply_modifiers(Difficulty.HEALTH[difficulty] * DailyChallenge.health_multiplier_of(mutators),
+			Difficulty.ENEMY_COUNT[difficulty] * DailyChallenge.count_multiplier_of(mutators),
+			Difficulty.SPEED[difficulty] * DailyChallenge.speed_multiplier_of(mutators))
 	elif difficulty != Difficulty.MOYEN:
 		spawner.apply_difficulty(difficulty)
 	# La carte prend les tuiles du biome de son monde, si elle n'en a pas.
@@ -315,6 +327,11 @@ func _ready() -> void:
 		starting_gold = challenge.get_starting_gold(starting_gold)
 		starting_lives = challenge.get_starting_lives(starting_lives)
 		hud.show_challenge_rules(challenge.describe_rules())
+	elif not mutators.is_empty():
+		starting_gold = DailyChallenge.starting_gold_of(mutators, starting_gold)
+		starting_lives = DailyChallenge.starting_lives_of(mutators, starting_lives)
+		hud.show_mutator_rules(Mutators.describe(mutators), Mutators.stars_for(mutators),
+			Progress.get_mutator_stars(scene_file_path), not is_choosing_towers)
 	gold = starting_gold
 	lives = starting_lives
 	# La démo de l'écran titre garde sa vitesse ; une partie démarre à celle des options.
@@ -357,6 +374,8 @@ func get_title() -> String:
 		return tr("Défi du jour  ·  %s") % tr(level_name)
 	if is_endless:
 		return tr("%s  ·  Mode infini") % tr(level_name)
+	if not mutators.is_empty():
+		return "%s  ·  %s  ·  ✦ %d" % [tr(level_name), tr(Difficulty.NAMES[difficulty]), mutators.size()]
 	return "%s  ·  %s" % [tr(level_name), tr(Difficulty.NAMES[difficulty])]
 
 
@@ -446,6 +465,7 @@ func choose_towers(types: Array[TowerData]) -> bool:
 		hud.tower_picker.queue_free()
 		hud.tower_picker = null
 	hud.set_tower_types(tower_types)
+	hud.show_rules_panel_later()
 	if not is_demo:
 		var paths := PackedStringArray()
 		for data in tower_types:
@@ -516,7 +536,8 @@ func _add_tower(cell: Vector2i, data: TowerData, at_level := 1) -> Tower:
 	var tower: Tower = data.scene.instantiate()
 	tower.data = data
 	tower.level = at_level
-	tower.upgrades_locked = challenge != null and not challenge.allows_upgrades()
+	tower.upgrades_locked = (challenge != null and not challenge.allows_upgrades()) \
+		or not DailyChallenge.allows_upgrades_of(mutators)
 	tower.projectile_container = projectiles
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
@@ -979,7 +1000,10 @@ func _end_game(victory: bool) -> void:
 			add_score(lives * DailyChallenge.POINTS_PER_LIFE)
 		var best_before := Progress.get_daily_score(challenge.date_key)
 		var new_record := Progress.record_daily(challenge.date_key, score)
-		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0)
+		if victory:
+			Progress.record_daily_win(challenge.date_key)
+		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0,
+			Progress.get_daily_streak(challenge.date_key) if victory else 0)
 	elif not custom_level.is_empty():
 		hud.show_end_screen(victory, false, get_stars() if victory else 0)
 	elif is_tutorial:
@@ -994,6 +1018,10 @@ func _end_game(victory: bool) -> void:
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		_announce_achievements(Achievements.on_victory(stats, lives, gold, difficulty))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record, get_next_world_name())
+		if not mutators.is_empty():
+			var before := Progress.get_mutator_stars(scene_file_path)
+			Progress.record_mutators(scene_file_path, Mutators.stars_for(mutators))
+			hud.show_mutator_result(Mutators.stars_for(mutators), before)
 	elif is_endless:
 		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
 		hud.show_endless_end_screen(get_waves_cleared(), get_endless_stars(),
@@ -1071,6 +1099,8 @@ func collect_loot(loot: Loot) -> void:
 ## tomber (de l'or s'ils sont tous au maximum). Renvoie son identifiant (&"" pour l'or).
 func open_chest(at: Vector2) -> StringName:
 	stats.chests_opened += 1
+	if counts_achievements():
+		_announce_achievements(Achievements.add_counters({chests_opened = 1}))
 	var available := ChestBonus.get_available(chest_levels, not powers.is_empty(), interest_rate > 0.0, conquest != null)
 	if available.is_empty():
 		gold += ChestBonus.FALLBACK_GOLD
@@ -1172,6 +1202,7 @@ func to_saved_game() -> Dictionary:
 		"challenge": challenge.date_key if challenge else "",
 		"custom": custom_level,
 		"difficulty": difficulty,
+		"mutators": mutators,
 		"wave": spawner.current_wave,
 		"wave_count": -1 if is_endless else spawner.get_wave_count(),
 		"gold": gold,
@@ -1230,8 +1261,9 @@ func restore_saved_game(data: Dictionary) -> void:
 	score = data.get("score", 0)
 	if challenge:
 		hud.set_score(score)
-		if spawner.current_wave >= 0:
-			hud.hide_challenge_rules()
+	# Règles du défi ou des mutateurs : affichées jusqu'à la première vague.
+	if spawner.current_wave >= 0:
+		hud.hide_challenge_rules()
 	if not chest_levels.is_empty():
 		hud.set_interest_rules(get_interest_rate(), get_interest_cap())
 		hud.update_chest_bonuses(chest_levels)
