@@ -8,6 +8,8 @@ signal damaged(enemy: Enemy, amount: float)
 signal reached_end(enemy: Enemy)
 ## Émis quand un soigneur rend des points de vie à cet ennemi.
 signal healed(enemy: Enemy, amount: float)
+## Émis quand un saboteur éteint une tour (EnemyData.sabotage_interval).
+signal sabotaged(enemy: Enemy, tower: Tower)
 ## Émis quand l'ennemi appelle des renforts (EnemyData.summon_enemy) : le niveau les
 ## fait apparaître derrière lui.
 signal summoned(enemy: Enemy)
@@ -15,6 +17,7 @@ signal summoned(enemy: Enemy)
 const GROUP := "enemies"
 const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
 const HEAL_COLOR := Color(0.45, 1.0, 0.55)
+const COLORBLIND_HEAL_COLOR := Color(0.4, 0.8, 1.0)
 ## Durée de l'onde verte dessinée autour d'un soigneur quand il soigne.
 const HEAL_PULSE_DURATION := 0.5
 ## Soigneur qui n'a trouvé personne à soigner : secondes avant de chercher de nouveau.
@@ -57,6 +60,19 @@ const RAID_COLOR := Color(1.0, 0.55, 0.2)
 const CARRIER_HEALTH := 1.5
 const CARRIER_COLOR := Color(1.0, 0.82, 0.25)
 const CARRIED_SIZE := 0.85
+
+## Tunnelier : il ne plonge plus sous terre si la base est à moins de cette distance, et
+## remonte s'il s'en approche autant en creusant (il ne l'atteint jamais sous terre).
+const BURROW_SURFACE_DISTANCE := 160.0
+## Secondes de la gerbe de terre dessinée quand il plonge ou remonte.
+const BURROW_DUST_DURATION := 0.45
+const DIRT_COLOR := Color(0.42, 0.32, 0.22)
+## Saboteur : secondes avant son premier sabotage, s'il trouve une tour, puis entre deux
+## recherches quand il n'en trouve pas ; durée de l'éclair dessiné jusqu'à la tour.
+const SABOTAGE_FIRST_DELAY := 1.5
+const SABOTAGE_RETRY := 0.25
+const SABOTAGE_FLASH_DURATION := 0.35
+const SABOTAGE_COLOR := Color(1.0, 0.85, 0.3)
 
 ## Pillard : sur le chemin, en route vers sa cible, ou de retour vers le chemin.
 enum RaidState { NONE, GOING, RETURNING }
@@ -128,6 +144,14 @@ var _raid_state := RaidState.NONE
 var _raid_return := Vector2.ZERO
 var _raid_time := 0.0
 var _raid_cooldown := 0.0
+## Tunnelier : secondes avant la prochaine plongée, et restant sous terre (0 = en surface).
+var _burrow_cooldown := 0.0
+var _burrow_left := 0.0
+var _burrow_dust_left := 0.0
+## Saboteur : secondes avant le prochain sabotage, et éclair vers la dernière tour éteinte.
+var _sabotage_cooldown := 0.0
+var _sabotage_flash_left := 0.0
+var _sabotage_flash_to := Vector2.ZERO
 
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
@@ -141,7 +165,8 @@ static func get_alive_in_radius(tree: SceneTree, center: Vector2, radius: float,
 	var result: Array[Enemy] = []
 	for node in tree.get_nodes_in_group(GROUP):
 		var enemy := node as Enemy
-		if enemy and enemy.is_alive and center.distance_to(enemy.global_position) <= radius \
+		if enemy and enemy.is_alive and not enemy.is_burrowed() \
+				and center.distance_to(enemy.global_position) <= radius \
 				and (stats == null or enemy.can_be_hit_by(stats)):
 			result.append(enemy)
 	return result
@@ -175,9 +200,15 @@ static func get_flight_curve(path: Path2D) -> Curve2D:
 	return curve
 
 
-## La tour peut le toucher : un volant échappe aux tours qui tirent au sol.
+## La tour peut le toucher : un volant échappe aux tours qui tirent au sol, un tunnelier
+## sous terre à toutes.
 func can_be_hit_by(stats: TowerData) -> bool:
-	return stats.hits_air or not data.flying
+	return (stats.hits_air or not data.flying) and not is_burrowed()
+
+
+## Tunnelier sous terre : ni vu, ni touché.
+func is_burrowed() -> bool:
+	return _burrow_left > 0.0
 
 
 ## Visible des tours : pas furtif, ou à portée de détection d'une tour.
@@ -201,6 +232,8 @@ func _ready() -> void:
 		health.shield_changed.connect(func(_shield: float, _max: float) -> void: queue_redraw())
 	_heal_cooldown = data.heal_interval
 	_summon_cooldown = data.summon_interval
+	_burrow_cooldown = data.burrow_interval
+	_sabotage_cooldown = SABOTAGE_FIRST_DELAY
 	health_bar.width = data.radius * 2.0
 	health_bar.position = Vector2(0, -data.radius - 8.0)
 	if Relief.enabled:
@@ -260,8 +293,16 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	if data.stealthy:
 		_update_detection()
+	if data.sabotage_interval > 0.0:
+		_update_sabotage(delta)
+	if _sabotage_flash_left > 0.0 or _burrow_dust_left > 0.0:
+		_sabotage_flash_left -= delta
+		_burrow_dust_left -= delta
+		queue_redraw()
 	if is_held():
 		return
+	if data.burrow_interval > 0.0:
+		_update_burrow(delta)
 	if data.raider and _update_raid(delta):
 		return
 	progress += get_speed() * delta
@@ -273,7 +314,8 @@ func _process(delta: float) -> void:
 
 
 func get_speed() -> float:
-	return data.speed * speed_multiplier * _slow_factor
+	var speed := data.speed * speed_multiplier * _slow_factor
+	return speed * data.burrow_speed_multiplier if is_burrowed() else speed
 
 
 func is_slowed() -> bool:
@@ -331,7 +373,7 @@ func distance_to_end() -> float:
 
 ## Applique un coup et renvoie les dégâts réellement subis.
 func take_damage(amount: float, ignore_armor := false, shield_multiplier := 1.0) -> float:
-	if not is_alive:
+	if not is_alive or is_burrowed():
 		return 0.0
 	if is_frozen():
 		amount *= 1.0 + _frozen_vulnerability
@@ -481,6 +523,55 @@ func _update_healing(delta: float) -> void:
 			enemy.healed.emit(enemy, amount)
 
 
+## Tunnelier : plonge sous terre régulièrement, puis remonte au bout de
+## burrow_duration, ou plus tôt s'il arrive près de la base.
+func _update_burrow(delta: float) -> void:
+	if is_burrowed():
+		_burrow_left -= delta
+		if _burrow_left <= 0.0 or distance_to_end() <= BURROW_SURFACE_DISTANCE:
+			_set_burrowed(false)
+		return
+	_burrow_cooldown -= delta
+	if _burrow_cooldown <= 0.0 and distance_to_end() > BURROW_SURFACE_DISTANCE + 40.0:
+		_set_burrowed(true)
+
+
+func _set_burrowed(burrowed: bool) -> void:
+	_burrow_left = data.burrow_duration if burrowed else 0.0
+	if not burrowed:
+		_burrow_cooldown = data.burrow_interval
+	_burrow_dust_left = BURROW_DUST_DURATION
+	health_bar.visible = not burrowed
+	queue_redraw()
+
+
+## Saboteur : éteint régulièrement la tour bâtie la plus proche à sa portée, qui ne l'est
+## pas déjà.
+func _update_sabotage(delta: float) -> void:
+	_sabotage_cooldown -= delta
+	if _sabotage_cooldown > 0.0:
+		return
+	var best: Tower = null
+	var best_distance := data.sabotage_radius
+	for node in get_tree().get_nodes_in_group(Tower.GROUP):
+		var tower := node as Tower
+		if tower == null or not tower.is_alive or not tower.is_built() or tower.is_sabotaged():
+			continue
+		var distance := global_position.distance_to(tower.global_position)
+		if distance <= best_distance:
+			best = tower
+			best_distance = distance
+	if best == null:
+		_sabotage_cooldown = SABOTAGE_RETRY
+		return
+	_sabotage_cooldown = data.sabotage_interval
+	best.sabotage(data.sabotage_duration)
+	_sabotage_flash_left = SABOTAGE_FLASH_DURATION
+	_sabotage_flash_to = best.global_position
+	sabotaged.emit(self, best)
+	queue_redraw()
+
+
 func is_raiding() -> bool:
 	return _raid_state != RaidState.NONE
 
@@ -545,7 +636,8 @@ func _update_detection() -> void:
 	var revealed := false
 	for node in get_tree().get_nodes_in_group(DETECTOR_GROUP):
 		var tower := node as Tower
-		if tower and tower.stats and global_position.distance_to(tower.global_position) <= tower.stats.detection_range:
+		if tower and tower.stats and not tower.is_sabotaged() \
+				and global_position.distance_to(tower.global_position) <= tower.stats.detection_range:
 			revealed = true
 			break
 	if revealed != _revealed:
@@ -605,6 +697,11 @@ func _on_health_depleted() -> void:
 
 
 func _draw() -> void:
+	_draw_sabotage_flash()
+	if is_burrowed() or _burrow_dust_left > 0.0:
+		_draw_burrow()
+		if is_burrowed():
+			return
 	if Relief.enabled:
 		_draw_relief()
 		return
@@ -615,7 +712,7 @@ func _draw() -> void:
 	if _heal_pulse_left > 0.0:
 		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
 		draw_arc(Vector2.ZERO, lerpf(data.radius, data.heal_radius, t), 0.0, TAU, 48,
-			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0)
+			Color(_heal_color(), 0.6 * (1.0 - t)), 3.0)
 	if data.max_shield > 0.0 and health.shield > 0.0:
 		var ratio := health.shield / data.max_shield
 		var shield_color := JAMMED_SHIELD_COLOR if health.is_shield_jammed() else SHIELD_COLOR
@@ -675,15 +772,20 @@ func _draw_relief() -> void:
 	var ground := Vector2(1.0, Relief.GROUND_SQUASH * 0.6)
 	if data.is_elite or data.is_boss:
 		var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
-		var color := EnemyData.BOSS_COLOR if data.is_boss else EnemyData.ELITE_COLOR
+		var color := EnemyData.boss_color() if data.is_boss else EnemyData.ELITE_COLOR
 		var ring := Relief.ellipse(Vector2(0, 1), u * (1.4 + 0.1 * pulse), u * (1.4 + 0.1 * pulse) * ground.y, 0.0, TAU, 32)
 		draw_colored_polygon(ring, Color(color, 0.12 + 0.1 * pulse))
 		draw_polyline(ring, Color(color, 0.6 + 0.3 * pulse), 2.5 if data.is_boss else 2.0, true)
+		if data.is_boss and UiStyle.is_colorblind():
+			# Mode daltonien : un second anneau, pour ne pas compter sur la couleur seule.
+			var outer := u * (1.75 + 0.1 * pulse)
+			draw_polyline(Relief.ellipse(Vector2(0, 1), outer, outer * ground.y, 0.0, TAU, 32),
+				Color(color, 0.5 + 0.3 * pulse), 2.0, true)
 	if _heal_pulse_left > 0.0:
 		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
 		var radius := lerpf(data.radius, data.heal_radius, t)
 		draw_polyline(Relief.ellipse(Vector2.ZERO, radius, radius * ground.y, 0.0, TAU, 40),
-			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0, true)
+			Color(_heal_color(), 0.6 * (1.0 - t)), 3.0, true)
 	if data.raider:
 		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), u * 1.5, u * 1.5 * ground.y, 0.0, TAU, 24),
 			Color(RAID_COLOR, 0.18 if not is_raiding() else 0.32))
@@ -727,6 +829,51 @@ func _draw_relief() -> void:
 		draw_set_transform(Vector2.ZERO)
 
 
+## Tunnelier : la butte de terre qui avance sous le chemin, et la gerbe de terre quand
+## il plonge ou remonte.
+func _draw_burrow() -> void:
+	var ground := Relief.GROUND_SQUASH if Relief.enabled else 1.0
+	var u := data.radius
+	if is_burrowed():
+		var wobble := sin(progress * 0.3) * 0.08
+		var mound := Relief.ellipse(Vector2(0, -u * 0.15), u * (1.15 + wobble), u * (0.55 - wobble) * (0.8 + 0.4 * ground), PI, TAU, 16)
+		mound.append(Vector2(u * 1.15, 0))
+		mound.append(Vector2(-u * 1.15, 0))
+		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), u * 1.3, u * 0.5 * ground + 1.0), Color(0, 0, 0, 0.25))
+		draw_colored_polygon(mound, DIRT_COLOR)
+		draw_polyline(mound, DIRT_COLOR.darkened(0.45), 1.5, true)
+		# Mottes et cailloux qui roulent sur la butte.
+		for i in 3:
+			var x := fposmod(progress * 0.6 + i * u * 0.75, u * 2.0) - u
+			var y := -sqrt(maxf(1.0 - pow(x / (u * 1.15), 2.0), 0.0)) * u * 0.55 * (0.8 + 0.4 * ground)
+			draw_circle(Vector2(x, y), maxf(u * 0.13, 1.5), DIRT_COLOR.lightened(0.2 + 0.1 * i), true, -1.0, true)
+	if _burrow_dust_left > 0.0:
+		var t := 1.0 - _burrow_dust_left / BURROW_DUST_DURATION
+		for i in 7:
+			var angle := PI + PI * (i + 0.5) / 7.0
+			var at := Vector2.from_angle(angle) * u * (0.6 + 1.2 * t) - Vector2(0, u * 1.4 * t * (1.0 - t))
+			draw_circle(Vector2(at.x, at.y * (0.6 + 0.4 * ground)), maxf(u * 0.2 * (1.0 - t), 1.0),
+				Color(DIRT_COLOR.lightened(0.15), 1.0 - t), true, -1.0, true)
+
+
+## Saboteur : un éclair jaune, bref, jusqu'à la tour qu'il vient d'éteindre.
+func _draw_sabotage_flash() -> void:
+	if _sabotage_flash_left <= 0.0:
+		return
+	var to := to_local(_sabotage_flash_to)
+	var from := Vector2(0, -Creature.body_height(data)) if Relief.enabled else Vector2.ZERO
+	if Relief.enabled:
+		to += Vector2(0, -24)
+	var alpha := _sabotage_flash_left / SABOTAGE_FLASH_DURATION
+	var points := PackedVector2Array([from])
+	var across := (to - from).orthogonal().normalized()
+	for i in range(1, 6):
+		points.append(from.lerp(to, i / 6.0) + across * (6.0 if i % 2 == 0 else -6.0))
+	points.append(to)
+	draw_polyline(points, Color(SABOTAGE_COLOR, alpha), 2.5, true)
+	draw_polyline(points, Color(1, 1, 1, alpha * 0.8), 1.0, true)
+
+
 ## Pillard : un halo orangé sous lui et une torche à son côté.
 func _draw_torch() -> void:
 	draw_circle(Vector2.ZERO, data.radius * 1.3, Color(RAID_COLOR, 0.16 if not is_raiding() else 0.3))
@@ -764,9 +911,16 @@ func _draw_flying_shadow() -> void:
 ## Aura dorée qui pulse autour d'un élite, rouge et dorée autour d'un boss.
 func _draw_aura() -> void:
 	var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
-	var color := EnemyData.BOSS_COLOR if data.is_boss else EnemyData.ELITE_COLOR
+	var color := EnemyData.boss_color() if data.is_boss else EnemyData.ELITE_COLOR
 	var aura_radius := data.radius * (1.25 + 0.08 * pulse)
 	draw_circle(Vector2.ZERO, aura_radius, Color(color, 0.12 + 0.1 * pulse))
 	draw_arc(Vector2.ZERO, aura_radius, 0.0, TAU, 40, Color(color, 0.55 + 0.3 * pulse), 2.5 if data.is_boss else 2.0)
 	if data.is_boss:
 		draw_arc(Vector2.ZERO, aura_radius + 5.0, 0.0, TAU, 40, Color(EnemyData.ELITE_COLOR, 0.35 * pulse), 1.5)
+	if data.is_boss and UiStyle.is_colorblind():
+		draw_arc(Vector2.ZERO, aura_radius + 10.0, 0.0, TAU, 40, Color(color, 0.5 + 0.3 * pulse), 2.0)
+
+
+## Halo du soin d'un Médecin : vert, bleu ciel en mode daltonien.
+static func _heal_color() -> Color:
+	return COLORBLIND_HEAL_COLOR if UiStyle.is_colorblind() else HEAL_COLOR

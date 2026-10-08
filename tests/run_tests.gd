@@ -43,6 +43,10 @@ const REINE := preload("res://resources/enemies/insectoid/reine.tres")
 const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
 const FRELON := preload("res://resources/enemies/insectoid/frelon.tres")
 const MANTE := preload("res://resources/enemies/insectoid/mante.tres")
+const TUNNELIER := preload("res://resources/enemies/mecha/tunnelier.tres")
+const SABOTEUR := preload("res://resources/enemies/humanoid/saboteur.tres")
+const BANSHEE := preload("res://resources/enemies/undead/banshee.tres")
+const REVENANT := preload("res://resources/enemies/undead/revenant.tres")
 const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
 const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
 const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
@@ -79,6 +83,7 @@ func _run() -> void:
 	SavedGame.clear()
 	# Les textes vérifiés sont ceux du jeu en français, quelle que soit la langue du système.
 	GameSettings.apply_language()
+	GameSettings.apply_accessibility()
 	await _test_title_screen()
 	await _test_progress()
 	await _test_perk_tree()
@@ -93,6 +98,8 @@ func _run() -> void:
 	await _test_tower_upgrade_in_level()
 	await _test_tower_info_panels()
 	await _test_touch_controls()
+	await _test_gamepad()
+	await _test_accessibility()
 	await _test_sell_tower()
 	await _test_undo_placement()
 	await _test_saved_game()
@@ -133,6 +140,9 @@ func _run() -> void:
 	await _test_magnet_tower()
 	await _test_flying_enemies()
 	await _test_stealthy_enemies()
+	await _test_burrowing_enemies()
+	await _test_saboteurs()
+	await _test_necropolis_flyer_and_stealth()
 	await _test_crossings_in_tree()
 	await _test_tower_choice()
 	await _test_worlds()
@@ -828,6 +838,135 @@ func _click(level: Level, screen_position: Vector2) -> void:
 	event.pressed = true
 	event.position = screen_position
 	await _send_to_placer(level, event)
+
+
+func _joy_button(index: JoyButton, pressed := true) -> InputEventJoypadButton:
+	var event := InputEventJoypadButton.new()
+	event.button_index = index
+	event.pressed = pressed
+	return event
+
+
+func _test_gamepad() -> void:
+	print("Manette")
+	Gamepad.setup_input_map()
+	_check(InputMap.event_is_action(_joy_button(JOY_BUTTON_A), &"ui_accept")
+		and InputMap.event_is_action(_joy_button(JOY_BUTTON_B), &"ui_cancel"),
+		"A valide et B annule dans les menus")
+	var stick := InputEventJoypadMotion.new()
+	stick.axis = JOY_AXIS_LEFT_X
+	stick.axis_value = -1.0
+	_check(not InputMap.event_is_action(stick, &"ui_left"), "le stick gauche ne sert qu'au pointeur")
+
+	var level := await _spawn_level(LEVEL_01)
+	var hud := level.hud
+	var shop_types: Array[TowerData] = []
+	for button: TowerShopButton in hud.tower_shop.get_children():
+		shop_types.append(button.data)
+	level.gold = 10000
+	await process_frame
+	hud._unhandled_input(_joy_button(JOY_BUTTON_RIGHT_SHOULDER))
+	_check(level.placer.selected_tower == shop_types[0], "RB choisit la première tour de la barre")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_RIGHT_SHOULDER))
+	_check(level.placer.selected_tower == shop_types[1], "RB encore : la tour suivante")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_LEFT_SHOULDER))
+	_check(level.placer.selected_tower == shop_types[0], "LB revient à la précédente")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_START))
+	_check(level.is_paused, "Start met en pause")
+	hud._unhandled_input(_joy_button(JOY_BUTTON_START))
+	_check(not level.is_paused, "et relance la partie")
+	var waves := [0]
+	hud.next_wave_requested.connect(func() -> void: waves[0] += 1)
+	hud._unhandled_input(_joy_button(JOY_BUTTON_Y))
+	_check(waves[0] == 1, "Y lance la vague suivante")
+
+	var manette := root.get_node_or_null(^"Manette") as Gamepad
+	_check(manette != null, "la manette est chargée au démarrage")
+	if manette:
+		level.select_tower(CANNON)
+		var cell := Vector2i(2, 4)
+		var at := level.get_viewport().get_canvas_transform() * level.map.cell_to_world(cell)
+		manette.set_cursor(at)
+		_check(Gamepad.has_cursor() and Gamepad.is_active(), "le pointeur apparaît")
+		manette._input(_joy_button(JOY_BUTTON_A))
+		manette._input(_joy_button(JOY_BUTTON_A, false))
+		for i in 3:
+			await process_frame
+		_check(level.map.get_occupant(cell) is Tower, "A pose la tour sous le pointeur")
+		hud._process(0.0)
+		_check(hud.shop_hint.text == Hud.GAMEPAD_HINT, "le rappel des commandes parle de la manette")
+		var previous_scene := current_scene
+		current_scene = level
+		var from := Gamepad.get_cursor()
+		manette._input(_joy_button(JOY_BUTTON_DPAD_RIGHT))
+		manette._input(_joy_button(JOY_BUTTON_DPAD_RIGHT, false))
+		_check(Gamepad.get_cursor().is_equal_approx(from + Vector2(Gamepad.DPAD_STEP, 0)),
+			"en partie, la croix avance le pointeur d'une case")
+		current_scene = previous_scene
+		var motion := InputEventMouseMotion.new()
+		motion.position = Vector2(5, 5)
+		manette._input(motion)
+		_check(not Gamepad.has_cursor() and not Gamepad.is_active(), "la souris reprend la main")
+	await _free(level)
+
+
+func _test_accessibility() -> void:
+	print("Accessibilité : taille du texte, mode daltonien, vibrations")
+	var options := OptionsMenu.new()
+	root.add_child(options)
+	await process_frame
+	_check(options.text_scale_buttons.size() == GameSettings.TEXT_SCALES.size()
+		and options.text_scale_buttons[0].button_pressed, "les Options proposent la taille du texte (normale au départ)")
+	var label := Label.new()
+	label.text = "Texte"
+	label.add_theme_font_size_override(&"font_size", 20)
+	root.add_child(label)
+	await process_frame
+	options.text_scale_buttons[2].pressed.emit()
+	await process_frame
+	_check(is_equal_approx(GameSettings.get_text_scale(), GameSettings.TEXT_SCALES[2])
+		and label.get_theme_font_size(&"font_size") == roundi(20 * GameSettings.TEXT_SCALES[2]),
+		"le texte déjà affiché grandit tout de suite")
+	label.add_theme_font_size_override(&"font_size", 10)
+	await process_frame
+	await process_frame
+	_check(label.get_theme_font_size(&"font_size") == 13, "une taille posée ensuite par le code grandit aussi")
+	var late := Button.new()
+	late.text = "Plus tard"
+	root.add_child(late)
+	await process_frame
+	var theme_size := ThemeDB.get_project_theme().get_font_size(&"font_size", &"Button") \
+		if ThemeDB.get_project_theme() and ThemeDB.get_project_theme().has_font_size(&"font_size", &"Button") \
+		else ThemeDB.fallback_font_size
+	_check(late.get_theme_font_size(&"font_size") == roundi(theme_size * GameSettings.TEXT_SCALES[2]),
+		"un bouton ouvert ensuite a la taille choisie")
+	options.text_scale_buttons[0].pressed.emit()
+	await process_frame
+	_check(label.get_theme_font_size(&"font_size") == 10 and late.get_theme_font_size(&"font_size") == theme_size,
+		"revenir à la taille normale rend les tailles d'origine")
+	label.free()
+	late.free()
+
+	_check(not UiStyle.is_colorblind() and UiStyle.invalid_color() == UiStyle.INVALID_COLOR,
+		"sans le mode daltonien, une case interdite est rouge")
+	options.colorblind_check.button_pressed = true
+	_check(GameSettings.is_colorblind() and UiStyle.invalid_color() == UiStyle.COLORBLIND_INVALID_COLOR
+		and UiStyle.valid_color() == UiStyle.COLORBLIND_VALID_COLOR
+		and EnemyData.boss_color() == EnemyData.COLORBLIND_BOSS_COLOR,
+		"mode daltonien : bleu et orange, boss magenta")
+	Progress.clear_cache()
+	GameSettings.apply_accessibility()
+	_check(UiStyle.is_colorblind(), "le mode daltonien est enregistré")
+	options.colorblind_check.button_pressed = false
+	_check(EnemyData.boss_color() == EnemyData.BOSS_COLOR, "et se retire")
+
+	_check(Gamepad.is_vibration_enabled() and options.vibration_check.button_pressed and Gamepad.rumble(&"boss"),
+		"les vibrations sont permises au départ")
+	options.vibration_check.button_pressed = false
+	_check(not Gamepad.is_vibration_enabled() and not Gamepad.rumble(&"life_lost"), "la case Vibrations les coupe")
+	Gamepad.set_vibration_enabled(true)
+	options.close()
+	await process_frame
 
 
 func _test_touch_controls() -> void:
@@ -2273,6 +2412,87 @@ func _test_stealthy_enemies() -> void:
 	await _free(level)
 
 
+func _test_burrowing_enemies() -> void:
+	print("Tunnelier : il plonge sous le chemin, hors d'atteinte des tours, et remonte avant la base")
+	var level := await _spawn_level(LEVEL_01)
+	var cannon := _place_test_tower(level, CANNON)
+	cannon.set_process(false)
+	var borer := _add_enemy_at(level, TUNNELIER, cannon.global_position + Vector2(60, 0))
+	_check(cannon.find_target() == borer, "en surface, le Canon le vise")
+	borer._set_burrowed(true)
+	_check(borer.is_burrowed() and cannon.find_target() == null and not borer.health_bar.visible,
+		"sous terre, aucune tour ne le voit et sa barre de vie disparaît")
+	_check(borer.take_damage(50.0) == 0.0 and borer.hit(50.0, CANNON.get_stats_at_level(1)) == 0.0
+			and Enemy.get_alive_in_radius(self, borer.global_position, 50.0).is_empty(),
+		"ni les coups, ni les ondes, ni les explosions ne l'atteignent")
+	_check(is_equal_approx(borer.get_speed(), TUNNELIER.speed * TUNNELIER.burrow_speed_multiplier), "il creuse plus vite qu'il ne roule")
+	borer.despawn()
+	# Il plonge et remonte de lui-même en avançant sur le chemin.
+	var walker := _add_still_enemy(level, TUNNELIER, 0, 0.0)
+	walker.set_process(true)
+	var dove := false
+	var surfaced := false
+	var elapsed := 0.0
+	while elapsed < TUNNELIER.burrow_interval + TUNNELIER.burrow_duration + 0.5 and walker.is_alive:
+		elapsed += await _step()
+		dove = dove or walker.is_burrowed()
+		surfaced = dove and not walker.is_burrowed()
+	_check(dove and surfaced, "il plonge toutes les %s s et remonte au bout de %s s" % [TUNNELIER.burrow_interval, TUNNELIER.burrow_duration])
+	# Près de la base, il reste en surface.
+	walker.progress = walker._path_length - Enemy.BURROW_SURFACE_DISTANCE + 10.0
+	walker._burrow_cooldown = 0.0
+	walker._update_burrow(0.1)
+	_check(not walker.is_burrowed(), "il ne plonge plus près de la base")
+	walker.despawn()
+	_check(TUNNELIER.get_abilities()[0].begins_with("Tunnelier"), "sa capacité est décrite dans sa fiche")
+	await _free(level)
+
+
+func _test_saboteurs() -> void:
+	print("Saboteur : il éteint quelques secondes la tour la plus proche")
+	var level := await _spawn_level(LEVEL_01)
+	var sniper := _place_test_tower(level, SNIPER)
+	var cannon := _place_near(level, CANNON, Vector2i(10, 8))
+	var saboteur := _add_enemy_at(level, SABOTEUR, sniper.global_position + Vector2(50, 0))
+	var mante := _add_enemy_at(level, MANTE, sniper.global_position + Vector2(70, 0))
+	mante._update_detection()
+	_check(mante.is_revealed(), "le Sniper détecte la Mante")
+	saboteur._sabotage_cooldown = 0.0
+	saboteur._update_sabotage(0.1)
+	_check(sniper.is_sabotaged() and not cannon.is_sabotaged(), "il éteint la tour la plus proche, pas celle qui est loin")
+	_check(sniper.find_target() != null and not sniper.is_in_group(Enemy.DETECTOR_GROUP),
+		"la tour éteinte ne détecte plus les furtifs")
+	mante._update_detection()
+	_check(not mante.is_revealed(), "la Mante redevient invisible")
+	sniper._cooldown = 0.0
+	var health := saboteur.health.health
+	var elapsed := 0.0
+	while elapsed < 1.0:
+		elapsed += await _step()
+	_check(saboteur.health.health == health and sniper._target == null, "la tour éteinte ne tire plus")
+	while elapsed < SABOTEUR.sabotage_duration + 0.3:
+		elapsed += await _step()
+	_check(not sniper.is_sabotaged() and sniper.is_in_group(Enemy.DETECTOR_GROUP),
+		"au bout de %s s, elle se rallume et détecte de nouveau" % SABOTEUR.sabotage_duration)
+	# Une Bobine éteinte ne renforce plus ses voisines.
+	var coil := _place_near(level, COIL, sniper.cell)
+	_check(sniper.is_boosted(), "la Bobine renforce le Sniper")
+	coil.sabotage(2.0)
+	_check(not sniper.is_boosted(), "éteinte, elle ne le renforce plus")
+	_check(SABOTEUR.get_abilities()[0].begins_with("Saboteur"), "sa capacité est décrite dans sa fiche")
+	await _free(level)
+
+
+func _test_necropolis_flyer_and_stealth() -> void:
+	print("La Nécropole a aussi son volant et son furtif")
+	var world: World = (load("res://resources/campaign.tres") as Campaign).worlds[3]
+	_check(BANSHEE.flying and BANSHEE in world.enemies, "la Banshee vole et fait partie de La Nécropole")
+	_check(REVENANT.stealthy and REVENANT.revive_count == 1 and REVENANT in world.enemies,
+		"le Revenant est furtif et se relève une fois")
+	var shapes := [Creature.shape_of(BANSHEE), Creature.shape_of(REVENANT), Creature.shape_of(TUNNELIER), Creature.shape_of(SABOTEUR)]
+	_check(shapes == ["banshee", "revenant", "tunnelier", "saboteur"], "chacun a son dessin en trois quarts (%s)" % [shapes])
+
+
 func _test_crossings_in_tree() -> void:
 	print("Arbre des améliorations : croisements de tours")
 	var tree := Perks.TREE
@@ -3281,10 +3501,10 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 39 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
-			and names.has("Frelon") and names.has("Infiltré") and names.any(func(n: String) -> bool: return n.contains("Liche"))
+	_check(names.size() == 43 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+			and names.has("Frelon") and names.has("Infiltré") and names.has("Banshee") and names.has("Tunnelier") and names.any(func(n: String) -> bool: return n.contains("Liche"))
 			and names.has("Pillarde  ·  Conquête"),
-		"onglet Monstres : les élites, les porteurs, les 29 monstres (dont les volants et les furtifs), les 4 boss et les 4 Pillards (%d)"
+		"onglet Monstres : les élites, les porteurs, les 33 monstres (dont les volants, les furtifs, le Tunnelier et le Saboteur), les 4 boss et les 4 Pillards (%d)"
 			% names.size())
 	var raider_entry: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.begins_with("Maraudeur"))[0]
 	raider_entry.pressed.emit()

@@ -17,7 +17,7 @@ var _bars: Control
 func _init() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := UiStyle.panel(EnemyData.BOSS_COLOR, 14.0, SIDE_LEFT, Color(0.08, 0.05, 0.05, 0.88))
+	var style := UiStyle.panel(EnemyData.boss_color(), 14.0, SIDE_LEFT, Color(0.08, 0.05, 0.05, 0.88))
 	style.content_margin_top = 6
 	style.content_margin_bottom = 8
 	add_theme_stylebox_override(&"panel", style)
@@ -27,7 +27,7 @@ func _init() -> void:
 	add_child(column)
 	_name_label = Label.new()
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_color_override(&"font_color", EnemyData.BOSS_COLOR.lightened(0.3))
+	_name_label.add_theme_color_override(&"font_color", EnemyData.boss_color().lightened(0.3))
 	_name_label.add_theme_font_size_override(&"font_size", 16)
 	column.add_child(_name_label)
 	_bars = Control.new()

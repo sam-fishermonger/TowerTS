@@ -89,7 +89,7 @@ func show_tab(tab: Tab) -> void:
 					_add_entry(enemy.display_name, enemy.color.lightened(0.35), enemy.texture, null,
 						show_enemy.bind(enemy, world))
 				for boss in world.bosses:
-					_add_entry(tr("%s  ·  boss") % tr(boss.display_name), EnemyData.BOSS_COLOR, boss.texture, null,
+					_add_entry(tr("%s  ·  boss") % tr(boss.display_name), EnemyData.boss_color(), boss.texture, null,
 						show_enemy.bind(boss, world))
 				for raider in world.raiders:
 					_add_entry(tr("%s  ·  Conquête") % tr(raider.display_name), Enemy.RAID_COLOR, raider.texture, null,
@@ -179,7 +179,7 @@ func show_tower(data: TowerData) -> void:
 
 
 func show_enemy(data: EnemyData, world: World) -> void:
-	_set_detail_header(tr(data.display_name), EnemyData.BOSS_COLOR if data.is_boss else data.color.lightened(0.2),
+	_set_detail_header(tr(data.display_name), EnemyData.boss_color() if data.is_boss else data.color.lightened(0.2),
 		data.texture, null)
 	if data.is_boss:
 		detail_title.text += "  " + EnemyInfo.rank_tag(data)

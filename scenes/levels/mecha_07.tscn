@@ -19,6 +19,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/mecha/spectre.tres" id="e_spectre"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/titan.tres" id="e_titan"]
 [ext_resource type="Resource" path="res://resources/enemies/mecha/behemoth.tres" id="e_behemoth"]
+[ext_resource type="Resource" path="res://resources/enemies/mecha/tunnelier.tres" id="e_tunnelier"]
 
 [sub_resource type="Resource" id="Group_w1_1"]
 script = ExtResource("4_spawn_group")
@@ -107,9 +108,16 @@ interval = 0.8
 start_delay = 0.0
 path_index = 0
 
+[sub_resource type="Resource" id="Group_w4_tunnelier"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_tunnelier")
+count = 5
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_4"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w4_1"), SubResource("Group_w4_2"), SubResource("Group_w4_tunnelier")])
 bonus_gold = 25
 
 [sub_resource type="Resource" id="Group_w5_1"]
@@ -195,9 +203,16 @@ interval = 0.6
 start_delay = 3.0
 path_index = 1
 
+[sub_resource type="Resource" id="Group_w7_tunnelier"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_tunnelier")
+count = 8
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_7"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_4")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w7_1"), SubResource("Group_w7_2"), SubResource("Group_w7_3"), SubResource("Group_w7_4"), SubResource("Group_w7_tunnelier")])
 bonus_gold = 35
 
 [sub_resource type="Resource" id="Group_w8_1"]

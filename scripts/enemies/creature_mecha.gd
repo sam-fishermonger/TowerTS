@@ -16,6 +16,7 @@ const SHAPES := {
 	"porte_drones": [1.15, 0.95, 1.3],
 	"behemoth": [1.0, 1.35, 1.3],
 	"recuperateur": [0.75, 1.0, 1.0],
+	"tunnelier": [0.75, 0.9, 1.3],
 }
 const STEEL := Color(0.62, 0.64, 0.7)
 const DARK_STEEL := Color(0.27, 0.28, 0.33)
@@ -60,6 +61,8 @@ static func draw(canvas: CanvasItem, shape: String, u: float, color: Color, phas
 			Creature.limb(canvas, PackedVector2Array([Vector2(-0.1, -0.3) * u, Vector2(0.1, 0.15) * u]), 0.3 * u, DARK_STEEL * tint)
 			Creature.box(canvas, Vector2(0.45, 0.2) * u, Vector2(0.85, 0.32) * u, 0.1 * u, DARK_STEEL.lightened(0.15) * tint)
 			canvas.draw_circle(Vector2(0.88, 0.2) * u, 0.09 * u, Color(1.0, 0.45, 0.2) * tint, true, -1.0, true)
+		"tunnelier":
+			_draw_borer(canvas, u, color, phase, tint)
 		"chenillard":
 			_treads(canvas, Vector2(0, 0.42) * u, Vector2(2.0, 0.62) * u, phase, tint)
 			Creature.box(canvas, Vector2(-0.05, -0.12) * u, Vector2(1.8, 0.6) * u, 0.14 * u, color)
@@ -119,6 +122,36 @@ static func _treads(canvas: CanvasItem, center: Vector2, size: Vector2, phase: f
 		var bottom := fposmod(i * spacing - phase, straight) - straight / 2.0
 		canvas.draw_line(center + Vector2(top, -size.y / 2.0 + 0.5), center + Vector2(top, -size.y / 2.0 + size.y * 0.16), link, 2.0)
 		canvas.draw_line(center + Vector2(bottom, size.y / 2.0 - 0.5), center + Vector2(bottom, size.y / 2.0 - size.y * 0.16), link, 2.0)
+
+
+## Tunnelier : une foreuse sur chenilles, gros cône vissé à l'avant qui tourne, cheminée
+## qui fume à l'arrière.
+static func _draw_borer(canvas: CanvasItem, u: float, color: Color, phase: float, tint: Color) -> void:
+	_treads(canvas, Vector2(-0.2, 0.42) * u, Vector2(1.6, 0.6) * u, phase, tint)
+	# Cheminée et petite fumée.
+	Creature.box(canvas, Vector2(-0.75, -0.6) * u, Vector2(0.2, 0.45) * u, 0.05 * u, DARK_STEEL * tint)
+	var puff := fposmod(phase * 0.05, 1.0)
+	canvas.draw_circle(Vector2(-0.8 - 0.2 * puff, -0.95 - 0.4 * puff) * u, (0.12 + 0.12 * puff) * u,
+		Color(0.55, 0.55, 0.58, 0.6 * (1.0 - puff)) * tint, true, -1.0, true)
+	Creature.box(canvas, Vector2(-0.25, -0.15) * u, Vector2(1.3, 0.7) * u, 0.18 * u, color)
+	# Hublot de la cabine.
+	_visor(canvas, Vector2(-0.35, -0.25) * u, Vector2(0.35, 0.22) * u, Color(1.0, 0.7, 0.2) * tint, u)
+	# Bandes de danger sur le flanc.
+	for i in 3:
+		var x := (-0.65 + i * 0.2) * u
+		canvas.draw_line(Vector2(x, 0.05 * u), Vector2(x + 0.12 * u, -0.08 * u), Color(0.15, 0.15, 0.15, 0.6) * tint, 2.0, true)
+	# Le cône de la foreuse : un triangle à spires qui défilent.
+	var tip := Vector2(1.35, 0.05) * u
+	var base_top := Vector2(0.4, -0.45) * u
+	var base_bottom := Vector2(0.4, 0.55) * u
+	Creature.polygon(canvas, PackedVector2Array([base_top, tip, base_bottom]), STEEL * tint)
+	var turn := fposmod(phase * 0.12, 1.0)
+	for i in 4:
+		var t := (i + turn) / 4.0
+		var top := base_top.lerp(tip, t)
+		var bottom := base_bottom.lerp(tip, minf(t + 0.12, 1.0))
+		canvas.draw_line(top, bottom, Color(DARK_STEEL, 0.9) * tint, maxf(0.06 * u, 1.2), true)
+	Creature.box(canvas, Vector2(0.38, 0.05) * u, Vector2(0.16, 1.05) * u, 0.05 * u, DARK_STEEL * tint)
 
 
 ## Drone : une coque ronde qui flotte au ras du sol sous deux hélices.

@@ -21,6 +21,13 @@ const DEFAULT_LANGUAGE := "fr"
 const TOUCH_MODE_META := &"settings_touch_mode"
 ## Méta du moteur : bouton touché une première fois (voir confirm_touch).
 const ARMED_BUTTON_META := &"settings_armed_button"
+## Tailles du texte proposées : facteur appliqué à toutes les polices de l'interface.
+const TEXT_SCALES: Array[float] = [1.0, 1.15, 1.3]
+const TEXT_SCALE_NAMES: Array[String] = ["Normale", "Grande", "Très grande"]
+## Réglages de taille de police que la taille du texte agrandit, selon la sorte de nœud.
+const FONT_SIZE_NAMES: Array[StringName] = [&"font_size"]
+const RICH_FONT_SIZE_NAMES: Array[StringName] = [&"normal_font_size", &"bold_font_size",
+	&"italics_font_size", &"bold_italics_font_size", &"mono_font_size"]
 
 ## Message « tournez l'appareil », par-dessus tout.
 var _rotate_hint: Control
@@ -30,11 +37,13 @@ func _ready() -> void:
 	layer = 128
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	apply_language()
+	apply_accessibility()
 	# Le navigateur refuse le plein écran sans geste du joueur : sur le web, il ne se
 	# demande que depuis le menu Options.
 	if is_fullscreen_saved() and not OS.has_feature("web"):
 		_apply_fullscreen(true)
 	_build_rotate_hint()
+	get_tree().node_added.connect(_on_node_added)
 	get_viewport().size_changed.connect(_refresh_rotate_hint)
 	_refresh_rotate_hint()
 
@@ -128,6 +137,89 @@ static func decimal(value: float, step := 0.1) -> String:
 static func apply_language() -> void:
 	if TranslationServer.get_locale() != get_language():
 		TranslationServer.set_locale(get_language())
+
+
+# --- Accessibilité -----------------------------------------------------------
+
+## Mode daltonien : les couleurs qui opposent le vert et le rouge (emplacement libre ou
+## non, auras des monstres) passent au bleu et à l'orange, avec un signe en plus de la
+## couleur (croix sur une case interdite, double anneau du boss).
+static func is_colorblind() -> bool:
+	return Progress.get_setting("colorblind", false)
+
+
+static func set_colorblind(enabled: bool) -> void:
+	Progress.set_setting("colorblind", enabled)
+	apply_accessibility()
+
+
+## Recopie le mode daltonien enregistré là où les dessins le lisent (UiStyle.is_colorblind).
+static func apply_accessibility() -> void:
+	Engine.set_meta(UiStyle.COLORBLIND_META, is_colorblind())
+
+
+## Facteur de taille du texte choisi (une valeur de TEXT_SCALES).
+static func get_text_scale() -> float:
+	var value: float = Progress.get_setting("text_scale", 1.0)
+	for scale in TEXT_SCALES:
+		if is_equal_approx(scale, value):
+			return scale
+	return 1.0
+
+
+## Change la taille du texte de tout ce qui est déjà affiché, puis de ce qui s'ouvrira.
+static func set_text_scale(scale: float) -> void:
+	Progress.set_setting("text_scale", scale)
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree:
+		_scale_tree(tree.root)
+
+
+static func _scale_tree(node: Node) -> void:
+	if node is Control:
+		scale_text(node)
+	for child in node.get_children(true):
+		_scale_tree(child)
+
+
+func _on_node_added(node: Node) -> void:
+	# Le texte d'un nœud tout neuf se met à l'échelle après son _ready (et celui de son
+	# parent), une fois ses tailles de police posées par le code.
+	if node is Control and _has_text(node) and (get_text_scale() != 1.0 or node.has_meta(&"text_base")):
+		scale_text.call_deferred(node)
+
+
+static func _has_text(control: Control) -> bool:
+	return control is Label or control is BaseButton or control is LineEdit or control is TextEdit \
+		or control is RichTextLabel or control is ItemList
+
+
+## Met les polices de ce nœud à la taille du texte choisie. La taille d'origine (celle du
+## thème ou celle posée par le code) est gardée de côté : si le code en pose une autre
+## plus tard, c'est elle qui devient la taille d'origine.
+static func scale_text(control: Control) -> void:
+	if not is_instance_valid(control) or not control.is_inside_tree() or not _has_text(control):
+		return
+	var scale := get_text_scale()
+	var bases: Dictionary = control.get_meta(&"text_base", {})
+	var applied: Dictionary = control.get_meta(&"text_applied", {})
+	for item in (RICH_FONT_SIZE_NAMES if control is RichTextLabel else FONT_SIZE_NAMES):
+		var current := control.get_theme_font_size(item)
+		if not bases.has(item) or applied.get(item, -1) != current:
+			bases[item] = current
+		var target := roundi(bases[item] * scale)
+		applied[item] = target
+		if target != current:
+			control.add_theme_font_size_override(item, target)
+	control.set_meta(&"text_base", bases)
+	control.set_meta(&"text_applied", applied)
+	if not control.theme_changed.is_connected(_on_text_theme_changed.bind(control)):
+		control.theme_changed.connect(_on_text_theme_changed.bind(control))
+
+
+## Le code a peut-être posé une nouvelle taille de police : on la remet à l'échelle.
+static func _on_text_theme_changed(control: Control) -> void:
+	scale_text.call_deferred(control)
 
 
 # --- Tactile ------------------------------------------------------------------

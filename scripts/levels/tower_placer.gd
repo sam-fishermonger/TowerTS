@@ -322,7 +322,8 @@ func _set_touch_cell(cell: Vector2i) -> void:
 		else level.can_place_tower(cell, selected_tower)
 	touch_hint.text = "Touchez encore pour poser" if can_place else \
 		"Fermerait le passage" if selected_tower and level.blocks_passage(cell) else "Impossible ici"
-	touch_hint.add_theme_color_override(&"font_color", Color(0.6, 1.0, 0.65) if can_place else Color(1.0, 0.5, 0.5))
+	touch_hint.add_theme_color_override(&"font_color", UiStyle.valid_color().lerp(Color.WHITE, 0.3) if can_place
+		else UiStyle.invalid_color().lerp(Color.WHITE, 0.2))
 	touch_hint.reset_size()
 	var center := level.map.cell_to_world(cell)
 	touch_hint.global_position = center - Vector2(touch_hint.size.x / 2.0, Tower.SIZE / 2.0 + touch_hint.size.y + 4.0)
@@ -401,7 +402,7 @@ func _draw() -> void:
 		return
 	var color := selected_power.color
 	if not level.map.is_cell_in_grid(level.map.world_to_cell(_mouse_position)):
-		color = Color(1, 0.35, 0.3)
+		color = UiStyle.invalid_color()
 	var at := to_local(_mouse_position)
 	if selected_power.kind == Power.Kind.REINFORCEMENTS:
 		var post := to_local(level.map.get_closest_path_point(_mouse_position))

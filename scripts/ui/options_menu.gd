@@ -1,8 +1,9 @@
 class_name OptionsMenu
 extends Control
 ## Menu Options, ouvert depuis l'écran titre ou en jeu : langue, musique et sons (chacun
-## avec sa case pour le couper et son curseur de volume), plein écran et vitesse de jeu au
-## lancement d'un niveau. Chaque réglage s'applique et s'enregistre tout de suite
+## avec sa case pour le couper et son curseur de volume), plein écran, vitesse de jeu au
+## lancement d'un niveau, puis l'accessibilité : taille du texte, mode daltonien et
+## vibrations (téléphone et manette). Chaque réglage s'applique et s'enregistre tout de suite
 ## (voir Sound et GameSettings). Couvre tout l'écran ; **Fermer** ou Échap le referme.
 
 signal closed
@@ -19,12 +20,17 @@ var fullscreen_check: CheckButton
 var speed_buttons: Array[Button] = []
 ## Un bouton par langue de GameSettings.LANGUAGES, dans le même ordre.
 var language_buttons: Array[Button] = []
+## Un bouton par taille de GameSettings.TEXT_SCALES.
+var text_scale_buttons: Array[Button] = []
+var colorblind_check: CheckButton
+var vibration_check: CheckButton
 var close_button: Button
 
 var _music_value: Label
 var _sound_value: Label
 var _speed_group := ButtonGroup.new()
 var _language_group := ButtonGroup.new()
+var _text_scale_group := ButtonGroup.new()
 
 
 func _init() -> void:
@@ -137,7 +143,44 @@ func _ready() -> void:
 		speed_buttons.append(button)
 	_add_row(grid, speed_label, speed_row, Control.new())
 
-	var hint := _label("Chaque niveau commence à cette vitesse.", 14, Color(1, 1, 1, 0.5))
+	var text_label := _label("Taille du texte", 20, Color.WHITE)
+	text_label.custom_minimum_size.y = ROW_HEIGHT
+	text_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var text_row := HBoxContainer.new()
+	text_row.add_theme_constant_override("separation", 6)
+	for i in GameSettings.TEXT_SCALES.size():
+		var scale := GameSettings.TEXT_SCALES[i]
+		var button := Button.new()
+		button.text = GameSettings.TEXT_SCALE_NAMES[i]
+		button.toggle_mode = true
+		button.button_group = _text_scale_group
+		button.custom_minimum_size = Vector2(0, ROW_HEIGHT)
+		button.add_theme_font_size_override(&"font_size", 20)
+		button.pressed.connect(func() -> void:
+			GameSettings.set_text_scale(scale)
+			refresh())
+		text_row.add_child(button)
+		text_scale_buttons.append(button)
+	_add_row(grid, text_label, text_row, Control.new())
+
+	colorblind_check = _check("Mode daltonien", GameSettings.is_colorblind())
+	colorblind_check.tooltip_text = "Portées et auras en bleu et orange plutôt qu'en vert et rouge"
+	_add_row(grid, colorblind_check, _label("Bleu et orange au lieu de vert et rouge", 16, Color(1, 1, 1, 0.6)),
+		Control.new())
+	colorblind_check.toggled.connect(func(on: bool) -> void:
+		GameSettings.set_colorblind(on)
+		refresh())
+
+	vibration_check = _check("Vibrations", Gamepad.is_vibration_enabled())
+	_add_row(grid, vibration_check, _label("Vie perdue et arrivée d'un boss (téléphone, manette)", 16,
+		Color(1, 1, 1, 0.6)), Control.new())
+	vibration_check.toggled.connect(func(on: bool) -> void:
+		Gamepad.set_vibration_enabled(on)
+		if on:
+			Gamepad.rumble(&"life_lost")
+		refresh())
+
+	var hint := _label("Chaque niveau commence à la vitesse choisie.", 14, Color(1, 1, 1, 0.5))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(hint)
 
@@ -177,6 +220,11 @@ func refresh() -> void:
 	var languages := GameSettings.LANGUAGES.keys()
 	for i in language_buttons.size():
 		language_buttons[i].set_pressed_no_signal(languages[i] == GameSettings.get_language())
+	colorblind_check.set_pressed_no_signal(GameSettings.is_colorblind())
+	vibration_check.set_pressed_no_signal(Gamepad.is_vibration_enabled())
+	var text_scale := GameSettings.get_text_scale()
+	for i in text_scale_buttons.size():
+		text_scale_buttons[i].set_pressed_no_signal(is_equal_approx(GameSettings.TEXT_SCALES[i], text_scale))
 	var default_speed := GameSettings.get_default_speed()
 	for i in speed_buttons.size():
 		speed_buttons[i].set_pressed_no_signal(is_equal_approx(GameSettings.DEFAULT_SPEEDS[i], default_speed))

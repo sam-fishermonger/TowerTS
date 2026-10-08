@@ -16,6 +16,8 @@ const SHAPES := {
 	"abomination": [1.1, 1.15, 1.05],
 	"liche": [1.25, 1.55, 0.8],
 	"pilleur": [1.0, 1.35, 0.8],
+	"banshee": [1.1, 1.3, 0.9],
+	"revenant": [1.05, 1.5, 0.8],
 }
 const BONE := Color(0.93, 0.9, 0.8)
 const SOUL := Color(0.45, 1.0, 0.55)
@@ -126,6 +128,10 @@ static func draw(canvas: CanvasItem, shape: String, u: float, color: Color, phas
 			canvas.draw_line(r.head + Vector2(0.0, 0.18) * u, r.head + Vector2(0.28, 0.14) * u, dark, 1.5, true)
 		"liche":
 			_draw_lich(canvas, u, feet, color, phase, tint)
+		"banshee":
+			_draw_banshee(canvas, u, color, phase, tint)
+		"revenant":
+			_draw_revenant(canvas, u, feet, color, phase, tint)
 		"pilleur":
 			var r := CreatureHumanoid.rig(u, feet, phase, 0.36, 0.35)
 			var coat := Color(0.38, 0.3, 0.24) * tint
@@ -238,3 +244,66 @@ static func _draw_lich(canvas: CanvasItem, u: float, feet: float, color: Color, 
 	crown.append(base + Vector2(-0.38, 0.04) * u)
 	Creature.polygon(canvas, crown, CreatureHumanoid.GOLD * tint)
 	canvas.draw_circle(base + Vector2(0, -0.05) * u, 0.06 * u, Color(0.4, 1.0, 0.6) * tint, true, -1.0, true)
+
+
+## Banshee : un spectre qui vole, longue traîne de voiles, cheveux au vent, bras tendus,
+## bouche ouverte sur un cri.
+static func _draw_banshee(canvas: CanvasItem, u: float, color: Color, phase: float, tint: Color) -> void:
+	var wave := sin(phase * 0.2)
+	# Traîne de voiles qui ondule derrière elle.
+	var trail := PackedVector2Array([Vector2(-0.2, -0.45) * u, Vector2(0.35, -0.2) * u, Vector2(0.3, 0.5) * u])
+	for i in 5:
+		var t := i / 4.0
+		trail.append(Vector2(lerpf(0.1, -1.45, t), 0.55 - 0.35 * t + (0.12 if i % 2 == 0 else -0.04)) * u
+			+ Vector2(0, sin(phase * 0.25 + i * 1.3) * 0.08 * u))
+	Creature.polygon(canvas, trail, Color(color, 0.85))
+	canvas.draw_colored_polygon(PackedVector2Array([trail[0], trail[1], trail[trail.size() - 1]]), Color(color.lightened(0.25), 0.4))
+	# Cheveux qui flottent en arrière.
+	for i in 3:
+		var root := Vector2(-0.05, -0.75 + i * 0.12) * u
+		Creature.limb(canvas, PackedVector2Array([root, root + Vector2(-0.55, 0.05 + wave * 0.08) * u,
+			root + Vector2(-1.0, 0.18 - wave * 0.1 + i * 0.05) * u]), maxf(0.1 * u, 2.0), Color(0.82, 0.85, 0.92) * tint)
+	# Bras décharnés tendus vers l'avant.
+	for i in 2:
+		var shoulder := Vector2(0.15, -0.3) * u
+		var hand := Vector2(0.95 - i * 0.12, -0.15 + i * 0.18 + wave * 0.05) * u
+		Creature.limb(canvas, PackedVector2Array([shoulder, (shoulder + hand) / 2.0 + Vector2(0, 0.05 * u), hand]),
+			maxf(0.12 * u, 2.0), (BONE * tint).darkened(0.15 * (1 - i)))
+	# Tête pâle, orbites vides, bouche qui hurle.
+	var head := Vector2(0.15, -0.72) * u
+	Creature.blob(canvas, head, 0.36 * u, 0.4 * u, Color(0.88, 0.92, 0.95) * tint)
+	for x in [0.05, 0.3]:
+		canvas.draw_colored_polygon(Relief.ellipse(head + Vector2(x, -0.05) * u, 0.07 * u, 0.1 * u, 0.0, TAU, 10), Relief.OUTLINE)
+		canvas.draw_circle(head + Vector2(x, -0.04) * u, maxf(0.03 * u, 0.8), SOUL * tint, true, -1.0, true)
+	canvas.draw_colored_polygon(Relief.ellipse(head + Vector2(0.2, 0.2) * u, 0.08 * u, 0.13 * u * (0.8 + 0.2 * absf(wave)), 0.0, TAU, 12),
+		Relief.OUTLINE)
+
+
+## Revenant : un mort en suaire, encapuchonné, qui marche courbé une lanterne à la main.
+static func _draw_revenant(canvas: CanvasItem, u: float, feet: float, color: Color, phase: float, tint: Color) -> void:
+	var r := CreatureHumanoid.rig(u, feet, phase, 0.22, 0.3)
+	var shroud := color
+	var look := {"cloth": shroud, "pants": shroud.darkened(0.2), "boots": shroud.darkened(0.35), "skin": BONE * tint,
+		"torso": Vector2(0.85, 0.95), "arms": "forward"}
+	CreatureHumanoid.figure(canvas, u, r, look, func() -> void:
+		# Suaire en lambeaux qui descend jusqu'aux genoux.
+		var hem := PackedVector2Array([r.chest + Vector2(-0.45, -0.3) * u, r.chest + Vector2(0.4, -0.3) * u])
+		for i in 5:
+			var t := i / 4.0
+			hem.append(r.chest + Vector2(lerpf(0.45, -0.6, t), 0.9 + (0.12 if i % 2 == 0 else -0.02)) * u
+				+ Vector2(sin(phase * 0.2 + i) * 0.04 * u, 0))
+		Creature.polygon(canvas, hem, shroud.darkened(0.1)))
+	# Capuche profonde, visage de crâne dans l'ombre.
+	var hood := Relief.ellipse(r.head + Vector2(-0.08, -0.02) * u, 0.58 * u, 0.6 * u, -PI * 0.1, -PI * 1.45, 18)
+	hood.append(r.head + Vector2(0.2, 0.55) * u)
+	Creature.polygon(canvas, hood, shroud.lightened(0.08))
+	Creature.blob(canvas, r.head + Vector2(0.16, 0.06) * u, 0.3 * u, 0.33 * u, Color(0.07, 0.07, 0.09))
+	for x in [0.08, 0.3]:
+		Creature.glow(canvas, r.head + Vector2(x, 0.02) * u, maxf(0.06 * u, 1.2), Color(0.55, 0.85, 1.0) * tint)
+	# Lanterne à flamme bleue, au bout d'une chaîne.
+	var hand := CreatureHumanoid.near_hand(u, r, look)
+	var swing := sin(phase * 0.25) * 0.06 * u
+	var lantern := hand + Vector2(0.1 * u + swing, 0.45 * u)
+	canvas.draw_line(hand, lantern + Vector2(0, -0.2 * u), Relief.OUTLINE, 1.2, true)
+	Creature.box(canvas, lantern, Vector2(0.3, 0.38) * u, 0.06 * u, Color(0.3, 0.28, 0.25) * tint)
+	Creature.glow(canvas, lantern, 0.12 * u, Color(0.5, 0.85, 1.0) * tint)

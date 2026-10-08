@@ -590,6 +590,8 @@ func _add_tower(cell: Vector2i, data: TowerData, at_level := 1) -> Tower:
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
 	tower.cell = cell
+	# Une Bobine éteinte par un Saboteur ne renforce plus ses voisines.
+	tower.sabotage_changed.connect(func(_tower: Tower) -> void: refresh_boosts())
 	refresh_tower_bonuses(tower)
 	map.occupy(cell, tower)
 	_placed_towers.append(tower)
@@ -768,9 +770,10 @@ func refresh_boosts() -> void:
 	var all := get_towers()
 	var coils: Array[CoilTower] = []
 	for tower in all:
-		if tower is CoilTower and tower.is_built():
-			coils.append(tower)
+		if tower is CoilTower:
 			tower.boosted_towers.clear()
+			if tower.is_built() and not tower.is_sabotaged():
+				coils.append(tower)
 	for tower in all:
 		var best: CoilTower = null
 		for coil in coils:
@@ -892,6 +895,8 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 		enemy.set_route(map.get_route_from(enemy.get_route_position()))
 	if enemy.data.is_boss:
 		hud.track_boss(enemy)
+		if not is_demo:
+			Gamepad.rumble(&"boss")
 
 
 func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
@@ -981,6 +986,8 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 	stats.lives_lost += mini(enemy.data.damage, lives)
 	lives -= enemy.data.damage
 	Sound.play(&"lives_lost")
+	if not is_demo:
+		Gamepad.rumble(&"life_lost")
 	_show_lives_lost(enemy.data.damage, enemy.global_position)
 	if lives <= 0:
 		_end_game(false)
