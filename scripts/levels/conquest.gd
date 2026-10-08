@@ -371,11 +371,16 @@ func build(site, delta: float) -> void:
 		level.on_tower_built(site)
 
 
-## Une tour vendue rend sa pierre : toute pour un chantier, la même part que l'or sinon.
+## Une tour vendue rend sa pierre : toute pour un chantier ou une pose annulée, la même
+## part que l'or sinon.
 func refund(tower: Tower) -> void:
 	_sites.erase(tower)
 	var cost := stone_cost(tower.data)
-	stone += cost if not tower.is_built() else roundi(cost * SELL_RATIO)
+	stone += cost if not tower.is_built() or tower.refundable else roundi(cost * SELL_RATIO)
+	# Une pose annulée rend aussi l'essence de ses améliorations.
+	if tower.refundable:
+		for next_level in range(2, tower.level + 1):
+			essence += UPGRADE_ESSENCE * (next_level - UPGRADE_ESSENCE_FROM_LEVEL + 1) if next_level >= UPGRADE_ESSENCE_FROM_LEVEL else 0
 	changed.emit()
 
 

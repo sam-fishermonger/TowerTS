@@ -17,6 +17,8 @@ signal menu_requested
 signal upgrade_requested(tower: Tower)
 ## Émis quand le joueur demande la vente de la tour affichée en détail.
 signal sell_requested(tower: Tower)
+## Ctrl+Z (ou Retour arrière) : annuler la dernière pose.
+signal undo_requested
 ## Émis quand le joueur ferme la fiche de la tour posée.
 signal tower_details_closed
 ## Émis quand le joueur met le jeu en pause ou le relance (bouton ou Espace).
@@ -245,7 +247,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var code := key.physical_keycode
 	var slot := TowerShop.slot_for_key(code)
 	var power_index := POWER_KEYS.find(code)
-	if power_index >= 0 and power_index < power_buttons.size():
+	if (key.keycode == KEY_Z and key.is_command_or_control_pressed()) or code == KEY_BACKSPACE:
+		undo_requested.emit()
+	elif power_index >= 0 and power_index < power_buttons.size():
 		power_selected.emit(power_buttons[power_index].power)
 	elif code == KEY_SPACE or code == KEY_P:
 		pause_toggled.emit()

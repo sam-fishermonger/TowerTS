@@ -2753,3 +2753,18 @@ msgstr "Polished Lenses"
 
 msgid "Butin de guerre"
 msgstr "Spoils of War"
+
+msgid "Pose annulée  +%d"
+msgstr "Placement undone  +%d"
+
+msgid "Annuler la pose  ·  %d or"
+msgstr "Undo placement  ·  %d gold"
+
+msgid "Remboursée en entier tant que la vague suivante n'est pas lancée (Ctrl+Z)."
+msgstr "Fully refunded until the next wave is launched (Ctrl+Z)."
+
+msgid "vague %d"
+msgstr "wave %d"
+
+msgid "vague %d / %d"
+msgstr "wave %d / %d"

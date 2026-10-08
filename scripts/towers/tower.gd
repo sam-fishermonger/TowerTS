@@ -54,6 +54,10 @@ var research_fire_rate := 0.0
 ## n'est qu'un chantier que les ouvriers bâtissent. Elle ne tire pas, ne s'améliore pas
 ## et ne détecte pas les furtifs.
 var build_progress := 1.0
+## Pose annulable : la tour vient d'être posée et n'a encore rien fait. Elle est alors
+## remboursée en entier (pose et améliorations), jusqu'à son premier tir ou au lancement
+## de la vague suivante (voir Level.undo_last_placement()).
+var refundable := false
 
 ## Nœud qui reçoit ce que la tour crée en jeu (projectiles, effets). Par défaut, son parent.
 var projectile_container: Node
@@ -147,6 +151,7 @@ func _process(delta: float) -> void:
 		_cooldown += 1.0 / stats.fire_rate
 		shots += 1
 	if shots > 0:
+		refundable = false
 		Sound.play_stream(data.attack_sound)
 
 
@@ -195,9 +200,11 @@ func get_total_cost() -> int:
 
 ## Or rendu si la tour est vendue.
 func get_sell_value() -> int:
-	# Un chantier pas fini est remboursé en entier.
+	# Un chantier pas fini est remboursé en entier, une pose annulée aussi.
 	if not is_built():
 		return data.get_cost()
+	if refundable:
+		return get_total_cost()
 	return roundi(get_total_cost() * (SELL_RATIO + Perks.get_bonuses().sell_ratio_bonus))
 
 
