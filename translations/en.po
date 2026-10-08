@@ -2753,3 +2753,53 @@ msgstr "Polished Lenses"
 
 msgid "Butin de guerre"
 msgstr "Spoils of War"
+
+msgid "Défi réussi"
+msgstr "Challenge won"
+
+msgid "Série : %d jour réussi d'affilée"
+msgid_plural "Série : %d jours réussis d'affilée"
+msgstr[0] "Streak: %d day won in a row"
+msgstr[1] "Streak: %d days won in a row"
+
+msgid "meilleure série : %d"
+msgstr "best streak: %d"
+
+msgid "Série : %d jours réussis d'affilée !"
+msgstr "Streak: %d days won in a row!"
+
+msgid "Victoire : ∞ ★ %d (meilleur résultat sur ce niveau : %d / %d)."
+msgstr "Victory: ∞ ★ %d (best on this level: %d / %d)."
+
+msgid "✦ Mutateurs"
+msgstr "✦ Mutators"
+
+msgid "Mutateurs"
+msgstr "Mutators"
+
+msgid "Mutateurs : ∞ ★ %d / %d"
+msgstr "Mutators: ∞ ★ %d / %d"
+
+msgid "+%d étoiles infinies à dépenser dans Améliorations."
+msgstr "+%d infinite stars to spend in Upgrades."
+
+msgid "+1 étoile infinie à dépenser dans Améliorations."
+msgstr "+1 infinite star to spend in Upgrades."
+
+msgid "✦ Mutateurs sur les niveaux déjà gagnés : %s (∞ ★ %d par victoire)."
+msgstr "✦ Mutators on levels already won: %s (∞ ★ %d per victory)."
+
+msgid "%s  Mutateurs"
+msgstr "%s  Mutators"
+
+msgid "[color=#%s]✦ Mutateurs : %s  ·  ∞ ★ %d / %d[/color]"
+msgstr "[color=#%s]✦ Mutators: %s  ·  ∞ ★ %d / %d[/color]"
+
+msgid "Des règles du défi du jour pour rejouer les niveaux déjà gagnés, dans la difficulté choisie. Chaque mutateur actif rapporte une étoile infinie à la victoire, %d au plus par niveau : elles achètent les spécialisations des tours, dans Améliorations."
+msgstr "Daily challenge rules to replay levels you have already won, at the chosen difficulty. Each active mutator earns one infinite star on victory, up to %d per level: they buy tower specializations in Upgrades."
+
+msgid "✦  Mutateurs"
+msgstr "✦  Mutators"
+
+msgid "Règles du défi du jour sur les niveaux déjà gagnés, contre des étoiles infinies."
+msgstr "Daily challenge rules on levels already won, for infinite stars."
