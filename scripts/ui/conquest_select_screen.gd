@@ -69,7 +69,7 @@ func get_title_color() -> Color:
 
 func get_intro() -> String:
 	return ("Récoltez la pierre et l'essence avec vos ouvriers, bâtissez tours, dépôts, maisons, barricades "
-		+ "et casernes, et protégez votre économie des Pillards. Les vagues partent seules.")
+		+ "et casernes, et protégez votre économie des Pillards et des Voleurs. Les vagues partent seules.")
 
 
 ## Ligne propre au mode sous la présentation d'un niveau (vide : aucune).
@@ -78,7 +78,10 @@ func get_card_extra(index: int) -> Array:
 	if world.raiders.is_empty():
 		return []
 	var raider: EnemyData = world.raiders[0]
-	return [tr("Pillards : %s") % tr(raider.display_name), Enemy.RAID_COLOR]
+	var text := tr("Pillards : %s") % tr(raider.display_name)
+	if not world.thieves.is_empty():
+		text += "  ·  " + tr("Voleurs : %s") % tr(world.thieves[0].display_name)
+	return [text, Enemy.RAID_COLOR]
 
 
 func set_difficulty(difficulty: int) -> void:

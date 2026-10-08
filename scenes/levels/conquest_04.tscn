@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" path="res://scenes/levels/undead_02.tscn" id="1_base"]
 [ext_resource type="TileSet" path="res://resources/tilesets/undead.tres" id="2_tileset"]
 [ext_resource type="Resource" path="res://resources/enemies/undead/pilleur.tres" id="3_raider"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/detrousseur.tres" id="v_thief"]
 
 [node name="Conquest04" instance=ExtResource("1_base")]
 level_name = "Conquête · Les Catacombes"
@@ -13,6 +14,8 @@ conquest_starting_workers = 4
 essence_cells = Array[Vector2i]([Vector2i(12, 7), Vector2i(4, 2)])
 raider = ExtResource("3_raider")
 raiders_per_wave = Array[int]([0, 1, 1, 2, 3, 3, 4])
+thief = ExtResource("v_thief")
+thieves_per_wave = Array[int]([0, 1, 1, 1, 2, 2, 3])
 
 [node name="Map" parent="."]
 blocked_cells = Array[Vector2i]([Vector2i(10, 2), Vector2i(16, 2), Vector2i(2, 3), Vector2i(8, 3), Vector2i(9, 3), Vector2i(3, 4), Vector2i(18, 8), Vector2i(8, 9), Vector2i(10, 9), Vector2i(13, 0), Vector2i(3, 6), Vector2i(5, 7), Vector2i(14, 7), Vector2i(16, 3), Vector2i(12, 3), Vector2i(1, 9), Vector2i(15, 9)])

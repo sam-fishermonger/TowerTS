@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/mante.tres" id="f1_mante"]
 [ext_resource type="TileSet" path="res://resources/tilesets/insectoid.tres" id="t_tileset"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/pillarde.tres" id="r0_pillarde"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/chapardeuse.tres" id="v0_chapardeuse"]
 
 [resource]
 script = ExtResource("1_world")
@@ -21,5 +22,6 @@ color = Color(0.62, 0.42, 0.75, 1)
 enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_larve"), ExtResource("e1_rodeur"), ExtResource("e2_scarabee"), ExtResource("e3_ravageur"), ExtResource("e4_couveuse"), ExtResource("f0_frelon"), ExtResource("f1_mante")])
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_reine")])
 raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_pillarde")])
+thieves = Array[ExtResource("2_enemy_data")]([ExtResource("v0_chapardeuse")])
 levels = Array[String](["res://scenes/levels/level_01.tscn", "res://scenes/levels/level_02.tscn", "res://scenes/levels/level_03.tscn", "res://scenes/levels/level_04.tscn", "res://scenes/levels/level_05.tscn", "res://scenes/levels/level_06.tscn", "res://scenes/levels/level_07.tscn"])
 tileset = ExtResource("t_tileset")

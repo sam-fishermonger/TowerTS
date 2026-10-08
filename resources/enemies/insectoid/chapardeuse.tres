@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/insectoid/rodeur.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Chapardeuse"
+description = "Fourmi maigre et rapide : elle file vers les Dépôts, se remplit les mandibules de pierre et d'essence et repart vers la ruche."
+max_health = 55.0
+armor = 0.0
+speed = 125.0
+reward = 8
+damage = 1
+color = Color(0.4, 0.85, 0.55, 1)
+radius = 9.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.6
+raid_radius = 160.0
+thief = true

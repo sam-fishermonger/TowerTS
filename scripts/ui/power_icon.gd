@@ -1,6 +1,7 @@
 class_name PowerIcon
 extends Control
-## Image d'un pouvoir actif, dessinée en code : un météore, un flocon ou un bouclier.
+## Image d'un pouvoir actif, dessinée en code : un météore, un flocon, un bouclier ou
+## une pioche.
 
 ## Pouvoir dessiné (Power).
 var power: Power:
@@ -49,3 +50,18 @@ static func draw_icon(canvas: CanvasItem, power: Power, rect: Rect2, alpha := 1.
 			canvas.draw_polyline(shield, Color(1, 1, 1, 0.8 * alpha), maxf(r * 0.1, 1.0))
 			canvas.draw_line(c + Vector2(0.0, -r * 0.5), c + Vector2(0.0, r * 0.55), Color(1, 1, 1, 0.6 * alpha),
 				maxf(r * 0.1, 1.0))
+		Power.Kind.CORVEE:
+			# Une pioche en travers, et des traits de vitesse derrière elle.
+			for i in 3:
+				var y := c.y - r * 0.35 + i * r * 0.35
+				canvas.draw_line(Vector2(c.x - r * 0.95, y), Vector2(c.x - r * (0.45 - i * 0.1), y),
+					Color(color, 0.6 * alpha), maxf(r * 0.1, 1.0))
+			var handle_from := c + Vector2(-r * 0.5, r * 0.8)
+			var handle_to := c + Vector2(r * 0.45, -r * 0.55)
+			canvas.draw_line(handle_from, handle_to, Color(0.6, 0.42, 0.25, alpha), maxf(r * 0.16, 1.5))
+			# Le fer, en croissant autour du haut du manche.
+			var head := PackedVector2Array([c + Vector2(-r * 0.3, -r * 0.8), c + Vector2(r * 0.25, -r * 0.75),
+				c + Vector2(r * 0.75, -r * 0.3), c + Vector2(r * 0.85, r * 0.15), c + Vector2(r * 0.5, -r * 0.35),
+				c + Vector2(r * 0.15, -r * 0.6)])
+			canvas.draw_colored_polygon(head, color)
+			canvas.draw_polyline(head + PackedVector2Array([head[0]]), Color(1, 1, 1, 0.8 * alpha), maxf(r * 0.08, 1.0))

@@ -7,8 +7,8 @@ extends Entity
 ## - Barricade : posée sur le chemin, elle arrête les monstres au sol qui la frappent ;
 ## - Caserne : elle produit des soldats qui retiennent les monstres sur le chemin ;
 ## - Atelier : il lance des améliorations pour la partie (Research), une à la fois.
-## Les Pillards (EnemyData.raider) quittent le chemin pour les frapper ; un bâtiment
-## détruit disparaît. C'est le mode Conquête (Conquest) qui les pose et les compte.
+## Les Pillards (EnemyData.raider) quittent le chemin pour les frapper, et les Voleurs
+## (EnemyData.thief) pour piller les Dépôts bâtis ; un bâtiment détruit disparaît. C'est le mode Conquête (Conquest) qui les pose et les compte.
 
 enum Kind { DEPOT, HOUSE, EXTRACTOR, BARRICADE, BARRACKS, WORKSHOP }
 
@@ -114,6 +114,9 @@ func advance_construction(amount: float) -> bool:
 	if not is_built():
 		return false
 	_timer = conquest.get_extract_interval()
+	if kind == Kind.DEPOT:
+		# Un Dépôt bâti attire les Voleurs (EnemyData.thief).
+		add_to_group(Conquest.THEFT_TARGET_GROUP)
 	if kind == Kind.BARRACKS:
 		# Une caserne bâtie envoie tous ses soldats d'un coup, puis les remplace un à un.
 		_timer = BARRACKS_RESPAWN

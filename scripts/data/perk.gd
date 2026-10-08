@@ -48,6 +48,23 @@ extends Resource
 ## Vies rendues à chaque vague repoussée, sans dépasser les vies de départ.
 @export var lives_per_wave := 0
 
+@export_group("Conquête")
+## Bonus du mode Conquête seulement (page Logistique de l'arbre) : ouvriers au départ,
+## ouvriers au plus, pierre au départ.
+@export var conquest_workers_bonus := 0
+@export var conquest_max_workers_bonus := 0
+@export var conquest_stone_bonus := 0
+## Pierre et essence que les Voleurs ne peuvent pas prendre (réserve du Dépôt).
+@export var conquest_vault_stone := 0
+@export var conquest_vault_essence := 0
+## Les Dépôts bâtis abritent et soignent les ouvriers, comme le QG.
+@export var conquest_depot_shelter := false
+## Multiplicateurs de la vie des bâtiments, de la vitesse des chantiers et de la pierre
+## des tours.
+@export var conquest_building_health_multiplier := 1.0
+@export var conquest_build_speed_multiplier := 1.0
+@export var conquest_stone_cost_multiplier := 1.0
+
 @export_group("Spécialisation")
 ## Spécialisation d'une tour (chemin de sa TowerData) : les bonus de tour de cette
 ## amélioration (dégâts, portée, cadence, durée du ralentissement, et ceux de ce
@@ -177,3 +194,12 @@ func add_to(total: Perk) -> void:
 	total.wave_bonus_multiplier *= wave_bonus_multiplier
 	total.lives_bonus += lives_bonus
 	total.lives_per_wave += lives_per_wave
+	total.conquest_workers_bonus += conquest_workers_bonus
+	total.conquest_max_workers_bonus += conquest_max_workers_bonus
+	total.conquest_stone_bonus += conquest_stone_bonus
+	total.conquest_vault_stone += conquest_vault_stone
+	total.conquest_vault_essence += conquest_vault_essence
+	total.conquest_depot_shelter = total.conquest_depot_shelter or conquest_depot_shelter
+	total.conquest_building_health_multiplier *= conquest_building_health_multiplier
+	total.conquest_build_speed_multiplier *= conquest_build_speed_multiplier
+	total.conquest_stone_cost_multiplier *= conquest_stone_cost_multiplier

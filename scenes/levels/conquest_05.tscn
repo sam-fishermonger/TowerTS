@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" path="res://scenes/levels/level_06.tscn" id="1_base"]
 [ext_resource type="TileSet" path="res://resources/tilesets/insectoid.tres" id="2_tileset"]
 [ext_resource type="Resource" path="res://resources/enemies/insectoid/pillarde.tres" id="3_raider"]
+[ext_resource type="Resource" path="res://resources/enemies/insectoid/chapardeuse.tres" id="v_thief"]
 
 [node name="Conquest05" instance=ExtResource("1_base")]
 level_name = "Conquête · Le Nid de la Reine"
@@ -13,6 +14,8 @@ conquest_starting_workers = 4
 essence_cells = Array[Vector2i]([Vector2i(10, 4), Vector2i(17, 5)])
 raider = ExtResource("3_raider")
 raiders_per_wave = Array[int]([0, 1, 2, 2, 3, 3, 4, 4, 5, 6])
+thief = ExtResource("v_thief")
+thieves_per_wave = Array[int]([0, 0, 1, 1, 1, 2, 2, 2, 3, 3])
 
 [node name="Map" parent="."]
 blocked_cells = Array[Vector2i]([Vector2i(10, 0), Vector2i(0, 4), Vector2i(12, 4), Vector2i(17, 4), Vector2i(7, 5), Vector2i(19, 5), Vector2i(13, 7), Vector2i(8, 9), Vector2i(3, 0), Vector2i(15, 0), Vector2i(5, 2), Vector2i(12, 2), Vector2i(17, 2), Vector2i(4, 7), Vector2i(8, 7), Vector2i(14, 9), Vector2i(19, 9), Vector2i(3, 9)])

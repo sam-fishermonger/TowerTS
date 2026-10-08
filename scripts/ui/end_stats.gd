@@ -64,6 +64,8 @@ func setup(stats: LevelStats, achievement_ids: Array[String] = []) -> void:
 		summary["Essence récoltée"] = LevelStats.format_number(stats.essence_mined)
 		summary["Bâtiments bâtis"] = str(stats.buildings_built)
 		summary["Ouvriers perdus"] = str(stats.workers_lost)
+		if stats.resources_stolen > 0:
+			summary["Volé par les Voleurs"] = LevelStats.format_number(stats.resources_stolen)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override(&"h_separation", 12)

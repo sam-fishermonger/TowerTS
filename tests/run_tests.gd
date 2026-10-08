@@ -62,6 +62,7 @@ const TUTORIAL := preload("res://scenes/levels/tutorial.tscn")
 const FREEZE_POWER := preload("res://resources/powers/freeze.tres")
 const CONQUEST_SELECT_SCREEN := preload("res://scenes/ui/conquest_select_screen.tscn")
 const PILLARDE := preload("res://resources/enemies/insectoid/pillarde.tres")
+const CHAPARDEUSE := preload("res://resources/enemies/insectoid/chapardeuse.tres")
 const FREE_01 := preload("res://scenes/levels/free_01.tscn")
 const FREE_SELECT_SCREEN := preload("res://scenes/ui/free_select_screen.tscn")
 
@@ -166,6 +167,9 @@ func _run() -> void:
 	await _test_conquest_workshop()
 	await _test_conquest_top_bar()
 	await _test_raiders()
+	await _test_thieves()
+	await _test_corvee()
+	await _test_logistics()
 	await _test_conquest_progress()
 	await _test_free_levels()
 	await _test_free_level_enemies()
@@ -515,10 +519,19 @@ func _test_biome_towers_in_tree() -> void:
 	_check(tower_perks.all(func(p: Perk) -> bool: return tree.get_page(p) == 1 and p.get_unlocked_tower() != null),
 		"elles sont toutes sur la page Tours des mondes")
 	var campaign_stars := campaign.size() * Progress.MAX_LEVEL_STARS
-	_check(tree.get_total_cost() <= campaign_stars and tree.get_total_cost() >= campaign_stars * 0.9,
-		"l'arbre complet (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [tree.get_total_cost(), campaign_stars])
-	_check(tree.get_total_cost() > campaign.size() * 3 * 3,
+	# La page Logistique (bonus de la Conquête) se paie avec les étoiles de la Conquête.
+	var logistics := tree.page_names.find("Logistique")
+	var logistics_cost := 0
+	for perk in tree.get_page_perks(logistics):
+		logistics_cost += perk.cost
+	var main_cost := tree.get_total_cost() - logistics_cost
+	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
+		"l'arbre sans la Logistique (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
+	_check(main_cost > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
+	var conquest_stars := ConquestLevels.size() * Progress.MAX_LEVEL_STARS
+	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.85,
+		"la page Logistique (%d étoiles) coûte presque toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
@@ -1514,7 +1527,8 @@ func _buy_all_powers() -> void:
 	Perks.unlock_everything()
 	Progress.set_value("perks", "owned", PackedStringArray())
 	for perk in Perks.TREE.perks:
-		if not perk.get_power_path().is_empty():
+		# La Corvée (page Logistique) a ses propres tests.
+		if not perk.get_power_path().is_empty() and Perks.TREE.get_page(perk) == 3:
 			_check(Perks.buy(perk), "achat : %s" % perk.display_name)
 
 
@@ -1522,8 +1536,11 @@ func _test_powers_in_tree() -> void:
 	print("Pouvoirs : arbre des améliorations")
 	var tree := Perks.TREE
 	var unlocks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_power.is_empty())
+	var corvee_perk := tree.get_perk("pouvoir_corvee")
+	unlocks.erase(corvee_perk)
 	var on_page := unlocks.all(func(p: Perk) -> bool: return tree.get_page(p) == 3 and not p.paid_with_endless_stars)
 	_check(unlocks.size() == 3 and on_page, "3 pouvoirs, payés en étoiles, sur la page Pouvoirs")
+	_check(tree.get_page(corvee_perk) == tree.page_names.find("Logistique"), "la Corvée est sur la page Logistique")
 	var upgrades := tree.perks.filter(func(p: Perk) -> bool: return not p.improves_power.is_empty())
 	_check(upgrades.size() == 6 and upgrades.all(func(p: Perk) -> bool: return p.paid_with_endless_stars),
 		"6 renforts de pouvoirs, payés en étoiles infinies")
@@ -2938,7 +2955,7 @@ func _test_konami_code() -> void:
 		event.pressed = true
 		title._input(event)
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	_check(Perks.get_earned_stars() == campaign.size() * Progress.MAX_LEVEL_STARS and Progress.is_world_unlocked(campaign, 2),
+	_check(Perks.get_earned_stars() == (campaign.size() + ConquestLevels.size() + FreeLevels.LEVELS.size()) * Progress.MAX_LEVEL_STARS and Progress.is_world_unlocked(campaign, 2),
 		"le code débloque tous les mondes et tous les niveaux, avec 3 étoiles dans chaque difficulté")
 	var endless_open := true
 	for path in campaign.levels:
@@ -2964,7 +2981,7 @@ func _test_konami_code() -> void:
 		if i == 4:
 			_check(title._konami_label.visible and title._konami_label.text.begins_with("● ● ● ● ● ·"),
 				"le code en cours s'affiche, une pastille par touche juste")
-	_check(Perks.get_earned_stars() == campaign.size() * Progress.MAX_LEVEL_STARS, "les flèches du pavé numérique et le A d'un clavier QWERTY comptent")
+	_check(Perks.get_earned_stars() == (campaign.size() + ConquestLevels.size() + FreeLevels.LEVELS.size()) * Progress.MAX_LEVEL_STARS, "les flèches du pavé numérique et le A d'un clavier QWERTY comptent")
 	_check(not title._konami_label.visible, "les pastilles disparaissent une fois le code entré")
 	await _free(title)
 	Progress.reset_campaign()
@@ -3328,10 +3345,10 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 43 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+	_check(names.size() == 47 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
 			and names.has("Frelon") and names.has("Infiltré") and names.has("Banshee") and names.has("Tunnelier") and names.any(func(n: String) -> bool: return n.contains("Liche"))
-			and names.has("Pillarde  ·  Conquête"),
-		"onglet Monstres : les élites, les porteurs, les 33 monstres (dont les volants, les furtifs, le Tunnelier et le Saboteur), les 4 boss et les 4 Pillards (%d)"
+			and names.has("Pillarde  ·  Conquête") and names.has("Chapardeuse  ·  Conquête"),
+		"onglet Monstres : les élites, les porteurs, les 33 monstres (dont les volants, les furtifs, le Tunnelier et le Saboteur), les 4 boss, les 4 Pillards et les 4 Voleurs (%d)"
 			% names.size())
 	var raider_entry: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.begins_with("Maraudeur"))[0]
 	raider_entry.pressed.emit()
@@ -3945,10 +3962,13 @@ func _grant_campaign_perks(path: String) -> void:
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	for i in campaign.levels.find(path):
 		Progress.record_victory(campaign.levels[i], 3)
+	# Un joueur de la campagne laisse de côté la page Logistique (bonus de la Conquête).
+	var logistics := Perks.TREE.page_names.find("Logistique")
 	while true:
 		var cheapest: Perk = null
 		for perk in Perks.TREE.perks:
-			if not perk.paid_with_endless_stars and Perks.can_buy(perk) and (cheapest == null or perk.cost < cheapest.cost):
+			if not perk.paid_with_endless_stars and Perks.TREE.get_page(perk) != logistics and Perks.can_buy(perk) \
+					and (cheapest == null or perk.cost < cheapest.cost):
 				cheapest = perk
 		if cheapest == null:
 			return
@@ -4708,7 +4728,8 @@ func _test_raiders() -> void:
 	print("Mode Conquête : Pillards")
 	var level := await _spawn_level(CONQUEST_01)
 	var conquest := level.conquest
-	_check(level.spawner.waves[2].groups.back().enemy == PILLARDE and level.spawner.waves[2].groups.back().count == 1
+	var raid_groups := level.spawner.waves[2].groups.filter(func(group: SpawnGroup) -> bool: return group.enemy == PILLARDE)
+	_check(raid_groups.size() == 1 and raid_groups[0].count == 1
 		and level.spawner.waves[1].groups.all(func(group: SpawnGroup) -> bool: return group.enemy != PILLARDE),
 		"les Pillards s'ajoutent aux vagues du niveau")
 	var original := LEVEL_01.instantiate()
@@ -4740,6 +4761,145 @@ func _test_raiders() -> void:
 	_check(not safe.can_be_raided(), "les ouvriers au QG sont à l'abri des Pillards")
 	raider.despawn()
 	await _free(level)
+
+
+func _test_thieves() -> void:
+	print("Mode Conquête : Voleurs")
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	var thief_groups := level.spawner.waves[2].groups.filter(func(group: SpawnGroup) -> bool: return group.enemy == CHAPARDEUSE)
+	_check(thief_groups.size() == 1 and level.spawner.waves[1].groups.all(func(group: SpawnGroup) -> bool: return group.enemy != CHAPARDEUSE),
+		"les Voleurs s'ajoutent aux vagues du niveau")
+	_check(CHAPARDEUSE.get_abilities().any(func(line: String) -> bool: return line.begins_with("Voleur")),
+		"la fiche du Voleur décrit son vol")
+	_check(Perks.CAMPAIGN.worlds.all(func(world: World) -> bool: return world.thieves.size() == 1 and world.thieves[0].thief),
+		"un Voleur par monde")
+	for worker in conquest.get_workers():
+		worker.set_process(false)
+	level.gold = 1000
+	conquest.stone = 200
+	conquest.essence = 30
+	# Un Dépôt bâti près du chemin attire le Voleur ; un chantier, non.
+	var path := level.map.get_enemy_path(0)
+	var thief := level.spawner.spawn(CHAPARDEUSE, path, 300.0)
+	thief.set_process(false)
+	var cell := Conquest.NO_CELL
+	var thief_cell := level.map.world_to_cell(thief.global_position)
+	for offset in [Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1),
+			Vector2i(0, 2), Vector2i(0, -2), Vector2i(1, 2), Vector2i(-1, 2)]:
+		if cell == Conquest.NO_CELL and conquest.is_cell_suitable(thief_cell + offset, Building.Kind.DEPOT):
+			cell = thief_cell + offset
+	var depot := conquest.place_building(cell, Building.Kind.DEPOT)
+	_check(depot != null and thief._find_theft_target() == null, "un Dépôt en chantier n'attire pas les Voleurs")
+	_finish_building(depot)
+	_check(thief._find_theft_target() == depot, "un Dépôt bâti, si")
+	var stone := conquest.stone
+	var essence := conquest.essence
+	thief.set_process(true)
+	var elapsed := 0.0
+	while not thief.has_stolen and elapsed < 15.0:
+		elapsed += await _step()
+	_check(thief.has_stolen and conquest.stone == stone - CHAPARDEUSE.steal_stone and conquest.essence == essence - CHAPARDEUSE.steal_essence
+		and thief.stolen_stone == CHAPARDEUSE.steal_stone, "le Voleur pille le Dépôt (%.1f s)" % elapsed)
+	elapsed = 0.0
+	while thief.is_raiding() and elapsed < 20.0:
+		elapsed += await _step()
+	_check(not thief.is_raiding() and thief._find_theft_target() == depot and not thief._update_raid(0.0),
+		"puis il revient sur le chemin, sans piller une seconde fois")
+	# Détruit, il lâche son butin.
+	thief.take_damage(9999.0, true)
+	await process_frame
+	var dropped := get_nodes_in_group(Loot.GROUP).filter(func(node: Node) -> bool:
+		return (node as Loot).kind != Loot.Kind.CHEST and (node as Loot).amount in [CHAPARDEUSE.steal_stone, CHAPARDEUSE.steal_essence])
+	_check(dropped.size() == 2, "détruit, le Voleur lâche la pierre et l'essence volées")
+	for loot in dropped:
+		level.collect_loot(loot)
+	_check(conquest.stone == stone and conquest.essence == essence, "et on les ramasse")
+	_check(level.stats.resources_stolen == CHAPARDEUSE.steal_stone + CHAPARDEUSE.steal_essence, "la fin de partie compte ce qui a été volé")
+	# Au QG : il se sert en passant, sans toucher à la réserve.
+	conquest.stone = 25
+	conquest.essence = 3
+	conquest.bonuses.conquest_vault_stone = 10
+	var runner := level.spawner.spawn(CHAPARDEUSE, path, path.curve.get_baked_length() - 2.0)
+	elapsed = 0.0
+	while is_instance_valid(runner) and runner.is_alive and elapsed < 2.0:
+		elapsed += await _step()
+	_check(conquest.stone == 10 and conquest.essence == 0, "un Voleur qui atteint le QG emporte ce qui n'est pas en réserve")
+	await _free(level)
+
+
+func _test_corvee() -> void:
+	print("Mode Conquête : pouvoir Corvée")
+	var corvee: Power = load("res://resources/powers/corvee.tres")
+	_check(not corvee.is_targeted() and corvee.is_conquest_only(), "la Corvée part tout de suite, en Conquête seulement")
+	Perks.unlock_everything()
+	var level := await _spawn_level(LEVEL_01)
+	_check(level.powers.size() == 3 and not level.powers.any(func(power: Power) -> bool: return power.is_conquest_only()),
+		"pas de bouton Corvée hors de la Conquête")
+	await _free(level)
+	level = await _spawn_level(CONQUEST_01)
+	if level.is_choosing_towers:
+		level.choose_towers(level.get_default_tower_choice())
+	var conquest := level.conquest
+	var power: Power = level.powers.filter(func(p: Power) -> bool: return p.kind == Power.Kind.CORVEE).front()
+	_check(level.powers.size() == 4 and level.hud.power_buttons.size() == 4, "en Conquête, la Corvée a son bouton (touche T)")
+	var walk := conquest.get_worker_speed()
+	var work := conquest.get_work_speed()
+	_check(level.use_power(power) and conquest.is_corvee(), "la Corvée se lance")
+	_check(is_equal_approx(conquest.get_worker_speed(), walk * 2.0) and is_equal_approx(conquest.get_work_speed(), work * 2.0),
+		"les ouvriers vont deux fois plus vite")
+	var elapsed := 0.0
+	while conquest.is_corvee() and elapsed < 30.0:
+		elapsed += await _step()
+	_check(absf(elapsed - power.duration) < 1.0 and is_equal_approx(conquest.get_worker_speed(), walk),
+		"pendant %s s (%.1f s)" % [power.duration, elapsed])
+	await _free(level)
+	Perks.refund_all()
+	Progress.reset_campaign()
+
+
+func _test_logistics() -> void:
+	print("Mode Conquête : page Logistique de l'arbre")
+	var tree := Perks.TREE
+	var page := tree.page_names.find("Logistique")
+	_check(page >= 0 and tree.get_page_perks(page).all(func(p: Perk) -> bool: return not p.paid_with_endless_stars),
+		"la page Logistique se paie en étoiles")
+	_win_in_all_difficulties(ConquestLevels.LEVELS)
+	for perk in tree.get_page_perks(page):
+		_check(Perks.buy(perk), "achat : %s" % perk.display_name)
+	var level := await _spawn_level(CONQUEST_01)
+	var conquest := level.conquest
+	_check(conquest.get_workers().size() == level.conquest_starting_workers + 2
+		and conquest.stone == level.conquest_starting_stone + 30, "ouvriers et pierre de départ en plus")
+	_check(conquest.get_max_workers() == Conquest.BASE_WORKERS + 2, "Dortoirs : 2 ouvriers de plus au maximum")
+	_check(Conquest.stone_cost(CANNON) == ceili(CANNON.get_cost() * Conquest.STONE_PER_GOLD * 0.8), "Tailleurs de pierre : tours moins chères en pierre")
+	_check(conquest.get_vault().stone == 100 and conquest.get_vault().essence == 25, "Chambre forte : 100 pierres et 25 essences à l'abri")
+	level.gold = 1000
+	conquest.stone = 500
+	var house := conquest.place_building(Vector2i(14, 2), Building.Kind.HOUSE)
+	_check(is_equal_approx(house.max_health, Building.get_definition(Building.Kind.HOUSE).health * 1.25 * 1.4),
+		"Murs épais et Pierre de taille : bâtiments plus solides")
+	var time: float = Building.get_definition(Building.Kind.HOUSE).build_time
+	conquest.build(house, time / 1.25 + 0.01)
+	_check(house.is_built(), "Charpentiers : chantiers plus rapides")
+	var depot := conquest.place_building(Vector2i(11, 3), Building.Kind.DEPOT)
+	var near_depot := level.map.cell_to_world(Vector2i(11, 3)) + Vector2(20, 0)
+	_check(not conquest.is_safe(near_depot), "un Dépôt en chantier n'abrite pas les ouvriers")
+	_finish_building(depot)
+	_check(conquest.is_safe(near_depot), "Relais : un Dépôt bâti les abrite")
+	await _free(level)
+	level = await _spawn_level(LEVEL_01)
+	_check(level.conquest == null and level.gold == level.starting_gold, "hors de la Conquête, rien ne change")
+	await _free(level)
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(page)
+	_check(screen.get_button(tree.get_perk("pouvoir_corvee")).is_visible_in_tree()
+		and screen.get_button(tree.get_perk("pouvoir_corvee")).get_child(0) is PowerIcon, "l'onglet Logistique montre la Corvée avec son image")
+	await _free(screen)
+	Perks.refund_all()
+	Progress.reset_campaign()
 
 
 func _test_conquest_progress() -> void:

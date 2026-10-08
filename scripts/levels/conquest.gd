@@ -12,6 +12,10 @@ extends Node2D
 ## Le joueur peut choisir des ouvriers et les affecter à la main à un gisement, un
 ## chantier ou au QG (Worker.Order), à autant qu'il veut sur la même tâche. L'Atelier
 ## lance des améliorations (Research) qui valent pour le reste de la partie.
+## Des Voleurs (EnemyData.thief) quittent aussi le chemin, pour piller les Dépôts bâtis
+## (ou le QG s'ils l'atteignent) de leur pierre et de leur essence. Le pouvoir Corvée
+## fait travailler les ouvriers deux fois plus vite un moment, et la page Logistique de
+## l'arbre des améliorations donne des bonus propres à ce mode (Perk, groupe Conquête).
 ## Le niveau crée ce nœud quand il a `conquest_mode`.
 
 enum Ore { STONE, ESSENCE }
@@ -43,11 +47,16 @@ const WAVE_DELAY := 25.0
 ## Pillards : secondes entre deux apparitions, et après le début de la vague.
 const RAIDER_INTERVAL := 2.5
 const RAIDER_DELAY := 3.0
+## Voleurs : secondes après le début de la vague.
+const THIEF_DELAY := 6.0
 const STONE_COLOR := Color(0.78, 0.8, 0.88)
 const ESSENCE_COLOR := Color(0.78, 0.5, 1.0)
 const NO_CELL := Vector2i(-1000, -1000)
 ## Groupe des cibles des Pillards : ouvriers et bâtiments.
 const RAID_TARGET_GROUP := "raid_targets"
+## Groupe des cibles des Voleurs : les Dépôts bâtis.
+const THEFT_TARGET_GROUP := "theft_targets"
+const CORVEE_COLOR := Color(1.0, 0.75, 0.3)
 
 ## Émis quand la pierre, l'essence, les ouvriers, les bâtiments ou le compte à rebours
 ## changent.
@@ -76,6 +85,13 @@ var buildings_lost := 0
 var peak_workers := 0
 ## Niveau atteint de chaque amélioration de l'Atelier (Research), pour cette partie.
 var research_levels := {}
+## Bonus de la page Logistique de l'arbre (et des autres pages, sans effet ici).
+var bonuses: Perk
+## Secondes de Corvée restantes (0 : pas de Corvée).
+var corvee_left := 0.0
+## Pierre et essence volées par les Voleurs pendant la partie.
+var stone_stolen := 0
+var essence_stolen := 0
 
 ## Ouvriers choisis par le joueur : le prochain clic sur un gisement, un chantier ou le
 ## QG leur donne une tâche.
@@ -91,9 +107,9 @@ var _vein_nodes := {}
 var _gauges: DepositGauges
 
 
-## Pierre demandée pour un type de tour.
+## Pierre demandée pour un type de tour (moins avec Tailleurs de pierre, page Logistique).
 static func stone_cost(data: TowerData) -> int:
-	return ceili(data.get_cost() * STONE_PER_GOLD)
+	return ceili(data.get_cost() * STONE_PER_GOLD * Perks.get_bonuses().conquest_stone_cost_multiplier)
 
 
 ## Secondes pour bâtir un type de tour avec un seul ouvrier.
@@ -124,7 +140,8 @@ static func crystal_points(center: Vector2, height: float) -> PackedVector2Array
 func setup(owner_level: Level) -> void:
 	level = owner_level
 	level.stats.conquest = true
-	stone = level.conquest_starting_stone
+	bonuses = Perks.get_bonuses()
+	stone = level.conquest_starting_stone + bonuses.conquest_stone_bonus
 	depot_position = level.map.get_base_position()
 	for cell in level.map.blocked_cells:
 		rocks[cell] = ROCK_STONE
@@ -133,7 +150,8 @@ func setup(owner_level: Level) -> void:
 		level.map.block_cell(cell)
 	if Relief.enabled:
 		_setup_relief()
-	for i in level.conquest_starting_workers:
+	var workers := level.conquest_starting_workers + bonuses.conquest_workers_bonus
+	for i in workers:
 		_add_worker(depot_position + Vector2.from_angle(PI * (0.8 + 0.4 * i)) * 30.0)
 	_add_raiders()
 	wave_countdown = FIRST_WAVE_DELAY
@@ -175,28 +193,37 @@ func _refresh_deposits() -> void:
 
 
 
-## Ajoute les Pillards du niveau aux vagues (sur des copies : la scène ne change pas),
-## en nombre réglé par la difficulté.
+## Ajoute les Pillards et les Voleurs du niveau aux vagues (sur des copies : la scène ne
+## change pas), en nombre réglé par la difficulté.
 func _add_raiders() -> void:
-	if level.raider == null:
+	if level.raider == null and level.thief == null:
 		return
 	var spawner := level.spawner
 	var waves: Array[WaveData] = []
 	for i in spawner.waves.size():
 		var wave := spawner.waves[i]
-		var count := level.raiders_per_wave[i] if i < level.raiders_per_wave.size() else 0
-		if count > 0:
+		var raiders := level.raiders_per_wave[i] if level.raider and i < level.raiders_per_wave.size() else 0
+		var thieves := level.thieves_per_wave[i] if level.thief and i < level.thieves_per_wave.size() else 0
+		if raiders > 0 or thieves > 0:
 			wave = wave.duplicate()
 			wave.groups = wave.groups.duplicate()
-			var group := SpawnGroup.new()
-			group.enemy = level.raider
-			group.count = maxi(roundi(count * Difficulty.ENEMY_COUNT[level.difficulty]), 1)
-			group.interval = RAIDER_INTERVAL
-			group.start_delay = RAIDER_DELAY
-			group.path_index = i % maxi(level.map.paths.size(), 1)
-			wave.groups.append(group)
+			if raiders > 0:
+				wave.groups.append(_raid_group(level.raider, raiders, RAIDER_DELAY, i))
+			if thieves > 0:
+				# Les Voleurs arrivent après les Pillards, sur l'autre chemin s'il y en a deux.
+				wave.groups.append(_raid_group(level.thief, thieves, THIEF_DELAY, i + 1))
 		waves.append(wave)
 	spawner.waves = waves
+
+
+func _raid_group(enemy: EnemyData, count: int, delay: float, path: int) -> SpawnGroup:
+	var group := SpawnGroup.new()
+	group.enemy = enemy
+	group.count = maxi(roundi(count * Difficulty.ENEMY_COUNT[level.difficulty]), 1)
+	group.interval = RAIDER_INTERVAL
+	group.start_delay = delay
+	group.path_index = path % maxi(level.map.paths.size(), 1)
+	return group
 
 
 func get_workers() -> Array[Worker]:
@@ -207,10 +234,11 @@ func get_workers() -> Array[Worker]:
 	return result
 
 
-## Ouvriers au plus : ceux du QG, et 2 de plus par Maison bâtie.
+## Ouvriers au plus : ceux du QG, et 2 de plus par Maison bâtie (Dortoirs, page
+## Logistique, en ajoute partout).
 func get_max_workers() -> int:
 	var houses := get_buildings(Building.Kind.HOUSE).size()
-	return mini(BASE_WORKERS + houses * Building.HOUSE_WORKERS, MAX_WORKERS)
+	return mini(BASE_WORKERS + houses * Building.HOUSE_WORKERS, MAX_WORKERS) + bonuses.conquest_max_workers_bonus
 
 
 # --- Pierre, essence et gisements ----------------------------------------------
@@ -291,9 +319,49 @@ func nearest_depot(from: Vector2) -> Vector2:
 	return best
 
 
-## Près du QG, les ouvriers sont à l'abri des monstres.
+## Près du QG (ou d'un Dépôt bâti, avec Relais de la page Logistique), les ouvriers
+## sont à l'abri des monstres.
 func is_safe(at: Vector2) -> bool:
-	return at.distance_to(depot_position) < Worker.SAFE_RADIUS
+	if at.distance_to(depot_position) < Worker.SAFE_RADIUS:
+		return true
+	if bonuses.conquest_depot_shelter:
+		for building in get_buildings(Building.Kind.DEPOT):
+			if at.distance_to(building.global_position) < Worker.SAFE_RADIUS:
+				return true
+	return false
+
+
+# --- Voleurs -----------------------------------------------------------------
+
+## Pierre et essence que les Voleurs ne peuvent pas prendre (page Logistique).
+func get_vault() -> Dictionary:
+	return {stone = bonuses.conquest_vault_stone, essence = bonuses.conquest_vault_essence}
+
+
+## Un Voleur pille un Dépôt (ou le QG) : il prend ce qu'il peut porter, sans toucher à
+## la réserve. Renvoie la pierre et l'essence prises.
+func steal(thief: Enemy, at: Vector2) -> Dictionary:
+	var vault := get_vault()
+	var taken := {stone = clampi(stone - vault.stone, 0, thief.data.steal_stone),
+		essence = clampi(essence - vault.essence, 0, thief.data.steal_essence)}
+	stone -= taken.stone
+	essence -= taken.essence
+	stone_stolen += taken.stone
+	essence_stolen += taken.essence
+	level.stats.resources_stolen += taken.stone + taken.essence
+	thief.carry_stolen(taken.stone, taken.essence)
+	if taken.stone + taken.essence > 0:
+		var parts: Array[String] = []
+		if taken.stone > 0:
+			parts.append(tr("-%d pierre") % taken.stone)
+		if taken.essence > 0:
+			parts.append(tr("-%d essence") % taken.essence)
+		_show_text(tr("Volé ! %s") % "  ".join(parts), Color(1.0, 0.5, 0.4), at + Vector2(0, -36), 15)
+		Sound.play(&"lives_lost", -10.0)
+	else:
+		_show_text(tr("Rien à voler"), Enemy.THIEF_COLOR, at + Vector2(0, -36), 13)
+	changed.emit()
+	return taken
 
 
 ## Désigne le gisement où miner (clic sur un rocher ou un filon) : les mineurs y vont
@@ -362,7 +430,7 @@ func start_site(tower: Tower) -> void:
 
 ## Un ouvrier bâtit un chantier (tour ou bâtiment) pendant `delta` secondes.
 func build(site, delta: float) -> void:
-	if not site.advance_construction(delta / build_time(site)):
+	if not site.advance_construction(delta * bonuses.conquest_build_speed_multiplier / build_time(site)):
 		return
 	_sites.erase(site)
 	if site is Building:
@@ -713,12 +781,30 @@ func apply_research_to_tower(tower: Tower) -> void:
 
 
 func get_worker_speed() -> float:
-	return Worker.SPEED * (1.0 + get_research_bonus(Research.WORKER_SPEED))
+	return Worker.SPEED * (1.0 + get_research_bonus(Research.WORKER_SPEED)) * get_corvee_multiplier()
 
 
 ## Vitesse de minage et de construction des ouvriers (1 = sans amélioration).
 func get_work_speed() -> float:
-	return 1.0 + get_research_bonus(Research.WORKER_TOOLS) + level.get_chest_bonus(ChestBonus.WORKERS)
+	return (1.0 + get_research_bonus(Research.WORKER_TOOLS) + level.get_chest_bonus(ChestBonus.WORKERS)) \
+		* get_corvee_multiplier()
+
+
+## Corvée (pouvoir) : les ouvriers vont deux fois plus vite pendant `duration` secondes.
+func start_corvee(duration: float) -> void:
+	corvee_left = maxf(corvee_left, duration)
+	_show_text(tr("Corvée !"), CORVEE_COLOR, depot_position + Vector2(0, -50), 18)
+	for worker in get_workers():
+		worker.queue_redraw()
+	changed.emit()
+
+
+func is_corvee() -> bool:
+	return corvee_left > 0.0
+
+
+func get_corvee_multiplier() -> float:
+	return Power.CORVEE_SPEED if is_corvee() else 1.0
 
 
 ## Pierre ou essence portée à chaque voyage.
@@ -732,7 +818,7 @@ func get_reward_multiplier() -> float:
 
 
 func get_building_health_multiplier() -> float:
-	return 1.0 + get_research_bonus(Research.WORLD_FORTIFY)
+	return (1.0 + get_research_bonus(Research.WORLD_FORTIFY)) * bonuses.conquest_building_health_multiplier
 
 
 ## Secondes entre deux essences d'un Extracteur.
@@ -754,6 +840,10 @@ func on_wave_cleared() -> void:
 func _process(delta: float) -> void:
 	if level.is_over:
 		return
+	if corvee_left > 0.0:
+		corvee_left = maxf(corvee_left - delta, 0.0)
+		if corvee_left == 0.0:
+			changed.emit()
 	if wave_countdown >= 0.0 and not level.is_choosing_towers:
 		var before := ceili(wave_countdown)
 		wave_countdown -= delta
