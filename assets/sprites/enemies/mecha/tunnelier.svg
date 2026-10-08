@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Tunnelier : foreuse sur chenilles, cône vissé à l'avant, orientée vers la droite. -->
+  <rect x="6" y="12" width="34" height="8" rx="4" fill="#2e2f35"/>
+  <rect x="6" y="44" width="34" height="8" rx="4" fill="#2e2f35"/>
+  <rect x="8" y="18" width="32" height="28" rx="5" fill="#c08a32"/>
+  <path d="M12 22 L18 22 L14 42 L8 42 Z M24 22 L30 22 L26 42 L20 42 Z" fill="#222" opacity="0.35"/>
+  <rect x="14" y="27" width="10" height="10" rx="2" fill="#1e2026"/>
+  <circle cx="19" cy="32" r="3" fill="#ffb43a"/>
+  <rect x="38" y="16" width="5" height="32" rx="1.5" fill="#45474f"/>
+  <path d="M42 17 L60 32 L42 47 Z" fill="#9ea2ac"/>
+  <path d="M46 20 L48 44 M51 24 L53 40 M56 28 L57 36" stroke="#45474f" stroke-width="2"/>
+</svg>

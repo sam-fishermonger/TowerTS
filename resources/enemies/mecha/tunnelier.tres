@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/mecha/tunnelier.svg" id="9_texture"]
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Tunnelier"
+description = "Foreuse blindée qui plonge régulièrement sous le chemin, hors d'atteinte des tours, et ressort plus loin."
+max_health = 260.0
+armor = 4.0
+speed = 38.0
+reward = 18
+damage = 2
+color = Color(0.75, 0.54, 0.2, 1)
+radius = 15.0
+texture = ExtResource("9_texture")
+sprite_scale = 1.1
+burrow_interval = 4.0
+burrow_duration = 3.0
+burrow_speed_multiplier = 1.6

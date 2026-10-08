@@ -553,6 +553,8 @@ func place_tower(cell: Vector2i, data: TowerData) -> Tower:
 	towers.add_child(tower)
 	tower.global_position = map.cell_to_world(cell)
 	tower.cell = cell
+	# Une Bobine éteinte par un Saboteur ne renforce plus ses voisines.
+	tower.sabotage_changed.connect(func(_tower: Tower) -> void: refresh_boosts())
 	refresh_tower_bonuses(tower)
 	map.occupy(cell, tower)
 	gold -= data.get_cost()
@@ -712,9 +714,10 @@ func refresh_boosts() -> void:
 	var all := get_towers()
 	var coils: Array[CoilTower] = []
 	for tower in all:
-		if tower is CoilTower and tower.is_built():
-			coils.append(tower)
+		if tower is CoilTower:
 			tower.boosted_towers.clear()
+			if tower.is_built() and not tower.is_sabotaged():
+				coils.append(tower)
 	for tower in all:
 		var best: CoilTower = null
 		for coil in coils:

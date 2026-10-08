@@ -7,9 +7,9 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 | ![Écran titre](docs/captures/titre.webp) | ![Choix du monde](docs/captures/mondes.webp) |
 | Écran titre : une partie se joue derrière le menu | Quatre mondes de sept niveaux, en quatre difficultés |
 | ![La Ruche](docs/captures/ruche.webp) | ![La Fonderie](docs/captures/fonderie.webp) |
-| La Ruche : insectoïdes, un porteur de coffre | La Fonderie : robots blindés et boucliers |
+| La Ruche : insectoïdes, un porteur de coffre | La Fonderie : robots blindés et boucliers, Tunneliers |
 | ![La Cité](docs/captures/cite.webp) | ![La Nécropole](docs/captures/necropole.webp) |
-| La Cité : soldats, gardes et médecins | La Nécropole : morts-vivants |
+| La Cité : des Saboteurs éteignent deux tours | La Nécropole : morts-vivants et Banshees |
 | ![Mode Conquête](docs/captures/conquete.webp) | ![Améliorations](docs/captures/ameliorations.webp) |
 | Mode Conquête : ouvriers choisis à la main, Atelier | Les étoiles achètent des améliorations |
 | ![Niveau libre](docs/captures/libre.webp) | ![Éditeur de niveau](docs/captures/editeur.webp) |
@@ -230,8 +230,8 @@ Chaque monde a ses monstres, rangés dans `resources/enemies/<biome>/` avec leur
 | Monde | Monstres | Spécialité |
 |---|---|---|
 | 1. La Ruche (insectoïdes) | Larve, Rôdeur (rapide), Scarabée (carapace : les petits dégâts rebondissent), Ravageur (gros), Couveuse (éclate en 3 Larves) | Les essaims et les ennemis qui se divisent |
-| 2. La Fonderie (mecha) | Drone (rapide), Sentinelle, Chenillard (très blindé), Porte-drones (libère 3 Drones), Titan (énorme) | **Bouclier d'énergie** (Sentinelle, Titan) : il encaisse les coups en premier, sans armure, et se recharge après 2 secondes sans être touché. Une barre bleue s'affiche au-dessus de la barre de vie. |
-| 3. La Cité (humanoïdes) | Soldat, Éclaireur (rapide), Garde (bouclier anti-émeute : armure), Médecin, Transport de troupes (libère 4 Soldats), Colosse (énorme) | **Soin** (Médecin) : il rend régulièrement des points de vie aux ennemis blessés autour de lui (onde et « +N » verts). Mieux vaut l'abattre en premier. |
+| 2. La Fonderie (mecha) | Drone (rapide), Sentinelle, Chenillard (très blindé), Porte-drones (libère 3 Drones), Titan (énorme), Tunnelier (creuse sous le chemin) | **Bouclier d'énergie** (Sentinelle, Titan) : il encaisse les coups en premier, sans armure, et se recharge après 2 secondes sans être touché. Une barre bleue s'affiche au-dessus de la barre de vie. |
+| 3. La Cité (humanoïdes) | Soldat, Éclaireur (rapide), Garde (bouclier anti-émeute : armure), Médecin, Transport de troupes (libère 4 Soldats), Colosse (énorme), Saboteur (éteint les tours) | **Soin** (Médecin) : il rend régulièrement des points de vie aux ennemis blessés autour de lui (onde et « +N » verts). Mieux vaut l'abattre en premier. |
 | 4. La Nécropole (morts-vivants) | Squelette, Goule (rapide), Chevalier noir (armure), Charogne (libère 4 Asticots), Asticot, Momie, Abomination (énorme) | **Résurrection** (Chevalier noir, Momie, la Liche) : abattus, ils tombent puis se relèvent sur place une fois (tache violette, « Se relève ! »), avec une partie de leur vie. Ils ne rapportent leur or qu'à leur vraie mort. Un ennemi **consacré** par l'Encensoir (petite croix dorée) ne se relève pas. |
 
 Le bouclier, le soin, les renforts et la résurrection se règlent dans la ressource de l'ennemi (`EnemyData`, groupes **Bouclier**, **Soin**, **Renforts** et **Résurrection**) : n'importe quel ennemi peut en avoir. Sa `description` est celle du lexique.
@@ -245,11 +245,21 @@ Chaque monde a aussi un monstre volant et un monstre furtif :
 | La Ruche | **Frelon** (dès le 1-2) | **Mante** (dès le 1-4), armure 3 |
 | La Fonderie | **Chasseur** (dès le 2-2), bouclier | **Spectre** (dès le 2-3), bouclier |
 | La Cité | **Aviateur** (dès le 3-2), armure 2 | **Infiltré** (dès le 3-3), armure 2 |
+| La Nécropole | **Banshee** (dès le 4-2) | **Revenant** (dès le 4-3), armure 2, se relève une fois |
 
 - **Volants** : ils survolent le chemin en coupant les virages (ils vont tout droit d'un virage sur deux, en arrondissant), avec leur ombre au sol, et passent au-dessus des tours. Avant la première vague, leur trajet s'affiche en pointillés bleus à côté des flèches du chemin. Les tours qui tirent au sol ne les touchent pas : **Mortier**, **Lance-flammes**, **Pesticide** et **Lacrymogène** (ni leurs explosions et nuages). La **Mitrailleuse** leur fait 50 % de dégâts en plus.
 - **Furtifs** : à demi transparents, les tours ne les visent pas, sauf quand ils passent à portée de détection d'une tour qui détecte : **Sniper** (150), **Franc-tireur** (200) et **Bobine** (140), marquées d'un petit œil violet (la portée de détection s'affiche en pointillés violets au survol). Les ondes, qui ne visent personne (Givre, Brouilleur, Électroaimant), et les explosions et nuages autour d'une autre cible les touchent quand même.
 
 Un ennemi vole avec `flying` et se cache avec `stealthy` (groupe **Déplacement** de `EnemyData`). Côté tours (groupe **Volants et furtifs** de `TowerData`) : `hits_air`, `air_damage_multiplier` et `detection_range`, qui grandit avec la portée.
+
+### Tunnelier et Saboteur
+
+Deux monstres dérèglent la défense au lieu de seulement l'encaisser :
+
+- **Tunnelier** (La Fonderie, dès le 2-4) : une foreuse blindée (260 vie, armure 4) qui roule lentement, puis toutes les 4 s plonge sous le chemin pendant 3 s. Sous terre, on ne voit qu'une butte de terre qui avance, 60 % plus vite : aucune tour ne la vise, et ni les ondes, ni les explosions, ni les nuages, ni les Météores ne la touchent. Elle ne plonge plus à moins de 200 pixels de la base, et remonte si elle s'en approche en creusant : il faut des tours tout au long du chemin, et surtout près de la sortie.
+- **Saboteur** (La Cité, dès le 3-4) : toutes les 6 s, il éteint pendant 4 s la tour bâtie la plus proche à 140 pixels (un éclair jaune part vers elle). Une tour éteinte est grisée et crépite : elle ne tire plus, ne détecte plus les furtifs et, si c'est une Bobine, ne renforce plus ses voisines. Mieux vaut l'abattre de loin, avec un Sniper ou un Mortier.
+
+Un ennemi creuse avec `burrow_interval`, `burrow_duration` et `burrow_speed_multiplier` (groupe **Terrier** de `EnemyData`), et sabote avec `sabotage_interval`, `sabotage_radius` et `sabotage_duration` (groupe **Sabotage**).
 
 ### Tours des mondes
 

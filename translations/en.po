@@ -2862,3 +2862,32 @@ msgstr "✦  Mutators"
 
 msgid "Règles du défi du jour sur les niveaux déjà gagnés, contre des étoiles infinies."
 msgstr "Daily challenge rules on levels already won, for infinite stars."
+msgid "Banshee"
+msgstr "Banshee"
+
+msgid "Spectre hurlant qui flotte au-dessus des tombes et file droit vers la base."
+msgstr "Shrieking ghost that floats above the graves and flies straight for the base."
+
+msgid "Revenant"
+msgstr "Revenant"
+
+msgid "Mort en suaire, invisible pour les tours sauf près d'une tour qui détecte. Abattu, il se relève une fois."
+msgstr "Shrouded corpse, invisible to towers except near a detecting tower. Struck down, it rises once."
+
+msgid "Tunnelier"
+msgstr "Borer"
+
+msgid "Foreuse blindée qui plonge régulièrement sous le chemin, hors d'atteinte des tours, et ressort plus loin."
+msgstr "Armored drill that regularly dives under the path, out of the towers' reach, and comes out further on."
+
+msgid "Saboteur"
+msgstr "Saboteur"
+
+msgid "Ingénieur à la pince coupante qui éteint en passant la tour la plus proche."
+msgstr "Engineer with wire cutters who shuts down the nearest tower as he passes."
+
+msgid "Tunnelier : toutes les %s s, il creuse sous le chemin pendant %s s. Sous terre, aucune tour ne le voit ni ne le touche ; il remonte avant la base."
+msgstr "Borer: every %s s, it digs under the path for %s s. Underground, no tower can see or hit it; it surfaces before the base."
+
+msgid "Saboteur : toutes les %s s, il éteint pendant %s s la tour la plus proche à sa portée (elle ne tire plus et ne détecte plus)."
+msgstr "Saboteur: every %s s, shuts down the nearest tower in range for %s s (it stops firing and detecting)."

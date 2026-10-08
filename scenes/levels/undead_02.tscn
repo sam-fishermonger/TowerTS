@@ -15,6 +15,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/undead/charogne.tres" id="e_charogne"]
 [ext_resource type="Resource" path="res://resources/enemies/undead/squelette.tres" id="e_squelette"]
 [ext_resource type="Resource" path="res://resources/enemies/undead/asticot.tres" id="e_asticot"]
+[ext_resource type="Resource" path="res://resources/enemies/undead/banshee.tres" id="e_banshee"]
 
 [sub_resource type="Curve2D" id="Curve2D_Path0"]
 _data = {
@@ -104,9 +105,16 @@ start_delay = 8.0
 path_index = 1
 elite = true
 
+[sub_resource type="Resource" id="Group_w3_banshee"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_banshee")
+count = 6
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_elite")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w3_1"), SubResource("Group_w3_2"), SubResource("Group_w3_elite"), SubResource("Group_w3_banshee")])
 bonus_gold = 25
 health_multiplier = 1.5
 
@@ -197,9 +205,16 @@ count = 36
 interval = 0.7
 start_delay = 8.0
 
+[sub_resource type="Resource" id="Group_w6_banshee"]
+script = ExtResource("4_spawn_group")
+enemy = ExtResource("e_banshee")
+count = 10
+interval = 1.2
+start_delay = 5.0
+
 [sub_resource type="Resource" id="Wave_6"]
 script = ExtResource("3_wave_data")
-groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3")])
+groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w6_1"), SubResource("Group_w6_2"), SubResource("Group_w6_3"), SubResource("Group_w6_banshee")])
 bonus_gold = 40
 health_multiplier = 2.25
 

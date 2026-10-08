@@ -43,6 +43,10 @@ const REINE := preload("res://resources/enemies/insectoid/reine.tres")
 const GENERAL := preload("res://resources/enemies/humanoid/general.tres")
 const FRELON := preload("res://resources/enemies/insectoid/frelon.tres")
 const MANTE := preload("res://resources/enemies/insectoid/mante.tres")
+const TUNNELIER := preload("res://resources/enemies/mecha/tunnelier.tres")
+const SABOTEUR := preload("res://resources/enemies/humanoid/saboteur.tres")
+const BANSHEE := preload("res://resources/enemies/undead/banshee.tres")
+const REVENANT := preload("res://resources/enemies/undead/revenant.tres")
 const LEXICON_SCREEN := preload("res://scenes/ui/lexicon_screen.tscn")
 const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
 const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
@@ -130,6 +134,9 @@ func _run() -> void:
 	await _test_magnet_tower()
 	await _test_flying_enemies()
 	await _test_stealthy_enemies()
+	await _test_burrowing_enemies()
+	await _test_saboteurs()
+	await _test_necropolis_flyer_and_stealth()
 	await _test_crossings_in_tree()
 	await _test_tower_choice()
 	await _test_worlds()
@@ -2100,6 +2107,87 @@ func _test_stealthy_enemies() -> void:
 	await _free(level)
 
 
+func _test_burrowing_enemies() -> void:
+	print("Tunnelier : il plonge sous le chemin, hors d'atteinte des tours, et remonte avant la base")
+	var level := await _spawn_level(LEVEL_01)
+	var cannon := _place_test_tower(level, CANNON)
+	cannon.set_process(false)
+	var borer := _add_enemy_at(level, TUNNELIER, cannon.global_position + Vector2(60, 0))
+	_check(cannon.find_target() == borer, "en surface, le Canon le vise")
+	borer._set_burrowed(true)
+	_check(borer.is_burrowed() and cannon.find_target() == null and not borer.health_bar.visible,
+		"sous terre, aucune tour ne le voit et sa barre de vie disparaît")
+	_check(borer.take_damage(50.0) == 0.0 and borer.hit(50.0, CANNON.get_stats_at_level(1)) == 0.0
+			and Enemy.get_alive_in_radius(self, borer.global_position, 50.0).is_empty(),
+		"ni les coups, ni les ondes, ni les explosions ne l'atteignent")
+	_check(is_equal_approx(borer.get_speed(), TUNNELIER.speed * TUNNELIER.burrow_speed_multiplier), "il creuse plus vite qu'il ne roule")
+	borer.despawn()
+	# Il plonge et remonte de lui-même en avançant sur le chemin.
+	var walker := _add_still_enemy(level, TUNNELIER, 0, 0.0)
+	walker.set_process(true)
+	var dove := false
+	var surfaced := false
+	var elapsed := 0.0
+	while elapsed < TUNNELIER.burrow_interval + TUNNELIER.burrow_duration + 0.5 and walker.is_alive:
+		elapsed += await _step()
+		dove = dove or walker.is_burrowed()
+		surfaced = dove and not walker.is_burrowed()
+	_check(dove and surfaced, "il plonge toutes les %s s et remonte au bout de %s s" % [TUNNELIER.burrow_interval, TUNNELIER.burrow_duration])
+	# Près de la base, il reste en surface.
+	walker.progress = walker._path_length - Enemy.BURROW_SURFACE_DISTANCE + 10.0
+	walker._burrow_cooldown = 0.0
+	walker._update_burrow(0.1)
+	_check(not walker.is_burrowed(), "il ne plonge plus près de la base")
+	walker.despawn()
+	_check(TUNNELIER.get_abilities()[0].begins_with("Tunnelier"), "sa capacité est décrite dans sa fiche")
+	await _free(level)
+
+
+func _test_saboteurs() -> void:
+	print("Saboteur : il éteint quelques secondes la tour la plus proche")
+	var level := await _spawn_level(LEVEL_01)
+	var sniper := _place_test_tower(level, SNIPER)
+	var cannon := _place_near(level, CANNON, Vector2i(10, 8))
+	var saboteur := _add_enemy_at(level, SABOTEUR, sniper.global_position + Vector2(50, 0))
+	var mante := _add_enemy_at(level, MANTE, sniper.global_position + Vector2(70, 0))
+	mante._update_detection()
+	_check(mante.is_revealed(), "le Sniper détecte la Mante")
+	saboteur._sabotage_cooldown = 0.0
+	saboteur._update_sabotage(0.1)
+	_check(sniper.is_sabotaged() and not cannon.is_sabotaged(), "il éteint la tour la plus proche, pas celle qui est loin")
+	_check(sniper.find_target() != null and not sniper.is_in_group(Enemy.DETECTOR_GROUP),
+		"la tour éteinte ne détecte plus les furtifs")
+	mante._update_detection()
+	_check(not mante.is_revealed(), "la Mante redevient invisible")
+	sniper._cooldown = 0.0
+	var health := saboteur.health.health
+	var elapsed := 0.0
+	while elapsed < 1.0:
+		elapsed += await _step()
+	_check(saboteur.health.health == health and sniper._target == null, "la tour éteinte ne tire plus")
+	while elapsed < SABOTEUR.sabotage_duration + 0.3:
+		elapsed += await _step()
+	_check(not sniper.is_sabotaged() and sniper.is_in_group(Enemy.DETECTOR_GROUP),
+		"au bout de %s s, elle se rallume et détecte de nouveau" % SABOTEUR.sabotage_duration)
+	# Une Bobine éteinte ne renforce plus ses voisines.
+	var coil := _place_near(level, COIL, sniper.cell)
+	_check(sniper.is_boosted(), "la Bobine renforce le Sniper")
+	coil.sabotage(2.0)
+	_check(not sniper.is_boosted(), "éteinte, elle ne le renforce plus")
+	_check(SABOTEUR.get_abilities()[0].begins_with("Saboteur"), "sa capacité est décrite dans sa fiche")
+	await _free(level)
+
+
+func _test_necropolis_flyer_and_stealth() -> void:
+	print("La Nécropole a aussi son volant et son furtif")
+	var world: World = (load("res://resources/campaign.tres") as Campaign).worlds[3]
+	_check(BANSHEE.flying and BANSHEE in world.enemies, "la Banshee vole et fait partie de La Nécropole")
+	_check(REVENANT.stealthy and REVENANT.revive_count == 1 and REVENANT in world.enemies,
+		"le Revenant est furtif et se relève une fois")
+	var shapes := [Creature.shape_of(BANSHEE), Creature.shape_of(REVENANT), Creature.shape_of(TUNNELIER), Creature.shape_of(SABOTEUR)]
+	_check(shapes == ["banshee", "revenant", "tunnelier", "saboteur"], "chacun a son dessin en trois quarts (%s)" % [shapes])
+
+
 func _test_crossings_in_tree() -> void:
 	print("Arbre des améliorations : croisements de tours")
 	var tree := Perks.TREE
@@ -3108,10 +3196,10 @@ func _test_lexicon() -> void:
 		"une tour des mondes dit où la débloquer")
 	screen.show_tab(1)
 	var names: Array = screen.get_entry_buttons().map(func(b: Button) -> String: return b.text)
-	_check(names.size() == 39 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
-			and names.has("Frelon") and names.has("Infiltré") and names.any(func(n: String) -> bool: return n.contains("Liche"))
+	_check(names.size() == 43 and names[0] == "Élites" and names[1] == "Porteurs et coffres" and names.any(func(n: String) -> bool: return n.contains("Béhémoth"))
+			and names.has("Frelon") and names.has("Infiltré") and names.has("Banshee") and names.has("Tunnelier") and names.any(func(n: String) -> bool: return n.contains("Liche"))
 			and names.has("Pillarde  ·  Conquête"),
-		"onglet Monstres : les élites, les porteurs, les 29 monstres (dont les volants et les furtifs), les 4 boss et les 4 Pillards (%d)"
+		"onglet Monstres : les élites, les porteurs, les 33 monstres (dont les volants, les furtifs, le Tunnelier et le Saboteur), les 4 boss et les 4 Pillards (%d)"
 			% names.size())
 	var raider_entry: Button = screen.get_entry_buttons().filter(func(b: Button) -> bool: return b.text.begins_with("Maraudeur"))[0]
 	raider_entry.pressed.emit()

@@ -13,13 +13,14 @@
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/infiltre.tres" id="f1_infiltre"]
 [ext_resource type="TileSet" path="res://resources/tilesets/humanoid.tres" id="t_tileset"]
 [ext_resource type="Resource" path="res://resources/enemies/humanoid/maraudeur.tres" id="r0_maraudeur"]
+[ext_resource type="Resource" path="res://resources/enemies/humanoid/saboteur.tres" id="en_saboteur"]
 
 [resource]
 script = ExtResource("1_world")
 display_name = "La Cité"
 description = "Humanoïdes : des soldats, des gardes à bouclier, et des médecins qui soignent leurs alliés."
 color = Color(0.95, 0.7, 0.35, 1)
-enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_soldat"), ExtResource("e1_eclaireur"), ExtResource("e2_garde"), ExtResource("e3_medecin"), ExtResource("e4_transport"), ExtResource("e5_colosse"), ExtResource("f0_aviateur"), ExtResource("f1_infiltre")])
+enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_soldat"), ExtResource("e1_eclaireur"), ExtResource("e2_garde"), ExtResource("e3_medecin"), ExtResource("e4_transport"), ExtResource("e5_colosse"), ExtResource("f0_aviateur"), ExtResource("f1_infiltre"), ExtResource("en_saboteur")])
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_general")])
 raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_maraudeur")])
 levels = Array[String](["res://scenes/levels/humanoid_01.tscn", "res://scenes/levels/humanoid_02.tscn", "res://scenes/levels/humanoid_03.tscn", "res://scenes/levels/humanoid_04.tscn", "res://scenes/levels/humanoid_05.tscn", "res://scenes/levels/humanoid_06.tscn", "res://scenes/levels/humanoid_07.tscn"])

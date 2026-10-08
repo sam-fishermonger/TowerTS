@@ -45,6 +45,26 @@ var base_name := ""
 ## tour qui en a une (TowerData.detection_range). Les dégâts de zone le touchent quand même.
 @export var stealthy := false
 
+@export_group("Terrier")
+## Tunnelier : secondes à la surface entre deux plongées sous terre (0 = ne creuse pas).
+## Sous terre, aucune tour ne le voit ni ne le touche, même avec une onde ou une
+## explosion ; il remonte avant d'arriver près de la base (Enemy.BURROW_SURFACE_DISTANCE).
+@export var burrow_interval := 0.0
+## Secondes passées sous terre à chaque plongée.
+@export var burrow_duration := 3.0
+## Vitesse sous terre, par rapport à celle de la surface.
+@export var burrow_speed_multiplier := 1.0
+
+@export_group("Sabotage")
+## Saboteur : secondes entre deux sabotages (0 = ne sabote pas). Il éteint la tour bâtie
+## la plus proche à sa portée : elle ne tire plus et ne détecte plus pendant
+## `sabotage_duration`.
+@export var sabotage_interval := 0.0
+## Portée du sabotage, en pixels.
+@export var sabotage_radius := 140.0
+## Secondes pendant lesquelles la tour sabotée reste éteinte.
+@export var sabotage_duration := 4.0
+
 @export_group("Pillage")
 ## Pillard (mode Conquête) : il quitte le chemin pour frapper un ouvrier ou un bâtiment
 ## à portée, puis y revient (voir Enemy).
@@ -135,6 +155,12 @@ func get_abilities() -> Array[String]:
 		result.append(tr("Pillard : quitte le chemin pour frapper les ouvriers et les bâtiments à portée (mode Conquête), puis y revient."))
 	if stealthy:
 		result.append(tr("Furtif : les tours ne le visent que près d'une tour qui détecte (Sniper, Franc-tireur, Bobine). Les ondes et les explosions le touchent quand même."))
+	if burrow_interval > 0.0:
+		result.append(tr("Tunnelier : toutes les %s s, il creuse sous le chemin pendant %s s. Sous terre, aucune tour ne le voit ni ne le touche ; il remonte avant la base.")
+			% [_seconds(burrow_interval), _seconds(burrow_duration)])
+	if sabotage_interval > 0.0:
+		result.append(tr("Saboteur : toutes les %s s, il éteint pendant %s s la tour la plus proche à sa portée (elle ne tire plus et ne détecte plus).")
+			% [_seconds(sabotage_interval), _seconds(sabotage_duration)])
 	if armor > 0.0:
 		result.append(tr("Armure : chaque coup perd %s dégâts (au moins 1 passe).") % str(armor).trim_suffix(".0"))
 	if max_shield > 0.0:
@@ -148,10 +174,7 @@ func get_abilities() -> Array[String]:
 			% [summon_count, plural(summon_enemy.display_name, summon_count), str(summon_interval).trim_suffix(".0")])
 	if revive_count > 0:
 		var percent := roundi(revive_health_ratio * 100.0)
-		# Pas GameSettings.decimal() ici : GameSettings dépend (de loin) des ressources d'ennemis.
-		var delay := str(revive_delay).trim_suffix(".0")
-		if _is_french():
-			delay = delay.replace(".", ",")
+		var delay := _seconds(revive_delay)
 		if revive_count == 1:
 			result.append(tr("Se relève une fois avec %d %% de sa vie, %s s après sa mort, sauf s'il vient d'être consacré.")
 				% [percent, delay])
@@ -161,6 +184,13 @@ func get_abilities() -> Array[String]:
 	if split_into and split_count > 0:
 		result.append(tr("Libère %d %s à sa mort.") % [split_count, plural(split_into.display_name, split_count)])
 	return result
+
+
+## Un nombre de secondes écrit à la française (virgule) ou à l'anglaise. Pas
+## GameSettings.decimal() ici : GameSettings dépend (de loin) des ressources d'ennemis.
+static func _seconds(value: float) -> String:
+	var text := str(value).trim_suffix(".0")
+	return text.replace(".", ",") if _is_french() else text
 
 
 ## Nom traduit, au pluriel s'il y en a plusieurs : « 3 Larves », « 2 Porte-drones »
