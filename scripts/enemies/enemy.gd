@@ -15,6 +15,7 @@ signal summoned(enemy: Enemy)
 const GROUP := "enemies"
 const SHIELD_COLOR := Color(0.4, 0.85, 1.0)
 const HEAL_COLOR := Color(0.45, 1.0, 0.55)
+const COLORBLIND_HEAL_COLOR := Color(0.4, 0.8, 1.0)
 ## Durée de l'onde verte dessinée autour d'un soigneur quand il soigne.
 const HEAL_PULSE_DURATION := 0.5
 ## Soigneur qui n'a trouvé personne à soigner : secondes avant de chercher de nouveau.
@@ -615,7 +616,7 @@ func _draw() -> void:
 	if _heal_pulse_left > 0.0:
 		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
 		draw_arc(Vector2.ZERO, lerpf(data.radius, data.heal_radius, t), 0.0, TAU, 48,
-			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0)
+			Color(_heal_color(), 0.6 * (1.0 - t)), 3.0)
 	if data.max_shield > 0.0 and health.shield > 0.0:
 		var ratio := health.shield / data.max_shield
 		var shield_color := JAMMED_SHIELD_COLOR if health.is_shield_jammed() else SHIELD_COLOR
@@ -675,15 +676,20 @@ func _draw_relief() -> void:
 	var ground := Vector2(1.0, Relief.GROUND_SQUASH * 0.6)
 	if data.is_elite or data.is_boss:
 		var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
-		var color := EnemyData.BOSS_COLOR if data.is_boss else EnemyData.ELITE_COLOR
+		var color := EnemyData.boss_color() if data.is_boss else EnemyData.ELITE_COLOR
 		var ring := Relief.ellipse(Vector2(0, 1), u * (1.4 + 0.1 * pulse), u * (1.4 + 0.1 * pulse) * ground.y, 0.0, TAU, 32)
 		draw_colored_polygon(ring, Color(color, 0.12 + 0.1 * pulse))
 		draw_polyline(ring, Color(color, 0.6 + 0.3 * pulse), 2.5 if data.is_boss else 2.0, true)
+		if data.is_boss and UiStyle.is_colorblind():
+			# Mode daltonien : un second anneau, pour ne pas compter sur la couleur seule.
+			var outer := u * (1.75 + 0.1 * pulse)
+			draw_polyline(Relief.ellipse(Vector2(0, 1), outer, outer * ground.y, 0.0, TAU, 32),
+				Color(color, 0.5 + 0.3 * pulse), 2.0, true)
 	if _heal_pulse_left > 0.0:
 		var t := 1.0 - _heal_pulse_left / HEAL_PULSE_DURATION
 		var radius := lerpf(data.radius, data.heal_radius, t)
 		draw_polyline(Relief.ellipse(Vector2.ZERO, radius, radius * ground.y, 0.0, TAU, 40),
-			Color(HEAL_COLOR, 0.6 * (1.0 - t)), 3.0, true)
+			Color(_heal_color(), 0.6 * (1.0 - t)), 3.0, true)
 	if data.raider:
 		draw_colored_polygon(Relief.ellipse(Vector2(0, 1), u * 1.5, u * 1.5 * ground.y, 0.0, TAU, 24),
 			Color(RAID_COLOR, 0.18 if not is_raiding() else 0.32))
@@ -764,9 +770,16 @@ func _draw_flying_shadow() -> void:
 ## Aura dorée qui pulse autour d'un élite, rouge et dorée autour d'un boss.
 func _draw_aura() -> void:
 	var pulse := 0.5 + 0.5 * sin(_aura_time * 4.0)
-	var color := EnemyData.BOSS_COLOR if data.is_boss else EnemyData.ELITE_COLOR
+	var color := EnemyData.boss_color() if data.is_boss else EnemyData.ELITE_COLOR
 	var aura_radius := data.radius * (1.25 + 0.08 * pulse)
 	draw_circle(Vector2.ZERO, aura_radius, Color(color, 0.12 + 0.1 * pulse))
 	draw_arc(Vector2.ZERO, aura_radius, 0.0, TAU, 40, Color(color, 0.55 + 0.3 * pulse), 2.5 if data.is_boss else 2.0)
 	if data.is_boss:
 		draw_arc(Vector2.ZERO, aura_radius + 5.0, 0.0, TAU, 40, Color(EnemyData.ELITE_COLOR, 0.35 * pulse), 1.5)
+	if data.is_boss and UiStyle.is_colorblind():
+		draw_arc(Vector2.ZERO, aura_radius + 10.0, 0.0, TAU, 40, Color(color, 0.5 + 0.3 * pulse), 2.0)
+
+
+## Halo du soin d'un Médecin : vert, bleu ciel en mode daltonien.
+static func _heal_color() -> Color:
+	return COLORBLIND_HEAL_COLOR if UiStyle.is_colorblind() else HEAL_COLOR

@@ -126,8 +126,35 @@ msgstr "F11 or Alt + Enter, at any time"
 msgid "Vitesse au départ"
 msgstr "Starting speed"
 
-msgid "Chaque niveau commence à cette vitesse."
-msgstr "Every level starts at this speed."
+msgid "Taille du texte"
+msgstr "Text size"
+
+msgid "Normale"
+msgstr "Normal"
+
+msgid "Grande"
+msgstr "Large"
+
+msgid "Très grande"
+msgstr "Extra large"
+
+msgid "Mode daltonien"
+msgstr "Colorblind mode"
+
+msgid "Portées et auras en bleu et orange plutôt qu'en vert et rouge"
+msgstr "Ranges and auras in blue and orange instead of green and red"
+
+msgid "Bleu et orange au lieu de vert et rouge"
+msgstr "Blue and orange instead of green and red"
+
+msgid "Vibrations"
+msgstr "Vibration"
+
+msgid "Vie perdue et arrivée d'un boss (téléphone, manette)"
+msgstr "Life lost and boss arrival (phone, gamepad)"
+
+msgid "Chaque niveau commence à la vitesse choisie."
+msgstr "Every level starts at the chosen speed."
 
 msgid "Fermer"
 msgstr "Close"
@@ -884,6 +911,9 @@ msgstr "Wave %d"
 
 msgid "Bonus : +%d or"
 msgstr "Bonus: +%d gold"
+
+msgid "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·  B : annuler  ·  LB / RB : choisir une tour  ·  Y : vague suivante  ·  X : vitesse  ·  Start : pause  ·  Select : options"
+msgstr "Left stick or D-pad: aim  ·  A: place, click  ·  B: cancel  ·  LB / RB: pick a tower  ·  Y: next wave  ·  X: speed  ·  Start: pause  ·  Select: options"
 
 msgid "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
 msgstr "Left click: place the tower  ·  Shift + click: place several  ·  Right click / Esc: cancel  ·  Click a placed tower: details, upgrade, sell and target  ·  1 to 0: pick a tower  ·  Space: pause  ·  V: speed"

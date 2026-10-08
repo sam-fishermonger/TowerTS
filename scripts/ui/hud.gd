@@ -55,6 +55,7 @@ const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
 const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
 ## Mode Conquête : ce qui change, devant le rappel des commandes.
+const GAMEPAD_HINT := "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·  B : annuler  ·  LB / RB : choisir une tour  ·  Y : vague suivante  ·  X : vitesse  ·  Start : pause  ·  Select : options"
 const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
@@ -273,6 +274,31 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		tower_shop.toggle_slot(slot)
 	else:
 		return
+	get_viewport().set_input_as_handled()
+
+
+## Manette (voir Gamepad) : Start met en pause, Select ouvre les Options, X change la
+## vitesse, Y lance la vague, LB et RB passent d'une tour de la barre à l'autre.
+func _unhandled_input(event: InputEvent) -> void:
+	var button := event as InputEventJoypadButton
+	if button == null or not button.pressed or end_panel.visible or tower_picker or options_menu:
+		return
+	match button.button_index:
+		JOY_BUTTON_START:
+			pause_toggled.emit()
+		JOY_BUTTON_BACK:
+			open_options()
+		JOY_BUTTON_X:
+			_select_next_speed()
+		JOY_BUTTON_Y:
+			if next_wave_button.visible and not next_wave_button.disabled:
+				next_wave_requested.emit()
+		JOY_BUTTON_LEFT_SHOULDER:
+			tower_shop.select_neighbour(-1)
+		JOY_BUTTON_RIGHT_SHOULDER:
+			tower_shop.select_neighbour(1)
+		_:
+			return
 	get_viewport().set_input_as_handled()
 
 
@@ -1097,7 +1123,8 @@ func show_wave_details() -> void:
 
 func _process(_delta: float) -> void:
 	_update_hovered_enemy()
-	var hint := tr(TOUCH_HINT) if GameSettings.is_touch_mode() else tr(MOUSE_HINT)
+	var hint := tr(TOUCH_HINT) if GameSettings.is_touch_mode() \
+		else tr(GAMEPAD_HINT) if Gamepad.is_active() else tr(MOUSE_HINT)
 	if recruit_button:
 		hint = tr(CONQUEST_HINT) + "  ·  " + hint
 	if shop_hint.text != hint:
@@ -1139,7 +1166,7 @@ func show_enemy_details(enemy: Enemy) -> void:
 			tr("Porteur : lâche un coffre à sa mort.") if enemy.carried == Loot.Kind.CHEST
 			else tr("Porteur : lâche du butin à sa mort.")]
 	enemy_details.bounds = get_play_area()
-	var border := EnemyData.BOSS_COLOR if enemy.data.is_boss \
+	var border := EnemyData.boss_color() if enemy.data.is_boss \
 		else EnemyData.ELITE_COLOR if enemy.data.is_elite else enemy.data.color
 	enemy_details.show_text(text, Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0), border)
 

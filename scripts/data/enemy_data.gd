@@ -13,6 +13,8 @@ const ELITE_REWARD := 4.0
 const ELITE_DAMAGE := 2
 const ELITE_COLOR := Color(1.0, 0.8, 0.25)
 const BOSS_COLOR := Color(1.0, 0.35, 0.3)
+## Boss en mode daltonien : magenta, que l'on ne confond pas avec l'or des élites.
+const COLORBLIND_BOSS_COLOR := Color(0.95, 0.35, 0.95)
 ## Pluriels anglais irréguliers des noms traduits (voir plural()).
 const ENGLISH_PLURALS := {"Larva": "Larvae", "Colossus": "Colossi"}
 
@@ -201,3 +203,8 @@ func get_translated_name() -> String:
 	if not base_name.is_empty():
 		return tr("%s élite") % tr(base_name)
 	return tr(display_name)
+
+
+## Couleur de l'aura et de la barre de vie d'un boss (magenta en mode daltonien).
+static func boss_color() -> Color:
+	return COLORBLIND_BOSS_COLOR if UiStyle.is_colorblind() else BOSS_COLOR

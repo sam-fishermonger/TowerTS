@@ -781,6 +781,8 @@ func _on_enemy_spawned(enemy: Enemy) -> void:
 		enemy.set_route(map.get_route_from(enemy.get_route_position()))
 	if enemy.data.is_boss:
 		hud.track_boss(enemy)
+		if not is_demo:
+			Gamepad.rumble(&"boss")
 
 
 func _on_enemy_damaged(enemy: Enemy, amount: float) -> void:
@@ -870,6 +872,8 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 	stats.lives_lost += mini(enemy.data.damage, lives)
 	lives -= enemy.data.damage
 	Sound.play(&"lives_lost")
+	if not is_demo:
+		Gamepad.rumble(&"life_lost")
 	_show_lives_lost(enemy.data.damage, enemy.global_position)
 	if lives <= 0:
 		_end_game(false)
