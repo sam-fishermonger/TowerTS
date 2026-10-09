@@ -86,6 +86,7 @@ func _run() -> void:
 	GameSettings.apply_language()
 	GameSettings.apply_accessibility()
 	await _test_title_screen()
+	await _test_unlocks()
 	await _test_progress()
 	await _test_perk_tree()
 	await _test_perks_in_level()
@@ -310,11 +311,11 @@ func _test_title_screen() -> void:
 		and not title.get_node("%PerksButton").visible and title.get_node("%CampaignButton").has_focus(),
 		"Jouer ouvre le choix du mode, Campagne a le focus")
 	_check(title.get_node("%WorldsButton").text == "Mondes", "le bouton Mondes ouvre la sélection")
-	_check(title.get_node("%DailyButton").text == "Défi du jour", "le bouton Défi du jour existe")
-	_check(title.get_node("%EditorButton").text == "Éditeur de niveau", "le bouton Éditeur de niveau existe")
-	_check(title.get_node("%ConquestButton").text == "Conquête", "le bouton Conquête existe")
-	_check(title.get_node("%ExpeditionButton").disabled and title.get_node("%ExpeditionButton").text.begins_with("Expédition"),
-		"le bouton Expédition attend cinq niveaux débloqués")
+	_check(title.get_node("%DailyButton").text.begins_with("Défi du jour"), "le bouton Défi du jour existe")
+	_check(title.get_node("%EditorButton").text.begins_with("Éditeur de niveau"), "le bouton Éditeur de niveau existe")
+	_check(title.get_node("%ConquestButton").text.begins_with("Conquête"), "le bouton Conquête existe")
+	_check(title.is_locked(title.get_node("%ExpeditionButton")) and title.get_node("%ExpeditionButton").text.begins_with("Expédition"),
+		"le bouton Expédition attend la progression de la campagne")
 	_check(title.get_node("%CampaignButton").text == "Campagne" and not title.get_node("%ResetButton").visible,
 		"pas de progression à reprendre ni à effacer")
 	var cancel := InputEventAction.new()
@@ -375,6 +376,97 @@ func _test_title_demo() -> void:
 	_check(demo.level != level and demo.level.scene_file_path != finished_path, "un autre niveau prend la suite")
 	await _free(title)
 	_check(not Sound.are_effects_muted(), "les sons reviennent en quittant l'écran titre")
+
+
+## Les modes s'ouvrent au fil de la campagne (Unlocks) ; verrouillé, un bouton n'ouvre rien
+## et montre une bulle qui dit comment le débloquer.
+func _test_unlocks() -> void:
+	print("Déblocage progressif des modes")
+	Progress.reset_campaign()
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	_check(Unlocks.get_levels_won() == 0 and not Unlocks.is_unlocked(Unlocks.Feature.DAILY),
+		"au départ, aucun mode n'est ouvert")
+	var order := Unlocks.LEVELS_WON.keys().map(func(f: int) -> int: return Unlocks.LEVELS_WON[f])
+	var sorted := order.duplicate()
+	sorted.sort()
+	_check(order == sorted, "les modes s'ouvrent dans l'ordre de la liste : %s" % [order])
+	var title := TITLE_SCREEN.instantiate()
+	root.add_child(title)
+	await process_frame
+	title.get_node("%PlayButton").pressed.emit()
+	var daily: Button = title.get_node("%DailyButton")
+	var editor: Button = title.get_node("%EditorButton")
+	_check(title.is_locked(daily) and daily.text == "Défi du jour  ·  Verrouillé" and daily.self_modulate != Color.WHITE
+		and not daily.disabled, "le défi du jour est verrouillé, assombri, mais garde le focus")
+	_check([title.get_node("%ConquestButton"), title.get_node("%FreeButton"), title.get_node("%ExpeditionButton"), editor].all(
+		func(b: Button) -> bool: return title.is_locked(b) and b.tooltip_text.is_empty()),
+		"Conquête, Niveaux libres, Expédition et Éditeur aussi, sans infobulle")
+	var children := root.get_child_count()
+	daily.pressed.emit()
+	await process_frame
+	await process_frame
+	_check(root.get_child_count() == children and title.is_inside_tree(), "appuyer sur un mode verrouillé n'ouvre rien")
+	_check(title.lock_bubble.visible and title.lock_bubble.button == daily
+		and title.lock_bubble.label.text == "Gagnez 3 niveaux de la campagne pour débloquer le défi du jour.\nNiveaux gagnés : 0 / 3",
+		"une bulle dit comment le débloquer : %s" % title.lock_bubble.label.text)
+	var bubble_rect: Rect2 = title.lock_bubble.get_global_rect()
+	_check(bubble_rect.position.x >= daily.get_global_rect().end.x and get_root().get_visible_rect().encloses(bubble_rect),
+		"la bulle est à côté du bouton, dans l'écran")
+	editor.grab_focus()
+	_check(title.lock_bubble.button == editor and title.lock_bubble.label.text.ends_with("0 / 5"),
+		"le focus (clavier, manette) passe la bulle au bouton suivant")
+	title.get_node("%CampaignButton").grab_focus()
+	_check(not title.lock_bubble.visible, "la bulle se cache en quittant le bouton")
+	for i in 3:
+		Progress.record_victory(campaign.levels[i], 1)
+	title._refresh()
+	_check(not title.is_locked(daily) and daily.text == "Défi du jour" and daily.self_modulate == Color.WHITE,
+		"trois niveaux gagnés ouvrent le défi du jour")
+	_check(title.is_locked(editor) and Unlocks.get_hint(Unlocks.Feature.EDITOR).ends_with("3 / 5"),
+		"l'éditeur attend toujours, la bulle compte les niveaux gagnés")
+	await _free(title)
+
+	# Écran des mondes : Mode infini et Mutateurs.
+	var screen := await _spawn_world_select()
+	var mode_button: Button = screen.get_node("%ModeButton")
+	_check(mode_button.text.ends_with("Verrouillé") and screen.mutators_button.text.ends_with("Verrouillé"),
+		"Mode infini et Mutateurs sont verrouillés")
+	mode_button.toggled.emit(true)
+	_check(not screen.endless_mode and not mode_button.button_pressed and screen.lock_bubble.visible
+		and screen.lock_bubble.label.text.contains("le mode infini"), "le mode infini verrouillé montre sa bulle")
+	screen.mutators_button.pressed.emit()
+	_check(screen.mutators_panel == null and screen.lock_bubble.button == screen.mutators_button
+		and screen.lock_bubble.label.text.contains("12 niveaux"), "les mutateurs aussi")
+	Mutators.set_active([DailyChallenge.RAPIDES])
+	_check(Mutators.get_active().is_empty(), "verrouillés, les mutateurs choisis ne s'appliquent pas")
+	await _free(screen)
+
+	# Le niveau gagné qui ouvre un mode le dit sur l'écran de fin.
+	Progress.record_victory(campaign.levels[3], 1)
+	var level := await _spawn_level(LEVEL_05)
+	level._end_game(true)
+	_check(level.hud.end_message.text.contains("Vous avez débloqué l'éditeur de niveau !")
+		and Unlocks.is_unlocked(Unlocks.Feature.EDITOR), "la victoire qui ouvre l'éditeur l'annonce")
+	await _free(level)
+	for i in 14:
+		Progress.record_victory(campaign.levels[i], 1)
+	_check(Mutators.get_active() == [DailyChallenge.RAPIDES] and Unlocks.is_unlocked(Unlocks.Feature.CONQUEST),
+		"quatorze niveaux ouvrent tout, et les mutateurs choisis reviennent")
+	screen = await _spawn_world_select()
+	_check(screen.get_node("%ModeButton").text == "∞  Mode infini" and screen.mutators_button.text.ends_with("1"),
+		"Mode infini et Mutateurs sont ouverts")
+	await _free(screen)
+	Mutators.set_active([])
+	Progress.reset_campaign()
+
+
+## Gagne (une étoile) les derniers niveaux de la campagne, sans toucher aux premiers :
+## tous les modes s'ouvrent (Unlocks).
+func _unlock_all_modes() -> void:
+	var levels: Array[String] = (load("res://resources/campaign.tres") as Campaign).levels
+	var needed: int = Unlocks.LEVELS_WON.values().max()
+	for i in needed:
+		Progress.record_victory(levels[levels.size() - 1 - i], 1)
 
 
 func _spawn_world_select() -> Control:
@@ -1098,6 +1190,22 @@ func _test_tower_info_panels() -> void:
 	escape.pressed = true
 	await _send_to_placer(level, escape)
 	_check(not details.visible, "Échap ferme la fiche")
+
+	# Fermée aussi par la HUD, avant tout le reste : Échap, ou un clic en dehors de la fiche.
+	await _click(level, tower.global_position)
+	level.hud._input(escape)
+	_check(not details.visible and level.placer.inspected_tower == null, "Échap ferme la fiche, même si un bouton a le focus")
+	await _click(level, tower.global_position)
+	var inside := InputEventMouseButton.new()
+	inside.button_index = MOUSE_BUTTON_LEFT
+	inside.pressed = true
+	inside.position = details.get_global_rect().get_center()
+	level.hud._input(inside)
+	_check(details.visible, "un clic dans la fiche la garde ouverte")
+	var outside := inside.duplicate() as InputEventMouseButton
+	outside.position = level.get_viewport().get_canvas_transform() * level.map.cell_to_world(Vector2i(14, 6))
+	level.hud._input(outside)
+	_check(not details.visible and level.placer.inspected_tower == null, "un clic en dehors de la fiche la ferme")
 
 	await _click(level, tower.global_position)
 	level.select_tower(GATLING)
@@ -2577,6 +2685,11 @@ func _test_tower_choice() -> void:
 	var picker := level.hud.tower_picker
 	_check(picker.get_selected() == level.available_tower_types.slice(0, 5), "5 tours cochées d'avance : celles du niveau d'abord")
 	_check(picker.get_button(ARC).disabled, "une fois 5 tours cochées, les autres sont grisées")
+	picker._show_info(picker.get_button(CANNON))
+	_check(picker._info.visible and picker._info.mouse_filter == Control.MOUSE_FILTER_IGNORE
+		and picker._info.find_children("*", "Control", true, false).all(func(c: Control) -> bool:
+			return c is BaseButton or c.mouse_filter == Control.MOUSE_FILTER_IGNORE),
+		"la fiche d'une tour survolée laisse passer la souris vers les cases qu'elle recouvre")
 	picker.set_tower_selected(CANNON, false)
 	picker.set_tower_selected(ARC, true)
 	_check(picker.get_selected().size() == 5 and picker.get_selected().has(ARC), "on remplace une tour par une autre")
@@ -2681,6 +2794,8 @@ func _test_spawn_spread() -> void:
 
 func _test_endless_mode() -> void:
 	print("Mode infini")
+	_unlock_all_modes()
+	var unlock_stars := Perks.get_earned_stars()
 	_check(not Progress.is_endless_unlocked(LEVEL_01.resource_path), "fermé tant que le niveau n'a pas 3 étoiles")
 	Progress.record_victory(LEVEL_01.resource_path, 2)
 	_check(not Progress.is_endless_unlocked(LEVEL_01.resource_path), "toujours fermé avec 2 étoiles")
@@ -2736,7 +2851,7 @@ func _test_endless_mode() -> void:
 	_check(level.get_waves_cleared() == count + 5 and not level.is_over, "la partie continue après les vagues du niveau")
 	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == count + 5
 		and Progress.get_endless_stars(LEVEL_01.resource_path) == 1, "chaque vague repoussée compte pour le record et les étoiles")
-	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == 3, "les étoiles infinies sont une monnaie à part")
+	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == unlock_stars + 3, "les étoiles infinies sont une monnaie à part")
 	level.lives = 1
 	level._on_enemy_reached_end(_add_still_enemy(level, LARVE, 0, 0.0))
 	_check(level.is_over and level.hud.end_title.text == "Fin de la partie"
@@ -2885,6 +3000,7 @@ func _test_daily_history() -> void:
 func _test_mutators() -> void:
 	print("Mutateurs")
 	Progress.reset_campaign()
+	_unlock_all_modes()
 	Mutators.set_active([])
 	var path := LEVEL_01.resource_path
 	var raw: Level = LEVEL_01.instantiate()
@@ -3020,6 +3136,7 @@ func _test_difficulties() -> void:
 	await _free(level)
 
 	Progress.record_victory(LEVEL_02.resource_path, 1)
+	_unlock_all_modes()
 	var screen := await _spawn_world_select()
 	_check(screen.difficulty_bar.visible and screen.get_difficulty_button(Difficulty.FACILE).button_pressed,
 		"la sélection des mondes montre la difficulté choisie")
@@ -3270,7 +3387,8 @@ func _test_expedition() -> void:
 	_check(drawn.size() == Expedition.LEVEL_COUNT and tiers_ok, "cinq niveaux, un par tranche de la campagne : %s" % [indices])
 	_check(Expedition.draw_levels(1234, pool) == drawn and Expedition.draw_levels(99, pool) != drawn,
 		"le tirage dépend de la graine")
-	_check(Expedition.is_unlocked() == (Expedition.get_pool().size() >= 5), "ouvert avec cinq niveaux débloqués")
+	_check(Expedition.is_unlocked() == (Unlocks.is_unlocked(Unlocks.Feature.EXPEDITION) and Expedition.get_pool().size() >= 5),
+		"ouvert avec la progression de la campagne")
 	var run := Expedition.from_dict(Expedition.create(77).to_dict())
 	_check(run.rng_seed == 77 and run.index == 0 and run.lives == -1, "l'expédition passe d'une scène à l'autre en dictionnaire")
 	var picked := Expedition.pick_choices(ChestBonus.get_available({}, false, true, false), RandomNumberGenerator.new())
@@ -5080,6 +5198,7 @@ func _test_conquest_progress() -> void:
 	Progress.reset_campaign()
 	for id in ["premiere_pierre", "securite", "conquerant", "contremaitre", "carrier"]:
 		Progress.set_value(Achievements.SECTION, id, 0)
+	_unlock_all_modes()
 	var title: Control = TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
@@ -5092,6 +5211,7 @@ func _test_conquest_progress() -> void:
 	if current_scene:
 		current_scene.queue_free()
 	await process_frame
+	Progress.reset_campaign()
 	var screen: Control = CONQUEST_SELECT_SCREEN.instantiate()
 	root.add_child(screen)
 	await process_frame
@@ -5462,6 +5582,7 @@ func _test_free_level_enemies() -> void:
 func _test_free_levels_progress() -> void:
 	print("Niveaux libres : écran de choix, étoiles et niveau suivant")
 	Progress.reset_campaign()
+	_unlock_all_modes()
 	var title: Control = TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
@@ -5476,6 +5597,7 @@ func _test_free_levels_progress() -> void:
 	if current_scene:
 		current_scene.queue_free()
 	await process_frame
+	Progress.reset_campaign()
 	var screen: Control = FREE_SELECT_SCREEN.instantiate()
 	root.add_child(screen)
 	await process_frame

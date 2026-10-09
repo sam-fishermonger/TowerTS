@@ -60,6 +60,9 @@ func _ready() -> void:
 	sell_button.pressed.connect(func() -> void: sell_requested.emit(tower))
 	target_button.pressed.connect(_on_target_button_pressed)
 	resized.connect(_reposition)
+	# Seuls la fiche et ses boutons prennent la souris : en aperçu (mouse_filter de la fiche à
+	# IGNORE), les clics passent à travers elle, jusqu'aux cases qu'elle recouvre.
+	_ignore_mouse(self)
 
 
 ## Aperçu d'un type de tour, au-dessus de la zone donnée (le bouton de la barre
@@ -87,6 +90,13 @@ func show_tower(placed: Tower, gold: int) -> void:
 func close() -> void:
 	_set_tower(null)
 	visible = false
+
+
+func _ignore_mouse(node: Node) -> void:
+	for child in node.get_children():
+		if child is Control and not child is BaseButton:
+			(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ignore_mouse(child)
 
 
 ## Met à jour l'or disponible (prix et bouton Améliorer). Seul ce qui dépend de l'or est

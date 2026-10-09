@@ -66,9 +66,9 @@ static func get_pool() -> Array[String]:
 	return result
 
 
-## Le mode s'ouvre quand assez de niveaux de la campagne sont débloqués.
+## Le mode s'ouvre avec la progression de la campagne (Unlocks), qui débloque assez de niveaux.
 static func is_unlocked() -> bool:
-	return get_pool().size() >= LEVEL_COUNT
+	return Unlocks.is_unlocked(Unlocks.Feature.EXPEDITION) and get_pool().size() >= LEVEL_COUNT
 
 
 ## Tirage des niveaux : la liste (dans l'ordre de la campagne) est coupée en LEVEL_COUNT

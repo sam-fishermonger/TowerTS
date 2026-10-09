@@ -115,6 +115,8 @@ var _pending_rules_panel := Callable()
 ## Étoiles des mutateurs de l'écran de fin, [gagnées, meilleur résultat d'avant] (vide sans
 ## mutateurs) : ajoutées au texte refait au changement de langue.
 var _mutator_result: Array[int] = []
+## Modes ouverts par la victoire (Unlocks.Feature), dits sur l'écran de fin.
+var _unlocked_features: Array = []
 ## … et règles, au milieu de la carte jusqu'à la première vague.
 var challenge_rules: PanelContainer
 ## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
@@ -250,6 +252,8 @@ func _notification(what: int) -> void:
 		_end_screen.call()
 		if not _mutator_result.is_empty():
 			show_mutator_result(_mutator_result[0], _mutator_result[1])
+		if not _unlocked_features.is_empty():
+			show_unlocked_features(_unlocked_features)
 		if end_stats.visible:
 			_center_end_panel.call_deferred()
 
@@ -1152,6 +1156,13 @@ func show_mutator_result(stars: int, best_before: int) -> void:
 	_mutator_result = [stars, best_before]
 
 
+## Une ligne par mode que la victoire vient de débloquer (Unlocks).
+func show_unlocked_features(features: Array) -> void:
+	for feature: int in features:
+		end_message.text += "\n" + tr("Vous avez débloqué %s !") % tr(Unlocks.NAMES[feature])
+	_unlocked_features = features
+
+
 # --- Fenêtres de détail -------------------------------------------------------
 
 ## Fenêtre de détail de la prochaine vague, sous son aperçu : chaque sorte de monstre
@@ -1188,10 +1199,21 @@ func _process(_delta: float) -> void:
 
 ## Au tactile, toucher un monstre ouvre sa fiche (il n'y a pas de survol) ; toucher
 ## ailleurs la ferme. `_input` : le toucher continue vers la carte (pose des tours).
+## La fiche d'une tour posée se ferme avec Échap, ou avec un clic n'importe où en dehors
+## d'elle (le clic sert quand même : une autre tour, la barre d'achat…).
 func _input(event: InputEvent) -> void:
 	var touch := event as InputEventScreenTouch
 	if touch and touch.pressed:
 		touched_enemy = find_enemy_at(touch.position)
+	if not tower_details.visible or tower_details.tower == null or tower_picker or options_menu or chest_choice:
+		return
+	var click := event as InputEventMouseButton
+	if click and click.pressed and click.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT] \
+			and not tower_details.get_global_rect().has_point(click.position):
+		tower_details_closed.emit()
+	elif event.is_action_pressed(&"ui_cancel"):
+		tower_details_closed.emit()
+		get_viewport().set_input_as_handled()
 
 
 ## Monstre sous la souris (ou touché) : sa fenêtre de détail le suit, avec sa vie restante.
