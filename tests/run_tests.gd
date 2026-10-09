@@ -1191,6 +1191,22 @@ func _test_tower_info_panels() -> void:
 	await _send_to_placer(level, escape)
 	_check(not details.visible, "Échap ferme la fiche")
 
+	# Fermée aussi par la HUD, avant tout le reste : Échap, ou un clic en dehors de la fiche.
+	await _click(level, tower.global_position)
+	level.hud._input(escape)
+	_check(not details.visible and level.placer.inspected_tower == null, "Échap ferme la fiche, même si un bouton a le focus")
+	await _click(level, tower.global_position)
+	var inside := InputEventMouseButton.new()
+	inside.button_index = MOUSE_BUTTON_LEFT
+	inside.pressed = true
+	inside.position = details.get_global_rect().get_center()
+	level.hud._input(inside)
+	_check(details.visible, "un clic dans la fiche la garde ouverte")
+	var outside := inside.duplicate() as InputEventMouseButton
+	outside.position = level.get_viewport().get_canvas_transform() * level.map.cell_to_world(Vector2i(14, 6))
+	level.hud._input(outside)
+	_check(not details.visible and level.placer.inspected_tower == null, "un clic en dehors de la fiche la ferme")
+
 	await _click(level, tower.global_position)
 	level.select_tower(GATLING)
 	_check(not details.visible, "choisir une tour à poser ferme la fiche")
@@ -2669,6 +2685,11 @@ func _test_tower_choice() -> void:
 	var picker := level.hud.tower_picker
 	_check(picker.get_selected() == level.available_tower_types.slice(0, 5), "5 tours cochées d'avance : celles du niveau d'abord")
 	_check(picker.get_button(ARC).disabled, "une fois 5 tours cochées, les autres sont grisées")
+	picker._show_info(picker.get_button(CANNON))
+	_check(picker._info.visible and picker._info.mouse_filter == Control.MOUSE_FILTER_IGNORE
+		and picker._info.find_children("*", "Control", true, false).all(func(c: Control) -> bool:
+			return c is BaseButton or c.mouse_filter == Control.MOUSE_FILTER_IGNORE),
+		"la fiche d'une tour survolée laisse passer la souris vers les cases qu'elle recouvre")
 	picker.set_tower_selected(CANNON, false)
 	picker.set_tower_selected(ARC, true)
 	_check(picker.get_selected().size() == 5 and picker.get_selected().has(ARC), "on remplace une tour par une autre")
