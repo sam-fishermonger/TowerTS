@@ -17,10 +17,13 @@ const MAX_STARS := 3
 const COLOR := Color(0.95, 0.55, 0.85)
 
 
-## Mutateurs choisis (dans l'ordre de LIST).
+## Mutateurs choisis (dans l'ordre de LIST) ; aucun tant que les mutateurs ne sont pas
+## débloqués (Unlocks).
 static func get_active() -> Array[int]:
 	var saved: Array = Progress.get_setting(SETTING, [])
 	var result: Array[int] = []
+	if not Unlocks.is_unlocked(Unlocks.Feature.MUTATORS):
+		return result
 	for rule in LIST:
 		if saved.has(rule):
 			result.append(rule)

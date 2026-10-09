@@ -1,7 +1,8 @@
 extends Control
 ## Écran titre. « Jouer » ouvre le choix du mode : reprendre la campagne (la toute première
 ## fois, elle commence par le tutoriel), le tutoriel, la sélection des mondes et des niveaux, le défi du jour, le mode Conquête, les niveaux libres,
-## l'Expédition ou l'éditeur de niveau. Le menu
+## l'Expédition ou l'éditeur de niveau. Les modes s'ouvrent au fil de la campagne (Unlocks) :
+## un mode verrouillé affiche une bulle (LockBubble) qui dit comment le débloquer. Le menu
 ## principal ouvre aussi l'arbre des améliorations, le lexique (tours, monstres, mondes), les succès ou les options, ou quitte le jeu. Derrière le menu, une partie se
 ## joue toute seule (TitleDemo) ; le titre respire et les boutons réagissent au survol.
 ## Le code Konami (↑ ↑ ↓ ↓ ← → ← → B A) débloque tout : mondes, niveaux, modes infinis,
@@ -34,6 +35,10 @@ var _time := 0.0
 ## Touches du code Konami déjà entrées dans l'ordre.
 var _konami_progress := 0
 var _konami_label: Label
+## Bulle des modes verrouillés.
+var lock_bubble: LockBubble
+## Mode de chaque bouton qui se débloque avec la progression (Unlocks.Feature).
+var _locked_features := {}
 
 @onready var play_button: Button = %PlayButton
 ## Reprendre la partie enregistrée entre deux vagues (SavedGame), s'il y en a une, et
@@ -73,11 +78,17 @@ func _ready() -> void:
 	tutorial_button.pressed.connect(func() -> void: open_level(Tutorial.LEVEL_PATH))
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
-	daily_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
-	conquest_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN))
-	free_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN))
-	expedition_button.pressed.connect(start_expedition)
-	editor_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
+	lock_bubble = LockBubble.new()
+	add_child(lock_bubble)
+	_connect_feature(daily_button, Unlocks.Feature.DAILY,
+		func() -> void: get_tree().change_scene_to_file(DAILY_CHALLENGE_SCREEN))
+	_connect_feature(conquest_button, Unlocks.Feature.CONQUEST,
+		func() -> void: get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN))
+	_connect_feature(free_button, Unlocks.Feature.FREE_LEVELS,
+		func() -> void: get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN))
+	_connect_feature(expedition_button, Unlocks.Feature.EXPEDITION, start_expedition)
+	_connect_feature(editor_button, Unlocks.Feature.EDITOR,
+		func() -> void: get_tree().change_scene_to_file(LEVEL_EDITOR))
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
 	options_button.pressed.connect(open_options)
@@ -105,8 +116,22 @@ func get_main_buttons() -> Array[Button]:
 
 
 func get_play_buttons() -> Array[Button]:
-	return [campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button, expedition_button,
-		editor_button, back_button]
+	return [campaign_button, tutorial_button, worlds_button, daily_button, editor_button, free_button, expedition_button,
+		conquest_button, back_button]
+
+
+## Le bouton ouvre son mode s'il est débloqué ; sinon, il montre seulement sa bulle.
+func _connect_feature(button: Button, feature: Unlocks.Feature, open: Callable) -> void:
+	_locked_features[button] = feature
+	lock_bubble.watch(button, Unlocks.get_hint.bind(feature))
+	button.pressed.connect(func() -> void:
+		if Unlocks.is_unlocked(feature):
+			open.call())
+
+
+## Le mode du bouton est-il encore verrouillé ?
+func is_locked(button: Button) -> bool:
+	return _locked_features.has(button) and not Unlocks.is_unlocked(_locked_features[button])
 
 
 func is_play_menu_open() -> bool:
@@ -269,16 +294,22 @@ func _refresh() -> void:
 	daily_button.text = tr("Défi du jour")
 	if daily_score >= 0:
 		daily_button.text += "  ·  %d" % daily_score
-	# L'Expédition s'ouvre avec cinq niveaux débloqués ; son record s'affiche ensuite.
-	expedition_button.disabled = not Expedition.is_unlocked()
+	# Le record de l'Expédition.
 	expedition_button.text = tr("Expédition")
-	expedition_button.tooltip_text = tr("Cinq niveaux tirés au sort à la suite, avec les mêmes vies. Les coffres proposent trois bonus, gardés jusqu'au bout.")
-	if expedition_button.disabled:
-		expedition_button.text += "  ·  " + tr("Verrouillé")
-		expedition_button.tooltip_text = tr("Débloquez %d niveaux de la campagne pour partir en expédition.") \
-			% Expedition.LEVEL_COUNT
-	elif Expedition.get_best() > 0:
+	if Expedition.get_best() > 0:
 		expedition_button.text += "  ·  %d / %d" % [Expedition.get_best(), Expedition.LEVEL_COUNT]
+	conquest_button.text = tr("Conquête")
+	free_button.text = tr("Niveaux libres")
+	editor_button.text = tr("Éditeur de niveau")
+	# Les modes pas encore débloqués : assombris, marqués, et leur bulle remplace l'infobulle.
+	for button: Button in _locked_features:
+		var locked := is_locked(button)
+		LockBubble.set_locked(button, locked)
+		if not button.has_meta(&"tooltip"):
+			button.set_meta(&"tooltip", button.tooltip_text)
+		button.tooltip_text = "" if locked else String(button.get_meta(&"tooltip"))
+	if lock_bubble.button and not is_locked(lock_bubble.button):
+		lock_bubble.hide_for(lock_bubble.button)
 	# Les objectifs remplis par la progression (arbre, étoiles, code Konami) se débloquent ici.
 	Achievements.check_progress()
 	var unlocked := Achievements.get_unlocked_count()

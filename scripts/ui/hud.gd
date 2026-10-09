@@ -115,6 +115,8 @@ var _pending_rules_panel := Callable()
 ## Étoiles des mutateurs de l'écran de fin, [gagnées, meilleur résultat d'avant] (vide sans
 ## mutateurs) : ajoutées au texte refait au changement de langue.
 var _mutator_result: Array[int] = []
+## Modes ouverts par la victoire (Unlocks.Feature), dits sur l'écran de fin.
+var _unlocked_features: Array = []
 ## … et règles, au milieu de la carte jusqu'à la première vague.
 var challenge_rules: PanelContainer
 ## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
@@ -250,6 +252,8 @@ func _notification(what: int) -> void:
 		_end_screen.call()
 		if not _mutator_result.is_empty():
 			show_mutator_result(_mutator_result[0], _mutator_result[1])
+		if not _unlocked_features.is_empty():
+			show_unlocked_features(_unlocked_features)
 		if end_stats.visible:
 			_center_end_panel.call_deferred()
 
@@ -1150,6 +1154,13 @@ func show_mutator_result(stars: int, best_before: int) -> void:
 		end_message.text += "\n" + tr("+%d étoiles infinies à dépenser dans Améliorations.") % (stars - best_before) \
 			if stars - best_before > 1 else "\n" + tr("+1 étoile infinie à dépenser dans Améliorations.")
 	_mutator_result = [stars, best_before]
+
+
+## Une ligne par mode que la victoire vient de débloquer (Unlocks).
+func show_unlocked_features(features: Array) -> void:
+	for feature: int in features:
+		end_message.text += "\n" + tr("Vous avez débloqué %s !") % tr(Unlocks.NAMES[feature])
+	_unlocked_features = features
 
 
 # --- Fenêtres de détail -------------------------------------------------------

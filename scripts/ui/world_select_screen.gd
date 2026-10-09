@@ -10,6 +10,8 @@ extends Control
 ## avec leurs monstres, élites et boss, dans la difficulté choisie.
 ## Le bouton Mutateurs ouvre le choix des mutateurs (Mutators) : des règles du défi du
 ## jour qui durcissent les niveaux déjà gagnés, contre des étoiles infinies.
+## Le mode infini et les mutateurs s'ouvrent au fil de la campagne (Unlocks) : verrouillés,
+## leur bouton montre une bulle (LockBubble) qui dit comment les débloquer.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
@@ -33,6 +35,8 @@ var level_details: DetailPopup
 ## Texte de la fenêtre de détail de chaque niveau, par « chemin|difficulté|infini » :
 ## chaque niveau n'est ouvert qu'une fois pour lire ses vagues.
 var _details_cache := {}
+## Bulle des boutons verrouillés (Mode infini, Mutateurs).
+var lock_bubble: LockBubble
 
 @onready var worlds_box: HBoxContainer = %Worlds
 @onready var back_button: Button = %BackButton
@@ -56,6 +60,10 @@ func _ready() -> void:
 	level_details = DetailPopup.new(470.0)
 	add_child(level_details)
 	_build_difficulty_buttons()
+	lock_bubble = LockBubble.new()
+	add_child(lock_bubble)
+	lock_bubble.watch(mode_button, Unlocks.get_hint.bind(Unlocks.Feature.ENDLESS), true)
+	lock_bubble.watch(mutators_button, Unlocks.get_hint.bind(Unlocks.Feature.MUTATORS), true)
 	mode_button.toggled.connect(set_endless_mode)
 	mutators_button.pressed.connect(open_mutators)
 	set_endless_mode(false)
@@ -82,7 +90,11 @@ func open_level(path: String) -> void:
 
 
 ## Affiche les cartes du mode infini (true) ou de la campagne (false).
+## Tant que le mode infini est verrouillé, le bouton ne fait que montrer sa bulle.
 func set_endless_mode(value: bool) -> void:
+	if value and not Unlocks.is_unlocked(Unlocks.Feature.ENDLESS):
+		value = false
+		lock_bubble.show_for(mode_button, Unlocks.get_hint(Unlocks.Feature.ENDLESS))
 	endless_mode = value
 	mode_button.set_pressed_no_signal(value)
 	title_label.text = "Mode infini" if value else "Choisir un monde"
@@ -340,7 +352,7 @@ func get_level_details(path: String) -> String:
 
 ## Ouvre la fenêtre du choix des mutateurs, au milieu de l'écran.
 func open_mutators() -> void:
-	if mutators_panel:
+	if mutators_panel or not Unlocks.is_unlocked(Unlocks.Feature.MUTATORS):
 		return
 	level_details.close()
 	# Fond qui assombrit l'écran et prend les clics : rien ne se lance derrière la fenêtre.
@@ -408,6 +420,12 @@ func _refresh_mutators_button() -> void:
 	var count := Mutators.get_active().size()
 	mutators_button.text = tr("✦  Mutateurs") + ("  ·  %d" % count if count > 0 else "")
 	mutators_button.tooltip_text = tr("Règles du défi du jour sur les niveaux déjà gagnés, contre des étoiles infinies.")
+	var mutators_locked := not Unlocks.is_unlocked(Unlocks.Feature.MUTATORS)
+	LockBubble.set_locked(mutators_button, mutators_locked)
+	if mutators_locked:
+		mutators_button.tooltip_text = ""
+	mode_button.text = tr("∞  Mode infini")
+	LockBubble.set_locked(mode_button, not Unlocks.is_unlocked(Unlocks.Feature.ENDLESS))
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

@@ -1090,13 +1090,17 @@ func _end_game(victory: bool) -> void:
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
+		var won_before := Unlocks.get_levels_won()
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
+		var unlocked := Unlocks.unlocked_between(won_before, Unlocks.get_levels_won())
 		_announce_achievements(Achievements.on_victory(stats, lives, gold, difficulty))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record, get_next_world_name())
 		if not mutators.is_empty():
 			var before := Progress.get_mutator_stars(scene_file_path)
 			Progress.record_mutators(scene_file_path, Mutators.stars_for(mutators))
 			hud.show_mutator_result(Mutators.stars_for(mutators), before)
+		if not unlocked.is_empty():
+			hud.show_unlocked_features(unlocked)
 	elif is_endless:
 		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
 		hud.show_endless_end_screen(get_waves_cleared(), get_endless_stars(),
