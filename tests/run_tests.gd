@@ -2007,10 +2007,38 @@ func _test_path_preview() -> void:
 	level.set_paused(false)
 	level.start_next_wave()
 	for i in 60:
-		if not is_instance_valid(preview):
-			break
 		await process_frame
-	_check(not is_instance_valid(preview), "le trajet s'efface quand la première vague est lancée")
+	_check(not preview.visible, "le trajet s'efface quand la première vague est lancée")
+	level.set_paused(true)
+	for i in 60:
+		await process_frame
+	_check(preview.visible and is_equal_approx(preview._alpha, 1.0), "la pause réaffiche le trajet des monstres")
+	level.set_paused(false)
+	for i in 60:
+		await process_frame
+	_check(not preview.visible, "il s'efface de nouveau à la reprise")
+	# Pause : Recommencer et Quitter demandent une confirmation avant d'abandonner la partie.
+	level.set_paused(true)
+	var restart: Button = level.hud.pause_restart_button
+	var quit: Button = level.hud.pause_quit_button
+	_check(restart.is_visible_in_tree() and quit.is_visible_in_tree(),
+		"la pause propose de recommencer ou de quitter le niveau")
+	var restarted := [false]
+	# Le niveau ne recharge pas vraiment la scène pendant le test.
+	level.hud.restart_requested.disconnect(level._on_restart_requested)
+	level.hud.restart_requested.connect(func() -> void: restarted[0] = true)
+	restart.pressed.emit()
+	_check(not restarted[0] and restart.text == "Vraiment recommencer ?", "Recommencer demande d'abord confirmation")
+	level.set_paused(false)
+	_check(restart.text == "Recommencer", "la demande s'efface à la reprise")
+	level.set_paused(true)
+	restart.pressed.emit()
+	restart.pressed.emit()
+	_check(restarted[0], "le second clic recommence le niveau")
+	level.set_paused(false)
+	level.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	_check(level.is_paused, "le jeu se met en pause quand il n'est plus au premier plan")
+	level.set_paused(false)
 	await _free(level)
 
 

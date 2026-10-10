@@ -4,7 +4,8 @@ extends Node2D
 ## des flèches défilent de l'entrée vers la sortie sur chaque chemin, et le chemin
 ## s'éclaire en pulsant doucement. Si des monstres volants passent par un chemin, leur
 ## trajet (qui coupe les virages) s'affiche en pointillés bleus. Tout s'efface en
-## fondu quand la première vague démarre.
+## fondu quand la première vague démarre, et revient en fondu pendant la pause (voir
+## set_highlighted()).
 ## Niveau libre : les chemins suivent le passage laissé par les tours et restent affichés,
 ## plus discrets, pendant les vagues ; pendant la pose d'une tour, le chemin qu'auraient
 ## les monstres avec elle s'affiche en pointillés (voir show_candidate()).
@@ -28,6 +29,8 @@ extends Node2D
 ## Temps écoulé, en secondes réelles : sert à l'animation.
 var _time := 0.0
 var _fading := false
+## Pause : les chemins sont de nouveau affichés en entier, même après le début des vagues.
+var _highlighted := false
 ## Opacité des chemins (le fondu) ; le chemin de la tour en train d'être posée n'en dépend pas.
 var _alpha := 1.0
 ## Voile lumineux de chaque chemin. Un Line2D plutôt que draw_polyline : ses angles
@@ -94,12 +97,13 @@ func _process(delta: float) -> void:
 	# delta suit Engine.time_scale : on revient au temps réel pour que x2 ou x3 n'accélère pas les flèches.
 	var real_delta := delta / maxf(Engine.time_scale, 0.001)
 	_time += real_delta
-	if _fading:
-		var floor_alpha := free_layout_alpha if map and map.free_layout else 0.0
-		_alpha = maxf(_alpha - real_delta / fade_duration, floor_alpha)
-		if _alpha == 0.0:
-			queue_free()
-			return
+	var target := 1.0
+	if _fading and not _highlighted:
+		target = free_layout_alpha if map and map.free_layout else 0.0
+	_alpha = move_toward(_alpha, target, real_delta / fade_duration)
+	visible = _alpha > 0.0 or not _candidate.is_empty()
+	if not visible:
+		return
 	var pulse := 0.5 + 0.5 * sin(_time * TAU / 1.6)
 	for glow in _glows:
 		glow.default_color = Color(glow_color, lerpf(0.12, 0.3, pulse) * _alpha)
@@ -118,6 +122,11 @@ static func get_flying_path_indices(waves: Array[WaveData]) -> Array[int]:
 
 func _on_wave_started(_index: int) -> void:
 	_fading = true
+
+
+## Pause : les chemins réapparaissent pour préparer la défense, et s'effacent à la reprise.
+func set_highlighted(value: bool) -> void:
+	_highlighted = value
 
 
 func _draw() -> void:
