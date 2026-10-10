@@ -335,6 +335,8 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
 	hud.menu_requested.connect(_on_menu_requested)
+	# L'expédition ne se rejoue pas étape par étape : la pause ne propose que de la quitter.
+	hud.pause_restart_button.visible = expedition == null
 	hud.power_selected.connect(select_power)
 	placer.power_selection_changed.connect(hud.set_selected_power)
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
@@ -431,14 +433,23 @@ func get_title() -> String:
 
 
 ## Changement de langue (menu Options en jeu) : le titre est composé, le HUD refait le reste.
-## Le jeu passe en arrière-plan (téléphone) ou se ferme : la partie est enregistrée si
-## elle est entre deux vagues.
+## Le jeu passe en arrière-plan (téléphone, autre fenêtre) ou se ferme : la partie est
+## enregistrée si elle est entre deux vagues, et mise en pause (elle ne reprend pas seule).
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		hud.level_label.text = get_title()
 	elif what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST,
 			NOTIFICATION_WM_GO_BACK_REQUEST] and is_node_ready():
 		autosave()
+		if what in [NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT]:
+			pause_in_background()
+
+
+## Mise en pause quand le jeu n'est plus au premier plan, sauf sur l'écran titre (démo)
+## et pendant le choix des tours.
+func pause_in_background() -> void:
+	if not is_demo and not is_over and not is_paused and not is_choosing_towers:
+		set_paused(true)
 
 
 func _exit_tree() -> void:
@@ -817,6 +828,10 @@ func set_paused(value: bool) -> void:
 	is_paused = value
 	get_tree().paused = value
 	hud.set_paused(value)
+	# Pendant la pause, le trajet des monstres réapparaît pour aider à préparer la défense.
+	var path_preview := get_node_or_null("PathPreview") as PathPreview
+	if path_preview:
+		path_preview.set_highlighted(value)
 	# Le niveau ne se met plus à jour pendant la pause : on rafraîchit la vague tout de suite.
 	_refresh_wave_ui()
 

@@ -175,6 +175,9 @@ var _hint_max_towers := 7
 @onready var top_bar: Control = %TopBar
 @onready var bottom_bar: Control = %BottomBar
 @onready var pause_overlay: ColorRect = %PauseOverlay
+## Boutons de la pause qui abandonnent la partie en cours (un premier clic demande confirmation).
+@onready var pause_restart_button: Button = %PauseRestartButton
+@onready var pause_quit_button: Button = %PauseQuitButton
 ## Composition de la prochaine vague et bonus pour la lancer en avance.
 @onready var wave_preview: PanelContainer = %WavePreview
 @onready var wave_preview_label: RichTextLabel = %WavePreviewLabel
@@ -197,6 +200,8 @@ func _ready() -> void:
 	tower_details.sell_requested.connect(sell_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
+	_connect_confirmed(pause_restart_button, "Vraiment recommencer ?", restart_requested.emit)
+	_connect_confirmed(pause_quit_button, "Vraiment quitter ?", menu_requested.emit)
 	options_button.pressed.connect(open_options)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
 	boss_bar = BossBar.new()
@@ -535,6 +540,19 @@ func set_paused(paused: bool) -> void:
 	pause_button.set_pressed_no_signal(paused)
 	pause_button.text = "Reprendre" if paused else "Pause"
 	pause_overlay.visible = paused
+	for button in [pause_restart_button, pause_quit_button]:
+		button.text = button.get_meta(&"text")
+
+
+## Bouton qui fait perdre la partie en cours : le premier clic le change en demande de
+## confirmation, le second lance l'action. La demande s'efface à la sortie de pause.
+func _connect_confirmed(button: Button, confirm_text: String, action: Callable) -> void:
+	button.set_meta(&"text", button.text)
+	button.pressed.connect(func() -> void:
+		if button.text == confirm_text:
+			action.call()
+		else:
+			button.text = confirm_text)
 
 
 func set_game_speed(speed: float) -> void:

@@ -936,6 +936,18 @@ msgstr "Resume"
 msgid "Vous pouvez poser, améliorer et vendre des tours pendant la pause."
 msgstr "You can place, upgrade and sell towers while paused."
 
+msgid "Recommencer"
+msgstr "Restart"
+
+msgid "Quitter le niveau"
+msgstr "Quit level"
+
+msgid "Vraiment recommencer ?"
+msgstr "Really restart?"
+
+msgid "Vraiment quitter ?"
+msgstr "Really quit?"
+
 msgid "Vitesse %s (V : vitesse suivante)"
 msgstr "Speed %s (V: next speed)"
 
