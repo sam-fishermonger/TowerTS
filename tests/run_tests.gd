@@ -4595,8 +4595,16 @@ func _test_tutorial() -> void:
 	title = TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
-	_check(title.get_campaign_start() != Tutorial.LEVEL_PATH and title.get_node("%TutorialButton").text == "Tutoriel",
-		"une fois fini, le tutoriel n'est plus imposé ni conseillé")
+	title.show_play_menu(true)
+	_check(title.get_campaign_start() != Tutorial.LEVEL_PATH and not title.get_node("%TutorialButton").visible
+		and not title.get_play_buttons().has(title.get_node("%TutorialButton")),
+		"une fois fini, le tutoriel n'est plus imposé, et son bouton disparaît du menu Jouer")
+	# Effacer la progression le fait revenir.
+	title._on_reset_confirmed()
+	title.show_play_menu(true)
+	_check(not Tutorial.is_done() and title.get_node("%TutorialButton").visible
+		and title.get_campaign_start() == Tutorial.LEVEL_PATH,
+		"effacer la progression fait revenir le bouton du tutoriel")
 	await _free(title)
 
 

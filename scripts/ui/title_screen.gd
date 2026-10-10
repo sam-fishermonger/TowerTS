@@ -115,9 +115,13 @@ func get_main_buttons() -> Array[Button]:
 	return [play_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]
 
 
+## Le tutoriel n'y est plus une fois fini ou passé (il revient si la progression est effacée).
 func get_play_buttons() -> Array[Button]:
-	return [campaign_button, tutorial_button, worlds_button, daily_button, editor_button, free_button, expedition_button,
-		conquest_button, back_button]
+	var buttons: Array[Button] = [campaign_button, worlds_button, daily_button, editor_button, free_button,
+		expedition_button, conquest_button, back_button]
+	if not Tutorial.is_done():
+		buttons.insert(1, tutorial_button)
+	return buttons
 
 
 ## Le bouton ouvre son mode s'il est débloqué ; sinon, il montre seulement sa bulle.
@@ -144,6 +148,7 @@ func show_play_menu(open: bool) -> void:
 		button.visible = not open
 	quit_button.visible = not open and not OS.has_feature("web")
 	_refresh_resume(not open)
+	tutorial_button.visible = false
 	for button in get_play_buttons():
 		button.visible = open
 	subtitle.text = "Jouer" if open else "Tower Defense"
@@ -287,8 +292,8 @@ func _refresh() -> void:
 		perks_button.text += "  ·  ∞ %d" % endless_available
 	reset_button.visible = any_won
 	_refresh_resume(not is_play_menu_open())
-	# Tant qu'il n'est ni fini ni passé, le tutoriel est conseillé.
-	tutorial_button.text = tr("Tutoriel") if Tutorial.is_done() else tr("Tutoriel  ·  conseillé")
+	# Le bouton du tutoriel n'est montré que tant qu'il n'est ni fini ni passé : il est alors conseillé.
+	tutorial_button.text = tr("Tutoriel  ·  conseillé")
 	# Le meilleur score du défi du jour, s'il a déjà été joué aujourd'hui.
 	var daily_score := Progress.get_daily_score(DailyChallenge.today_key())
 	daily_button.text = tr("Défi du jour")
@@ -363,6 +368,8 @@ func _on_demo_level_started(level: Level) -> void:
 
 func _on_reset_confirmed() -> void:
 	Progress.reset_campaign()
+	# Toute la progression repart de zéro : le tutoriel est de nouveau proposé.
+	Progress.set_setting(Tutorial.DONE_SETTING, false)
 	SavedGame.clear()
 	_refresh()
 	show_play_menu(false)
