@@ -14,8 +14,10 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 | Mode Conquête : un Voleur repart d'un Dépôt, ouvriers en Corvée | Les étoiles achètent des améliorations |
 | ![Niveau libre](docs/captures/libre.webp) | ![Éditeur de niveau](docs/captures/editeur.webp) |
 | Niveaux libres : les tours font le labyrinthe | Éditeur de niveau, partage par code |
-| ![Mode Expédition](docs/captures/expedition.webp) | |
-| Expédition : cinq niveaux à la suite, un coffre au choix | |
+| ![Mode Expédition](docs/captures/expedition.webp) | ![Menu Jouer](docs/captures/jouer.webp) |
+| Expédition : cinq niveaux à la suite, un coffre au choix | Menu Jouer : les modes se débloquent avec les niveaux gagnés |
+| ![Pause](docs/captures/pause.webp) | |
+| En pause : le trajet des monstres revient, Recommencer ou Quitter | |
 
 ## Prérequis
 
