@@ -136,14 +136,14 @@ func _refresh() -> void:
 	var difficulty := Difficulty.get_current()
 	get_difficulty_button(difficulty).set_pressed_no_signal(true)
 	if endless_mode:
-		mode_hint.text = tr("Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les spécialisations des tours, dans Améliorations.") \
+		mode_hint.text = tr("Les vagues ne s'arrêtent plus et durcissent sans fin. Un crâne ☠ toutes les %d vagues repoussées au-delà de celles du niveau (%d par niveau) : ils achètent les spécialisations des tours, dans Améliorations.") \
 			% [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
 	else:
 		mode_hint.text = tr("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau avec 3 étoiles ouvre son mode infini.") \
 			% [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty), Difficulty.describe_tower_limit(difficulty)]
 		var mutators := Mutators.get_active()
 		if not mutators.is_empty():
-			mode_hint.text += "\n" + tr("✦ Mutateurs sur les niveaux déjà gagnés : %s (∞ ★ %d par victoire).") \
+			mode_hint.text += "\n" + tr("✦ Mutateurs sur les niveaux déjà gagnés : %s (☠ %d par victoire).") \
 				% [Mutators.names(mutators), Mutators.stars_for(mutators)]
 	_refresh_mutators_button()
 	for card in worlds_box.get_children():
@@ -222,7 +222,7 @@ func _make_card(world_index: int) -> Control:
 
 	var stars: Label
 	if endless_mode:
-		stars = _label("∞  ★ %d / %d" % [Progress.get_world_endless_stars(world),
+		stars = _label("%s %d / %d" % [Progress.SKULL, Progress.get_world_endless_stars(world),
 			world.levels.size() * Progress.ENDLESS_MAX_STARS], 20, ENDLESS_COLOR)
 	else:
 		stars = _label("★ %d / %d" % [Progress.get_world_stars(world), world.levels.size() * Progress.MAX_LEVEL_STARS],
@@ -280,7 +280,7 @@ func _level_tooltip(path: String) -> String:
 	for d in Difficulty.COUNT:
 		lines.append("%s  %s" % [Progress.star_text(Progress.get_stars(path, d)), tr(Difficulty.NAMES[d])])
 	if Progress.get_stars(path) > 0:
-		lines.append(tr("%s  Mutateurs") % Progress.star_text(Progress.get_mutator_stars(path), Mutators.MAX_STARS))
+		lines.append(tr("%s  Mutateurs") % Progress.skull_text(Progress.get_mutator_stars(path), Mutators.MAX_STARS))
 	return "\n".join(lines)
 
 
@@ -292,7 +292,7 @@ func _setup_endless_button(button: Button, path: String, number: String) -> void
 		button.text = "%s\n%s" % [number, tr("Verrouillé")]
 		button.tooltip_text = "Gagner ce niveau avec 3 étoiles pour ouvrir son mode infini."
 		return
-	button.text = "%s  ∞\n%s" % [number, Progress.star_text(Progress.get_endless_stars(path), Progress.ENDLESS_MAX_STARS)]
+	button.text = "%s  ∞\n%s" % [number, Progress.skull_text(Progress.get_endless_stars(path), Progress.ENDLESS_MAX_STARS)]
 	var record := Progress.get_endless_waves(path)
 	button.tooltip_text = (tr("Record : %d vagues") if record > 1 else tr("Record : %d vague")) % record if record > 0 \
 		else "Pas encore joué"
@@ -334,7 +334,7 @@ func get_level_details(path: String) -> String:
 		spawner.get_wave_count(), level.starting_gold + bonuses.starting_gold_bonus,
 		level.starting_lives + bonuses.lives_bonus])
 	if not mutators.is_empty():
-		lines.append(tr("[color=#%s]✦ Mutateurs : %s  ·  ∞ ★ %d / %d[/color]") % [Mutators.COLOR.to_html(false),
+		lines.append(tr("[color=#%s]✦ Mutateurs : %s  ·  ☠ %d / %d[/color]") % [Mutators.COLOR.to_html(false),
 			Mutators.names(mutators), Progress.get_mutator_stars(path), Mutators.MAX_STARS])
 	if (level.get_node("Map") as GameMap).free_layout:
 		lines.append(tr("[color=%s]Niveau libre : pas de chemin, vos tours font le labyrinthe.[/color]") % FREE_COLOR)
@@ -377,7 +377,7 @@ func open_mutators() -> void:
 	var title := _label("✦  Mutateurs", 36, Mutators.COLOR)
 	UiStyle.style_title(title)
 	column.add_child(title)
-	var intro := _label(tr("Des règles du défi du jour pour rejouer les niveaux déjà gagnés, dans la difficulté choisie. Chaque mutateur actif rapporte une étoile infinie à la victoire, %d au plus par niveau : elles achètent les spécialisations des tours, dans Améliorations.")
+	var intro := _label(tr("Des règles du défi du jour pour rejouer les niveaux déjà gagnés, dans la difficulté choisie. Chaque mutateur actif rapporte un crâne ☠ à la victoire, %d au plus par niveau : ils achètent les spécialisations des tours, dans Améliorations.")
 		% Mutators.MAX_STARS, 16, Color(0.85, 0.88, 0.85))
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(intro)
@@ -419,7 +419,7 @@ func get_mutator_check(rule: int) -> CheckButton:
 func _refresh_mutators_button() -> void:
 	var count := Mutators.get_active().size()
 	mutators_button.text = tr("✦  Mutateurs") + ("  ·  %d" % count if count > 0 else "")
-	mutators_button.tooltip_text = tr("Règles du défi du jour sur les niveaux déjà gagnés, contre des étoiles infinies.")
+	mutators_button.tooltip_text = tr("Règles du défi du jour sur les niveaux déjà gagnés, contre des crânes.")
 	var mutators_locked := not Unlocks.is_unlocked(Unlocks.Feature.MUTATORS)
 	LockBubble.set_locked(mutators_button, mutators_locked)
 	if mutators_locked:

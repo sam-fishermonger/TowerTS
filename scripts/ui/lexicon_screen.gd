@@ -176,7 +176,7 @@ func show_tower(data: TowerData) -> void:
 				% [STAR_HEX, tr(world_name) if not world_name.is_empty() else tr("Tours des mondes"), perk.cost])
 		elif perk.specializes_tower == data.resource_path:
 			lines.append("")
-			lines.append(tr("[color=#73d9ff]Spécialisation « %s » (∞ %d) : %s[/color]") % [tr(perk.display_name), perk.cost,
+			lines.append(tr("[color=#73d9ff]Spécialisation « %s » (☠ %d) : %s[/color]") % [tr(perk.display_name), perk.cost,
 				tr(perk.description)])
 	detail_text.text = "\n".join(lines)
 

@@ -998,8 +998,8 @@ msgid_plural "%d vagues repoussées."
 msgstr[0] "%d wave held off."
 msgstr[1] "%d waves held off."
 
-msgid "Une étoile infinie toutes les %d vagues au-delà de celles du niveau."
-msgstr "One infinite star every %d waves beyond the level's own."
+msgid "Un crâne toutes les %d vagues au-delà de celles du niveau."
+msgstr "One skull every %d waves beyond the level's own."
 
 msgid "Succès débloqué : %s"
 msgstr "Achievement unlocked: %s"
@@ -1486,8 +1486,8 @@ msgstr "Level %d  [color=%s](%d gold)[/color]: %s"
 msgid "[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]"
 msgstr "[color=%s]World tower: unlock it in the upgrade tree (%s, ★ %d).[/color]"
 
-msgid "[color=#73d9ff]Spécialisation « %s » (∞ %d) : %s[/color]"
-msgstr "[color=#73d9ff]Specialization \"%s\" (∞ %d): %s[/color]"
+msgid "[color=#73d9ff]Spécialisation « %s » (☠ %d) : %s[/color]"
+msgstr "[color=#73d9ff]Specialization \"%s\" (☠ %d): %s[/color]"
 
 msgid "[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]"
 msgstr "[color=%s]Difficulty changes its health, but only one boss ever comes at a time.[/color]"
@@ -1579,11 +1579,11 @@ msgstr "Owned"
 msgid "Verrouillé"
 msgstr "Locked"
 
-msgid "%s  ·  il manque %d étoiles infinies"
-msgstr "%s  ·  %d more endless stars needed"
+msgid "%s  ·  il manque %d crânes"
+msgstr "%s  ·  %d more skulls needed"
 
-msgid "%s  ·  il manque %d étoile infinie"
-msgstr "%s  ·  %d more endless star needed"
+msgid "%s  ·  il manque %d crâne"
+msgstr "%s  ·  %d more skull needed"
 
 msgid "%s  ·  il manque %d étoiles"
 msgstr "%s  ·  %d more stars needed"
@@ -1603,14 +1603,14 @@ msgstr " and "
 msgid "Cliquer pour acheter  ·  %s"
 msgstr "Click to buy  ·  %s"
 
-msgid "Les étoiles infinies, gagnées en mode infini (ouvert sur chaque niveau gagné avec 3 étoiles), donnent à une tour un atout de plus, dans toutes les parties."
-msgstr "Endless stars, earned in endless mode (open on every level won with 3 stars), give a tower an extra edge in every game."
+msgid "Les crânes, gagnés en mode infini (ouvert sur chaque niveau gagné avec 3 étoiles) et avec les mutateurs, donnent à une tour un atout de plus, dans toutes les parties."
+msgstr "Skulls, earned in endless mode (open on every level won with 3 stars) and with mutators, give a tower an extra edge in every game."
 
 msgid "Survoler une spécialisation pour la voir, cliquer pour l'acheter."
 msgstr "Hover over a specialization to see it, click to buy it."
 
-msgid "Des pouvoirs à lancer en pleine partie, avec leur bouton en haut de l'écran ou leur touche, puis à laisser se recharger. Ils s'achètent avec des étoiles, et se renforcent avec des étoiles infinies."
-msgstr "Powers to cast mid-game, with their button at the top of the screen or their key, then let them recharge. They are bought with stars and boosted with endless stars."
+msgid "Des pouvoirs à lancer en pleine partie, avec leur bouton en haut de l'écran ou leur touche, puis à laisser se recharger. Ils s'achètent avec des étoiles, et se renforcent avec des crânes."
+msgstr "Powers to cast mid-game, with their button at the top of the screen or their key, then let them recharge. They are bought with stars and boosted with skulls."
 
 msgid "Survoler un pouvoir pour le voir, cliquer pour l'acheter."
 msgstr "Hover over a power to see it, click to buy it."
@@ -1633,8 +1633,8 @@ msgstr "Refunds all spent stars, to build a different tree."
 msgid "Réinitialiser l'arbre"
 msgstr "Reset tree"
 
-msgid "Les vagues ne s'arrêtent plus et durcissent sans fin. Une étoile infinie toutes les %d vagues repoussées au-delà de celles du niveau (%d par niveau) : elles achètent les spécialisations des tours, dans Améliorations."
-msgstr "Waves never stop and keep getting harder. One endless star every %d waves held past the level's own (%d per level): they buy tower specializations, in Upgrades."
+msgid "Les vagues ne s'arrêtent plus et durcissent sans fin. Un crâne ☠ toutes les %d vagues repoussées au-delà de celles du niveau (%d par niveau) : ils achètent les spécialisations des tours, dans Améliorations."
+msgstr "Waves never stop and keep getting harder. One skull ☠ every %d waves held past the level's own (%d per level): they buy tower specializations, in Upgrades."
 
 msgid "%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau avec 3 étoiles ouvre son mode infini."
 msgstr "%s: %s %s Each difficulty has its own stars (3 per level). Winning a level with 3 stars opens its endless mode."
@@ -2869,8 +2869,8 @@ msgstr "best streak: %d"
 msgid "Série : %d jours réussis d'affilée !"
 msgstr "Streak: %d days won in a row!"
 
-msgid "Victoire : ∞ ★ %d (meilleur résultat sur ce niveau : %d / %d)."
-msgstr "Victory: ∞ ★ %d (best on this level: %d / %d)."
+msgid "Victoire : ☠ %d (meilleur résultat sur ce niveau : %d / %d)."
+msgstr "Victory: ☠ %d (best on this level: %d / %d)."
 
 msgid "✦ Mutateurs"
 msgstr "✦ Mutators"
@@ -2878,32 +2878,32 @@ msgstr "✦ Mutators"
 msgid "Mutateurs"
 msgstr "Mutators"
 
-msgid "Mutateurs : ∞ ★ %d / %d"
-msgstr "Mutators: ∞ ★ %d / %d"
+msgid "Mutateurs : ☠ %d / %d"
+msgstr "Mutators: ☠ %d / %d"
 
-msgid "+%d étoiles infinies à dépenser dans Améliorations."
-msgstr "+%d infinite stars to spend in Upgrades."
+msgid "+%d crânes à dépenser dans Améliorations."
+msgstr "+%d skulls to spend in Upgrades."
 
-msgid "+1 étoile infinie à dépenser dans Améliorations."
-msgstr "+1 infinite star to spend in Upgrades."
+msgid "+1 crâne à dépenser dans Améliorations."
+msgstr "+1 skull to spend in Upgrades."
 
-msgid "✦ Mutateurs sur les niveaux déjà gagnés : %s (∞ ★ %d par victoire)."
-msgstr "✦ Mutators on levels already won: %s (∞ ★ %d per victory)."
+msgid "✦ Mutateurs sur les niveaux déjà gagnés : %s (☠ %d par victoire)."
+msgstr "✦ Mutators on levels already won: %s (☠ %d per victory)."
 
 msgid "%s  Mutateurs"
 msgstr "%s  Mutators"
 
-msgid "[color=#%s]✦ Mutateurs : %s  ·  ∞ ★ %d / %d[/color]"
-msgstr "[color=#%s]✦ Mutators: %s  ·  ∞ ★ %d / %d[/color]"
+msgid "[color=#%s]✦ Mutateurs : %s  ·  ☠ %d / %d[/color]"
+msgstr "[color=#%s]✦ Mutators: %s  ·  ☠ %d / %d[/color]"
 
-msgid "Des règles du défi du jour pour rejouer les niveaux déjà gagnés, dans la difficulté choisie. Chaque mutateur actif rapporte une étoile infinie à la victoire, %d au plus par niveau : elles achètent les spécialisations des tours, dans Améliorations."
-msgstr "Daily challenge rules to replay levels you have already won, at the chosen difficulty. Each active mutator earns one infinite star on victory, up to %d per level: they buy tower specializations in Upgrades."
+msgid "Des règles du défi du jour pour rejouer les niveaux déjà gagnés, dans la difficulté choisie. Chaque mutateur actif rapporte un crâne ☠ à la victoire, %d au plus par niveau : ils achètent les spécialisations des tours, dans Améliorations."
+msgstr "Daily challenge rules to replay levels you have already won, at the chosen difficulty. Each active mutator earns one skull ☠ on victory, up to %d per level: they buy tower specializations in Upgrades."
 
 msgid "✦  Mutateurs"
 msgstr "✦  Mutators"
 
-msgid "Règles du défi du jour sur les niveaux déjà gagnés, contre des étoiles infinies."
-msgstr "Daily challenge rules on levels already won, for infinite stars."
+msgid "Règles du défi du jour sur les niveaux déjà gagnés, contre des crânes."
+msgstr "Daily challenge rules on levels already won, for skulls."
 msgid "Banshee"
 msgstr "Banshee"
 
@@ -3114,3 +3114,12 @@ msgstr "mutators"
 
 msgid "la Conquête"
 msgstr "Conquest"
+
+msgid "☠ %d à dépenser"
+msgstr "☠ %d to spend"
+
+msgid "%d dépensés"
+msgstr "%d spent"
+
+msgid "%d dépensé"
+msgstr "%d spent"

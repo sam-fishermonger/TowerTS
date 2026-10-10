@@ -1843,7 +1843,7 @@ func _test_powers_in_tree() -> void:
 	screen.show_page(3)
 	_check(screen.get_button(meteors).is_visible_in_tree() and screen.get_button(meteors).get_child(0) is PowerIcon,
 		"la page Pouvoirs montre le pouvoir avec son image")
-	_check(screen.stars_label.text.contains("★") and screen.stars_label.text.contains("∞ ★"),
+	_check(screen.stars_label.text.contains("★") and screen.stars_label.text.contains("☠"),
 		"et les deux monnaies (%s)" % screen.stars_label.text)
 	_check(screen.buy(meteors), "les Météores s'achètent")
 	await _free(screen)
@@ -2839,7 +2839,7 @@ func _test_endless_mode() -> void:
 	await process_frame
 	var endless_button: Button = screen.get_level_button(LEVEL_01.resource_path)
 	_check(screen.endless_mode and screen.get_node("%Title").text == "Mode infini", "le bouton Mode infini change les cartes")
-	_check(not endless_button.disabled and endless_button.text.ends_with("☆☆☆☆☆")
+	_check(not endless_button.disabled and endless_button.text.ends_with("○○○○○")
 		and screen.get_level_button(LEVEL_02.resource_path).disabled, "seul le niveau à 3 étoiles s'ouvre en mode infini")
 	_check(screen.get_card(0).find_child("Stars", true, false).text.contains("0 / 35"), "la carte compte les étoiles infinies du monde")
 	await _free(screen)
@@ -2884,7 +2884,7 @@ func _test_endless_mode() -> void:
 	level._on_enemy_reached_end(_add_still_enemy(level, LARVE, 0, 0.0))
 	_check(level.is_over and level.hud.end_title.text == "Fin de la partie"
 		and level.hud.end_message.text.contains("%d vagues" % (count + 5)) and level.hud.end_message.text.contains("Nouveau record")
-		and level.hud.end_stars.text == "★☆☆☆☆" and not level.hud.next_level_button.visible,
+		and level.hud.end_stars.text == "☠○○○○" and not level.hud.next_level_button.visible,
 		"l'écran de fin donne les vagues repoussées, le record et les étoiles infinies")
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 3, "le mode infini ne touche pas aux étoiles du niveau")
 	await _free(level)
@@ -3065,7 +3065,7 @@ func _test_mutators() -> void:
 	_check(level.is_over and Progress.get_mutator_stars(path) == Mutators.MAX_STARS
 		and Perks.get_earned_stars(true) == earned_before + Mutators.MAX_STARS,
 		"la victoire rapporte une étoile infinie par mutateur, %d au plus" % Mutators.MAX_STARS)
-	_check(level.hud.end_message.text.contains("+3 étoiles infinies") and Progress.get_stars(path) > 0,
+	_check(level.hud.end_message.text.contains("+3 crânes") and Progress.get_stars(path) > 0,
 		"l'écran de fin le dit, et les étoiles du niveau comptent toujours")
 	await _free(level)
 	_check(not Progress.record_mutators(path, 1) and Progress.get_mutator_stars(path) == Mutators.MAX_STARS,
@@ -3224,13 +3224,13 @@ func _test_specializations() -> void:
 	root.add_child(screen)
 	await process_frame
 	screen.show_page(page)
-	_check(screen.stars_label.text.begins_with("∞ ★ 3 à dépenser"), "l'onglet compte les étoiles infinies")
+	_check(screen.stars_label.text.begins_with("☠ 3 à dépenser"), "l'onglet compte les étoiles infinies")
 	screen.get_button(gatling).pressed.emit()
 	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 3,
 		"Balles perforantes coûte 2 étoiles infinies, et aucune étoile des niveaux")
 	_check(GATLING.get_stats_at_level(1).armor_piercing and GATLING.get_stats_at_level(3).armor_piercing
 		and not CANNON.get_stats_at_level(1).armor_piercing, "les balles de la Mitrailleuse, et d'elle seule, ignorent l'armure")
-	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("∞ ★ 3"), "la suivante est trop chère")
+	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("☠ 3"), "la suivante est trop chère")
 	Progress.record_endless(LEVEL_02.resource_path, 40, 5)
 	screen.buy(sniper)
 	_check(is_equal_approx(SNIPER.get_stats_at_level(1).damage, 80.0 * 1.4) and is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0),

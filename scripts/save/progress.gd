@@ -24,6 +24,9 @@ const ENDLESS_STAR_STEP := 5
 const ENDLESS_MAX_STARS := 5
 ## Couleur des étoiles infinies dans les menus et en jeu.
 const ENDLESS_STAR_COLOR := Color(0.45, 0.85, 1.0)
+## Symbole des étoiles infinies (mode infini et mutateurs) : des crânes, pour ne pas
+## les confondre avec les étoiles des niveaux dans l'arbre des améliorations.
+const SKULL := "☠"
 
 
 static func get_save_path() -> String:
@@ -41,6 +44,11 @@ static func stars_for(lives: int, starting_lives: int) -> int:
 ## Étoiles pleines et vides : « ★★☆ ».
 static func star_text(stars: int, total := 3) -> String:
 	return "★".repeat(stars) + "☆".repeat(maxi(total - stars, 0))
+
+
+## Crânes (étoiles infinies) obtenus et à obtenir : « ☠☠○○○ ».
+static func skull_text(skulls: int, total: int) -> String:
+	return SKULL.repeat(skulls) + "○".repeat(maxi(total - skulls, 0))
 
 
 ## Section du fichier qui garde les étoiles d'une difficulté. Moyen garde « stars »,
