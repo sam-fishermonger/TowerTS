@@ -3622,8 +3622,17 @@ func _test_equipment() -> void:
 	level = await _spawn_level(LEVEL_01)
 	level._end_game(true)
 	_check(level.box_won >= 0 and Equipment.get_boxes().size() == 1
-		and level.hud.end_message.text.contains("obtenu ! À ouvrir dans l'Armurerie."),
-		"première victoire : un coffret, annoncé à l'écran de fin")
+		and level.hud.end_message.text.contains("obtenu ! À ouvrir ici ou dans l'Armurerie.")
+		and level.hud.box_button.visible, "première victoire : un coffret, annoncé à l'écran de fin")
+	var items_before := Equipment.get_items().size()
+	level.hud.box_button.pressed.emit()
+	var won: Dictionary = level.hud._box_item
+	_check(not won.is_empty() and won.rarity == level.box_won and Equipment.get_boxes().is_empty()
+		and Equipment.get_items().size() == items_before + 1 and not level.hud.box_button.visible
+		and level.hud.box_reveal.visible and level.hud.end_message.text.contains("ouvert :"),
+		"le coffret s'ouvre sur l'écran de victoire : l'objet rejoint l'inventaire et s'affiche")
+	level.hud.box_button.pressed.emit()
+	_check(Equipment.get_items().size() == items_before + 1, "un coffret ne s'ouvre qu'une fois")
 	await _free(level)
 
 	Progress.reset_campaign()

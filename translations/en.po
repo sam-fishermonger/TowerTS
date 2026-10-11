@@ -3398,8 +3398,14 @@ msgstr "Reserved: %s"
 msgid "Sur : %s"
 msgstr "On: %s"
 
-msgid "%s obtenu ! À ouvrir dans l'Armurerie."
-msgstr "%s found! Open it in the Armory."
+msgid "%s obtenu ! À ouvrir ici ou dans l'Armurerie."
+msgstr "%s found! Open it here or in the Armory."
+
+msgid "%s ouvert :"
+msgstr "%s opened:"
+
+msgid "Ouvrir le coffret"
+msgstr "Open the crate"
 
 msgid "Équipement : %s"
 msgstr "Equipment: %s"
