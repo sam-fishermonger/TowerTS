@@ -1486,8 +1486,8 @@ msgstr "Level %d  [color=%s](%d gold)[/color]: %s"
 msgid "[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]"
 msgstr "[color=%s]World tower: unlock it in the upgrade tree (%s, ★ %d).[/color]"
 
-msgid "[color=#73d9ff]Spécialisation « %s » (☠ %d) : %s[/color]"
-msgstr "[color=#73d9ff]Specialization \"%s\" (☠ %d): %s[/color]"
+msgid "[color=%s]Spécialisation « %s » (☠ %d) : %s[/color]"
+msgstr "[color=%s]Specialization \"%s\" (☠ %d): %s[/color]"
 
 msgid "[color=%s]La difficulté change sa vie, mais il n'arrive jamais qu'un boss à la fois.[/color]"
 msgstr "[color=%s]Difficulty changes its health, but only one boss ever comes at a time.[/color]"
@@ -3123,3 +3123,9 @@ msgstr "%d spent"
 
 msgid "%d dépensé"
 msgstr "%d spent"
+
+msgid "Crânes gagnés : mode infini %d  ·  mutateurs %d"
+msgstr "Skulls earned: endless mode %d  ·  mutators %d"
+
+msgid "Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d"
+msgstr "Stars earned: campaign %d  ·  Conquest %d  ·  free levels %d"

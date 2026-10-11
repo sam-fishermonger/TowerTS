@@ -629,7 +629,7 @@ func show_endless_end_screen(waves: int, endless_stars: int, new_record := false
 	end_title.text = "Fin de la partie"
 	end_stars.visible = true
 	end_stars.text = Progress.skull_text(endless_stars, Progress.ENDLESS_MAX_STARS)
-	end_stars.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	end_stars.add_theme_color_override("font_color", Progress.SKULL_COLOR)
 	end_message.text = tr_n("%d vague repoussée.", "%d vagues repoussées.", LevelStats.plural_count(waves)) % waves
 	if new_record:
 		end_message.text += "\n" + tr("Nouveau record !")

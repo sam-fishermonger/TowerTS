@@ -30,7 +30,7 @@ const OWNED_COLOR := Color(0.95, 0.78, 0.3)
 const BUYABLE_COLOR := Color(0.45, 0.85, 0.45)
 const TOO_EXPENSIVE_COLOR := Color(0.85, 0.45, 0.4)
 const LOCKED_COLOR := Color(0.45, 0.48, 0.45)
-const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
+const ENDLESS_COLOR := Progress.SKULL_COLOR
 const STARS_COLOR := Color(0.95, 0.85, 0.45)
 
 ## Amélioration affichée dans l'encadré du bas (survol ou dernier clic).
@@ -49,6 +49,9 @@ var _available := {false: 0, true: 0}
 @onready var tree: Control = %Tree
 @onready var tabs: HBoxContainer = %Tabs
 @onready var stars_label: Label = %StarsLabel
+## Crânes à dépenser, à côté des étoiles et dans leur couleur, sur une page qui se paie
+## dans les deux monnaies (pouvoirs).
+@onready var skulls_label: Label = %SkullsLabel
 @onready var info_name: Label = %InfoName
 @onready var info_description: Label = %InfoDescription
 @onready var info_status: Label = %InfoStatus
@@ -237,9 +240,13 @@ func _refresh() -> void:
 		spent_text % spent,
 		(tr("toutes les spécialisations : %d") if endless else tr("arbre complet : %d")) % Perks.TREE.get_total_cost(endless)]
 	stars_label.add_theme_color_override("font_color", ENDLESS_COLOR if endless else STARS_COLOR)
-	if is_mixed_page(page):
-		stars_label.text = "%s   ·   %s" % [tr("★ %d à dépenser") % _available[false],
-			tr("☠ %d à dépenser") % _available[true]]
+	stars_label.tooltip_text = get_origin_text(endless)
+	skulls_label.visible = is_mixed_page(page)
+	if skulls_label.visible:
+		stars_label.text = "%s   ·" % (tr("★ %d à dépenser") % _available[false])
+		skulls_label.text = tr("☠ %d à dépenser") % _available[true]
+		skulls_label.add_theme_color_override("font_color", ENDLESS_COLOR)
+		skulls_label.tooltip_text = get_origin_text(true)
 	refund_button.disabled = Perks.get_owned_ids().is_empty()
 	for perk in Perks.TREE.perks:
 		_style_button(get_button(perk), perk)
@@ -248,6 +255,23 @@ func _refresh() -> void:
 	_show_info(shown_perk)
 	for root in _pages:
 		root.queue_redraw()
+
+
+## Bulle d'aide du compteur : d'où viennent les étoiles (campagne, Conquête, niveaux
+## libres) ou, avec `endless`, les crânes (mode infini, mutateurs).
+func get_origin_text(endless: bool) -> String:
+	if endless:
+		var waves := 0
+		var mutators := 0
+		for path in Perks.CAMPAIGN.levels:
+			waves += Progress.get_endless_stars(path)
+			mutators += Progress.get_mutator_stars(path)
+		return tr("Crânes gagnés : mode infini %d  ·  mutateurs %d") % [waves, mutators]
+	var campaign := 0
+	for path in Perks.CAMPAIGN.levels:
+		campaign += Progress.get_total_stars(path)
+	return tr("Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d") % [campaign,
+		ConquestLevels.get_total_stars(), FreeLevels.get_total_stars()]
 
 
 ## Les cases d'une tour (débloquée ou spécialisée) sont plus larges : elles montrent son image.

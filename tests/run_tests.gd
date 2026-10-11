@@ -555,6 +555,8 @@ func _test_perk_tree() -> void:
 		and screen.get_button(longue_vue).text.ends_with("★ %d" % longue_vue.cost),
 		"Poudre fine est acquise et débloque Longue-vue")
 	_check(screen.stars_label.text.begins_with("★ %d à dépenser" % (8 - poudre.cost)), "le compteur d'étoiles se met à jour")
+	_check(screen.stars_label.tooltip_text.begins_with("Étoiles gagnées : campagne "),
+		"la bulle d'aide du compteur dit d'où viennent les étoiles")
 	_check(not screen.buy(poudre), "une amélioration ne s'achète qu'une fois")
 	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0 * 1.1), "Poudre fine : +10 % de dégâts sur les tours")
 	_check(Perks.is_unlocked(longue_vue) and not Perks.buy(longue_vue) and Perks.get_available_stars() == 8 - poudre.cost,
@@ -1843,8 +1845,10 @@ func _test_powers_in_tree() -> void:
 	screen.show_page(3)
 	_check(screen.get_button(meteors).is_visible_in_tree() and screen.get_button(meteors).get_child(0) is PowerIcon,
 		"la page Pouvoirs montre le pouvoir avec son image")
-	_check(screen.stars_label.text.contains("★") and screen.stars_label.text.contains("☠"),
-		"et les deux monnaies (%s)" % screen.stars_label.text)
+	_check(screen.stars_label.text.begins_with("★") and screen.skulls_label.visible
+		and screen.skulls_label.text.begins_with("☠")
+		and screen.skulls_label.get_theme_color("font_color") == Progress.SKULL_COLOR,
+		"et les deux monnaies, les crânes dans leur couleur (%s %s)" % [screen.stars_label.text, screen.skulls_label.text])
 	_check(screen.buy(meteors), "les Météores s'achètent")
 	await _free(screen)
 	var powers := Perks.get_powers()
@@ -3224,7 +3228,9 @@ func _test_specializations() -> void:
 	root.add_child(screen)
 	await process_frame
 	screen.show_page(page)
-	_check(screen.stars_label.text.begins_with("☠ 3 à dépenser"), "l'onglet compte les étoiles infinies")
+	_check(screen.stars_label.text.begins_with("☠ 3 à dépenser") and not screen.skulls_label.visible,
+		"l'onglet compte les étoiles infinies")
+	_check(screen.stars_label.tooltip_text.contains("mode infini 3"), "la bulle d'aide dit d'où viennent les crânes")
 	screen.get_button(gatling).pressed.emit()
 	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 3,
 		"Balles perforantes coûte 2 étoiles infinies, et aucune étoile des niveaux")

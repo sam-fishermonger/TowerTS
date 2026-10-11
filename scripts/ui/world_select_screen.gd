@@ -19,7 +19,7 @@ const LOCKED_ALPHA := 0.45
 const STARS_COLOR := Color(0.95, 0.85, 0.45)
 ## Ligne « niveau libre » de la fenêtre de détail.
 const FREE_COLOR := "#ffd27a"
-const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
+const ENDLESS_COLOR := Progress.SKULL_COLOR
 const LEVEL_BUTTON_WIDTH := 104.0
 ## Assez bas pour que les 7 niveaux d'un monde (4 rangées) tiennent sur la carte.
 const LEVEL_BUTTON_HEIGHT := 46.0

@@ -22,8 +22,11 @@ const ENDLESS_UNLOCK_STARS := 3
 ## au-delà de celles du niveau, jusqu'à ENDLESS_MAX_STARS par niveau.
 const ENDLESS_STAR_STEP := 5
 const ENDLESS_MAX_STARS := 5
-## Couleur des étoiles infinies dans les menus et en jeu.
+## Couleur du défi du jour et des messages spéciaux de l'écran titre.
 const ENDLESS_STAR_COLOR := Color(0.45, 0.85, 1.0)
+## Couleur des crânes (étoiles infinies) : le violet de La Nécropole, loin du doré des
+## étoiles et du bleu du défi du jour.
+const SKULL_COLOR := Color(0.72, 0.55, 0.95)
 ## Symbole des étoiles infinies (mode infini et mutateurs) : des crânes, pour ne pas
 ## les confondre avec les étoiles des niveaux dans l'arbre des améliorations.
 const SKULL := "☠"
