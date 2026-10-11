@@ -26,6 +26,7 @@ const SHOTS := {
 	"pause": ["res://scenes/levels/humanoid_02.tscn", 9.0, true],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
+	"armurerie": ["res://scenes/ui/armory_screen.tscn", 0.5, false],
 }
 
 
@@ -43,6 +44,8 @@ func _run() -> void:
 		var shot: Array = SHOTS[shot_name]
 		if shot_name == "expedition":
 			_prepare_expedition()
+		elif shot_name == "armurerie":
+			_prepare_armory()
 		var node: Node = load(shot[0]).instantiate()
 		root.add_child(node)
 		await process_frame
@@ -68,6 +71,10 @@ func _run() -> void:
 			(node as Level).open_chest(Vector2.ZERO)
 			for i in 3:
 				await process_frame
+		elif shot_name == "armurerie":
+			# Un coffret ouvert : l'objet obtenu s'affiche sous les coffrets.
+			node.open_box()
+			await create_timer(0.6).timeout
 		elif shot_name == "pause":
 			# En pause : le trajet des monstres revient et Recommencer / Quitter apparaissent.
 			(node as Level).set_paused(true)
@@ -108,6 +115,22 @@ func _prepare_expedition() -> void:
 	run.lives = 14
 	run.chest_levels = {ChestBonus.DAMAGE: 1, ChestBonus.BOUNTY: 1}
 	Engine.set_meta(Level.EXPEDITION_META, run.to_dict())
+
+
+## Armurerie : des coffrets ouverts (tirage fixe), deux objets posés sur le Canon et
+## quelques coffrets encore fermés. C'est la dernière capture, pour que cet équipement ne
+## renforce pas les tours des autres.
+func _prepare_armory() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for rarity in [0, 0, 1, 0, 2, 1, 3, 0, 1, 2, 0, 1, 3, 2]:
+		Equipment.add_box(rarity)
+	for i in 11:
+		Equipment.open_box(0, rng)
+	var cannon := "res://resources/towers/cannon.tres"
+	for item in Equipment.get_items():
+		if Equipment.get_equipped_uids(cannon).size() < 2:
+			Equipment.equip(item.uid, cannon)
 
 
 ## Pose une défense le long du chemin, avec toutes les tours du niveau, puis lance les

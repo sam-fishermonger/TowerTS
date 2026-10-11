@@ -66,6 +66,7 @@ const PILLARDE := preload("res://resources/enemies/insectoid/pillarde.tres")
 const CHAPARDEUSE := preload("res://resources/enemies/insectoid/chapardeuse.tres")
 const FREE_01 := preload("res://scenes/levels/free_01.tscn")
 const FREE_SELECT_SCREEN := preload("res://scenes/ui/free_select_screen.tscn")
+const ARMORY_SCREEN := preload("res://scenes/ui/armory_screen.tscn")
 
 ## Accélération des parties simulées (avec --fixed-fps 60 : 1/15 s de jeu par image).
 const GAME_SPEED := 4.0
@@ -160,6 +161,7 @@ func _run() -> void:
 	await _test_konami_code()
 	await _test_elites()
 	await _test_carriers_and_chests()
+	await _test_equipment()
 	await _test_expedition()
 	await _test_bosses()
 	await _test_necropolis()
@@ -307,7 +309,7 @@ func _test_title_screen() -> void:
 	_check(title.get_node("%LexiconButton").text == "Lexique", "le bouton Lexique existe")
 	_check(title.get_main_buttons().all(func(b: Button) -> bool: return b.visible)
 		and title.get_play_buttons().all(func(b: Button) -> bool: return not b.visible),
-		"le menu principal ne montre que Jouer, Améliorations, Lexique, Succès, Options et Quitter")
+		"le menu principal ne montre que Jouer, Améliorations, Armurerie, Lexique, Succès, Options et Quitter")
 	title.get_node("%PlayButton").pressed.emit()
 	_check(title.is_play_menu_open() and title.get_play_buttons().all(func(b: Button) -> bool: return b.visible)
 		and not title.get_node("%PerksButton").visible and title.get_node("%CampaignButton").has_focus(),
@@ -3491,6 +3493,144 @@ func _test_carriers_and_chests() -> void:
 	_check(not level.spawner.carriers, "pas de porteurs dans le tutoriel")
 	await _free(level)
 
+
+## Équipement des tours (Equipment) : effets, emplacements, coffrets, fusion, Armurerie
+## et coffret de fin de niveau.
+func _test_equipment() -> void:
+	print("Équipement des tours")
+	# Progression à part : l'équipement posé ici ne doit pas renforcer les tours des autres tests.
+	var save_path := Progress.get_save_path()
+	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_equipment.cfg")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Progress.clear_cache()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	var ids := Equipment.DEFINITIONS.map(func(d: Dictionary) -> String: return d.id)
+	var definitions_ok := true
+	for d in Equipment.DEFINITIONS:
+		definitions_ok = definitions_ok and d.values.size() == Equipment.RARITY_COUNT \
+			and not Equipment.describe_effect(d.effect, d.values[0]).is_empty() \
+			and (not d.has("tower") or ResourceLoader.exists(d.tower))
+	_check(ids.all(func(id: String) -> bool: return ids.count(id) == 1) and definitions_ok,
+		"%d objets, chacun avec une valeur par rareté, une description et une tour réservée qui existe" % ids.size())
+	_check(Equipment.get_items().is_empty() and Equipment.get_boxes().is_empty(), "inventaire vide au départ")
+
+	# Chances : les raretés hautes montent avec la difficulté et la place du niveau.
+	var low := Equipment.get_rarity_chances(Equipment.get_quality(LEVEL_01.resource_path, Difficulty.FACILE))
+	var high := Equipment.get_rarity_chances(Equipment.get_quality("res://scenes/levels/level_09.tscn", Difficulty.CAUCHEMAR))
+	_check(is_equal_approx(low.reduce(func(a: float, b: float) -> float: return a + b, 0.0), 1.0)
+		and is_equal_approx(high.reduce(func(a: float, b: float) -> float: return a + b, 0.0), 1.0)
+		and high[Equipment.LEGENDAIRE] > low[Equipment.LEGENDAIRE] and high[Equipment.COMMUN] < low[Equipment.COMMUN],
+		"les chances d'une rareté haute montent avec la difficulté et le niveau (légendaire : %d %% à %d %%)"
+			% [roundi(low[3] * 100.0), roundi(high[3] * 100.0)])
+	_check(Equipment.roll_victory_box("res://scenes/levels/level.tscn", Difficulty.MOYEN, true, rng) == -1
+		and Equipment.roll_victory_box(Tutorial.LEVEL_PATH, Difficulty.MOYEN, true, rng) == -1
+		and Equipment.get_boxes().is_empty(), "pas de coffret dans l'éditeur ni le tutoriel")
+	_check(Equipment.roll_victory_box(CONQUEST_01.resource_path, Difficulty.FACILE, true, rng) >= 0
+		and Equipment.roll_victory_box(FREE_01.resource_path, Difficulty.FACILE, true, rng) >= 0
+		and Equipment.get_boxes().size() == 2, "la Conquête et les niveaux libres donnent des coffrets")
+	var dropped := 0
+	for i in 200:
+		if Equipment.roll_victory_box(LEVEL_01.resource_path, Difficulty.CAUCHEMAR, false, rng) >= 0:
+			dropped += 1
+	_check(dropped > 80 and dropped < 160, "Cauchemar : un coffret environ six fois sur dix (%d sur 200)" % dropped)
+	Progress.set_value(Equipment.SECTION, "boxes", [])
+
+	# Effets sur les statistiques.
+	var cannon_path := CANNON.resource_path
+	var base := CANNON.get_stats_at_level(1)
+	var gatling_base := GATLING.get_stats_at_level(1)
+	var powder := Equipment.add_item("poudre", Equipment.LEGENDAIRE, "range")
+	var sight := Equipment.add_item("viseur", Equipment.COMMUN)
+	_check(Equipment.equip(powder.uid, cannon_path) and Equipment.equip(sight.uid, cannon_path),
+		"deux objets posés sur le Canon")
+	var equipped := CANNON.get_stats_at_level(1)
+	_check(is_equal_approx(equipped.damage, base.damage * 1.22) and is_equal_approx(equipped.attack_range, base.attack_range * 1.08)
+		and equipped.critical_every == 10, "Canon : +22 %% dégâts, +8 %% portée, un coup critique sur 10 (%s dégâts)"
+			% equipped.damage)
+	_check(is_equal_approx(GATLING.get_stats_at_level(1).damage, gatling_base.damage), "les autres tours ne changent pas")
+	var same_kind := Equipment.add_item("poudre", Equipment.COMMUN)
+	_check(not Equipment.equip(same_kind.uid, cannon_path), "pas deux objets de même sorte sur une tour")
+	var reserved := Equipment.add_item("charge_creuse", Equipment.RARE)
+	_check(not Equipment.equip(reserved.uid, cannon_path) and Equipment.equip(reserved.uid, MORTAR.resource_path)
+		and is_equal_approx(MORTAR.get_stats_at_level(1).splash_radius, MORTAR.get_stats_at_level(1).splash_radius)
+		and MORTAR.get_stats_at_level(1).splash_radius > MORTAR.splash_radius * 1.15,
+		"la Charge creuse est réservée au Mortier : +16 % de rayon d'explosion")
+	var lens := Equipment.add_item("lunette", Equipment.COMMUN)
+	var gear := Equipment.add_item("rouages", Equipment.COMMUN)
+	_check(Equipment.equip(lens.uid, cannon_path) and not Equipment.equip(gear.uid, cannon_path),
+		"%d emplacements par tour" % Equipment.SLOTS)
+	Equipment.unequip(sight.uid)
+	_check(Equipment.equip(gear.uid, cannon_path) and CANNON.get_stats_at_level(1).critical_every == 0,
+		"un objet retiré libère son emplacement et son effet")
+	_check(Equipment.equip(gear.uid, GATLING.resource_path) and Equipment.get_tower_of(gear.uid) == GATLING.resource_path
+		and Equipment.get_equipped_uids(cannon_path).size() == 2, "un objet posé ailleurs quitte sa tour")
+
+	# En jeu : les tours posées ont l'équipement ; pas pendant le défi du jour.
+	var level := await _spawn_level(LEVEL_01)
+	level.gold = 1000
+	var tower := level.place_tower(Vector2i(3, 3), CANNON)
+	_check(tower != null and is_equal_approx(tower.stats.damage, CANNON.get_stats_at_level(1).damage)
+		and tower.stats.damage > base.damage, "une tour posée a l'équipement de son type")
+	level.inspect_tower(tower)
+	await process_frame
+	_check(level.hud.tower_details.description_label.text.contains("Équipement : Munitions affûtées, Lunette de visée"),
+		"la fiche de la tour liste son équipement")
+	await _free(level)
+	Engine.set_meta(Perks.DISABLED_META, true)
+	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, CANNON.damage), "pas d'équipement pendant le défi du jour")
+	Engine.remove_meta(Perks.DISABLED_META)
+
+	# Coffrets : ouverture et fusion.
+	Equipment.add_box(Equipment.EPIQUE)
+	var opened := Equipment.open_box(0, rng)
+	_check(opened.rarity == Equipment.EPIQUE and not opened.extra.is_empty()
+		and opened.extra != Equipment.get_definition(opened.kind).effect and Equipment.get_boxes().is_empty()
+		and Equipment.describe_item(opened).size() == 2, "un coffret épique donne un objet épique avec un bonus en plus")
+	var commons := Equipment.get_free_items(Equipment.COMMUN).size()
+	for i in maxi(3 - commons, 0):
+		Equipment.add_item("trophee", Equipment.COMMUN)
+	commons = Equipment.get_free_items(Equipment.COMMUN).size()
+	_check(Equipment.merge(Equipment.COMMUN) and Equipment.get_free_items(Equipment.COMMUN).size() == commons - 3
+		and Equipment.get_boxes() == [Equipment.RARE] and not Equipment.can_merge(Equipment.LEGENDAIRE),
+		"trois objets communs libres se fondent en un coffret rare")
+	_check(Equipment.get_equipped_uids(cannon_path).size() == 2, "la fusion ne prend pas les objets posés")
+
+	# Armurerie.
+	var armory := ARMORY_SCREEN.instantiate()
+	root.add_child(armory)
+	await process_frame
+	_check(armory.tower_buttons.has(cannon_path) and armory.selected_tower == cannon_path
+		and armory.slot_buttons.size() == Equipment.SLOTS and armory.item_buttons.size() == Equipment.get_items().size(),
+		"l'Armurerie montre les tours, les emplacements du Canon et l'inventaire")
+	_check(armory.box_label.text == "Coffrets à ouvrir : 1" and not armory.open_button.disabled, "un coffret à ouvrir")
+	var item: Dictionary = armory.open_box()
+	_check(not item.is_empty() and armory.open_button.disabled and armory.item_buttons.has(item.uid),
+		"Ouvrir : l'objet rejoint l'inventaire")
+	armory.slot_buttons[0].pressed.emit()
+	_check(Equipment.get_equipped_uids(cannon_path).size() == 1, "un clic sur un emplacement retire son objet")
+	armory.toggle_item(reserved.uid)
+	_check(Equipment.get_tower_of(reserved.uid) == MORTAR.resource_path and armory.status_label.text.contains("Mortier"),
+		"un objet réservé à une autre tour reste où il est, et l'Armurerie dit pourquoi")
+	armory.select_tower(MORTAR.resource_path)
+	armory.toggle_item(reserved.uid)
+	_check(Equipment.get_tower_of(reserved.uid).is_empty(), "un clic sur un objet posé sur la tour choisie le retire")
+	armory.queue_free()
+	await process_frame
+
+	# Victoire : un coffret assuré la première fois dans une difficulté, annoncé à l'écran de fin.
+	level = await _spawn_level(LEVEL_01)
+	level._end_game(true)
+	_check(level.box_won >= 0 and Equipment.get_boxes().size() == 1
+		and level.hud.end_message.text.contains("obtenu ! À ouvrir dans l'Armurerie."),
+		"première victoire : un coffret, annoncé à l'écran de fin")
+	await _free(level)
+
+	Progress.reset_campaign()
+	_check(Equipment.get_items().is_empty() and Equipment.get_boxes().is_empty()
+		and is_equal_approx(CANNON.get_stats_at_level(1).damage, base.damage), "effacer la progression efface l'équipement")
+	Engine.set_meta(Progress.SAVE_PATH_META, save_path)
+	Progress.clear_cache()
 
 ## Mode Expédition : cinq niveaux tirés au sort à la suite, vies gardées, coffres au choix.
 func _test_expedition() -> void:

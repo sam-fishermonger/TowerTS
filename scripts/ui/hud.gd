@@ -117,6 +117,8 @@ var _pending_rules_panel := Callable()
 var _mutator_result: Array[int] = []
 ## Modes ouverts par la victoire (Unlocks.Feature), dits sur l'écran de fin.
 var _unlocked_features: Array = []
+## Rareté du coffret d'équipement gagné, dit sur l'écran de fin (-1 = aucun).
+var _box_result := -1
 ## … et règles, au milieu de la carte jusqu'à la première vague.
 var challenge_rules: PanelContainer
 ## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
@@ -259,6 +261,8 @@ func _notification(what: int) -> void:
 			show_mutator_result(_mutator_result[0], _mutator_result[1])
 		if not _unlocked_features.is_empty():
 			show_unlocked_features(_unlocked_features)
+		if _box_result >= 0:
+			show_box_result(_box_result)
 		if end_stats.visible:
 			_center_end_panel.call_deferred()
 
@@ -1179,6 +1183,12 @@ func show_unlocked_features(features: Array) -> void:
 	for feature: int in features:
 		end_message.text += "\n" + tr("Vous avez débloqué %s !") % tr(Unlocks.NAMES[feature])
 	_unlocked_features = features
+
+
+## Coffret d'équipement gagné (Equipment) : sa rareté, et où l'ouvrir.
+func show_box_result(rarity: int) -> void:
+	end_message.text += "\n" + tr("%s obtenu ! À ouvrir dans l'Armurerie.") % Equipment.box_name(rarity)
+	_box_result = rarity
 
 
 # --- Fenêtres de détail -------------------------------------------------------
