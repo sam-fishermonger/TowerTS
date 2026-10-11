@@ -704,13 +704,13 @@ func _test_biome_towers_in_tree() -> void:
 	var main_cost := tree.get_total_cost() - logistics_cost
 	# Les niveaux 7 et 8 de chaque monde ont ajouté des étoiles sans nouvelles améliorations :
 	# l'arbre en coûte encore les trois quarts, la marge attend de nouvelles options.
-	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.75,
-		"l'arbre sans la Logistique (%d étoiles) coûte l'essentiel des étoiles de la campagne (%d)" % [main_cost, campaign_stars])
+	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
+		"l'arbre sans la Logistique (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
 	_check(main_cost > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
 	var conquest_stars := ConquestLevels.size() * Progress.MAX_LEVEL_STARS
-	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.7,
-		"la page Logistique (%d étoiles) coûte l'essentiel des étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.85,
+		"la page Logistique (%d étoiles) coûte presque toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
