@@ -91,6 +91,7 @@ func _run() -> void:
 	await _test_progress()
 	await _test_perk_tree()
 	await _test_perks_in_level()
+	await _test_new_tree_options()
 	await _test_biome_towers_in_tree()
 	await _test_sound()
 	await _test_language()
@@ -524,9 +525,11 @@ func _test_perk_tree() -> void:
 		consistent = consistent and not ids.has(perk.id) and perk.cost > 0
 		ids[perk.id] = true
 		for required in perk.requires:
-			consistent = consistent and tree.perks.has(required) and required.row < perk.row
+			# Une tour demandée sur une autre page n'a pas de trait : son rang ne compte pas.
+			consistent = consistent and tree.perks.has(required) \
+				and (required.row < perk.row or tree.get_page(required) != tree.get_page(perk))
 	_check(consistent, "identifiants uniques, et chaque amélioration demande des améliorations des rangs au-dessus")
-	_check(tree.get_page_branches(0).size() == 3, "page Bonus : 3 branches, tours, or, vies")
+	_check(tree.get_page_branches(0).size() == 4, "page Bonus : 4 branches, tours, or, vies, savoirs")
 	var poudre := tree.get_perk("poudre")
 	var longue_vue := tree.get_perk("longue_vue")
 	_check(Perks.get_available_stars() == 0 and not Perks.can_buy(poudre), "sans étoiles, rien à acheter")
@@ -598,6 +601,81 @@ func _test_perks_in_level() -> void:
 	Progress.reset_campaign()
 
 
+## Accorde des améliorations sans les payer (effets seulement).
+func _grant_perks(ids: Array) -> void:
+	Progress.set_value("perks", "owned", PackedStringArray(ids))
+	Perks.clear_cache()
+
+
+func _test_new_tree_options() -> void:
+	print("Arbre des améliorations : nouvelles options")
+	var tree := Perks.TREE
+	for page in tree.page_names.size():
+		var ids := tree.get_page_perks(page).map(func(p: Perk) -> String: return p.id)
+		_check(ids.size() >= 7, "la page %s a de nouvelles cases (%d)" % [tree.page_names[page], ids.size()])
+	for perk in tree.perks:
+		for required in perk.requires:
+			_check(tree.get_page(required) == tree.get_page(perk) or not required.unlocks_tower.is_empty(),
+				"%s ne demande que des cases de sa page (ou une tour)" % perk.id)
+	# Coup critique, Savoirs et Bestiaire : dégâts des tours selon la cible.
+	_grant_perks(["critique", "savoir_ruche", "bestiaire"])
+	var stats := CANNON.get_stats_at_level(1)
+	var hits := []
+	for i in 10:
+		hits.append(stats.get_hit_multiplier(SOLDAT))
+	_check(hits.count(2.0) == 1 and hits.count(1.0) == 9, "Coup critique : un coup sur 10 fait double dégâts")
+	stats = CANNON.get_stats_at_level(1)
+	_check(is_equal_approx(stats.get_hit_multiplier(LARVE), 1.15) and is_equal_approx(stats.get_hit_multiplier(CHENILLARD), 1.0),
+		"Entomologie : +15 % contre les insectoïdes seulement")
+	_check(is_equal_approx(stats.get_hit_multiplier(LARVE.make_elite()), 1.15), "les élites gardent leur biome")
+	_check(is_equal_approx(stats.get_hit_multiplier(GENERAL), 1.25), "Bestiaire complet : +25 % contre les boss")
+	# Or et vies.
+	_grant_perks(["ingenieurs", "placements", "chasseur_primes", "dernier_rempart", "barbacane"])
+	_check(CANNON.get_cost() == CANNON.cost and CANNON.get_upgrade_cost(1) == roundi(CANNON.upgrades[0].cost * 0.85),
+		"Ingénieurs : les améliorations seules coûtent 15 % de moins")
+	var level := await _spawn_level(LEVEL_01)
+	_check(is_equal_approx(level.get_interest_rate(), level.interest_rate + 0.05) and level.get_interest_cap() == level.interest_cap + 25,
+		"Placements : intérêts +5 %, plafond +25")
+	_check(level.get_enemy_reward(LARVE) == LARVE.reward and level.get_enemy_reward(REINE) == roundi(REINE.reward * 1.5),
+		"Chasseur de primes : +50 % d'or pour les boss")
+	_check(level.get_lives_damage(REINE) == ceili(REINE.damage * 0.5) and level.get_lives_damage(LARVE) == LARVE.damage,
+		"Barbacane : un boss retire moitié moins de vies")
+	var enemy := level.spawner.spawn(LARVE, level.map.get_enemy_path(0), 10.0)
+	level.lives = 1
+	level._on_enemy_reached_end(enemy)
+	_check(not level.is_over and level.lives == 10 and level.last_stand_used, "Dernier rempart : 10 vies au lieu de perdre")
+	level.lives = 1
+	level._on_enemy_reached_end(enemy)
+	_check(level.is_over, "une seule fois par partie")
+	await _free(level)
+	# Croisement de la Nécropole et nouvelles spécialisations.
+	_grant_perks(["cross_censer_bell", "spe_arc", "spe_coil", "spe_magnet", "spe_censer", "spe_bell"])
+	_check(CENSER.get_stats_at_level(1).slow_factor == 0.5, "Glas ardent : les braises de l'Encensoir ralentissent")
+	var bell := BELL.get_stats_at_level(1)
+	_check(bell.dot_damage > 0.0 and bell.revive_block_duration > 0.0, "et l'onde de la Cloche brûle et consacre")
+	_check(is_equal_approx(bell.attack_range, BELL.attack_range * 1.2), "Glas profond : la Cloche porte 20 % plus loin")
+	_check(ARC.get_stats_at_level(1).chain_count == ARC.chain_count + 2, "Arc continu : 2 sauts de plus")
+	_check(is_equal_approx(COIL.get_stats_at_level(1).boost_damage, COIL.boost_damage + 0.1), "Haute tension : Bobine plus forte")
+	_check(is_equal_approx(MAGNET.get_stats_at_level(1).knockback, MAGNET.knockback * 1.3), "Champ inversé : repousse plus loin")
+	_check(is_equal_approx(CENSER.get_stats_at_level(1).splash_radius, CENSER.splash_radius * 1.3), "Encens sacré : explosions plus larges")
+	# Pouvoirs.
+	_grant_perks(["pouvoir_meteores", "meteores_deluge", "pouvoir_gel", "gel_hiver", "pouvoir_renforts", "renforts_garnison"])
+	var powers := Perks.get_powers()
+	_check(powers[0].count == 10 and is_equal_approx(powers[1].cooldown, FREEZE_POWER.cooldown * 0.7)
+		and is_equal_approx(powers[2].duration, load("res://resources/powers/reinforcements.tres").duration + 10.0),
+		"Déluge, Hiver éternel et Garnison renforcent leur pouvoir")
+	# Logistique.
+	_grant_perks(["outils_trempes", "fioles", "maitres_oeuvre"])
+	level = await _spawn_level(CONQUEST_01)
+	var house := Building.get_definition(Building.Kind.HOUSE)
+	_check(level.conquest.essence == 15, "Fioles d'essence : 15 essences au départ")
+	_check(Conquest.building_stone_cost(house) == ceili(house.stone * 0.75), "Maîtres d'œuvre : bâtiments 25 % moins chers en pierre")
+	_check(is_equal_approx(level.conquest.get_work_speed(), 1.25), "Outils trempés : ouvriers 25 % plus rapides")
+	await _free(level)
+	_grant_perks([])
+	Progress.reset_campaign()
+
+
 ## Enregistre une victoire à 3 étoiles dans chaque difficulté pour chacun des niveaux.
 func _win_in_all_difficulties(paths: Array[String]) -> void:
 	for path in paths:
@@ -626,13 +704,13 @@ func _test_biome_towers_in_tree() -> void:
 	var main_cost := tree.get_total_cost() - logistics_cost
 	# Les niveaux 7 et 8 de chaque monde ont ajouté des étoiles sans nouvelles améliorations :
 	# l'arbre en coûte encore les trois quarts, la marge attend de nouvelles options.
-	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.75,
-		"l'arbre sans la Logistique (%d étoiles) coûte l'essentiel des étoiles de la campagne (%d)" % [main_cost, campaign_stars])
+	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
+		"l'arbre sans la Logistique (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
 	_check(main_cost > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
 	var conquest_stars := ConquestLevels.size() * Progress.MAX_LEVEL_STARS
-	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.7,
-		"la page Logistique (%d étoiles) coûte l'essentiel des étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.85,
+		"la page Logistique (%d étoiles) coûte presque toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
@@ -1828,8 +1906,8 @@ func _test_powers_in_tree() -> void:
 	_check(unlocks.size() == 3 and on_page, "3 pouvoirs, payés en étoiles, sur la page Pouvoirs")
 	_check(tree.get_page(corvee_perk) == tree.page_names.find("Logistique"), "la Corvée est sur la page Logistique")
 	var upgrades := tree.perks.filter(func(p: Perk) -> bool: return not p.improves_power.is_empty())
-	_check(upgrades.size() == 6 and upgrades.all(func(p: Perk) -> bool: return p.paid_with_endless_stars),
-		"6 renforts de pouvoirs, payés en étoiles infinies")
+	_check(upgrades.size() == 9 and upgrades.all(func(p: Perk) -> bool: return p.paid_with_endless_stars),
+		"9 renforts de pouvoirs, payés en crânes")
 	_check(tree.get_total_cost(true) <= Progress.ENDLESS_MAX_STARS * Perks.CAMPAIGN.size(),
 		"les étoiles infinies suffisent à tout acheter (%d)" % tree.get_total_cost(true))
 	_check(Perks.get_powers().is_empty(), "aucun pouvoir sans achat")
@@ -2665,9 +2743,9 @@ func _test_crossings_in_tree() -> void:
 	_check([arc, coil, magnet].all(func(p: Perk) -> bool:
 			return p.requires.size() == 2 and tree.get_branch(p.requires[0]) != tree.get_branch(p.requires[1])),
 		"chacune demande deux tours de branches différentes")
-	_check(crossings.size() == 2 and crossings.all(func(p: Perk) -> bool:
+	_check(crossings.size() == 3 and crossings.all(func(p: Perk) -> bool:
 			return tree.get_page(p) == 1 and not p.paid_with_endless_stars and p.get_partner_tower_path() != p.specializes_tower),
-		"2 croisements où deux tours s'échangent un effet, payés en étoiles")
+		"3 croisements où deux tours s'échangent un effet, payés en étoiles")
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	_win_in_all_difficulties(campaign.levels)
 	for id in ["flame", "pesticide", "jammer", "rail"]:
@@ -3215,15 +3293,16 @@ func _test_specializations() -> void:
 	var tree := Perks.TREE
 	var page := tree.page_names.find("Spécialisations")
 	var specializations := tree.get_page_perks(page)
-	_check(page == 2 and tree.get_page_branches(page).size() == 3 and specializations.size() == 12,
-		"un onglet Spécialisations : 3 branches, 12 spécialisations")
+	_check(page == 2 and tree.get_page_branches(page).size() == 5 and specializations.size() == 17,
+		"un onglet Spécialisations : 5 branches, 17 spécialisations")
 	var towers := {}
 	var all_valid := true
 	for perk in specializations:
 		towers[perk.specializes_tower] = true
 		all_valid = all_valid and perk.paid_with_endless_stars and load(perk.specializes_tower) is TowerData
 	_check(all_valid, "chacune spécialise une tour, payée en étoiles infinies")
-	_check(towers.size() == 12, "une spécialisation par tour")
+	_check(towers.size() == 17 and towers.size() == Array(ResourceLoader.list_directory("res://resources/towers/")).filter(
+		func(file: String) -> bool: return file.ends_with(".tres")).size(), "une spécialisation par tour, pour toutes les tours")
 	var gatling := tree.get_perk("spe_gatling")
 	var sniper := tree.get_perk("spe_sniper")
 	var marksman := tree.get_perk("spe_marksman")

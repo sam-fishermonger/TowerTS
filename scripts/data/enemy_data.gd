@@ -23,6 +23,8 @@ const ENGLISH_PLURALS := {"Larva": "Larvae", "Colossus": "Colossi"}
 @export_multiline var description := ""
 ## Nom de l'ennemi d'origine d'un élite (make_elite()), pour traduire « Larve élite ».
 var base_name := ""
+## Biome du monstre (voir get_biome()).
+var biome := ""
 @export var max_health := 50.0
 ## Dégâts retirés à chaque coup reçu (un coup inflige toujours au moins 1).
 @export var armor := 0.0
@@ -130,6 +132,14 @@ var base_name := ""
 @export var heal_interval := 2.0
 
 
+## Biome du monstre : le dossier de sa ressource (insectoid, mecha, humanoid, undead),
+## ou "" pour un monstre fait en code.
+func get_biome() -> String:
+	if biome.is_empty() and not resource_path.is_empty():
+		biome = resource_path.get_base_dir().get_file()
+	return biome
+
+
 ## Version élite de cet ennemi : vie et bouclier x3, 25 % plus gros, 4 fois plus d'or,
 ## 2 vies de plus s'il atteint la base. Les ennemis qu'il libère ou appelle restent
 ## normaux. Une copie : l'ennemi d'origine n'est pas modifié.
@@ -140,6 +150,7 @@ func make_elite() -> EnemyData:
 	elite.is_elite = true
 	elite.display_name = "%s élite" % display_name
 	elite.base_name = display_name
+	elite.biome = get_biome()
 	elite.max_health = max_health * ELITE_HEALTH
 	elite.max_shield = max_shield * ELITE_HEALTH
 	elite.shield_regen = shield_regen * ELITE_HEALTH

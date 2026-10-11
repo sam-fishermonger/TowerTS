@@ -283,7 +283,8 @@ func _get_node_width(perk: Perk) -> float:
 ## « Finir La Ruche pour l'ouvrir » si la branche attend un monde pas encore débloqué.
 func _get_branch_lock_text(branch: int) -> String:
 	for perk in Perks.TREE.perks:
-		if Perks.TREE.get_branch(perk) == branch and not Perks.is_world_unlocked(perk):
+		# Le premier rang ouvre la branche (Savoirs ouvre ses rangs suivants monde par monde).
+		if Perks.TREE.get_branch(perk) == branch and perk.row == 0 and not Perks.is_world_unlocked(perk):
 			return tr("Finir %s pour l'ouvrir") % tr(Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name)
 	return ""
 

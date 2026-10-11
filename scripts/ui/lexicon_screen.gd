@@ -175,7 +175,7 @@ func show_tower(data: TowerData) -> void:
 			var world_name := Perks.get_required_world_name(perk)
 			lines.append(tr("[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]")
 				% [STAR_HEX, tr(world_name) if not world_name.is_empty() else tr("Tours des mondes"), perk.cost])
-		elif perk.specializes_tower == data.resource_path:
+		elif perk.specializes_tower == data.resource_path and not perk.is_crossing():
 			lines.append("")
 			lines.append(tr("[color=%s]Spécialisation « %s » (☠ %d) : %s[/color]") % [SKULL_HEX, tr(perk.display_name), perk.cost,
 				tr(perk.description)])

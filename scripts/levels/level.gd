@@ -148,6 +148,8 @@ var _pending_revives := 0
 var _endless_record_before := 0
 ## Bonus de l'arbre des améliorations, lus au lancement : ils ne changent pas en cours de partie.
 var _bonuses: Perk
+## Le Dernier rempart (arbre des améliorations) a déjà servi dans cette partie.
+var last_stand_used := false
 ## Monstres et élites détruits déjà ajoutés aux compteurs des succès.
 var _counted_kills := 0
 var _counted_elite_kills := 0
@@ -703,13 +705,17 @@ func get_interest() -> int:
 	return mini(floori(maxi(gold, 0) * get_interest_rate()), get_interest_cap())
 
 
-## Part de l'or gardé rapportée par les intérêts, et leur plafond, coffres compris.
+## Part de l'or gardé rapportée par les intérêts, et leur plafond, coffres et arbre des
+## améliorations (Placements) compris.
 func get_interest_rate() -> float:
-	return interest_rate + get_chest_bonus(ChestBonus.INTEREST) if interest_rate > 0.0 else 0.0
+	if interest_rate <= 0.0:
+		return 0.0
+	return interest_rate + get_chest_bonus(ChestBonus.INTEREST) + (_bonuses.interest_rate_bonus if _bonuses else 0.0)
 
 
 func get_interest_cap() -> int:
-	return interest_cap + chest_levels.get(ChestBonus.INTEREST, 0) * ChestBonus.INTEREST_CAP_PER_LEVEL
+	return interest_cap + chest_levels.get(ChestBonus.INTEREST, 0) * ChestBonus.INTEREST_CAP_PER_LEVEL \
+		+ (_bonuses.interest_cap_bonus if _bonuses else 0)
 
 
 # --- Pouvoirs ---------------------------------------------------------------
@@ -902,7 +908,8 @@ func get_wave_bonus(index: int) -> int:
 ## Or rapporté par un ennemi détruit, bonus de l'arbre des améliorations, des coffres (et
 ## de l'Atelier en Conquête) compris.
 func get_enemy_reward(data: EnemyData) -> int:
-	return roundi(data.reward * _bonuses.reward_multiplier * (conquest.get_reward_multiplier() if conquest else 1.0)
+	var elite := _bonuses.elite_reward_multiplier if data.is_elite or data.is_boss else 1.0
+	return roundi(data.reward * _bonuses.reward_multiplier * elite * (conquest.get_reward_multiplier() if conquest else 1.0)
 		* (1.0 + get_chest_bonus(ChestBonus.BOUNTY)))
 
 
@@ -1012,16 +1019,29 @@ func _on_enemy_summoned(enemy: Enemy) -> void:
 			1.0, -1, _route_for(enemy, data.summon_enemy))
 
 
+## Vies retirées par un monstre qui atteint la base (moins pour un boss avec Barbacane).
+func get_lives_damage(data: EnemyData) -> int:
+	if data.is_boss and _bonuses:
+		return maxi(1, ceili(data.damage * _bonuses.boss_lives_multiplier))
+	return data.damage
+
+
 func _on_enemy_reached_end(enemy: Enemy) -> void:
 	# Un Voleur qui n'a encore rien pillé se sert au QG en passant.
 	if enemy.data.thief and conquest and not enemy.has_stolen:
 		conquest.steal(enemy, conquest.depot_position)
-	stats.lives_lost += mini(enemy.data.damage, lives)
-	lives -= enemy.data.damage
+	var lost := get_lives_damage(enemy.data)
+	stats.lives_lost += mini(lost, lives)
+	lives -= lost
 	Sound.play(&"lives_lost")
 	if not is_demo:
 		Gamepad.rumble(&"life_lost")
-	_show_lives_lost(enemy.data.damage, enemy.global_position)
+	_show_lives_lost(lost, enemy.global_position)
+	# Dernier rempart (arbre des améliorations) : une fois par partie, on repart au lieu de perdre.
+	if lives <= 0 and _bonuses.last_stand_lives > 0 and not last_stand_used:
+		last_stand_used = true
+		lives = _bonuses.last_stand_lives
+		_show_floating_text(tr("Dernier rempart ! +%d vies") % lives, GOLD_TEXT_COLOR, hud.get_play_area().get_center(), 26)
 	if lives <= 0:
 		_end_game(false)
 	else:
@@ -1359,6 +1379,7 @@ func to_saved_game() -> Dictionary:
 		"wave_count": -1 if is_endless else spawner.get_wave_count(),
 		"gold": gold,
 		"lives": lives,
+		"last_stand_used": last_stand_used,
 		"starting_lives": starting_lives,
 		"score": score,
 		"tower_types": types,
@@ -1422,6 +1443,7 @@ func restore_saved_game(data: Dictionary) -> void:
 	refresh_boosts()
 	gold = data.get("gold", gold)
 	lives = data.get("lives", lives)
+	last_stand_used = data.get("last_stand_used", false)
 
 
 ## Débloque des succès (sauf dans la partie de l'écran titre) et annonce ceux qui

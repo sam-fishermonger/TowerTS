@@ -402,6 +402,8 @@ func hit(amount: float, stats: TowerData) -> float:
 		return 0.0
 	if data.flying:
 		amount *= stats.air_damage_multiplier
+	if amount > 0.0:
+		amount *= stats.get_hit_multiplier(data)
 	if stats.shield_jam_duration > 0.0:
 		health.jam_shield(stats.shield_jam_duration)
 	if stats.heal_block_duration > 0.0:
