@@ -302,7 +302,7 @@ Sous les tours des mondes, l'arbre se croise : chaque croisement demande deux to
 | **Électroaimant** | Arc électrique + Bobine | ★ 17 | Débloque l'Électroaimant : son onde fait reculer de 45 pixels tous les ennemis à portée sur leur chemin. Les gros reculent moins (une Couveuse 30 % de moins), et un ennemi qui vient de reculer ne peut plus reculer pendant 1,5 s : plusieurs Électroaimants ne le bloquent pas sur place. |
 | **Nuage ionisé** | Pesticide + Arc électrique | ★ 14 | L'Arc empoisonne ce qu'il touche (8 dégâts/s pendant 2 s, sous l'armure), et les nuages du Pesticide brouillent les boucliers d'énergie pendant 2,5 s. |
 | **Gaz sous tension** | Lacrymogène + Bobine | ★ 14 | La Bobine ralentit de 25 % les ennemis à sa portée et bloque leurs soins, comme le gaz, et le Lacrymogène tire 20 % plus loin et 25 % plus vite. |
-| **Glas ardent** | Encensoir + Cloche funèbre | ★ 16 | Les braises de l'Encensoir ralentissent de 50 % ce qu'elles touchent, et l'onde de la Cloche brûle (6 dégâts/s pendant 2 s) et consacre les morts 3 s. |
+| **Glas ardent** | Encensoir + Cloche funèbre | ★ 14 | Les braises de l'Encensoir ralentissent de 50 % ce qu'elles touchent, et l'onde de la Cloche brûle (6 dégâts/s pendant 2 s) et consacre les morts 3 s. |
 
 Un croisement qui échange des effets est une amélioration (`Perk`) avec `crossing`, dont `specializes_tower` reçoit les effets, et `partner_effect` une seconde amélioration avec les effets de l'autre tour (son `specializes_tower`). Comme pour les spécialisations, ces effets ne s'appliquent qu'à leur tour, et la fiche de la tour les rappelle (« Croisement : … »).
 
