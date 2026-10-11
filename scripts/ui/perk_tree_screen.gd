@@ -30,7 +30,7 @@ const OWNED_COLOR := Color(0.95, 0.78, 0.3)
 const BUYABLE_COLOR := Color(0.45, 0.85, 0.45)
 const TOO_EXPENSIVE_COLOR := Color(0.85, 0.45, 0.4)
 const LOCKED_COLOR := Color(0.45, 0.48, 0.45)
-const ENDLESS_COLOR := Progress.ENDLESS_STAR_COLOR
+const ENDLESS_COLOR := Progress.SKULL_COLOR
 const STARS_COLOR := Color(0.95, 0.85, 0.45)
 
 ## Amélioration affichée dans l'encadré du bas (survol ou dernier clic).
@@ -49,6 +49,9 @@ var _available := {false: 0, true: 0}
 @onready var tree: Control = %Tree
 @onready var tabs: HBoxContainer = %Tabs
 @onready var stars_label: Label = %StarsLabel
+## Crânes à dépenser, à côté des étoiles et dans leur couleur, sur une page qui se paie
+## dans les deux monnaies (pouvoirs).
+@onready var skulls_label: Label = %SkullsLabel
 @onready var info_name: Label = %InfoName
 @onready var info_description: Label = %InfoDescription
 @onready var info_status: Label = %InfoStatus
@@ -231,13 +234,19 @@ func _refresh() -> void:
 	var endless := is_endless_page(page)
 	var available: int = _available[endless]
 	var spent := Perks.get_spent_stars(endless)
-	stars_label.text = "%s%s   ·   %s   ·   %s" % ["∞ " if endless else "", tr("★ %d à dépenser") % available,
-		(tr("%d dépensées") if spent > 1 else tr("%d dépensée")) % spent,
+	var spent_text := (tr("%d dépensés") if spent > 1 else tr("%d dépensé")) if endless \
+		else (tr("%d dépensées") if spent > 1 else tr("%d dépensée"))
+	stars_label.text = "%s   ·   %s   ·   %s" % [(tr("☠ %d à dépenser") if endless else tr("★ %d à dépenser")) % available,
+		spent_text % spent,
 		(tr("toutes les spécialisations : %d") if endless else tr("arbre complet : %d")) % Perks.TREE.get_total_cost(endless)]
 	stars_label.add_theme_color_override("font_color", ENDLESS_COLOR if endless else STARS_COLOR)
-	if is_mixed_page(page):
-		stars_label.text = "%s   ·   ∞ %s" % [tr("★ %d à dépenser") % _available[false],
-			tr("★ %d à dépenser") % _available[true]]
+	stars_label.tooltip_text = get_origin_text(endless)
+	skulls_label.visible = is_mixed_page(page)
+	if skulls_label.visible:
+		stars_label.text = "%s   ·" % (tr("★ %d à dépenser") % _available[false])
+		skulls_label.text = tr("☠ %d à dépenser") % _available[true]
+		skulls_label.add_theme_color_override("font_color", ENDLESS_COLOR)
+		skulls_label.tooltip_text = get_origin_text(true)
 	refund_button.disabled = Perks.get_owned_ids().is_empty()
 	for perk in Perks.TREE.perks:
 		_style_button(get_button(perk), perk)
@@ -246,6 +255,23 @@ func _refresh() -> void:
 	_show_info(shown_perk)
 	for root in _pages:
 		root.queue_redraw()
+
+
+## Bulle d'aide du compteur : d'où viennent les étoiles (campagne, Conquête, niveaux
+## libres) ou, avec `endless`, les crânes (mode infini, mutateurs).
+func get_origin_text(endless: bool) -> String:
+	if endless:
+		var waves := 0
+		var mutators := 0
+		for path in Perks.CAMPAIGN.levels:
+			waves += Progress.get_endless_stars(path)
+			mutators += Progress.get_mutator_stars(path)
+		return tr("Crânes gagnés : mode infini %d  ·  mutateurs %d") % [waves, mutators]
+	var campaign := 0
+	for path in Perks.CAMPAIGN.levels:
+		campaign += Progress.get_total_stars(path)
+	return tr("Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d") % [campaign,
+		ConquestLevels.get_total_stars(), FreeLevels.get_total_stars()]
 
 
 ## Les cases d'une tour (débloquée ou spécialisée) sont plus larges : elles montrent son image.
@@ -262,9 +288,9 @@ func _get_branch_lock_text(branch: int) -> String:
 	return ""
 
 
-## Prix d'une amélioration : « ★ 3 », ou « ∞ ★ 3 » en étoiles infinies.
+## Prix d'une amélioration : « ★ 3 », ou « ☠ 3 » en crânes (étoiles infinies).
 func _price_text(perk: Perk) -> String:
-	return "%s★ %d" % ["∞ " if perk.paid_with_endless_stars else "", perk.cost]
+	return "%s %d" % [Progress.SKULL if perk.paid_with_endless_stars else "★", perk.cost]
 
 
 func _style_button(button: Button, perk: Perk) -> void:
@@ -322,8 +348,8 @@ func _show_info(perk: Perk) -> void:
 	shown_perk = perk
 	if perk == null and is_endless_page(page):
 		info_name.text = "Spécialisations"
-		info_description.text = ("Les étoiles infinies, gagnées en mode infini (ouvert sur chaque niveau gagné avec "
-			+ "3 étoiles), donnent à une tour un atout de plus, dans toutes les parties.")
+		info_description.text = ("Les crânes, gagnés en mode infini (ouvert sur chaque niveau gagné avec 3 étoiles) "
+			+ "et avec les mutateurs, donnent à une tour un atout de plus, dans toutes les parties.")
 		info_status.text = "Survoler une spécialisation pour la voir, cliquer pour l'acheter."
 		info_status.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 		return
@@ -331,7 +357,7 @@ func _show_info(perk: Perk) -> void:
 		info_name.text = "Pouvoirs"
 		info_description.text = ("Des pouvoirs à lancer en pleine partie, avec leur bouton en haut de l'écran ou "
 			+ "leur touche, puis à laisser se recharger. Ils s'achètent avec des étoiles, et se renforcent avec "
-			+ "des étoiles infinies.")
+			+ "des crânes.")
 		info_status.text = "Survoler un pouvoir pour le voir, cliquer pour l'acheter."
 		info_status.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
 		return
@@ -347,7 +373,7 @@ func _show_info(perk: Perk) -> void:
 	var missing_count := perk.cost - available
 	var missing_text: String
 	if perk.paid_with_endless_stars:
-		missing_text = tr("%s  ·  il manque %d étoiles infinies") if missing_count > 1 else tr("%s  ·  il manque %d étoile infinie")
+		missing_text = tr("%s  ·  il manque %d crânes") if missing_count > 1 else tr("%s  ·  il manque %d crâne")
 	else:
 		missing_text = tr("%s  ·  il manque %d étoiles") if missing_count > 1 else tr("%s  ·  il manque %d étoile")
 	if Perks.is_owned(perk):

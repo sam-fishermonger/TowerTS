@@ -289,7 +289,7 @@ func _refresh() -> void:
 	if available > 0:
 		perks_button.text += "  ·  ★ %d" % available
 	if endless_available > 0:
-		perks_button.text += "  ·  ∞ %d" % endless_available
+		perks_button.text += "  ·  %s %d" % [Progress.SKULL, endless_available]
 	reset_button.visible = any_won
 	_refresh_resume(not is_play_menu_open())
 	# Le bouton du tutoriel n'est montré que tant qu'il n'est ni fini ni passé : il est alors conseillé.

@@ -628,12 +628,12 @@ func show_endless_end_screen(waves: int, endless_stars: int, new_record := false
 	show_end_screen(false)
 	end_title.text = "Fin de la partie"
 	end_stars.visible = true
-	end_stars.text = Progress.star_text(endless_stars, Progress.ENDLESS_MAX_STARS)
-	end_stars.add_theme_color_override("font_color", Progress.ENDLESS_STAR_COLOR)
+	end_stars.text = Progress.skull_text(endless_stars, Progress.ENDLESS_MAX_STARS)
+	end_stars.add_theme_color_override("font_color", Progress.SKULL_COLOR)
 	end_message.text = tr_n("%d vague repoussée.", "%d vagues repoussées.", LevelStats.plural_count(waves)) % waves
 	if new_record:
 		end_message.text += "\n" + tr("Nouveau record !")
-	end_message.text += "\n" + tr("Une étoile infinie toutes les %d vagues au-delà de celles du niveau.") \
+	end_message.text += "\n" + tr("Un crâne toutes les %d vagues au-delà de celles du niveau.") \
 		% Progress.ENDLESS_STAR_STEP
 	_end_screen = show_endless_end_screen.bind(waves, endless_stars, new_record)
 
@@ -1068,7 +1068,7 @@ func show_challenge_rules(rules: Array[String]) -> void:
 ## show_rules_panel_later()), et « ✦ Mutateurs » dans la barre du haut, avec les règles
 ## en bulle d'aide. `stars` : étoiles infinies de la victoire ; `best` : déjà obtenues.
 func show_mutator_rules(rules: Array[String], stars: int, best: int, with_panel := true) -> void:
-	var footer := tr("Victoire : ∞ ★ %d (meilleur résultat sur ce niveau : %d / %d).") % [stars, best, Mutators.MAX_STARS]
+	var footer := tr("Victoire : ☠ %d (meilleur résultat sur ce niveau : %d / %d).") % [stars, best, Mutators.MAX_STARS]
 	mutator_label = Label.new()
 	mutator_label.text = tr("✦ Mutateurs")
 	mutator_label.add_theme_color_override("font_color", Mutators.COLOR)
@@ -1167,10 +1167,10 @@ func show_challenge_end_screen(victory: bool, score: int, best: int, new_record 
 ## infinies gagnées, et celles qui s'ajoutent au meilleur résultat du niveau.
 func show_mutator_result(stars: int, best_before: int) -> void:
 	hide_challenge_rules()
-	end_message.text += "\n" + tr("Mutateurs : ∞ ★ %d / %d") % [stars, Mutators.MAX_STARS]
+	end_message.text += "\n" + tr("Mutateurs : ☠ %d / %d") % [stars, Mutators.MAX_STARS]
 	if stars > best_before:
-		end_message.text += "\n" + tr("+%d étoiles infinies à dépenser dans Améliorations.") % (stars - best_before) \
-			if stars - best_before > 1 else "\n" + tr("+1 étoile infinie à dépenser dans Améliorations.")
+		end_message.text += "\n" + tr("+%d crânes à dépenser dans Améliorations.") % (stars - best_before) \
+			if stars - best_before > 1 else "\n" + tr("+1 crâne à dépenser dans Améliorations.")
 	_mutator_result = [stars, best_before]
 
 
