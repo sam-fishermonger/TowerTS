@@ -560,12 +560,12 @@ func _draw_map() -> void:
 		map_view.draw_circle(start, 13.0, Relief.OUTLINE, true, -1.0, true)
 		map_view.draw_circle(start, 11.0, START_COLOR, true, -1.0, true)
 		if path.size() >= 2:
-			standing.append([CustomLevel.cell_center(path[-1]) - CustomLevel.GRID_ORIGIN, null])
+			standing.append([_base_point(path[-1]), null])
 	standing.sort_custom(func(a: Array, b: Array) -> bool: return a[0].y < b[0].y)
 	var rock_color: Color = Color(CustomLevel.BIOME_COLORS[int(data.biome)][3]).lightened(0.3)
 	for item in standing:
 		if item[1] == null:
-			GameMap.draw_relief_base(map_view, item[0])
+			BaseRelief.draw(map_view, item[0])
 			continue
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(item[1])
@@ -641,7 +641,14 @@ func _draw_free_map(standing: Array[Array]) -> void:
 	for cell: Vector2i in data.spawns:
 		GameMap.draw_spawn_gate(map_view, CustomLevel.cell_center(cell) - CustomLevel.GRID_ORIGIN)
 	if CustomLevel.is_in_grid(base):
-		standing.append([CustomLevel.cell_center(base) - CustomLevel.GRID_ORIGIN, null])
+		standing.append([_base_point(base), null])
+
+
+## Pied du QG sur sa case, rentré dans la carte s'il est sur la colonne du bord, comme en jeu.
+func _base_point(cell: Vector2i) -> Vector2:
+	var at := CustomLevel.cell_center(cell) - CustomLevel.GRID_ORIGIN
+	at.x = clampf(at.x, BaseRelief.HALF_WIDTH, map_view.size.x - BaseRelief.HALF_WIDTH)
+	return at
 
 
 ## Petites flèches dans le sens de la marche, au milieu de chaque ligne droite.
