@@ -230,7 +230,7 @@ groups = Array[ExtResource("4_spawn_group")]([SubResource("Group_w8_1"), SubReso
 bonus_gold = 0
 
 [node name="Level07" instance=ExtResource("1_level")]
-level_name = "Niveau 1-7"
+level_name = "Niveau 1-9"
 starting_gold = 340
 starting_lives = 20
 tower_types = Array[ExtResource("2_tower_data")]([ExtResource("t0_cannon"), ExtResource("t1_gatling"), ExtResource("t2_sniper"), ExtResource("t3_mortar"), ExtResource("t4_frost"), ExtResource("t5_beam")])

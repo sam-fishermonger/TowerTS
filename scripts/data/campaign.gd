@@ -3,6 +3,9 @@ extends Resource
 ## Les mondes du jeu, dans l'ordre, chacun avec ses niveaux. L'écran de sélection en
 ## fait ses cartes et ses boutons, et chaque niveau y trouve le suivant : on finit
 ## un monde pour ouvrir le suivant. Ajouter un niveau = l'ajouter à son monde ici.
+## Les étoiles sont enregistrées par fichier de niveau : un niveau ajouté au milieu d'un
+## monde prend un nouveau fichier, sans renommer les autres (les niveaux 7 et 8 de chaque
+## monde sont des fichiers _08 et _09, placés avant le niveau libre _07 qui finit le monde).
 
 @export var worlds: Array[World] = []
 

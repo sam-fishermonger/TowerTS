@@ -21,7 +21,10 @@ const STARS_COLOR := Color(0.95, 0.85, 0.45)
 const FREE_COLOR := "#ffd27a"
 const ENDLESS_COLOR := Progress.SKULL_COLOR
 const LEVEL_BUTTON_WIDTH := 104.0
-## Assez bas pour que les 7 niveaux d'un monde (4 rangées) tiennent sur la carte.
+## Les boutons se resserrent jusque-là pour garder trois colonnes : les 9 niveaux d'un
+## monde tiennent alors en trois rangées.
+const MIN_LEVEL_BUTTON_WIDTH := 76.0
+const LEVEL_BUTTON_SMALL_FONT := 15
 const LEVEL_BUTTON_HEIGHT := 46.0
 
 ## Cartes du mode infini plutôt que de la campagne.
@@ -202,7 +205,7 @@ func _make_card(world_index: int) -> Control:
 
 	# Les monstres du biome, avec leur nom en bulle d'aide.
 	# Avec quatre mondes, les cartes sont plus étroites : les images des monstres
-	# rapetissent pour tenir sur une ligne, et les niveaux passent sur deux colonnes.
+	# rapetissent pour tenir sur une ligne, et les boutons des niveaux se resserrent.
 	var content_width := get_card_content_width()
 	var icon_size := clampf((content_width - 4.0 * (world.enemies.size() - 1)) / maxf(world.enemies.size(), 1.0),
 		28.0, 48.0)
@@ -233,7 +236,10 @@ func _make_card(world_index: int) -> Control:
 	column.add_child(stars)
 
 	var grid := GridContainer.new()
-	grid.columns = 3 if content_width >= 3 * LEVEL_BUTTON_WIDTH + 16.0 else 2
+	var button_width := minf(LEVEL_BUTTON_WIDTH, (content_width - 16.0) / 3.0)
+	grid.columns = 3 if button_width >= MIN_LEVEL_BUTTON_WIDTH else 2
+	if grid.columns == 2:
+		button_width = LEVEL_BUTTON_WIDTH
 	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	grid.add_theme_constant_override(&"h_separation", 8)
 	grid.add_theme_constant_override(&"v_separation", 6)
@@ -241,7 +247,16 @@ func _make_card(world_index: int) -> Control:
 	for i in world.levels.size():
 		var path := world.levels[i]
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(LEVEL_BUTTON_WIDTH, LEVEL_BUTTON_HEIGHT)
+		button.custom_minimum_size = Vector2(button_width, LEVEL_BUTTON_HEIGHT)
+		if button_width < LEVEL_BUTTON_WIDTH:
+			# Bouton resserré : texte un peu plus petit et marges réduites, pour que
+			# « Verrouillé » y tienne.
+			button.add_theme_font_size_override(&"font_size", LEVEL_BUTTON_SMALL_FONT)
+			for state in [&"normal", &"hover", &"pressed", &"disabled", &"focus"]:
+				var narrow := button.get_theme_stylebox(state).duplicate() as StyleBox
+				narrow.content_margin_left = 4.0
+				narrow.content_margin_right = 4.0
+				button.add_theme_stylebox_override(state, narrow)
 		if endless_mode:
 			_setup_endless_button(button, path, "%d-%d" % [world_index + 1, i + 1])
 		else:

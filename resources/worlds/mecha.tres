@@ -24,5 +24,5 @@ enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_drone"), ExtResour
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_behemoth")])
 raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_recuperateur")])
 thieves = Array[ExtResource("2_enemy_data")]([ExtResource("v0_siphonneur")])
-levels = Array[String](["res://scenes/levels/mecha_01.tscn", "res://scenes/levels/mecha_02.tscn", "res://scenes/levels/mecha_03.tscn", "res://scenes/levels/mecha_04.tscn", "res://scenes/levels/mecha_05.tscn", "res://scenes/levels/mecha_06.tscn", "res://scenes/levels/mecha_07.tscn"])
+levels = Array[String](["res://scenes/levels/mecha_01.tscn", "res://scenes/levels/mecha_02.tscn", "res://scenes/levels/mecha_03.tscn", "res://scenes/levels/mecha_04.tscn", "res://scenes/levels/mecha_05.tscn", "res://scenes/levels/mecha_06.tscn", "res://scenes/levels/mecha_08.tscn", "res://scenes/levels/mecha_09.tscn", "res://scenes/levels/mecha_07.tscn"])
 tileset = ExtResource("t_tileset")

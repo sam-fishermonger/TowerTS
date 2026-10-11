@@ -11,12 +11,15 @@ const STARS_COLOR := Color(0.95, 0.85, 0.45)
 const MUTED := Color(1, 1, 1, 0.6)
 const LOCKED_ALPHA := 0.45
 const CARD_WIDTH := 228.0
+## Les cartes ne se resserrent pas en dessous : au-delà, la rangée défile de côté.
+const MIN_CARD_WIDTH := 188.0
 
 var back_button: Button
 ## Bouton Jouer de chaque niveau, dans l'ordre de ConquestLevels.LEVELS.
 var play_buttons: Array[Button] = []
 
 var _cards: HBoxContainer
+var _scroll: ScrollContainer
 var _difficulty_bar: HBoxContainer
 var _difficulty_group := ButtonGroup.new()
 var _hint: Label
@@ -116,15 +119,23 @@ func _build() -> void:
 	intro.offset_right = -140.0
 	intro.offset_top = 84.0
 
+	# Quand les cartes ne tiennent plus sur la largeur, la rangée défile (molette, glisser,
+	# ou le focus de la manette, que le défilement suit).
+	_scroll = ScrollContainer.new()
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.follow_focus = true
+	add_child(_scroll)
+	_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_scroll.offset_top = 150.0
+	_scroll.offset_bottom = -190.0
+	_scroll.offset_left = 16.0
+	_scroll.offset_right = -16.0
 	_cards = HBoxContainer.new()
 	_cards.alignment = BoxContainer.ALIGNMENT_CENTER
 	_cards.add_theme_constant_override(&"separation", 16)
-	add_child(_cards)
-	_cards.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_cards.offset_top = 150.0
-	_cards.offset_bottom = -190.0
-	_cards.offset_left = 16.0
-	_cards.offset_right = -16.0
+	_cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_cards)
 
 	_hint = Label.new()
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -195,9 +206,11 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	var path := get_levels()[index]
 	var unlocked := is_level_unlocked(index)
 	var card := PanelContainer.new()
-	# Avec beaucoup de niveaux, les cartes se resserrent pour tenir sur l'écran.
+	# Avec beaucoup de niveaux, les cartes se resserrent pour tenir sur l'écran, jusqu'à
+	# une largeur minimale : au-delà, la rangée défile.
 	var count := get_levels().size()
-	card.custom_minimum_size.x = minf(CARD_WIDTH, (get_viewport_rect().size.x - 32.0 - 16.0 * (count - 1)) / count)
+	card.custom_minimum_size.x = clampf((get_viewport_rect().size.x - 32.0 - 16.0 * (count - 1)) / count,
+		MIN_CARD_WIDTH, CARD_WIDTH)
 	card.add_theme_stylebox_override(&"panel", UiStyle.panel(world.color, 16.0, SIDE_TOP))
 	card.modulate.a = 1.0 if unlocked else LOCKED_ALPHA
 	var column := VBoxContainer.new()

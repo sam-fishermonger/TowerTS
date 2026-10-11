@@ -14,6 +14,7 @@ const LEVEL_04 := preload("res://scenes/levels/level_04.tscn")
 const LEVEL_05 := preload("res://scenes/levels/level_05.tscn")
 const LEVEL_06 := preload("res://scenes/levels/level_06.tscn")
 const LEVEL_07 := preload("res://scenes/levels/level_07.tscn")
+const LEVEL_08 := preload("res://scenes/levels/level_08.tscn")
 const MECHA_01 := preload("res://scenes/levels/mecha_01.tscn")
 const HUMANOID_01 := preload("res://scenes/levels/humanoid_01.tscn")
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
@@ -500,13 +501,13 @@ func _test_progress() -> void:
 	_check(screen.get_level_button(LEVEL_01.resource_path).text == "1-1\n★★☆"
 		and not screen.get_level_button(LEVEL_02.resource_path).disabled,
 		"la sélection montre les étoiles et le niveau débloqué")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 84", "la carte du monde compte ses étoiles")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 2 / 108", "la carte du monde compte ses étoiles")
 	await _free(screen)
 	var title := TITLE_SCREEN.instantiate()
 	root.add_child(title)
 	await process_frame
 	_check(title.get_node("%CampaignButton").text == "Continuer", "le bouton Campagne devient Continuer")
-	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 336"), "l'écran titre montre les étoiles de la campagne")
+	_check(title.get_node("%WorldsButton").text.ends_with("★ 2 / 432"), "l'écran titre montre les étoiles de la campagne")
 	title.get_node("%ResetDialog").confirmed.emit()
 	await process_frame
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0 and not Progress.is_unlocked(campaign, 1),
@@ -623,13 +624,15 @@ func _test_biome_towers_in_tree() -> void:
 	for perk in tree.get_page_perks(logistics):
 		logistics_cost += perk.cost
 	var main_cost := tree.get_total_cost() - logistics_cost
-	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
-		"l'arbre sans la Logistique (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
+	# Les niveaux 7 et 8 de chaque monde ont ajouté des étoiles sans nouvelles améliorations :
+	# l'arbre en coûte encore les trois quarts, la marge attend de nouvelles options.
+	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.75,
+		"l'arbre sans la Logistique (%d étoiles) coûte l'essentiel des étoiles de la campagne (%d)" % [main_cost, campaign_stars])
 	_check(main_cost > campaign.size() * 3 * 3,
 		"il faut des étoiles de Cauchemar pour tout acheter")
 	var conquest_stars := ConquestLevels.size() * Progress.MAX_LEVEL_STARS
-	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.85,
-		"la page Logistique (%d étoiles) coûte presque toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.7,
+		"la page Logistique (%d étoiles) coûte l'essentiel des étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
@@ -2747,21 +2750,24 @@ func _test_tower_choice() -> void:
 
 
 func _test_worlds() -> void:
-	print("Mondes : quatre biomes de 7 niveaux, débloqués l'un après l'autre")
+	print("Mondes : quatre biomes de 9 niveaux, débloqués l'un après l'autre")
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	_check(campaign.worlds.size() == 4 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 7),
-		"4 mondes de 7 niveaux")
-	_check(campaign.size() == 28 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
+	_check(campaign.worlds.size() == 4 and campaign.worlds.all(func(w: World) -> bool: return w.levels.size() == 9),
+		"4 mondes de 9 niveaux")
+	_check(campaign.size() == 36 and campaign.levels[0] == LEVEL_01.resource_path, "la campagne commence au niveau 1-1")
 	_check(campaign.get_next(LEVEL_06.resource_path) == campaign.worlds[0].levels[6]
-		and campaign.get_next(campaign.worlds[0].levels[6]) == MECHA_01.resource_path, "après le niveau 1-6 vient le 1-7, puis le 2-1")
-	_check(campaign.get_next(campaign.worlds[2].levels[6]) == campaign.worlds[3].levels[0], "après le niveau 3-7 vient le 4-1")
-	_check(campaign.get_next(campaign.worlds[3].levels[6]) == "", "le niveau 4-7 est le dernier")
+		and campaign.get_next(campaign.worlds[0].levels[8]) == MECHA_01.resource_path, "après le niveau 1-6 vient le 1-7, et après le 1-9 le 2-1")
+	_check(campaign.get_next(campaign.worlds[2].levels[8]) == campaign.worlds[3].levels[0], "après le niveau 3-9 vient le 4-1")
+	_check(campaign.get_next(campaign.worlds[3].levels[8]) == "", "le niveau 4-9 est le dernier")
 	# Le dernier niveau de chaque monde est un niveau libre : les tours font le labyrinthe.
+	# Les niveaux 7 et 8, ajoutés après coup, passent avant lui : le niveau libre garde son
+	# fichier (et les étoiles déjà gagnées), et finir un monde ouvre toujours le suivant.
 	_check(campaign.worlds.all(func(w: World) -> bool:
-		var level: Level = load(w.levels[6]).instantiate()
+		var level: Level = load(w.levels[8]).instantiate()
 		var free: bool = level.get_node("Map").free_layout
+		var last: bool = w.levels[8].ends_with("_07.tscn") and level.level_name.ends_with("-9")
 		level.free()
-		return free), "le niveau 7 de chaque monde est un niveau libre")
+		return free and last), "le niveau 9 de chaque monde est un niveau libre (son fichier _07)")
 	# Chaque monde n'envoie que ses propres monstres.
 	for w in campaign.worlds.size():
 		var world := campaign.worlds[w]
@@ -2787,7 +2793,7 @@ func _test_worlds() -> void:
 	Progress.reset_campaign()
 	# Fin du dernier niveau d'un monde : le bouton annonce le monde suivant.
 	var level := await _spawn_level(LEVEL_07)
-	_check(level.get_next_world_name() == "La Fonderie", "le niveau 1-7 ouvre La Fonderie")
+	_check(level.get_next_world_name() == "La Fonderie", "le niveau 1-9 ouvre La Fonderie")
 	level._end_game(true)
 	_check(level.hud.next_level_button.visible and level.hud.next_level_button.text == "Monde suivant"
 		and level.hud.end_message.text.contains("La Fonderie"), "l'écran de victoire annonce le nouveau monde")
@@ -2845,7 +2851,7 @@ func _test_endless_mode() -> void:
 	_check(screen.endless_mode and screen.get_node("%Title").text == "Mode infini", "le bouton Mode infini change les cartes")
 	_check(not endless_button.disabled and endless_button.text.ends_with("○○○○○")
 		and screen.get_level_button(LEVEL_02.resource_path).disabled, "seul le niveau à 3 étoiles s'ouvre en mode infini")
-	_check(screen.get_card(0).find_child("Stars", true, false).text.contains("0 / 35"), "la carte compte les étoiles infinies du monde")
+	_check(screen.get_card(0).find_child("Stars", true, false).text.contains("0 / 45"), "la carte compte les étoiles infinies du monde")
 	await _free(screen)
 
 	Engine.set_meta(Level.ENDLESS_META, true)
@@ -3179,7 +3185,7 @@ func _test_difficulties() -> void:
 		"choisir Cauchemar l'enregistre et met les boutons à jour")
 	_check(screen.get_level_button(LEVEL_03.resource_path).tooltip_text.contains("★★★  Difficile"),
 		"la bulle d'aide du niveau donne les étoiles de chaque difficulté")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 84", "la carte compte les étoiles des 4 difficultés")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 108", "la carte compte les étoiles des 4 difficultés")
 	screen.set_endless_mode(true)
 	_check(not screen.difficulty_bar.visible, "pas de difficulté en mode infini")
 	await _free(screen)
@@ -3552,7 +3558,7 @@ func _test_bosses() -> void:
 						.all(func(g: SpawnGroup) -> bool: return g.count == 1 and world.bosses.has(g.enemy)),
 						"%s : le boss arrive seul, à la dernière vague" % level.level_name)
 			level.free()
-		_check(boss_levels == [3, 6, 7], "%s : un boss aux niveaux 3 et 6, et au niveau libre qui finit le monde (%s)"
+		_check(boss_levels == [3, 6, 8, 9], "%s : un boss aux niveaux 3, 6 et 8, et au niveau libre qui finit le monde (%s)"
 			% [world.display_name, boss_levels])
 	var level := await _spawn_level(LEVEL_03)
 	var boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 300.0)
@@ -4021,7 +4027,7 @@ func _check_build_order_balance(scene: PackedScene, build_order: Array, upgrade 
 func _test_levels_04_to_06_maps() -> void:
 	print("Niveaux 4 à 6 : cartes")
 	var expected := [
-		[LEVEL_04, "Niveau 1-4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 1-5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 1-6", 1, 10, LEVEL_07],
+		[LEVEL_04, "Niveau 1-4", 1, 8, LEVEL_05], [LEVEL_05, "Niveau 1-5", 3, 8, LEVEL_06], [LEVEL_06, "Niveau 1-6", 1, 10, LEVEL_08],
 	]
 	for item: Array in expected:
 		var level := await _spawn_level(item[0])
@@ -4092,8 +4098,25 @@ func _test_levels_04_to_06_with_earned_gold() -> void:
 	])
 
 
-## Ordres de construction des mondes 2 à 4 pour l'équilibrage (18 tours par niveau).
+## Ordres de construction pour l'équilibrage (18 tours par niveau) : mondes 2 à 4, et niveaux 7 et 8
+## de chaque monde.
 const WORLD_BUILD_ORDERS := {
+	"res://scenes/levels/level_08.tscn": [
+		[Vector2i(16, 2), CANNON], [Vector2i(12, 4), CANNON], [Vector2i(16, 5), MORTAR],
+		[Vector2i(6, 2), BEAM], [Vector2i(17, 2), FROST], [Vector2i(11, 4), CANNON],
+		[Vector2i(16, 4), SNIPER], [Vector2i(3, 7), MORTAR], [Vector2i(6, 4), BEAM],
+		[Vector2i(17, 1), GATLING], [Vector2i(13, 5), FROST], [Vector2i(3, 1), SNIPER],
+		[Vector2i(17, 4), MORTAR], [Vector2i(7, 4), BEAM], [Vector2i(16, 1), CANNON],
+		[Vector2i(13, 4), MORTAR], [Vector2i(17, 5), SNIPER], [Vector2i(7, 2), BEAM],
+	],
+	"res://scenes/levels/level_09.tscn": [
+		[Vector2i(12, 5), CANNON], [Vector2i(3, 1), CANNON], [Vector2i(3, 6), MORTAR],
+		[Vector2i(8, 1), BEAM], [Vector2i(13, 1), FROST], [Vector2i(7, 7), CANNON],
+		[Vector2i(17, 1), SNIPER], [Vector2i(12, 7), MORTAR], [Vector2i(17, 6), BEAM],
+		[Vector2i(10, 3), GATLING], [Vector2i(2, 2), FROST], [Vector2i(3, 7), SNIPER],
+		[Vector2i(8, 7), MORTAR], [Vector2i(13, 7), BEAM], [Vector2i(6, 1), CANNON],
+		[Vector2i(15, 1), MORTAR], [Vector2i(11, 1), SNIPER], [Vector2i(16, 6), BEAM],
+	],
 	"res://scenes/levels/mecha_01.tscn": [
 		[Vector2i(15, 2), CANNON], [Vector2i(15, 3), CANNON], [Vector2i(4, 5), MORTAR],
 		[Vector2i(4, 6), BEAM], [Vector2i(16, 2), FROST], [Vector2i(16, 3), CANNON],
@@ -4141,6 +4164,22 @@ const WORLD_BUILD_ORDERS := {
 		[Vector2i(7, 3), GATLING], [Vector2i(8, 3), FROST], [Vector2i(9, 3), SNIPER],
 		[Vector2i(10, 3), MORTAR], [Vector2i(11, 3), BEAM], [Vector2i(2, 6), CANNON],
 		[Vector2i(3, 6), MORTAR], [Vector2i(16, 6), SNIPER], [Vector2i(2, 2), BEAM],
+	],
+	"res://scenes/levels/mecha_08.tscn": [
+		[Vector2i(4, 6), CANNON], [Vector2i(14, 7), CANNON], [Vector2i(7, 6), MORTAR],
+		[Vector2i(15, 3), BEAM], [Vector2i(5, 6), FROST], [Vector2i(8, 6), CANNON],
+		[Vector2i(15, 6), SNIPER], [Vector2i(11, 7), MORTAR], [Vector2i(14, 2), BEAM],
+		[Vector2i(4, 2), GATLING], [Vector2i(8, 2), FROST], [Vector2i(4, 7), SNIPER],
+		[Vector2i(17, 6), MORTAR], [Vector2i(9, 7), BEAM], [Vector2i(15, 7), CANNON],
+		[Vector2i(4, 3), MORTAR], [Vector2i(5, 7), SNIPER], [Vector2i(13, 0), BEAM],
+	],
+	"res://scenes/levels/mecha_09.tscn": [
+		[Vector2i(4, 4), CANNON], [Vector2i(8, 5), CANNON], [Vector2i(16, 2), MORTAR],
+		[Vector2i(11, 4), BEAM], [Vector2i(3, 4), FROST], [Vector2i(7, 1), CANNON],
+		[Vector2i(12, 1), SNIPER], [Vector2i(17, 2), MORTAR], [Vector2i(7, 5), BEAM],
+		[Vector2i(3, 1), GATLING], [Vector2i(10, 5), FROST], [Vector2i(3, 5), SNIPER],
+		[Vector2i(14, 2), MORTAR], [Vector2i(6, 5), BEAM], [Vector2i(10, 4), CANNON],
+		[Vector2i(16, 1), MORTAR], [Vector2i(2, 1), SNIPER], [Vector2i(9, 1), BEAM],
 	],
 	"res://scenes/levels/humanoid_01.tscn": [
 		[Vector2i(6, 2), CANNON], [Vector2i(7, 2), CANNON], [Vector2i(9, 2), MORTAR],
@@ -4190,6 +4229,22 @@ const WORLD_BUILD_ORDERS := {
 		[Vector2i(14, 5), MORTAR], [Vector2i(15, 5), BEAM], [Vector2i(16, 5), CANNON],
 		[Vector2i(9, 6), MORTAR], [Vector2i(11, 8), SNIPER], [Vector2i(15, 2), BEAM],
 	],
+	"res://scenes/levels/humanoid_08.tscn": [
+		[Vector2i(7, 6), CANNON], [Vector2i(10, 2), CANNON], [Vector2i(14, 3), MORTAR],
+		[Vector2i(16, 6), BEAM], [Vector2i(5, 6), FROST], [Vector2i(10, 3), CANNON],
+		[Vector2i(13, 2), SNIPER], [Vector2i(16, 5), MORTAR], [Vector2i(8, 8), BEAM],
+		[Vector2i(2, 2), GATLING], [Vector2i(8, 5), FROST], [Vector2i(11, 2), SNIPER],
+		[Vector2i(17, 6), MORTAR], [Vector2i(14, 2), BEAM], [Vector2i(8, 6), CANNON],
+		[Vector2i(4, 5), MORTAR], [Vector2i(17, 5), SNIPER], [Vector2i(11, 3), BEAM],
+	],
+	"res://scenes/levels/humanoid_09.tscn": [
+		[Vector2i(6, 5), CANNON], [Vector2i(10, 6), CANNON], [Vector2i(15, 6), MORTAR],
+		[Vector2i(6, 6), BEAM], [Vector2i(11, 2), FROST], [Vector2i(14, 2), CANNON],
+		[Vector2i(9, 2), SNIPER], [Vector2i(11, 6), MORTAR], [Vector2i(5, 5), BEAM],
+		[Vector2i(14, 6), GATLING], [Vector2i(9, 6), FROST], [Vector2i(5, 6), SNIPER],
+		[Vector2i(17, 6), MORTAR], [Vector2i(7, 2), BEAM], [Vector2i(14, 3), CANNON],
+		[Vector2i(10, 5), MORTAR], [Vector2i(4, 2), SNIPER], [Vector2i(12, 6), BEAM],
+	],
 	"res://scenes/levels/undead_01.tscn": [
 		[Vector2i(7, 3), CANNON], [Vector2i(9, 6), CANNON], [Vector2i(13, 6), MORTAR],
 		[Vector2i(15, 3), BEAM], [Vector2i(6, 3), FROST], [Vector2i(7, 4), CANNON],
@@ -4238,15 +4293,32 @@ const WORLD_BUILD_ORDERS := {
 		[Vector2i(8, 7), MORTAR], [Vector2i(9, 5), BEAM], [Vector2i(9, 7), CANNON],
 		[Vector2i(10, 3), MORTAR], [Vector2i(10, 7), SNIPER], [Vector2i(11, 7), BEAM],
 	],
+	"res://scenes/levels/undead_08.tscn": [
+		[Vector2i(4, 1), CANNON], [Vector2i(4, 6), CANNON], [Vector2i(8, 6), MORTAR],
+		[Vector2i(8, 1), BEAM], [Vector2i(4, 7), FROST], [Vector2i(4, 2), CANNON],
+		[Vector2i(8, 7), SNIPER], [Vector2i(14, 1), MORTAR], [Vector2i(17, 3), BEAM],
+		[Vector2i(5, 1), GATLING], [Vector2i(9, 1), FROST], [Vector2i(5, 7), SNIPER],
+		[Vector2i(7, 7), MORTAR], [Vector2i(5, 2), BEAM], [Vector2i(10, 6), CANNON],
+		[Vector2i(15, 1), MORTAR], [Vector2i(10, 1), SNIPER], [Vector2i(5, 6), BEAM],
+	],
+	"res://scenes/levels/undead_09.tscn": [
+		[Vector2i(12, 3), CANNON], [Vector2i(4, 1), CANNON], [Vector2i(7, 3), MORTAR],
+		[Vector2i(15, 1), BEAM], [Vector2i(9, 1), FROST], [Vector2i(7, 6), CANNON],
+		[Vector2i(15, 7), SNIPER], [Vector2i(2, 5), MORTAR], [Vector2i(16, 2), BEAM],
+		[Vector2i(11, 6), GATLING], [Vector2i(2, 1), FROST], [Vector2i(10, 1), SNIPER],
+		[Vector2i(8, 6), MORTAR], [Vector2i(16, 6), BEAM], [Vector2i(5, 1), CANNON],
+		[Vector2i(15, 2), MORTAR], [Vector2i(11, 3), SNIPER], [Vector2i(4, 5), BEAM],
+	],
 }
 
 
 func _test_world_levels_maps() -> void:
-	print("Mondes 2 à 4 : cartes")
+	print("Mondes 2 à 4, et niveaux 1-7 à 1-9 : cartes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
-	for w in [1, 2, 3]:
+	for w in [0, 1, 2, 3]:
 		var world := campaign.worlds[w]
-		for i in world.levels.size():
+		# Les niveaux 1-1 à 1-6 ont leurs propres tests de carte.
+		for i in range(6 if w == 0 else 0, world.levels.size()):
 			var path := world.levels[i]
 			var level := await _spawn_level(load(path))
 			var label := "Niveau %d-%d" % [w + 1, i + 1]
@@ -5293,6 +5365,8 @@ const CONQUEST_BUILD_ORDERS := {
 	"res://scenes/levels/conquest_02.tscn": "res://scenes/levels/mecha_01.tscn",
 	"res://scenes/levels/conquest_03.tscn": "res://scenes/levels/humanoid_02.tscn",
 	"res://scenes/levels/conquest_04.tscn": "res://scenes/levels/undead_02.tscn",
+	"res://scenes/levels/conquest_07.tscn": "res://scenes/levels/mecha_08.tscn",
+	"res://scenes/levels/conquest_08.tscn": "res://scenes/levels/undead_08.tscn",
 	"res://scenes/levels/conquest_05.tscn": [
 		[Vector2i(8, 2), CANNON], [Vector2i(9, 4), CANNON], [Vector2i(10, 5), MORTAR],
 		[Vector2i(9, 7), BEAM], [Vector2i(6, 4), FROST], [Vector2i(11, 2), CANNON],
