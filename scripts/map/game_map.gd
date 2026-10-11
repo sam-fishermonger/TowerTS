@@ -121,6 +121,8 @@ var _ground: ColorRect
 ## Habillage du monde (BiomeTheme), choisi d'après les tuiles du niveau.
 var _theme: Dictionary = {}
 var _decor_by_cell := {}
+## QG debout dans le décor trié en profondeur (vue de trois quarts), s'il y en a un.
+var _base_item: DecorItem
 
 
 func _ready() -> void:
@@ -646,6 +648,15 @@ func populate_decor(container: Node2D) -> void:
 			elif rng.randf() < (0.22 if near_path else 0.1):
 				var jitter := Vector2(rng.randf_range(-18, 18), rng.randf_range(-10, 20))
 				_add_decor(container, cell, BiomeTheme.pick(_theme.near, rng), center + jitter, rng, rng.randf_range(0.8, 1.15))
+	if not paths.is_empty():
+		# Le QG, rentré dans l'écran s'il est sur la colonne du bord.
+		_base_item = DecorItem.new()
+		_base_item.kind = DecorItem.Kind.BASE
+		var at := to_local(get_base_position())
+		var margin := BaseRelief.HALF_WIDTH
+		at.x = clampf(at.x, grid_origin.x + margin, grid_origin.x + columns * cell_size - margin)
+		_base_item.position = container.to_local(to_global(at))
+		container.add_child(_base_item)
 
 
 func _add_decor(container: Node2D, cell: Vector2i, kind: DecorItem.Kind, at: Vector2, rng: RandomNumberGenerator,
@@ -798,41 +809,8 @@ func _draw_relief() -> void:
 			var from := grid_origin + Vector2(0, y * cell_size)
 			draw_line(from, from + Vector2(grid_size.x, 0), line)
 		_draw_spawn_gates()
-	if not paths.is_empty():
-		var base := to_local(get_base_position())
-		draw_relief_base(self, base)
-
-
-## Base du joueur en vue de trois quarts : un rempart entre deux tours rondes au toit
-## bleu, porte ouverte sur le chemin.
-static func draw_relief_base(canvas: CanvasItem, at: Vector2) -> void:
-	var stone := Color(0.7, 0.68, 0.64)
-	var roof := Color(0.25, 0.42, 0.8)
-	Relief.draw_shadow(canvas, at + Vector2(8, 18), 44.0, 16.0, 0.35)
-	for side in [-1.0, 1.0]:
-		var foot: Vector2 = at + Vector2(side * 19.0, 8.0 - 22.0)
-		var top := Relief.draw_cylinder(canvas, foot, 11.0, 5.5, 34.0, stone)
-		var cone := PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(15, 2)])
-		canvas.draw_colored_polygon(Relief.ellipse(top + Vector2(0, 2), 15.0, 6.0), roof.darkened(0.3))
-		canvas.draw_colored_polygon(cone, roof)
-		canvas.draw_colored_polygon(PackedVector2Array([top + Vector2(-15, 2), top + Vector2(0, -26), top + Vector2(-4, 4)]), roof.lightened(0.2))
-		cone.append(cone[0])
-		canvas.draw_polyline(cone, Relief.OUTLINE, 2.0, true)
-		canvas.draw_line(top + Vector2(0, -26), top + Vector2(0, -38), Relief.OUTLINE, 2.0)
-		canvas.draw_colored_polygon(PackedVector2Array([top + Vector2(0, -38), top + Vector2(10, -34), top + Vector2(0, -30)]),
-			Color(1.0, 0.8, 0.2))
-	# Rempart et porte.
-	var wall := Rect2(at + Vector2(-12, -34), Vector2(24, 36))
-	canvas.draw_rect(wall, stone.darkened(0.12))
-	for x in 2:
-		canvas.draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), stone.darkened(0.12))
-		canvas.draw_rect(Rect2(wall.position + Vector2(2 + x * 12, -6), Vector2(8, 6)), Relief.OUTLINE, false, 1.5)
-	canvas.draw_rect(wall, Relief.OUTLINE, false, 2.0)
-	var door := PackedVector2Array([at + Vector2(-8, 2), at + Vector2(-8, -12)])
-	door.append_array(Relief.ellipse(at + Vector2(0, -12), 8.0, 8.0, PI, TAU, 10))
-	door.append(at + Vector2(8, 2))
-	canvas.draw_colored_polygon(door, Color(0.2, 0.13, 0.08))
-	canvas.draw_polyline(door, Relief.OUTLINE, 2.0, true)
+	if not paths.is_empty() and _base_item == null:
+		BaseRelief.draw(self, to_local(get_base_position()))
 
 
 ## Niveau libre : un terrier sombre sur chaque point d'apparition, d'où sortent les monstres.

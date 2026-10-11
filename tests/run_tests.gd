@@ -3975,6 +3975,10 @@ func _test_relief() -> void:
 	_check(trees.size() > 20, "des arbres sur la carte (%d)" % trees.size())
 	_check(map._decor_by_cell.keys().all(func(c: Vector2i) -> bool: return not map.is_cell_on_path(c)),
 		"jamais de décor sur le chemin")
+	var bases := decor.get_children().filter(func(d: DecorItem) -> bool: return d.kind == DecorItem.Kind.BASE)
+	var base_x: float = bases[0].global_position.x if bases.size() == 1 else -1.0
+	_check(bases.size() == 1 and base_x >= BaseRelief.HALF_WIDTH and base_x <= map.columns * map.cell_size - BaseRelief.HALF_WIDTH,
+		"le QG se tient dans le décor trié en profondeur, entier à l'écran")
 	var cell: Vector2i = map._decor_by_cell.keys()[0]
 	var items: Array = map._decor_by_cell[cell]
 	level.gold = 1000

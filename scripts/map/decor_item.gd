@@ -3,10 +3,11 @@ extends Node2D
 ## Élément de décor debout de la vue de trois quarts (arbre, maison, tombe, caisse…),
 ## dessiné au-dessus de son pied (la position du nœud) et trié en profondeur avec les
 ## tours et les monstres. Chaque monde a le sien (BiomeTheme). Poser une tour sur sa case
-## l'abat (voir GameMap.occupy), sauf un rocher.
+## l'abat (voir GameMap.occupy), sauf un rocher. Le QG du joueur (BASE) en est un aussi,
+## pour passer devant ou derrière les tours et les monstres qui l'approchent.
 
 enum Kind { TREE, BUSH, ROCK, HIVE, EGGS, MUSHROOM, CRATE, BARREL, SCRAP, CHIMNEY, HOUSE, LAMP, FENCE,
-	DEAD_TREE, TOMB, CROSS }
+	DEAD_TREE, TOMB, CROSS, BASE }
 
 var kind := Kind.TREE
 ## Taille relative (1 = normale).
@@ -54,6 +55,8 @@ func _draw() -> void:
 			_draw_tomb(rng)
 		Kind.CROSS:
 			_draw_cross(rng)
+		Kind.BASE:
+			BaseRelief.draw(self, Vector2.ZERO)
 
 
 func _draw_tree(rng: RandomNumberGenerator) -> void:
