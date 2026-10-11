@@ -14,6 +14,7 @@ const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
 ## Nom du fichier => [scène, secondes de jeu avant la capture, partie lancée ?]
 const SHOTS := {
 	"titre": ["res://scenes/ui/title_screen.tscn", 4.0, false],
+	"jouer": ["res://scenes/ui/title_screen.tscn", 4.0, false],
 	"mondes": ["res://scenes/ui/world_select_screen.tscn", 0.5, false],
 	"ruche": ["res://scenes/levels/level_03.tscn", 14.0, true],
 	"fonderie": ["res://scenes/levels/mecha_04.tscn", 14.0, true],
@@ -22,6 +23,7 @@ const SHOTS := {
 	"conquete": ["res://scenes/levels/conquest_01.tscn", 8.0, false],
 	"libre": ["res://scenes/levels/free_02.tscn", 9.0, true],
 	"expedition": ["res://scenes/levels/mecha_02.tscn", 9.0, true],
+	"pause": ["res://scenes/levels/humanoid_02.tscn", 9.0, true],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
 }
@@ -54,6 +56,9 @@ func _run() -> void:
 			_start_battle(node as Level)
 		elif shot_name == "conquete":
 			_stage_conquest(node as Level)
+		elif shot_name == "jouer":
+			# Le choix du mode : les modes pas encore débloqués sont grisés.
+			node.show_play_menu(true)
 		elif shot_name != "titre":
 			# Sans focus, pas de fenêtre de détail ouverte sur le premier bouton.
 			root.gui_release_focus()
@@ -63,6 +68,10 @@ func _run() -> void:
 			(node as Level).open_chest(Vector2.ZERO)
 			for i in 3:
 				await process_frame
+		elif shot_name == "pause":
+			# En pause : le trajet des monstres revient et Recommencer / Quitter apparaissent.
+			(node as Level).set_paused(true)
+			await create_timer(1.0).timeout
 		await RenderingServer.frame_post_draw
 		var path := OUT_DIR + shot_name + ".webp"
 		root.get_texture().get_image().save_webp(path, true, 0.9)
