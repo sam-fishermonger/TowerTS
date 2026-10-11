@@ -84,14 +84,14 @@ func _run() -> void:
 	quit()
 
 
-## Premier monde gagné avec 3 étoiles, et la moitié du deuxième.
+## Premier monde gagné avec 3 étoiles (sauf un niveau), et le début du deuxième.
 func _prepare_progress() -> void:
 	Engine.set_meta(Progress.SAVE_PATH_META, SAVE_PATH)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	Progress.clear_cache()
 	# Pas de partie enregistrée : l'écran titre n'a pas de bouton Reprendre.
 	SavedGame.clear()
-	var stars := [3, 3, 3, 3, 3, 3, 3, 3, 2, 3]
+	var stars := [3, 3, 3, 3, 3, 3, 3, 2, 3, 3, 3, 2]
 	for i in stars.size():
 		Progress.record_victory(CAMPAIGN.levels[i], stars[i])
 

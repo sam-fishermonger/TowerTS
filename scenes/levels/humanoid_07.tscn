@@ -262,7 +262,7 @@ bonus_gold = 0
 health_multiplier = 4.0
 
 [node name="Humanoid07" instance=ExtResource("1_level")]
-level_name = "Niveau 3-7"
+level_name = "Niveau 3-9"
 starting_gold = 360
 starting_lives = 20
 tower_types = Array[ExtResource("2_tower_data")]([ExtResource("t0_cannon"), ExtResource("t1_gatling"), ExtResource("t2_sniper"), ExtResource("t3_mortar"), ExtResource("t4_frost"), ExtResource("t5_beam")])

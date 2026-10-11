@@ -25,5 +25,5 @@ enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_soldat"), ExtResou
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_general")])
 raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_maraudeur")])
 thieves = Array[ExtResource("2_enemy_data")]([ExtResource("v0_tire_laine")])
-levels = Array[String](["res://scenes/levels/humanoid_01.tscn", "res://scenes/levels/humanoid_02.tscn", "res://scenes/levels/humanoid_03.tscn", "res://scenes/levels/humanoid_04.tscn", "res://scenes/levels/humanoid_05.tscn", "res://scenes/levels/humanoid_06.tscn", "res://scenes/levels/humanoid_07.tscn"])
+levels = Array[String](["res://scenes/levels/humanoid_01.tscn", "res://scenes/levels/humanoid_02.tscn", "res://scenes/levels/humanoid_03.tscn", "res://scenes/levels/humanoid_04.tscn", "res://scenes/levels/humanoid_05.tscn", "res://scenes/levels/humanoid_06.tscn", "res://scenes/levels/humanoid_08.tscn", "res://scenes/levels/humanoid_09.tscn", "res://scenes/levels/humanoid_07.tscn"])
 tileset = ExtResource("t_tileset")

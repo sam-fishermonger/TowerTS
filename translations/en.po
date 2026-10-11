@@ -3129,3 +3129,57 @@ msgstr "Skulls earned: endless mode %d  ·  mutators %d"
 
 msgid "Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d"
 msgstr "Stars earned: campaign %d  ·  Conquest %d  ·  free levels %d"
+
+msgid "Niveau 1-8"
+msgstr "Level 1-8"
+
+msgid "Niveau 1-9"
+msgstr "Level 1-9"
+
+msgid "Niveau 2-8"
+msgstr "Level 2-8"
+
+msgid "Niveau 2-9"
+msgstr "Level 2-9"
+
+msgid "Niveau 3-8"
+msgstr "Level 3-8"
+
+msgid "Niveau 3-9"
+msgstr "Level 3-9"
+
+msgid "Niveau 4-8"
+msgstr "Level 4-8"
+
+msgid "Niveau 4-9"
+msgstr "Level 4-9"
+
+msgid "Le Hall d'assemblage"
+msgstr "The Assembly Hall"
+
+msgid "Deux cloisons coupent le hall : trois portes à relier au QG par un seul goulet."
+msgstr "Two partitions split the hall: three doors to link to the HQ through a single bottleneck."
+
+msgid "Le Marché couvert"
+msgstr "The Covered Market"
+
+msgid "Le QG est au fond, entre les étals, et les Aviateurs passent au-dessus des allées."
+msgstr "The HQ sits at the back, between the stalls, and Aviators fly over the aisles."
+
+msgid "Les Hauts-Fourneaux"
+msgstr "The Blast Furnaces"
+
+msgid "Conquête · Les Hauts-Fourneaux"
+msgstr "Conquest · The Blast Furnaces"
+
+msgid "Trois portes, une seule spirale autour du QG, et des Récupérateurs qui démontent ouvriers et bâtiments."
+msgstr "Three gates, a single spiral around the HQ, and Scavengers that take apart workers and buildings."
+
+msgid "La Crypte royale"
+msgstr "The Royal Crypt"
+
+msgid "Conquête · La Crypte royale"
+msgstr "Conquest · The Royal Crypt"
+
+msgid "Deux entrées, un seul couloir autour du QG, des Pilleurs de tombes dès la deuxième vague et la Liche pour finir."
+msgstr "Two entrances, a single corridor around the HQ, Grave Robbers from the second wave on, and the Lich to finish."

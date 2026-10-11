@@ -25,5 +25,5 @@ enemies = Array[ExtResource("2_enemy_data")]([ExtResource("e0_squelette"), ExtRe
 bosses = Array[ExtResource("2_enemy_data")]([ExtResource("b0_liche")])
 raiders = Array[ExtResource("2_enemy_data")]([ExtResource("r0_pilleur")])
 thieves = Array[ExtResource("2_enemy_data")]([ExtResource("v0_detrousseur")])
-levels = Array[String](["res://scenes/levels/undead_01.tscn", "res://scenes/levels/undead_02.tscn", "res://scenes/levels/undead_03.tscn", "res://scenes/levels/undead_04.tscn", "res://scenes/levels/undead_05.tscn", "res://scenes/levels/undead_06.tscn", "res://scenes/levels/undead_07.tscn"])
+levels = Array[String](["res://scenes/levels/undead_01.tscn", "res://scenes/levels/undead_02.tscn", "res://scenes/levels/undead_03.tscn", "res://scenes/levels/undead_04.tscn", "res://scenes/levels/undead_05.tscn", "res://scenes/levels/undead_06.tscn", "res://scenes/levels/undead_08.tscn", "res://scenes/levels/undead_09.tscn", "res://scenes/levels/undead_07.tscn"])
 tileset = ExtResource("t_tileset")

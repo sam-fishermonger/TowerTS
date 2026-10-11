@@ -12,6 +12,8 @@ const LEVELS: Array[String] = [
 	"res://scenes/levels/free_02.tscn",
 	"res://scenes/levels/free_03.tscn",
 	"res://scenes/levels/free_04.tscn",
+	"res://scenes/levels/free_05.tscn",
+	"res://scenes/levels/free_06.tscn",
 ]
 ## Nom, monde de la campagne (son biome), nombre de points d'apparition et présentation de chaque niveau.
 const INFO: Array[Dictionary] = [
@@ -23,6 +25,10 @@ const INFO: Array[Dictionary] = [
 		description = "Le QG est dans un coin, les rues arrivent de deux côtés et les Aviateurs survolent vos murs."},
 	{name = "Le Cimetière", world = 3, spawns = 3,
 		description = "Trois entrées et des morts qui se relèvent : il faut un labyrinthe qui tienne la distance."},
+	{name = "Le Hall d'assemblage", world = 1, spawns = 3,
+		description = "Deux cloisons coupent le hall : trois portes à relier au QG par un seul goulet."},
+	{name = "Le Marché couvert", world = 2, spawns = 2,
+		description = "Le QG est au fond, entre les étals, et les Aviateurs passent au-dessus des allées."},
 ]
 
 
