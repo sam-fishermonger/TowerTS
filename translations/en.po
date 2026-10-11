@@ -3337,3 +3337,227 @@ msgstr "Master Builders"
 
 msgid "Conquête : les bâtiments demandent 25 % de pierre en moins."
 msgstr "Conquest: buildings need 25% less stone."
+
+msgid "Armurerie"
+msgstr "Armory"
+
+msgid "L'équipement des tours, et les coffrets gagnés en finissant des niveaux."
+msgstr "Tower equipment, and the crates earned by finishing levels."
+
+msgid "L'équipement posé sur un type de tour renforce toutes ses tours, dans toutes les parties."
+msgstr "Equipment fitted to a tower type strengthens all its towers, in every game."
+
+msgid "Emplacement libre : choisissez un objet dans l'inventaire."
+msgstr "Empty slot: pick an item from the inventory."
+
+msgid "Finissez des niveaux pour en gagner : plus la difficulté est haute, plus ils sont rares."
+msgstr "Finish levels to earn some: the higher the difficulty, the rarer they are."
+
+msgid "Aucun objet pour l'instant. Ouvrez des coffrets pour en trouver."
+msgstr "No items yet. Open crates to find some."
+
+msgid "Cet objet est réservé à : %s."
+msgstr "This item is reserved for: %s."
+
+msgid "%s porte déjà un objet de cette sorte."
+msgstr "%s already has an item of this kind."
+
+msgid "Les emplacements de %s sont pleins : retirez d'abord un objet."
+msgstr "%s has no free slot: remove an item first."
+
+msgid "Trois objets fondus : un %s de plus à ouvrir."
+msgstr "Three items merged: one more %s to open."
+
+msgid "Niv. 1 : %s dégâts, %s tirs/s, portée %s"
+msgstr "Lv. 1: %s damage, %s shots/s, range %s"
+
+msgid "Cliquer pour retirer l'objet."
+msgstr "Click to remove the item."
+
+msgid "Coffrets à ouvrir : %d"
+msgstr "Crates to open: %d"
+
+msgid "Obtenu : "
+msgstr "Found: "
+
+msgid "Fond les trois plus anciens objets libres de cette rareté en un %s (%d libres)."
+msgstr "Merges the three oldest free items of this rarity into a %s (%d free)."
+
+msgid "Inventaire : %d"
+msgstr "Inventory: %d"
+
+msgid "Cliquer pour le retirer."
+msgstr "Click to remove it."
+
+msgid "Cliquer pour le poser sur : %s."
+msgstr "Click to fit it on: %s."
+
+msgid "Réservé : %s"
+msgstr "Reserved: %s"
+
+msgid "Sur : %s"
+msgstr "On: %s"
+
+msgid "%s obtenu ! À ouvrir ici ou dans l'Armurerie."
+msgstr "%s found! Open it here or in the Armory."
+
+msgid "%s ouvert :"
+msgstr "%s opened:"
+
+msgid "Ouvrir le coffret"
+msgstr "Open the crate"
+
+msgid "Équipement : %s"
+msgstr "Equipment: %s"
+
+msgid "Fondre 3 communs"
+msgstr "Merge 3 common"
+
+msgid "Fondre 3 rares"
+msgstr "Merge 3 rare"
+
+msgid "Fondre 3 épiques"
+msgstr "Merge 3 epic"
+
+msgid "Commun"
+msgstr "Common"
+
+msgid "Rare"
+msgstr "Rare"
+
+msgid "Épique"
+msgstr "Epic"
+
+msgid "Légendaire"
+msgstr "Legendary"
+
+msgid "Coffret commun"
+msgstr "Common crate"
+
+msgid "Coffret rare"
+msgstr "Rare crate"
+
+msgid "Coffret épique"
+msgstr "Epic crate"
+
+msgid "Coffret légendaire"
+msgstr "Legendary crate"
+
+msgid "Lunette de visée"
+msgstr "Scope"
+
+msgid "Viseur de précision"
+msgstr "Precision Sight"
+
+msgid "Trophée de chasse"
+msgstr "Hunting Trophy"
+
+msgid "Plumes de faucon"
+msgstr "Falcon Feathers"
+
+msgid "Braises"
+msgstr "Embers"
+
+msgid "Éclats de givre"
+msgstr "Frost Shards"
+
+msgid "Œil de lynx"
+msgstr "Lynx Eye"
+
+msgid "Boulets lestés"
+msgstr "Weighted Shot"
+
+msgid "Balles de tungstène"
+msgstr "Tungsten Rounds"
+
+msgid "Canons rotatifs"
+msgstr "Rotary Barrels"
+
+msgid "Charge creuse"
+msgstr "Shaped Charge"
+
+msgid "Cœur de glace"
+msgstr "Ice Heart"
+
+msgid "Lentille focale"
+msgstr "Focal Lens"
+
+msgid "Spores tenaces"
+msgstr "Lingering Spores"
+
+msgid "Condensateur"
+msgstr "Capacitor"
+
+msgid "Bobinage de cuivre"
+msgstr "Copper Winding"
+
+msgid "Aimant au néodyme"
+msgstr "Neodymium Magnet"
+
+msgid "Eau bénite"
+msgstr "Holy Water"
+
+msgid "Un coup sur %d fait double dégâts"
+msgstr "One hit in %d deals double damage"
+
+msgid "+%d %% dégâts aux boss"
+msgstr "+%d%% damage to bosses"
+
+msgid "+%d %% dégâts aux volants"
+msgstr "+%d%% damage to flyers"
+
+msgid "Brûle : %d %% des dégâts par seconde, %s s"
+msgstr "Burns: %d%% of damage per second, %s s"
+
+msgid "Ralentit de %d %% pendant %s s"
+msgstr "Slows by %d%% for %s s"
+
+msgid "Révèle les furtifs à %d %% de sa portée"
+msgstr "Reveals stealthy enemies within %d%% of its range"
+
+msgid "Fait reculer de %d"
+msgstr "Knocks back by %d"
+
+msgid "Ignore l'armure, +%d %% dégâts"
+msgstr "Ignores armor, +%d%% damage"
+
+msgid "+%d %% rayon d'explosion"
+msgstr "+%d%% blast radius"
+
+msgid "Ralentissement : +%d points"
+msgstr "Slow: +%d points"
+
+msgid "+%d %% montée en puissance"
+msgstr "+%d%% ramp-up"
+
+msgid "+%d %% dégâts de brûlure"
+msgstr "+%d%% burn damage"
+
+msgid "Nuage : +%s s"
+msgstr "Cloud: +%s s"
+
+msgid "+%d rebond"
+msgstr "+%d bounce"
+
+msgid "+%d rebonds"
+msgstr "+%d bounces"
+
+msgid "Renfort donné : +%d points"
+msgstr "Boost given: +%d points"
+
+msgid "+%d %% recul"
+msgstr "+%d%% knockback"
+
+msgid "Consacre %s s de plus"
+msgstr "Consecrates %s s longer"
+
+msgid "%d coffret"
+msgid_plural "%d coffrets"
+msgstr[0] "%d crate"
+msgstr[1] "%d crates"
+
+msgid "Munitions affûtées"
+msgstr "Honed Rounds"
+
+msgid "Culasse rapide"
+msgstr "Quick Breech"

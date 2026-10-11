@@ -152,6 +152,12 @@ func _refresh() -> void:
 	for specialization in data.get_specializations():
 		description_label.text += "\n" + (tr("Croisement : %s") if specialization.crossing
 			else tr("Spécialisation : %s")) % tr(specialization.display_name)
+	# Équipement posé sur ce type de tour dans l'Armurerie : déjà compté lui aussi.
+	if not Equipment.get_tower_effects(data.resource_path).is_empty():
+		var names: Array[String] = []
+		for item in Equipment.get_equipped(data.resource_path):
+			names.append(Equipment.item_name(item))
+		description_label.text += "\n" + tr("Équipement : %s") % ", ".join(names)
 	if placed and tower.is_boosted():
 		description_label.text += "\n" + tr("Renforcée par une Bobine : +%d %% de dégâts, +%d %% de cadence") % [
 			roundi(tower.boost_damage * 100.0), roundi(tower.boost_fire_rate * 100.0)]

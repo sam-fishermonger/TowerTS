@@ -16,8 +16,8 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 | Niveaux libres : les tours font le labyrinthe | Éditeur de niveau, partage par code |
 | ![Mode Expédition](docs/captures/expedition.webp) | ![Menu Jouer](docs/captures/jouer.webp) |
 | Expédition : cinq niveaux à la suite, un coffre au choix | Menu Jouer : les modes se débloquent avec les niveaux gagnés |
-| ![Pause](docs/captures/pause.webp) | |
-| En pause : le trajet des monstres revient, Recommencer ou Quitter | |
+| ![Pause](docs/captures/pause.webp) | ![Armurerie](docs/captures/armurerie.webp) |
+| En pause : le trajet des monstres revient, Recommencer ou Quitter | Armurerie : l'équipement des tours, les coffrets à ouvrir |
 
 ## Prérequis
 
@@ -203,6 +203,40 @@ Un pouvoir est une ressource `Power` (`resources/powers/`). L'amélioration qui 
 | Au-delà | Cloche funèbre | Glas profond | ☠ 4 | +20 % de portée, étourdit 0,3 s de plus. |
 
 Une spécialisation est une amélioration de l'arbre (`Perk`) avec `paid_with_endless_stars` et `specializes_tower` (la tour visée) : ses bonus de tour (groupes **Tours** et **Spécialisation**) ne s'appliquent qu'à cette tour.
+
+### Armurerie et équipement
+
+L'**Armurerie** (écran titre) range l'**équipement** gagné d'une partie à l'autre. Un objet se pose sur un **type de tour** (le Canon, le Sniper…) et renforce toutes les tours de ce type, dans tous les modes sauf le Défi du jour et le tutoriel. Chaque type de tour a **3 emplacements**, sans deux objets de la même sorte ; un clic sur un objet de l'inventaire le pose sur la tour choisie, un clic sur un emplacement le retire. La fiche d'une tour en jeu liste son équipement, et ses statistiques le comptent déjà.
+
+Les objets ont **4 raretés** : Commun, Rare, Épique et Légendaire. Plus la rareté est haute, plus l'effet est fort ; un objet épique ou légendaire a en plus un bonus tiré au sort (dégâts, portée ou cadence, jamais le même que son effet).
+
+| Objet | Tour | Effet (Commun → Légendaire) |
+|---|---|---|
+| Munitions affûtées | toutes | +6 → +22 % de dégâts |
+| Lunette de visée | toutes | +5 → +18 % de portée |
+| Culasse rapide | toutes | +5 → +18 % de cadence |
+| Viseur de précision | toutes | un coup sur 10 → 4 fait double dégâts |
+| Trophée de chasse | toutes | +15 → +60 % de dégâts aux boss |
+| Plumes de faucon | toutes | +15 → +60 % de dégâts aux volants |
+| Braises | toutes | brûlure de 15 → 45 % des dégâts par seconde, 2 s |
+| Éclats de givre | toutes | ralentit de 10 → 25 % pendant 1 s |
+| Œil de lynx | toutes | révèle les furtifs à 50 → 100 % de la portée |
+| Boulets lestés | Canon | recul de 5 → 17 |
+| Balles de tungstène | Sniper | ignore l'armure, +5 → +25 % de dégâts |
+| Canons rotatifs | Mitrailleuse | +10 → +32 % de cadence |
+| Charge creuse | Mortier | +10 → +35 % de rayon d'explosion |
+| Cœur de glace | Givre | ralentit 8 → 24 points de plus |
+| Lentille focale | Rayon | +10 → +40 % de montée en puissance |
+| Napalm | Lance-flammes | +15 → +60 % de dégâts de brûlure |
+| Spores tenaces | Pesticide | nuage 1 → 4 s de plus |
+| Condensateur | Arc électrique | 1 → 3 rebonds de plus |
+| Bobinage de cuivre | Bobine | renfort donné +3 → +12 points |
+| Aimant au néodyme | Électroaimant | +15 → +60 % de recul |
+| Eau bénite | Encensoir | consacre 1 → 4 s de plus |
+
+Les objets sortent des **coffrets**. Gagner un niveau de la campagne, un niveau libre ou un niveau de la Conquête donne un coffret **à coup sûr la première fois** dans une difficulté, puis avec 30 % (Facile), 40 % (Moyen), 50 % (Difficile) ou 60 % (Cauchemar) de chances ; pas d'éditeur, de tutoriel, de mode infini, de Défi du jour ni d'Expédition. La **rareté** du coffret dépend de la difficulté (pour 60 %) et de la place du niveau dans son monde (pour 40 %) : de 70 % de Commun et 1 % de Légendaire (Facile, premier niveau) à 20 % de Commun et 12 % de Légendaire (Cauchemar, dernier niveau). L'écran de fin l'annonce avec un bouton **Ouvrir le coffret** qui montre tout de suite l'objet obtenu ; pas ouvert, le coffret attend dans l'Armurerie, dont le bouton compte ceux à ouvrir. Ouvrir un coffret en tire un objet de sa rareté (les objets réservés à une tour sont deux fois moins fréquents). **Fondre** trois objets libres d'une même rareté (les plus anciens) donne un coffret de la rareté au-dessus. Ces coffrets n'ont rien à voir avec les coffres lâchés en jeu par les porteurs, dont le bonus ne dure que le niveau.
+
+Tout est dans `scripts/data/equipment.gd` (objets, chances, effets, appliqués par `TowerData.get_stats_at_level()`) et `scripts/ui/armory_screen.gd` ; l'équipement est enregistré dans la section `equipment` de la progression et s'efface avec elle.
 
 ## Images
 
@@ -422,7 +456,7 @@ Une nouvelle tour se crée sans code si elle réutilise un comportement existant
 ```
 project.godot        Configuration du projet
 export_presets.cfg   Réglages d'export (Windows, Linux, Web, Android)
-scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, lexique, succès, HUD, fiches et boutons du son
+scenes/ui/           Écran titre (scène de démarrage), sélection des mondes, arbre des améliorations, Armurerie, lexique, succès, HUD, fiches et boutons du son
 scenes/levels/       level.tscn (base) et les niveaux qui en héritent
 scenes/enemies/      Ennemi générique (Enemy + Health + HealthBar)
 scenes/towers/       ProjectileTower, PulseTower, BeamTower, FlameTower et RailTower
@@ -432,7 +466,7 @@ scripts/entities/    Classe de base Entity
 scripts/components/  Composants réutilisables (santé, barre de vie)
 scripts/map/         GameMap
 scripts/effects/     Effets visuels (explosion, textes flottants, taches, voile rouge de perte de vies)
-scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree
+scripts/data/        Ressources de données : Campaign, World, EnemyData, TowerData, TowerUpgrade, WaveData, SpawnGroup, Perk, PerkTree, Equipment (équipement des tours)
 resources/tilesets/  Tuiles de chaque biome (TileSet)
 tools/               Générateurs des effets sonores (generate_sounds.py) et des tuiles (generate_tilesets.py), textes à traduire (textes_a_traduire.py), captures d'écran (captures.gd)
 docs/captures/       Captures d'écran du README

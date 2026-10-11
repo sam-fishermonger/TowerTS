@@ -50,6 +50,7 @@ var _locked_features := {}
 @onready var back_button: Button = %BackButton
 @onready var subtitle: Label = %Subtitle
 @onready var perks_button: Button = %PerksButton
+@onready var armory_button: Button = %ArmoryButton
 @onready var worlds_button: Button = %WorldsButton
 @onready var daily_button: Button = %DailyButton
 @onready var conquest_button: Button = %ConquestButton
@@ -78,6 +79,7 @@ func _ready() -> void:
 	tutorial_button.pressed.connect(func() -> void: open_level(Tutorial.LEVEL_PATH))
 	worlds_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(WORLD_SELECT_SCREEN))
 	perks_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(PERK_TREE_SCREEN))
+	armory_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(Equipment.ARMORY_SCREEN))
 	lock_bubble = LockBubble.new()
 	add_child(lock_bubble)
 	_connect_feature(daily_button, Unlocks.Feature.DAILY,
@@ -103,7 +105,7 @@ func _ready() -> void:
 	if demo.level:
 		_on_demo_level_started(demo.level)
 	for button in [resume_button, play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button,
-			expedition_button, editor_button, back_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]:
+			expedition_button, editor_button, back_button, perks_button, armory_button, lexicon_button, achievements_button, options_button, quit_button]:
 		_add_hover_effect(button)
 	_play_intro()
 	(resume_button if resume_button.visible else play_button).grab_focus()
@@ -112,7 +114,7 @@ func _ready() -> void:
 ## Boutons du menu principal (sans Reprendre, affiché seulement avec une partie
 ## enregistrée), et ceux du choix du mode (sous « Jouer »).
 func get_main_buttons() -> Array[Button]:
-	return [play_button, perks_button, lexicon_button, achievements_button, options_button, quit_button]
+	return [play_button, perks_button, armory_button, lexicon_button, achievements_button, options_button, quit_button]
 
 
 ## Le tutoriel n'y est plus une fois fini ou passé (il revient si la progression est effacée).
@@ -290,6 +292,11 @@ func _refresh() -> void:
 		perks_button.text += "  ·  ★ %d" % available
 	if endless_available > 0:
 		perks_button.text += "  ·  %s %d" % [Progress.SKULL, endless_available]
+	# Les coffrets pas encore ouverts sont signalés sur le bouton de l'Armurerie.
+	var boxes := Equipment.get_boxes().size()
+	armory_button.text = tr("Armurerie")
+	if boxes > 0:
+		armory_button.text += "  ·  " + tr_n("%d coffret", "%d coffrets", LevelStats.plural_count(boxes)) % boxes
 	reset_button.visible = any_won
 	_refresh_resume(not is_play_menu_open())
 	# Le bouton du tutoriel n'est montré que tant qu'il n'est ni fini ni passé : il est alors conseillé.

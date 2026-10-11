@@ -117,6 +117,13 @@ var _pending_rules_panel := Callable()
 var _mutator_result: Array[int] = []
 ## Modes ouverts par la victoire (Unlocks.Feature), dits sur l'écran de fin.
 var _unlocked_features: Array = []
+## Rareté du coffret d'équipement gagné, dit sur l'écran de fin (-1 = aucun).
+var _box_result := -1
+## Objet sorti du coffret ouvert sur l'écran de fin (vide tant qu'il n'est pas ouvert).
+var _box_item: Dictionary = {}
+## Écran de fin : bouton qui ouvre le coffret gagné, puis l'objet obtenu (null sans coffret).
+var box_button: Button
+var box_reveal: HBoxContainer
 ## … et règles, au milieu de la carte jusqu'à la première vague.
 var challenge_rules: PanelContainer
 ## Mode Conquête : pierre, ouvriers et bouton de recrutement, dans la barre du haut (null
@@ -253,14 +260,8 @@ func _notification(what: int) -> void:
 		# L'aperçu de vague ne se refait que si son texte change : on l'oublie.
 		_wave_preview_text = ""
 		show_next_wave(_next_wave, _next_wave_early_bonus, _next_wave_number, _next_wave_bonus)
-	elif _end_screen.is_valid():
-		_end_screen.call()
-		if not _mutator_result.is_empty():
-			show_mutator_result(_mutator_result[0], _mutator_result[1])
-		if not _unlocked_features.is_empty():
-			show_unlocked_features(_unlocked_features)
-		if end_stats.visible:
-			_center_end_panel.call_deferred()
+	else:
+		_refresh_end_screen()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -1179,6 +1180,98 @@ func show_unlocked_features(features: Array) -> void:
 	for feature: int in features:
 		end_message.text += "\n" + tr("Vous avez débloqué %s !") % tr(Unlocks.NAMES[feature])
 	_unlocked_features = features
+
+
+## Coffret d'équipement gagné (Equipment) : sa rareté, et un bouton pour l'ouvrir tout de
+## suite. Pas ouvert, il attend dans l'Armurerie.
+func show_box_result(rarity: int) -> void:
+	_box_result = rarity
+	if _box_item.is_empty():
+		end_message.text += "\n" + tr("%s obtenu ! À ouvrir ici ou dans l'Armurerie.") % Equipment.box_name(rarity)
+	else:
+		end_message.text += "\n" + tr("%s ouvert :") % Equipment.box_name(rarity)
+	if box_button == null:
+		box_button = Button.new()
+		box_button.name = "OpenBoxButton"
+		box_button.custom_minimum_size.y = 44.0
+		box_button.pressed.connect(open_won_box)
+		box_reveal = HBoxContainer.new()
+		box_reveal.alignment = BoxContainer.ALIGNMENT_CENTER
+		box_reveal.add_theme_constant_override(&"separation", 10)
+		end_message.add_sibling(box_button)
+		end_message.add_sibling(box_reveal)
+	UiStyle.style_button(box_button, Equipment.rarity_color(rarity))
+	box_button.text = tr("Ouvrir le coffret")
+	box_button.visible = _box_item.is_empty()
+	box_reveal.visible = not _box_item.is_empty()
+	for child in box_reveal.get_children():
+		box_reveal.remove_child(child)
+		child.queue_free()
+	if not _box_item.is_empty():
+		_fill_box_reveal(_box_item)
+
+
+## Ouvre le coffret gagné (le dernier de cette rareté, ajouté par la victoire) : l'objet va
+## dans l'inventaire et s'affiche à la place du bouton.
+func open_won_box() -> Dictionary:
+	if _box_result < 0 or not _box_item.is_empty():
+		return _box_item
+	var index := Equipment.get_boxes().rfind(_box_result)
+	if index < 0:
+		return {}
+	_box_item = Equipment.open_box(index)
+	Sound.play(&"coins")
+	_refresh_end_screen()
+	# L'objet apparaît dans un éclair de la couleur de sa rareté.
+	box_reveal.modulate = Equipment.rarity_color(_box_item.rarity) * 2.0
+	box_reveal.modulate.a = 0.0
+	create_tween().tween_property(box_reveal, ^"modulate", Color.WHITE, 0.4)
+	if next_level_button.visible:
+		next_level_button.grab_focus()
+	else:
+		%RestartButton.grab_focus()
+	return _box_item
+
+
+## Badge, nom (couleur de sa rareté) et effets de l'objet sorti du coffret.
+func _fill_box_reveal(item: Dictionary) -> void:
+	var badge := EquipmentIcon.new()
+	badge.icon = Equipment.get_definition(item.kind).get("icon", "box")
+	badge.rarity = item.rarity
+	badge.custom_minimum_size = Vector2(48, 48)
+	box_reveal.add_child(badge)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override(&"separation", 0)
+	box_reveal.add_child(column)
+	var color := Equipment.rarity_color(item.rarity)
+	var title := Label.new()
+	title.text = "%s  ·  %s" % [Equipment.item_name(item), Equipment.rarity_name(item.rarity)]
+	title.add_theme_color_override(&"font_color", color.lightened(0.15))
+	column.add_child(title)
+	var reserved := Equipment.get_reserved_tower(item)
+	var lines := Equipment.describe_item(item)
+	if not reserved.is_empty():
+		lines.append(tr("Réservé : %s") % tr((load(reserved) as TowerData).display_name))
+	var effects := Label.new()
+	effects.text = "\n".join(lines)
+	effects.add_theme_font_size_override(&"font_size", 14)
+	effects.add_theme_color_override(&"font_color", Color(0.8, 0.95, 0.8))
+	column.add_child(effects)
+
+
+## Refait le texte de l'écran de fin (après l'ouverture du coffret), comme au changement de langue.
+func _refresh_end_screen() -> void:
+	if not _end_screen.is_valid():
+		return
+	_end_screen.call()
+	if not _mutator_result.is_empty():
+		show_mutator_result(_mutator_result[0], _mutator_result[1])
+	if not _unlocked_features.is_empty():
+		show_unlocked_features(_unlocked_features)
+	if _box_result >= 0:
+		show_box_result(_box_result)
+	if end_stats.visible:
+		_center_end_panel.call_deferred()
 
 
 # --- Fenêtres de détail -------------------------------------------------------

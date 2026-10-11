@@ -117,6 +117,8 @@ var score := 0
 ## campagne déjà gagné, hors mode infini. Ils s'ajoutent à la difficulté, et la victoire
 ## rapporte des étoiles infinies.
 var mutators: Array[int] = []
+## Rareté du coffret d'équipement gagné en fin de partie (Equipment), -1 = aucun.
+var box_won := -1
 ## Niveau fait dans l'éditeur (vide sinon, voir CustomLevel) : il ne compte ni pour la
 ## progression ni pour les succès, et la partie finie ramène à l'éditeur.
 var custom_level: Dictionary = {}
@@ -1120,12 +1122,15 @@ func _end_game(victory: bool) -> void:
 		hud.show_end_screen(victory, victory and has_next_level(), get_stars() if victory else 0)
 	elif conquest and victory:
 		var stars_won := get_stars()
+		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		_announce_achievements(Achievements.on_conquest_victory(stats))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record)
+		_roll_equipment_box(first_win)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
 		var won_before := Unlocks.get_levels_won()
+		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		var unlocked := Unlocks.unlocked_between(won_before, Unlocks.get_levels_won())
 		_announce_achievements(Achievements.on_victory(stats, lives, gold, difficulty))
@@ -1136,6 +1141,7 @@ func _end_game(victory: bool) -> void:
 			hud.show_mutator_result(Mutators.stars_for(mutators), before)
 		if not unlocked.is_empty():
 			hud.show_unlocked_features(unlocked)
+		_roll_equipment_box(first_win)
 	elif is_endless:
 		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
 		hud.show_endless_end_screen(get_waves_cleared(), get_endless_stars(),
@@ -1148,6 +1154,15 @@ func _end_game(victory: bool) -> void:
 	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
+
+
+## Victoire dans un mode qui donne des étoiles : peut-être un coffret d'équipement
+## (assuré pour la première victoire du niveau dans cette difficulté), annoncé à l'écran de fin.
+func _roll_equipment_box(first_win: bool) -> void:
+	var rarity := Equipment.roll_victory_box(scene_file_path, difficulty, first_win)
+	if rarity >= 0:
+		box_won = rarity
+		hud.show_box_result(rarity)
 
 
 ## Fin d'une étape de l'expédition : on garde les vies pour la suivante, ou l'expédition

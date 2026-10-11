@@ -278,11 +278,12 @@ static func set_value(section: String, key: String, value: Variant) -> void:
 	_save(config)
 
 
-## Efface les étoiles, les records du mode infini, des mutateurs, du défi du jour et des expéditions, et les
-## améliorations achetées avec (les réglages sont gardés).
+## Efface les étoiles, les records du mode infini, des mutateurs, du défi du jour et des expéditions, les
+## améliorations achetées avec, et l'équipement (les réglages sont gardés).
 static func reset_campaign() -> void:
 	var config := _load()
-	var sections := ["endless_waves", "endless_stars", "mutator_stars", "perks", "daily", "daily_won", "expedition"]
+	var sections := ["endless_waves", "endless_stars", "mutator_stars", "perks", "daily", "daily_won", "expedition",
+		Equipment.SECTION]
 	for d in Difficulty.COUNT:
 		sections.append(stars_section(d))
 	for section in sections:
@@ -331,6 +332,7 @@ static func _cache_of(config: ConfigFile) -> Dictionary:
 static func clear_cache() -> void:
 	Engine.remove_meta(CACHE_META)
 	Perks.clear_cache()
+	Equipment.clear_cache()
 
 
 ## Lecture du fichier, pour l'écrire ensuite (les lectures passent par _read()).
@@ -343,6 +345,7 @@ static func _load() -> ConfigFile:
 
 static func _save(config: ConfigFile) -> void:
 	Perks.clear_cache()
+	Equipment.clear_cache()
 	Engine.set_meta(CACHE_META, _cache_of(config))
 	var error := config.save(get_save_path())
 	if error != OK:

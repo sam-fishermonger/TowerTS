@@ -223,6 +223,15 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 22
 text = "Améliorations"
 
+[node name="ArmoryButton" type="Button" parent="Center/Panel/Menu"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+tooltip_text = "L'équipement des tours, et les coffrets gagnés en finissant des niveaux."
+theme_override_font_sizes/font_size = 22
+text = "Armurerie"
+
 [node name="LexiconButton" type="Button" parent="Center/Panel/Menu"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(260, 44)
