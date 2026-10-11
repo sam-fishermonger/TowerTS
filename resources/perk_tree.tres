@@ -743,10 +743,305 @@ column = 30.5
 row = 2
 conquest_building_health_multiplier = 1.4
 
+[sub_resource type="Resource" id="Effect_censer_bell"]
+script = ExtResource("2_perk")
+id = "cross_censer_bell_bell"
+display_name = "Glas ardent"
+description = "L'onde de la Cloche funèbre brûle, 6 dégâts par seconde pendant 2 s, et consacre les morts 3 s."
+specializes_tower = "res://resources/towers/bell.tres"
+dot_damage_bonus = 6.0
+dot_duration_bonus = 2.0
+revive_block_bonus = 3.0
+crossing = true
+
+[sub_resource type="Resource" id="Perk_critique"]
+script = ExtResource("2_perk")
+id = "critique"
+display_name = "Coup critique"
+description = "Un coup sur 10 de chaque tour fait double dégâts."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_artilleur")])
+column = 0.0
+row = 4
+critical_every = 10
+
+[sub_resource type="Resource" id="Perk_ingenieurs"]
+script = ExtResource("2_perk")
+id = "ingenieurs"
+display_name = "Ingénieurs"
+description = "Les améliorations des tours coûtent encore 15 % moins cher."
+cost = 10
+requires = Array[Resource]([SubResource("Perk_artilleur")])
+column = 1.0
+row = 4
+upgrade_cost_multiplier = 0.85
+
+[sub_resource type="Resource" id="Perk_placements"]
+script = ExtResource("2_perk")
+id = "placements"
+display_name = "Placements"
+description = "Intérêts : 5 % de plus sur l'or gardé, et 25 or de plus au plafond."
+cost = 10
+requires = Array[Resource]([SubResource("Perk_coffres")])
+column = 2.0
+row = 4
+interest_rate_bonus = 0.05
+interest_cap_bonus = 25
+
+[sub_resource type="Resource" id="Perk_chasseur_primes"]
+script = ExtResource("2_perk")
+id = "chasseur_primes"
+display_name = "Chasseur de primes"
+description = "Les élites et les boss rapportent 50 % d'or en plus."
+cost = 9
+requires = Array[Resource]([SubResource("Perk_coffres")])
+column = 3.0
+row = 4
+elite_reward_multiplier = 1.5
+
+[sub_resource type="Resource" id="Perk_dernier_rempart"]
+script = ExtResource("2_perk")
+id = "dernier_rempart"
+display_name = "Dernier rempart"
+description = "Une fois par partie, au lieu de perdre, on repart avec 10 vies."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_citadelle")])
+column = 4.0
+row = 3
+last_stand_lives = 10
+
+[sub_resource type="Resource" id="Perk_barbacane"]
+script = ExtResource("2_perk")
+id = "barbacane"
+display_name = "Barbacane"
+description = "Les boss qui atteignent la base retirent moitié moins de vies."
+cost = 8
+requires = Array[Resource]([SubResource("Perk_citadelle")])
+column = 5.0
+row = 3
+boss_lives_multiplier = 0.5
+
+[sub_resource type="Resource" id="Perk_savoir_ruche"]
+script = ExtResource("2_perk")
+id = "savoir_ruche"
+display_name = "Entomologie"
+description = "Les tours font 15 % de dégâts en plus aux insectoïdes (monstres de La Ruche)."
+cost = 6
+required_world = 0
+column = 32.5
+row = 0
+enemy_biome = "insectoid"
+biome_damage_multiplier = 1.15
+
+[sub_resource type="Resource" id="Perk_savoir_fonderie"]
+script = ExtResource("2_perk")
+id = "savoir_fonderie"
+display_name = "Mécanique"
+description = "Les tours font 15 % de dégâts en plus aux machines (monstres de La Fonderie)."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_savoir_ruche")])
+required_world = 1
+column = 32.5
+row = 1
+enemy_biome = "mecha"
+biome_damage_multiplier = 1.15
+
+[sub_resource type="Resource" id="Perk_savoir_cite"]
+script = ExtResource("2_perk")
+id = "savoir_cite"
+display_name = "Anatomie"
+description = "Les tours font 15 % de dégâts en plus aux humanoïdes (monstres de La Cité)."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_savoir_fonderie")])
+required_world = 2
+column = 32.5
+row = 2
+enemy_biome = "humanoid"
+biome_damage_multiplier = 1.15
+
+[sub_resource type="Resource" id="Perk_savoir_necropole"]
+script = ExtResource("2_perk")
+id = "savoir_necropole"
+display_name = "Exorcisme"
+description = "Les tours font 15 % de dégâts en plus aux morts-vivants (monstres de La Nécropole)."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_savoir_cite")])
+required_world = 3
+column = 32.5
+row = 3
+enemy_biome = "undead"
+biome_damage_multiplier = 1.15
+
+[sub_resource type="Resource" id="Perk_bestiaire"]
+script = ExtResource("2_perk")
+id = "bestiaire"
+display_name = "Bestiaire complet"
+description = "Les tours font 25 % de dégâts en plus aux boss."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_savoir_necropole")])
+column = 32.5
+row = 4
+boss_damage_multiplier = 1.25
+
+[sub_resource type="Resource" id="Perk_cross_censer_bell"]
+script = ExtResource("2_perk")
+id = "cross_censer_bell"
+display_name = "Glas ardent"
+description = "L'Encensoir et la Cloche funèbre s'échangent un effet. Les braises de l'Encensoir ralentissent de 50 % ce qu'elles touchent, comme le glas, et l'onde de la Cloche brûle et consacre les morts comme l'encens : 6 dégâts par seconde pendant 2 s."
+cost = 16
+requires = Array[Resource]([SubResource("Perk_censer"), SubResource("Perk_bell")])
+column = 24.5
+row = 2
+specializes_tower = "res://resources/towers/censer.tres"
+added_slow_factor = 0.5
+added_slow_duration = 0.8
+crossing = true
+partner_effect = SubResource("Effect_censer_bell")
+
+[sub_resource type="Resource" id="Perk_spe_arc"]
+script = ExtResource("2_perk")
+id = "spe_arc"
+display_name = "Arc continu"
+description = "Arc électrique : la décharge saute sur 2 ennemis de plus."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_arc")])
+column = 34.5
+row = 0
+specializes_tower = "res://resources/towers/arc.tres"
+chain_count_bonus = 2
+
+[sub_resource type="Resource" id="Perk_spe_coil"]
+script = ExtResource("2_perk")
+id = "spe_coil"
+display_name = "Haute tension"
+description = "Bobine : les tours voisines font encore 10 % de dégâts en plus et tirent 10 % plus vite."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_arc"), SubResource("Perk_coil")])
+column = 34.5
+row = 1
+specializes_tower = "res://resources/towers/coil.tres"
+boost_bonus = 0.1
+
+[sub_resource type="Resource" id="Perk_spe_magnet"]
+script = ExtResource("2_perk")
+id = "spe_magnet"
+display_name = "Champ inversé"
+description = "Électroaimant : 50 % de dégâts en plus, et repousse 30 % plus loin."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_coil"), SubResource("Perk_magnet")])
+column = 34.5
+row = 2
+specializes_tower = "res://resources/towers/magnet.tres"
+damage_multiplier = 1.5
+knockback_multiplier = 1.3
+
+[sub_resource type="Resource" id="Perk_spe_censer"]
+script = ExtResource("2_perk")
+id = "spe_censer"
+display_name = "Encens sacré"
+description = "Encensoir : explosions 30 % plus larges, et les morts restent consacrés 3 s de plus."
+cost = 3
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_censer")])
+column = 36.5
+row = 0
+specializes_tower = "res://resources/towers/censer.tres"
+splash_radius_multiplier = 1.3
+revive_block_bonus = 3.0
+
+[sub_resource type="Resource" id="Perk_spe_bell"]
+script = ExtResource("2_perk")
+id = "spe_bell"
+display_name = "Glas profond"
+description = "Cloche funèbre : 20 % de portée en plus, et elle étourdit 0,3 s de plus."
+cost = 4
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_spe_censer"), SubResource("Perk_bell")])
+column = 36.5
+row = 1
+specializes_tower = "res://resources/towers/bell.tres"
+range_multiplier = 1.2
+slow_duration_bonus = 0.3
+
+[sub_resource type="Resource" id="Perk_meteores_deluge"]
+script = ExtResource("2_perk")
+id = "meteores_deluge"
+display_name = "Déluge"
+description = "Météores : 4 météores de plus."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes")])
+column = 18.5
+row = 2
+improves_power = "res://resources/powers/meteors.tres"
+power_count_bonus = 4
+
+[sub_resource type="Resource" id="Perk_gel_hiver"]
+script = ExtResource("2_perk")
+id = "gel_hiver"
+display_name = "Hiver éternel"
+description = "Gel : se recharge 30 % plus vite."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures")])
+column = 20.5
+row = 2
+improves_power = "res://resources/powers/freeze.tres"
+power_cooldown_multiplier = 0.7
+
+[sub_resource type="Resource" id="Perk_renforts_garnison"]
+script = ExtResource("2_perk")
+id = "renforts_garnison"
+display_name = "Garnison"
+description = "Renforts : les soldats tiennent 10 s de plus."
+cost = 5
+paid_with_endless_stars = true
+requires = Array[Resource]([SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade")])
+column = 22.5
+row = 2
+improves_power = "res://resources/powers/reinforcements.tres"
+power_duration_bonus = 10.0
+
+[sub_resource type="Resource" id="Perk_outils_trempes"]
+script = ExtResource("2_perk")
+id = "outils_trempes"
+display_name = "Outils trempés"
+description = "Conquête : les ouvriers minent et bâtissent 25 % plus vite."
+cost = 7
+requires = Array[Resource]([SubResource("Perk_pouvoir_corvee")])
+column = 26.5
+row = 3
+conquest_work_speed_multiplier = 1.25
+
+[sub_resource type="Resource" id="Perk_fioles"]
+script = ExtResource("2_perk")
+id = "fioles"
+display_name = "Fioles d'essence"
+description = "Conquête : chaque partie commence avec 15 essences."
+cost = 6
+requires = Array[Resource]([SubResource("Perk_chambre_forte")])
+column = 28.5
+row = 3
+conquest_essence_bonus = 15
+
+[sub_resource type="Resource" id="Perk_maitres_oeuvre"]
+script = ExtResource("2_perk")
+id = "maitres_oeuvre"
+display_name = "Maîtres d'œuvre"
+description = "Conquête : les bâtiments demandent 25 % de pierre en moins."
+cost = 7
+requires = Array[Resource]([SubResource("Perk_pierre_de_taille")])
+column = 30.5
+row = 3
+conquest_building_stone_multiplier = 0.75
+
 [resource]
 script = ExtResource("1_tree")
-branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts", "La Nécropole", "Ouvriers", "Dépôt", "Bâtiments"])
-branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1), Color(0.72, 0.55, 0.95, 1), Color(1, 0.72, 0.25, 1), Color(0.85, 0.65, 0.35, 1), Color(0.4, 0.88, 0.78, 1)])
-branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 4, 4, 4])
+branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts", "La Nécropole", "Ouvriers", "Dépôt", "Bâtiments", "Savoirs", "Foudre", "Au-delà"])
+branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1), Color(0.72, 0.55, 0.95, 1), Color(1, 0.72, 0.25, 1), Color(0.85, 0.65, 0.35, 1), Color(0.4, 0.88, 0.78, 1), Color(0.8, 0.75, 0.55, 1), Color(0.55, 0.68, 1, 1), Color(0.95, 0.75, 0.3, 1)])
+branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 4, 4, 4, 0, 2, 2])
 page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations", "Pouvoirs", "Logistique"])
-perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_censer"), SubResource("Perk_bell"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade"), SubResource("Perk_equipe"), SubResource("Perk_dortoirs"), SubResource("Perk_grande_equipe"), SubResource("Perk_pouvoir_corvee"), SubResource("Perk_reserves"), SubResource("Perk_grand_depot"), SubResource("Perk_relais"), SubResource("Perk_chambre_forte"), SubResource("Perk_murs_epais"), SubResource("Perk_charpentiers"), SubResource("Perk_tailleurs"), SubResource("Perk_pierre_de_taille")])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_censer"), SubResource("Perk_bell"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade"), SubResource("Perk_equipe"), SubResource("Perk_dortoirs"), SubResource("Perk_grande_equipe"), SubResource("Perk_pouvoir_corvee"), SubResource("Perk_reserves"), SubResource("Perk_grand_depot"), SubResource("Perk_relais"), SubResource("Perk_chambre_forte"), SubResource("Perk_murs_epais"), SubResource("Perk_charpentiers"), SubResource("Perk_tailleurs"), SubResource("Perk_pierre_de_taille"), SubResource("Perk_critique"), SubResource("Perk_ingenieurs"), SubResource("Perk_placements"), SubResource("Perk_chasseur_primes"), SubResource("Perk_dernier_rempart"), SubResource("Perk_barbacane"), SubResource("Perk_savoir_ruche"), SubResource("Perk_savoir_fonderie"), SubResource("Perk_savoir_cite"), SubResource("Perk_savoir_necropole"), SubResource("Perk_bestiaire"), SubResource("Perk_cross_censer_bell"), SubResource("Perk_spe_arc"), SubResource("Perk_spe_coil"), SubResource("Perk_spe_magnet"), SubResource("Perk_spe_censer"), SubResource("Perk_spe_bell"), SubResource("Perk_meteores_deluge"), SubResource("Perk_gel_hiver"), SubResource("Perk_renforts_garnison"), SubResource("Perk_outils_trempes"), SubResource("Perk_fioles"), SubResource("Perk_maitres_oeuvre")])

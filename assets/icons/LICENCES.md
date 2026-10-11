@@ -6,6 +6,6 @@ Le fond noir des fichiers d'origine a été retiré ; le jeu les colore selon l'
 
 | Auteur | Icônes d'origine |
 |---|---|
-| Lorc (http://lorcblog.blogspot.com) | powder, spyglass, frozen-orb, gears, cannon, swap-bag, hammer-drop, trade, wave-crest, castle, mining, stone-block |
-| Delapouite (https://delapouite.com) | chest, coins-pile, stone-wall, healing, team-upgrade, bunk-beds, person, broom, wooden-crate, warehouse, radio-tower, strongbox, brick-wall, hand-saw |
+| Lorc (http://lorcblog.blogspot.com) | powder, spyglass, frozen-orb, gears, cannon, swap-bag, hammer-drop, trade, wave-crest, castle, mining, stone-block, archery-target, auto-repair, checked-shield, stone-tower, bee, robot-golem, cowled, tombstone, open-book, anvil, round-bottom-flask |
+| Delapouite (https://delapouite.com) | chest, coins-pile, stone-wall, healing, team-upgrade, bunk-beds, person, broom, wooden-crate, warehouse, radio-tower, strongbox, brick-wall, hand-saw, piggy-bank, wanted-reward, trowel |
 | Skoll | open-chest |

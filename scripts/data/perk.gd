@@ -24,6 +24,9 @@ const ICON_DIR := "res://assets/icons/ameliorations/"
 @export var column := 0.0
 @export var row := 0
 
+## Total des bonus contre chaque biome (biome -> multiplicateur), rempli par add_to().
+var biome_damage := {}
+
 @export_group("Tours")
 ## Nouvelle tour (TowerData) ajoutée à la barre d'achat de tous les niveaux.
 ## (Un chemin et pas la ressource : TowerData lit l'arbre pour ses prix, la charger
@@ -38,6 +41,16 @@ const ICON_DIR := "res://assets/icons/ameliorations/"
 @export var tower_cost_multiplier := 1.0
 ## Part du prix rendue en plus à la vente.
 @export var sell_ratio_bonus := 0.0
+## Multiplicateur du prix des améliorations des tours seulement (pas de leur pose).
+@export var upgrade_cost_multiplier := 1.0
+## Un coup sur `critical_every` fait double dégâts (0 = jamais ; le plus petit l'emporte).
+@export var critical_every := 0
+## Multiplicateur des dégâts des tours contre les boss.
+@export var boss_damage_multiplier := 1.0
+## Biome (dossier de resources/enemies : insectoid, mecha, humanoid, undead) dont les
+## monstres subissent `biome_damage_multiplier` dégâts des tours.
+@export var enemy_biome := ""
+@export var biome_damage_multiplier := 1.0
 
 @export_group("Or")
 @export var starting_gold_bonus := 0
@@ -45,11 +58,20 @@ const ICON_DIR := "res://assets/icons/ameliorations/"
 @export var reward_multiplier := 1.0
 ## Multiplicateur du bonus de fin de vague.
 @export var wave_bonus_multiplier := 1.0
+## Taux et plafond des intérêts ajoutés (niveaux qui en versent).
+@export var interest_rate_bonus := 0.0
+@export var interest_cap_bonus := 0
+## Multiplicateur de l'or des élites et des boss.
+@export var elite_reward_multiplier := 1.0
 
 @export_group("Vies")
 @export var lives_bonus := 0
 ## Vies rendues à chaque vague repoussée, sans dépasser les vies de départ.
 @export var lives_per_wave := 0
+## Une fois par partie, au lieu de perdre, on repart avec ces vies (0 = jamais).
+@export var last_stand_lives := 0
+## Multiplicateur des vies retirées par un boss qui atteint la base.
+@export var boss_lives_multiplier := 1.0
 
 @export_group("Conquête")
 ## Bonus du mode Conquête seulement (page Logistique de l'arbre) : ouvriers au départ,
@@ -67,6 +89,11 @@ const ICON_DIR := "res://assets/icons/ameliorations/"
 @export var conquest_building_health_multiplier := 1.0
 @export var conquest_build_speed_multiplier := 1.0
 @export var conquest_stone_cost_multiplier := 1.0
+## Essence au départ, vitesse de minage et de construction des ouvriers, et
+## multiplicateur de la pierre des bâtiments.
+@export var conquest_essence_bonus := 0
+@export var conquest_work_speed_multiplier := 1.0
+@export var conquest_building_stone_multiplier := 1.0
 
 @export_group("Spécialisation")
 ## Spécialisation d'une tour (chemin de sa TowerData) : les bonus de tour de cette
@@ -94,6 +121,13 @@ const ICON_DIR := "res://assets/icons/ameliorations/"
 @export var added_slow_duration := 0.0
 ## Secondes ajoutées au blocage des soins.
 @export var heal_block_bonus := 0.0
+## Ennemis de plus touchés par une décharge en chaîne.
+@export var chain_count_bonus := 0
+## Bonus ajouté au renfort que donne une tour de soutien (dégâts et cadence des voisines).
+@export var boost_bonus := 0.0
+@export var knockback_multiplier := 1.0
+## Secondes ajoutées à la consécration des morts (ils ne se relèvent pas).
+@export var revive_block_bonus := 0.0
 
 @export_group("Croisement")
 ## Croisement de deux tours : `specializes_tower` reçoit les effets de cette amélioration,
@@ -188,6 +222,13 @@ func apply_specialization(stats) -> void:
 		stats.slow_factor = minf(stats.slow_factor, added_slow_factor)
 		stats.slow_duration = maxf(stats.slow_duration, added_slow_duration)
 	stats.heal_block_duration += heal_block_bonus
+	stats.chain_count += chain_count_bonus
+	if stats.boost_damage > 0.0:
+		stats.boost_damage += boost_bonus
+	if stats.boost_fire_rate > 0.0:
+		stats.boost_fire_rate += boost_bonus
+	stats.knockback *= knockback_multiplier
+	stats.revive_block_duration += revive_block_bonus
 
 
 ## Ajoute les bonus de cette amélioration à `total` (modifié sur place) : les
@@ -199,11 +240,22 @@ func add_to(total: Perk) -> void:
 	total.slow_duration_bonus += slow_duration_bonus
 	total.tower_cost_multiplier *= tower_cost_multiplier
 	total.sell_ratio_bonus += sell_ratio_bonus
+	total.upgrade_cost_multiplier *= upgrade_cost_multiplier
+	if critical_every > 0:
+		total.critical_every = critical_every if total.critical_every <= 0 else mini(total.critical_every, critical_every)
+	total.boss_damage_multiplier *= boss_damage_multiplier
+	if not enemy_biome.is_empty():
+		total.biome_damage[enemy_biome] = total.biome_damage.get(enemy_biome, 1.0) * biome_damage_multiplier
 	total.starting_gold_bonus += starting_gold_bonus
 	total.reward_multiplier *= reward_multiplier
 	total.wave_bonus_multiplier *= wave_bonus_multiplier
+	total.interest_rate_bonus += interest_rate_bonus
+	total.interest_cap_bonus += interest_cap_bonus
+	total.elite_reward_multiplier *= elite_reward_multiplier
 	total.lives_bonus += lives_bonus
 	total.lives_per_wave += lives_per_wave
+	total.last_stand_lives = maxi(total.last_stand_lives, last_stand_lives)
+	total.boss_lives_multiplier *= boss_lives_multiplier
 	total.conquest_workers_bonus += conquest_workers_bonus
 	total.conquest_max_workers_bonus += conquest_max_workers_bonus
 	total.conquest_stone_bonus += conquest_stone_bonus
@@ -213,3 +265,6 @@ func add_to(total: Perk) -> void:
 	total.conquest_building_health_multiplier *= conquest_building_health_multiplier
 	total.conquest_build_speed_multiplier *= conquest_build_speed_multiplier
 	total.conquest_stone_cost_multiplier *= conquest_stone_cost_multiplier
+	total.conquest_essence_bonus += conquest_essence_bonus
+	total.conquest_work_speed_multiplier *= conquest_work_speed_multiplier
+	total.conquest_building_stone_multiplier *= conquest_building_stone_multiplier

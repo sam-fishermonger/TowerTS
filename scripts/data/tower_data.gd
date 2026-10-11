@@ -25,6 +25,13 @@ extends Resource
 ## coups qu'elles donnent lui sont comptés dans les statistiques de fin de niveau. Pas
 ## exporté : une copie (duplicate()) repart de 0.
 var source_tower_id := 0
+## Bonus de l'arbre des améliorations contre certains ennemis, posés par
+## get_stats_at_level() (pas exportés non plus) : un coup sur `critical_every` fait
+## double dégâts (0 = jamais), dégâts contre les boss et contre les monstres d'un biome.
+var critical_every := 0
+var boss_damage_multiplier := 1.0
+var biome_damage := {}
+var _hits := 0
 
 @export_group("Projectile")
 ## Scène du projectile tiré (tours à projectiles seulement).
@@ -128,7 +135,8 @@ func get_cost() -> int:
 func get_upgrade_cost(level: int) -> int:
 	if level < 1 or level >= get_max_level():
 		return -1
-	return roundi(upgrades[level - 1].cost * Perks.get_bonuses().tower_cost_multiplier)
+	var bonuses := Perks.get_bonuses()
+	return roundi(upgrades[level - 1].cost * bonuses.tower_cost_multiplier * bonuses.upgrade_cost_multiplier)
 
 
 ## Copie de ces statistiques avec les améliorations appliquées jusqu'au niveau donné,
@@ -141,9 +149,27 @@ func get_stats_at_level(level: int) -> TowerData:
 	var bonuses := Perks.get_bonuses()
 	stats.scale_stats(bonuses.damage_multiplier, bonuses.range_multiplier, bonuses.fire_rate_multiplier,
 		bonuses.slow_duration_bonus)
+	stats.critical_every = bonuses.critical_every
+	stats.boss_damage_multiplier = bonuses.boss_damage_multiplier
+	stats.biome_damage = bonuses.biome_damage
 	for specialization in get_specializations():
 		specialization.apply_specialization(stats)
 	return stats
+
+
+## Multiplicateur des dégâts d'un coup porté à un monstre (EnemyData) : boss, biome, et
+## coup critique (compté à chaque appel).
+func get_hit_multiplier(target: EnemyData) -> float:
+	var multiplier := 1.0
+	if target.is_boss:
+		multiplier *= boss_damage_multiplier
+	if not biome_damage.is_empty():
+		multiplier *= biome_damage.get(target.get_biome(), 1.0)
+	if critical_every > 0:
+		_hits += 1
+		if _hits % critical_every == 0:
+			multiplier *= 2.0
+	return multiplier
 
 
 ## Spécialisations achetées pour cette tour dans l'arbre des améliorations (Perk).

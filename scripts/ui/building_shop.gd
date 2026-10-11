@@ -61,8 +61,8 @@ func _make_button(kind: int) -> Button:
 ## Prix d'un bâtiment, sur une ligne : « 90 or · 40 p · 4 e ».
 static func _price_text(definition: Dictionary) -> String:
 	if definition.essence > 0:
-		return TranslationServer.translate("%d or · %d p · %d e") % [definition.gold, definition.stone, definition.essence]
-	return TranslationServer.translate("%d or · %d p") % [definition.gold, definition.stone]
+		return TranslationServer.translate("%d or · %d p · %d e") % [definition.gold, Conquest.building_stone_cost(definition), definition.essence]
+	return TranslationServer.translate("%d or · %d p") % [definition.gold, Conquest.building_stone_cost(definition)]
 
 
 func _add_label(parent: Control, text_value: String, font_size: int, color: Color) -> Label:
@@ -80,7 +80,7 @@ func _add_label(parent: Control, text_value: String, font_size: int, color: Colo
 func refresh(gold: int, stone: int, essence: int) -> void:
 	for kind in _buttons.size():
 		var definition := Building.get_definition(kind)
-		var affordable: bool = gold >= definition.gold and stone >= definition.stone and essence >= definition.essence
+		var affordable: bool = gold >= definition.gold and stone >= Conquest.building_stone_cost(definition) and essence >= definition.essence
 		var button := _buttons[kind]
 		button.disabled = not affordable and not button.button_pressed
 		button.modulate.a = 1.0 if affordable or button.button_pressed else TowerShopButton.UNAFFORDABLE_ALPHA

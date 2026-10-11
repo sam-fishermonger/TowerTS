@@ -112,6 +112,12 @@ static func stone_cost(data: TowerData) -> int:
 	return ceili(data.get_cost() * STONE_PER_GOLD * Perks.get_bonuses().conquest_stone_cost_multiplier)
 
 
+## Pierre demandée pour un bâtiment (sa définition ; moins avec Maîtres d'œuvre, page
+## Logistique).
+static func building_stone_cost(definition) -> int:
+	return ceili(definition.stone * Perks.get_bonuses().conquest_building_stone_multiplier)
+
+
 ## Secondes pour bâtir un type de tour avec un seul ouvrier.
 static func tower_build_time(data: TowerData) -> float:
 	return 3.0 + data.get_cost() / 25.0
@@ -142,6 +148,7 @@ func setup(owner_level: Level) -> void:
 	level.stats.conquest = true
 	bonuses = Perks.get_bonuses()
 	stone = level.conquest_starting_stone + bonuses.conquest_stone_bonus
+	essence = bonuses.conquest_essence_bonus
 	depot_position = level.map.get_base_position()
 	for cell in level.map.blocked_cells:
 		rocks[cell] = ROCK_STONE
@@ -483,7 +490,7 @@ func get_buildings(kind := -1) -> Array[Building]:
 
 func can_afford_building(kind: int) -> bool:
 	var definition := Building.get_definition(kind)
-	return level.gold >= definition.gold and stone >= definition.stone and essence >= definition.essence
+	return level.gold >= definition.gold and stone >= building_stone_cost(definition) and essence >= definition.essence
 
 
 ## La case convient au bâtiment : une case libre, un filon libre (Extracteur) ou une case
@@ -513,7 +520,7 @@ func place_building(cell: Vector2i, kind: int) -> Building:
 	var definition := Building.get_definition(kind)
 	level.gold -= definition.gold
 	level.stats.gold_spent += definition.gold
-	stone -= definition.stone
+	stone -= building_stone_cost(definition)
 	essence -= definition.essence
 	var building := Building.new()
 	building.kind = kind
@@ -540,7 +547,7 @@ func place_building(cell: Vector2i, kind: int) -> Building:
 func get_building_refund(building: Building) -> Dictionary:
 	var definition := Building.get_definition(building.kind)
 	var ratio := 1.0 if not building.is_built() else SELL_RATIO
-	return {gold = roundi(definition.gold * ratio), stone = roundi(definition.stone * ratio),
+	return {gold = roundi(definition.gold * ratio), stone = roundi(building_stone_cost(definition) * ratio),
 		essence = roundi(definition.essence * ratio)}
 
 
@@ -792,7 +799,7 @@ func get_worker_speed() -> float:
 ## Vitesse de minage et de construction des ouvriers (1 = sans amélioration).
 func get_work_speed() -> float:
 	return (1.0 + get_research_bonus(Research.WORKER_TOOLS) + level.get_chest_bonus(ChestBonus.WORKERS)) \
-		* get_corvee_multiplier()
+		* get_corvee_multiplier() * bonuses.conquest_work_speed_multiplier
 
 
 ## Corvée (pouvoir) : les ouvriers vont deux fois plus vite pendant `duration` secondes.

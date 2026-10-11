@@ -3183,3 +3183,157 @@ msgstr "Conquest · The Royal Crypt"
 
 msgid "Deux entrées, un seul couloir autour du QG, des Pilleurs de tombes dès la deuxième vague et la Liche pour finir."
 msgstr "Two entrances, a single corridor around the HQ, Grave Robbers from the second wave on, and the Lich to finish."
+# --- Nouvelles options des arbres -----------------------------------------------
+
+msgid "Savoirs"
+msgstr "Lore"
+
+msgid "Foudre"
+msgstr "Lightning"
+
+msgid "Au-delà"
+msgstr "Beyond"
+
+msgid "Dernier rempart ! +%d vies"
+msgstr "Last stand! +%d lives"
+
+msgid "Coup critique"
+msgstr "Critical Hit"
+
+msgid "Un coup sur 10 de chaque tour fait double dégâts."
+msgstr "One hit in 10 from each tower deals double damage."
+
+msgid "Ingénieurs"
+msgstr "Engineers"
+
+msgid "Les améliorations des tours coûtent encore 15 % moins cher."
+msgstr "Tower upgrades cost a further 15% less."
+
+msgid "Placements"
+msgstr "Investments"
+
+msgid "Intérêts : 5 % de plus sur l'or gardé, et 25 or de plus au plafond."
+msgstr "Interest: 5% more on the gold you keep, and a cap 25 gold higher."
+
+msgid "Chasseur de primes"
+msgstr "Bounty Hunter"
+
+msgid "Les élites et les boss rapportent 50 % d'or en plus."
+msgstr "Elites and bosses give 50% more gold."
+
+msgid "Dernier rempart"
+msgstr "Last Stand"
+
+msgid "Une fois par partie, au lieu de perdre, on repart avec 10 vies."
+msgstr "Once per game, instead of losing, you carry on with 10 lives."
+
+msgid "Barbacane"
+msgstr "Barbican"
+
+msgid "Les boss qui atteignent la base retirent moitié moins de vies."
+msgstr "Bosses that reach the base take away half as many lives."
+
+msgid "Entomologie"
+msgstr "Entomology"
+
+msgid "Les tours font 15 % de dégâts en plus aux insectoïdes (monstres de La Ruche)."
+msgstr "Towers deal 15% more damage to insectoids (The Hive's monsters)."
+
+msgid "Mécanique"
+msgstr "Mechanics"
+
+msgid "Les tours font 15 % de dégâts en plus aux machines (monstres de La Fonderie)."
+msgstr "Towers deal 15% more damage to machines (The Foundry's monsters)."
+
+msgid "Anatomie"
+msgstr "Anatomy"
+
+msgid "Les tours font 15 % de dégâts en plus aux humanoïdes (monstres de La Cité)."
+msgstr "Towers deal 15% more damage to humanoids (The City's monsters)."
+
+msgid "Exorcisme"
+msgstr "Exorcism"
+
+msgid "Les tours font 15 % de dégâts en plus aux morts-vivants (monstres de La Nécropole)."
+msgstr "Towers deal 15% more damage to the undead (The Necropolis's monsters)."
+
+msgid "Bestiaire complet"
+msgstr "Complete Bestiary"
+
+msgid "Les tours font 25 % de dégâts en plus aux boss."
+msgstr "Towers deal 25% more damage to bosses."
+
+msgid "Glas ardent"
+msgstr "Burning Knell"
+
+msgid "L'onde de la Cloche funèbre brûle, 6 dégâts par seconde pendant 2 s, et consacre les morts 3 s."
+msgstr "The Funeral Bell's wave burns, 6 damage per second for 2 s, and consecrates the dead for 3 s."
+
+msgid "L'Encensoir et la Cloche funèbre s'échangent un effet. Les braises de l'Encensoir ralentissent de 50 % ce qu'elles touchent, comme le glas, et l'onde de la Cloche brûle et consacre les morts comme l'encens : 6 dégâts par seconde pendant 2 s."
+msgstr "The Censer and the Funeral Bell swap an effect. The Censer's embers slow what they hit by 50%, like the knell, and the Bell's wave burns and consecrates the dead like the incense: 6 damage per second for 2 s."
+
+msgid "Arc continu"
+msgstr "Endless Arc"
+
+msgid "Arc électrique : la décharge saute sur 2 ennemis de plus."
+msgstr "Electric Arc: the discharge jumps to 2 more enemies."
+
+msgid "Haute tension"
+msgstr "High Voltage"
+
+msgid "Bobine : les tours voisines font encore 10 % de dégâts en plus et tirent 10 % plus vite."
+msgstr "Coil: nearby towers deal a further 10% more damage and fire 10% faster."
+
+msgid "Champ inversé"
+msgstr "Reversed Field"
+
+msgid "Électroaimant : 50 % de dégâts en plus, et repousse 30 % plus loin."
+msgstr "Electromagnet: 50% more damage, and pushes back 30% further."
+
+msgid "Encens sacré"
+msgstr "Holy Incense"
+
+msgid "Encensoir : explosions 30 % plus larges, et les morts restent consacrés 3 s de plus."
+msgstr "Censer: explosions 30% wider, and the dead stay consecrated 3 s longer."
+
+msgid "Glas profond"
+msgstr "Deep Knell"
+
+msgid "Cloche funèbre : 20 % de portée en plus, et elle étourdit 0,3 s de plus."
+msgstr "Funeral Bell: 20% more range, and it stuns 0.3 s longer."
+
+msgid "Déluge"
+msgstr "Deluge"
+
+msgid "Météores : 4 météores de plus."
+msgstr "Meteors: 4 more meteors."
+
+msgid "Hiver éternel"
+msgstr "Eternal Winter"
+
+msgid "Gel : se recharge 30 % plus vite."
+msgstr "Freeze: recharges 30% faster."
+
+msgid "Garnison"
+msgstr "Garrison"
+
+msgid "Renforts : les soldats tiennent 10 s de plus."
+msgstr "Reinforcements: the soldiers hold 10 s longer."
+
+msgid "Outils trempés"
+msgstr "Tempered Tools"
+
+msgid "Conquête : les ouvriers minent et bâtissent 25 % plus vite."
+msgstr "Conquest: workers mine and build 25% faster."
+
+msgid "Fioles d'essence"
+msgstr "Essence Vials"
+
+msgid "Conquête : chaque partie commence avec 15 essences."
+msgstr "Conquest: each game starts with 15 essence."
+
+msgid "Maîtres d'œuvre"
+msgstr "Master Builders"
+
+msgid "Conquête : les bâtiments demandent 25 % de pierre en moins."
+msgstr "Conquest: buildings need 25% less stone."
