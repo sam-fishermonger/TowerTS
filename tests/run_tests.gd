@@ -130,6 +130,7 @@ func _run() -> void:
 	await _test_defeat_without_towers()
 	await _test_victory_level_01()
 	await _test_victory_level_02()
+	await _test_end_screen_navigation()
 	await _test_level_02_with_earned_gold()
 	await _test_level_03_map()
 	await _test_splitting_enemy()
@@ -2174,6 +2175,41 @@ func _test_victory_level_01() -> void:
 		await _free(current_scene)
 
 
+func _test_end_screen_navigation() -> void:
+	print("Écran de fin : Armurerie et Retour au choix du mode")
+	Progress.reset_campaign()
+	var expected := {
+		LEVEL_01: Level.WORLD_SELECT_SCREEN,
+		FREE_01: FreeLevels.SELECT_SCREEN,
+		CONQUEST_01: ConquestLevels.SELECT_SCREEN,
+		TUTORIAL: Level.TITLE_SCREEN,
+	}
+	for scene: PackedScene in expected:
+		var played := await _spawn_level(scene)
+		played._end_game(false)
+		_check(played.get_mode_screen() == expected[scene] and played.hud.get_node("%ArmoryButton").visible
+			and played.hud.get_node("%BackButton").visible == (expected[scene] != Level.TITLE_SCREEN),
+			"%s : Retour mène à %s" % [scene.resource_path.get_file(), expected[scene].get_file()])
+		await _free(played)
+	var level := await _spawn_level(LEVEL_01)
+	level._end_game(false)
+	level.hud.get_node("%ArmoryButton").pressed.emit()
+	await _free(level)
+	await process_frame
+	_check(current_scene != null and current_scene.scene_file_path == Equipment.ARMORY_SCREEN
+		and Engine.get_meta(Level.ARMORY_RETURN_META, "") == Level.WORLD_SELECT_SCREEN,
+		"Armurerie ouverte depuis l'écran de fin")
+	current_scene.go_back()
+	await process_frame
+	await process_frame
+	_check(current_scene != null and current_scene.scene_file_path == Level.WORLD_SELECT_SCREEN
+		and not Engine.has_meta(Level.ARMORY_RETURN_META) and not Engine.has_meta(Level.WORLD_SELECT_META)
+		and current_scene.get_level_button(LEVEL_01.resource_path).has_focus(),
+		"son Retour ramène aux mondes, sur le niveau joué")
+	if current_scene:
+		await _free(current_scene)
+
+
 func _test_victory_level_02() -> void:
 	print("Niveau 2 : victoire avec une défense")
 	var level := await _spawn_level(LEVEL_02)
@@ -3070,7 +3106,12 @@ func _test_daily_challenge() -> void:
 	_check(level.medals_won == TowerLevels.DAILY_FIRST_REWARD
 		and level.hud.end_message.text.contains("Premier défi réussi aujourd'hui : +%d insignes" % level.medals_won),
 		"première victoire du jour au défi : beaucoup d'insignes, annoncés")
+	_check(not level.hud.get_node("%RestartButton").visible and level.hud.get_node("%BackButton").visible
+		and level.hud.get_node("%ArmoryButton").visible and level.get_mode_screen() == Level.DAILY_CHALLENGE_SCREEN,
+		"défi gagné : pas de Rejouer, Retour mène à l'écran du défi")
 	await _free(level)
+	Level.open_challenge(self, challenge)
+	_check(not Engine.has_meta(Level.CHALLENGE_META), "un défi gagné ne se relance plus")
 	_check(not Engine.has_meta(Perks.DISABLED_META) and Perks.get_bonuses().starting_gold_bonus > 0,
 		"l'arbre compte de nouveau après le défi")
 	_check(not Progress.record_daily(key, expected - 1) and Progress.record_daily(key, expected + 1)
@@ -3079,9 +3120,18 @@ func _test_daily_challenge() -> void:
 	var screen: Control = load("res://scenes/ui/daily_challenge_screen.tscn").instantiate()
 	root.add_child(screen)
 	await process_frame
-	_check(screen.challenge.date_key == DailyChallenge.today().date_key and screen.play_button.has_focus(),
+	# Le défi gagné plus haut peut tomber aujourd'hui : Jouer est alors grisé (voir plus bas).
+	_check(screen.challenge.date_key == DailyChallenge.today().date_key
+		and (screen.play_button.has_focus() or Progress.is_daily_won(screen.challenge.date_key)),
 		"l'écran du défi montre celui d'aujourd'hui, Jouer prêt")
 	_check(screen.get_history_text().contains("1 défi joué"), "et l'historique des scores")
+	await _free(screen)
+	Progress.record_daily_win(DailyChallenge.today_key())
+	screen = load("res://scenes/ui/daily_challenge_screen.tscn").instantiate()
+	root.add_child(screen)
+	await process_frame
+	_check(screen.play_button.disabled and screen.back_button.has_focus() and screen.find_child("WonToday", true, false),
+		"défi du jour gagné : Jouer grisé jusqu'à demain")
 	await _free(screen)
 	Progress.reset_campaign()
 	_check(Progress.get_daily_scores().is_empty(), "Effacer la progression efface les scores du défi")

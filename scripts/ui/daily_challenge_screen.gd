@@ -1,7 +1,7 @@
 extends Control
 ## Défi du jour (depuis l'écran titre) : le niveau et les règles du jour, les tours
 ## imposées, le meilleur score du jour, l'historique (record, série de jours réussis
-## d'affilée, scores des derniers jours) et le bouton Jouer.
+## d'affilée, scores des derniers jours) et le bouton Jouer, grisé une fois le défi gagné.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const TITLE_COLOR := Color(0.95, 0.85, 0.45)
@@ -23,7 +23,7 @@ func _ready() -> void:
 	challenge = DailyChallenge.today()
 	_build()
 	Sound.play_music()
-	play_button.grab_focus()
+	(back_button if play_button.disabled else play_button).grab_focus()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -123,6 +123,12 @@ func _build() -> void:
 	play_button.add_theme_font_size_override("font_size", 24)
 	play_button.pressed.connect(play)
 	buttons.add_child(play_button)
+	# Gagné aujourd'hui : le défi ne se rejoue plus avant demain.
+	if Progress.is_daily_won(challenge.date_key):
+		play_button.disabled = true
+		play_button.text = tr("Déjà gagné")
+		var wait := _add_label(column, tr("Déjà gagné aujourd'hui, revenez demain pour un nouveau défi."), 16, MUTED_COLOR, true)
+		wait.name = "WonToday"
 
 
 ## Scores des derniers jours joués (avant aujourd'hui) et record de tous les défis, ou ""

@@ -36,6 +36,15 @@ const EMPTY_LEVEL := "res://scenes/levels/level.tscn"
 ## son dictionnaire, lu et effacé au lancement du niveau, qui remet la partie en l'état.
 const RESUME_META := &"level_resume"
 const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
+const WORLD_SELECT_SCREEN := "res://scenes/ui/world_select_screen.tscn"
+const DAILY_CHALLENGE_SCREEN := "res://scenes/ui/daily_challenge_screen.tscn"
+## Méta du moteur posée en quittant un niveau de la campagne vers le choix des mondes
+## (voir get_mode_screen()) : { level = chemin du niveau, endless = mode infini }, lue et
+## effacée par l'écran, qui rouvre le bon mode et met le focus sur ce niveau.
+const WORLD_SELECT_META := &"world_select_return"
+## Méta du moteur posée en ouvrant l'Armurerie depuis l'écran de fin : l'écran où son
+## bouton Retour ramène (celui du mode joué), lu et effacé par l'Armurerie.
+const ARMORY_RETURN_META := &"armory_return"
 
 @export var level_name := "Niveau"
 ## Or et vies de départ, sans les bonus de l'arbre des améliorations (ajoutés au lancement).
@@ -190,8 +199,11 @@ static func open(tree: SceneTree, path: String, endless := false) -> void:
 	tree.change_scene_to_file(path)
 
 
-## Ouvre le défi du jour sur son niveau.
+## Ouvre le défi du jour sur son niveau, sauf s'il est déjà gagné : il ne se rejoue
+## alors plus avant le lendemain.
 static func open_challenge(tree: SceneTree, daily: DailyChallenge) -> void:
+	if Progress.is_daily_won(daily.date_key):
+		return
 	Engine.set_meta(CHALLENGE_META, daily.date_key)
 	tree.change_scene_to_file(daily.level_path)
 
@@ -341,6 +353,10 @@ func _ready() -> void:
 	hud.restart_requested.connect(_on_restart_requested)
 	hud.next_level_requested.connect(_on_next_level_requested)
 	hud.menu_requested.connect(_on_menu_requested)
+	hud.back_requested.connect(_on_back_requested)
+	hud.armory_requested.connect(_on_armory_requested)
+	hud.set_back_available(get_mode_screen() != TITLE_SCREEN and custom_level.is_empty())
+	hud.set_armory_available(custom_level.is_empty())
 	# L'expédition ne se rejoue pas étape par étape : la pause ne propose que de la quitter.
 	hud.pause_restart_button.visible = expedition == null
 	hud.power_selected.connect(select_power)
@@ -1522,17 +1538,48 @@ func _on_next_level_requested() -> void:
 
 
 func _on_menu_requested() -> void:
+	_leave(TITLE_SCREEN if custom_level.is_empty() else LEVEL_EDITOR)
+
+
+## Retour (écran de fin, Quitter de la pause) : vers l'écran de choix du mode joué.
+func _on_back_requested() -> void:
+	_leave(get_mode_screen())
+
+
+## Armurerie depuis l'écran de fin : son bouton Retour ramène ensuite au choix du mode joué.
+func _on_armory_requested() -> void:
+	Engine.set_meta(ARMORY_RETURN_META, get_mode_screen())
+	_leave(Equipment.ARMORY_SCREEN)
+
+
+## Écran où l'on choisit les niveaux du mode joué : les mondes de la campagne (dans le
+## bon mode, infini ou non), les niveaux libres, la Conquête, le défi du jour, l'éditeur ;
+## l'écran titre pour le tutoriel et l'expédition, lancés de là.
+func get_mode_screen() -> String:
+	if not custom_level.is_empty():
+		return LEVEL_EDITOR
+	if conquest_mode:
+		return ConquestLevels.SELECT_SCREEN
+	if challenge:
+		return DAILY_CHALLENGE_SCREEN
+	if expedition or is_tutorial:
+		return TITLE_SCREEN
+	if FreeLevels.has(scene_file_path):
+		return FreeLevels.SELECT_SCREEN
+	if campaign and campaign.world_index_of(scene_file_path) >= 0:
+		return WORLD_SELECT_SCREEN
+	return TITLE_SCREEN
+
+
+func _leave(screen: String) -> void:
 	get_tree().paused = false
 	autosave()
 	# Expédition quittée en route : les étapes déjà franchies comptent pour le record.
 	if expedition and not is_over:
 		Expedition.record(expedition.index)
-	if conquest_mode:
-		get_tree().change_scene_to_file(ConquestLevels.SELECT_SCREEN)
-	elif FreeLevels.has(scene_file_path) and not expedition:
-		get_tree().change_scene_to_file(FreeLevels.SELECT_SCREEN)
-	else:
-		get_tree().change_scene_to_file(TITLE_SCREEN if custom_level.is_empty() else LEVEL_EDITOR)
+	if screen == WORLD_SELECT_SCREEN:
+		Engine.set_meta(WORLD_SELECT_META, {level = scene_file_path, endless = is_endless})
+	get_tree().change_scene_to_file(screen)
 
 
 # --- Affichage --------------------------------------------------------------

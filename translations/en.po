@@ -3624,3 +3624,9 @@ msgstr "Blocks healing %s s longer"
 
 msgid "+%s %% dégâts, +%s %% portée"
 msgstr "+%s%% damage, +%s%% range"
+
+msgid "Déjà gagné"
+msgstr "Already won"
+
+msgid "Déjà gagné aujourd'hui, revenez demain pour un nouveau défi."
+msgstr "Already won today, come back tomorrow for a new challenge."

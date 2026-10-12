@@ -13,6 +13,10 @@ signal next_wave_requested
 signal restart_requested
 signal next_level_requested
 signal menu_requested
+## Retour à l'écran de choix du mode joué (écran de fin, Quitter de la pause).
+signal back_requested
+## Armurerie ouverte depuis l'écran de fin.
+signal armory_requested
 ## Émis quand le joueur demande l'amélioration de la tour affichée en détail.
 signal upgrade_requested(tower: Tower)
 ## Émis quand le joueur demande la vente de la tour affichée en détail.
@@ -158,6 +162,10 @@ var building_shop: BuildingShop
 var building_details: BuildingInfoPanel
 ## Tours au plus dans la barre d'achat pour que le rappel des commandes s'affiche à côté.
 var _hint_max_towers := 7
+## Bouton Retour de l'écran de fin montré (le mode joué a son écran de choix, autre que
+## l'écran titre), et bouton Armurerie (pas dans l'éditeur ni au milieu d'une expédition).
+var _back_available := true
+var _armory_available := true
 
 @onready var level_label: Label = %LevelLabel
 @onready var gold_label: Label = %GoldLabel
@@ -206,12 +214,14 @@ func _ready() -> void:
 	%RestartButton.pressed.connect(restart_requested.emit)
 	%NextLevelButton.pressed.connect(next_level_requested.emit)
 	%MenuButton.pressed.connect(menu_requested.emit)
+	%BackButton.pressed.connect(back_requested.emit)
+	%ArmoryButton.pressed.connect(armory_requested.emit)
 	tower_details.upgrade_requested.connect(upgrade_requested.emit)
 	tower_details.sell_requested.connect(sell_requested.emit)
 	tower_details.close_requested.connect(tower_details_closed.emit)
 	pause_button.pressed.connect(pause_toggled.emit)
 	_connect_confirmed(pause_restart_button, "Vraiment recommencer ?", restart_requested.emit)
-	_connect_confirmed(pause_quit_button, "Vraiment quitter ?", menu_requested.emit)
+	_connect_confirmed(pause_quit_button, "Vraiment quitter ?", back_requested.emit)
 	options_button.pressed.connect(open_options)
 	lives_label.add_theme_color_override("font_color", LIVES_COLOR)
 	boss_bar = BossBar.new()
@@ -593,6 +603,18 @@ func set_menu_button_text(text: String) -> void:
 	%MenuButton.text = text
 
 
+## Montre ou non le bouton Retour de l'écran de fin (vers le choix du mode joué).
+func set_back_available(available: bool) -> void:
+	_back_available = available
+	%BackButton.visible = available
+
+
+## Montre ou non le bouton Armurerie de l'écran de fin.
+func set_armory_available(available: bool) -> void:
+	_armory_available = available
+	%ArmoryButton.visible = available
+
+
 func show_end_screen(victory: bool, can_continue := false, stars := 0, new_record := false,
 		unlocked_world := "") -> void:
 	end_title.text = "Victoire !" if victory else "Défaite"
@@ -606,6 +628,9 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 		end_message.text += "\n" + tr("Nouveau monde débloqué : %s") % tr(unlocked_world)
 	next_level_button.text = "Monde suivant" if not unlocked_world.is_empty() else "Niveau suivant"
 	next_level_button.visible = can_continue
+	%RestartButton.visible = true
+	%ArmoryButton.visible = _armory_available
+	%BackButton.visible = _back_available
 	end_panel.visible = true
 	set_paused(false)
 	pause_button.disabled = true
@@ -665,6 +690,8 @@ func show_expedition_end_screen(victory: bool, cleared: int, total: int, lives: 
 			end_message.text += "\n" + tr("Nouveau record !")
 	%RestartButton.text = "Nouvelle expédition"
 	%RestartButton.visible = finished
+	# Quitter l'expédition en route l'arrête : l'Armurerie attend qu'elle soit finie.
+	%ArmoryButton.visible = _armory_available and finished
 	_end_screen = show_expedition_end_screen.bind(victory, cleared, total, lives, new_record)
 
 
@@ -1164,6 +1191,10 @@ func show_challenge_end_screen(victory: bool, score: int, best: int, new_record 
 	if streak > 1:
 		end_message.text += "\n" + tr("Série : %d jours réussis d'affilée !") % streak
 	end_message.text += "\n" + tr("Un nouveau défi demain.")
+	# Une fois gagné, le défi du jour ne se rejoue plus avant demain.
+	%RestartButton.visible = not victory
+	if victory:
+		(%BackButton if %BackButton.visible else %MenuButton).grab_focus()
 	_end_screen = show_challenge_end_screen.bind(victory, score, best, new_record, streak)
 
 
