@@ -158,6 +158,10 @@ func _refresh() -> void:
 		for item in Equipment.get_equipped(data.resource_path):
 			names.append(Equipment.item_name(item))
 		description_label.text += "\n" + tr("Équipement : %s") % ", ".join(names)
+	# Niveau du type de tour monté dans l'Armurerie (TowerLevels) : compté lui aussi.
+	if TowerLevels.get_level(data.resource_path) > 0 and not Engine.has_meta(Perks.DISABLED_META):
+		description_label.text += "\n" + tr("Niveau d'Armurerie : %d / %d") % [TowerLevels.get_level(data.resource_path),
+			TowerLevels.MAX_LEVEL]
 	if placed and tower.is_boosted():
 		description_label.text += "\n" + tr("Renforcée par une Bobine : +%d %% de dégâts, +%d %% de cadence") % [
 			roundi(tower.boost_damage * 100.0), roundi(tower.boost_fire_rate * 100.0)]

@@ -3344,8 +3344,8 @@ msgstr "Armory"
 msgid "L'équipement des tours, et les coffrets gagnés en finissant des niveaux."
 msgstr "Tower equipment, and the crates earned by finishing levels."
 
-msgid "L'équipement posé sur un type de tour renforce toutes ses tours, dans toutes les parties."
-msgstr "Equipment fitted to a tower type strengthens all its towers, in every game."
+msgid "L'équipement et le niveau d'un type de tour renforcent toutes ses tours, dans toutes les parties."
+msgstr "A tower type's equipment and level strengthen all its towers, in every game."
 
 msgid "Emplacement libre : choisissez un objet dans l'inventaire."
 msgstr "Empty slot: pick an item from the inventory."
@@ -3367,9 +3367,6 @@ msgstr "%s has no free slot: remove an item first."
 
 msgid "Trois objets fondus : un %s de plus à ouvrir."
 msgstr "Three items merged: one more %s to open."
-
-msgid "Niv. 1 : %s dégâts, %s tirs/s, portée %s"
-msgstr "Lv. 1: %s damage, %s shots/s, range %s"
 
 msgid "Cliquer pour retirer l'objet."
 msgstr "Click to remove the item."
@@ -3561,3 +3558,69 @@ msgstr "Honed Rounds"
 
 msgid "Culasse rapide"
 msgstr "Quick Breech"
+
+msgid "%s passe au niveau %d."
+msgstr "%s reaches level %d."
+
+msgid "%s passe au niveau %d : palier débloqué, %s !"
+msgstr "%s reaches level %d: milestone unlocked, %s!"
+
+msgid "Niv. %d"
+msgstr "Lv. %d"
+
+msgid "Tour posée : %s dégâts, %s tirs/s, portée %s"
+msgstr "Placed tower: %s damage, %s shots/s, range %s"
+
+msgid "Insignes : %s"
+msgstr "Insignia: %s"
+
+msgid "Gagnés à chaque victoire (plus en difficulté haute et vers la fin d'un monde), et beaucoup à la première victoire du jour au défi du jour. Ils font monter le niveau des tours."
+msgstr "Earned with every victory (more on higher difficulties and near the end of a world), and plenty for the first daily challenge win of the day. They level up your towers."
+
+msgid "Gagnés en tout : %d"
+msgstr "Earned in total: %d"
+
+msgid "Niveau %d / %d"
+msgstr "Level %d / %d"
+
+msgid "Chaque niveau : +1 % dégâts, +0,5 % portée"
+msgstr "Each level: +1% damage, +0.5% range"
+
+msgid "Bonus des niveaux : %s"
+msgstr "Level bonus: %s"
+
+msgid "Monter  ·  %s"
+msgstr "Level up  ·  %s"
+
+msgid "Il manque %s."
+msgstr "You need %s more."
+
+msgid "Passer au niveau %d."
+msgstr "Reach level %d."
+
+msgid "Palier du niveau %d : %s"
+msgstr "Level %d milestone: %s"
+
+msgid "Premier défi réussi aujourd'hui : +%d insignes ❖ !"
+msgstr "First challenge won today: +%d insignia ❖!"
+
+msgid "+%d insignes ❖ à dépenser dans l'Armurerie."
+msgstr "+%d insignia ❖ to spend in the Armory."
+
+msgid "Niveau d'Armurerie : %d / %d"
+msgstr "Armory level: %d / %d"
+
+msgid "Ralentissement : +%s s"
+msgstr "Slow: +%s s"
+
+msgid "+%d %% dégâts aux boucliers"
+msgstr "+%d%% damage to shields"
+
+msgid "Brouille les boucliers %s s de plus"
+msgstr "Jams shields %s s longer"
+
+msgid "Empêche les soins %s s de plus"
+msgstr "Blocks healing %s s longer"
+
+msgid "+%s %% dégâts, +%s %% portée"
+msgstr "+%s%% damage, +%s%% range"

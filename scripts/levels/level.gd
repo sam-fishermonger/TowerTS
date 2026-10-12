@@ -119,6 +119,8 @@ var score := 0
 var mutators: Array[int] = []
 ## Rareté du coffret d'équipement gagné en fin de partie (Equipment), -1 = aucun.
 var box_won := -1
+## Insignes gagnés en fin de partie (TowerLevels).
+var medals_won := 0
 ## Niveau fait dans l'éditeur (vide sinon, voir CustomLevel) : il ne compte ni pour la
 ## progression ni pour les succès, et la partie finie ramène à l'éditeur.
 var custom_level: Dictionary = {}
@@ -1112,10 +1114,14 @@ func _end_game(victory: bool) -> void:
 			add_score(lives * DailyChallenge.POINTS_PER_LIFE)
 		var best_before := Progress.get_daily_score(challenge.date_key)
 		var new_record := Progress.record_daily(challenge.date_key, score)
+		var first_today := victory and not Progress.is_daily_won(challenge.date_key)
 		if victory:
 			Progress.record_daily_win(challenge.date_key)
 		hud.show_challenge_end_screen(victory, score, maxi(best_before, score), new_record and best_before >= 0,
 			Progress.get_daily_streak(challenge.date_key) if victory else 0)
+		if victory:
+			medals_won = TowerLevels.reward_daily(first_today)
+			hud.show_medal_result(medals_won, first_today)
 	elif not custom_level.is_empty():
 		hud.show_end_screen(victory, false, get_stars() if victory else 0)
 	elif is_tutorial:
@@ -1126,6 +1132,7 @@ func _end_game(victory: bool) -> void:
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		_announce_achievements(Achievements.on_conquest_victory(stats))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record)
+		_reward_medals()
 		_roll_equipment_box(first_win)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
@@ -1141,6 +1148,7 @@ func _end_game(victory: bool) -> void:
 			hud.show_mutator_result(Mutators.stars_for(mutators), before)
 		if not unlocked.is_empty():
 			hud.show_unlocked_features(unlocked)
+		_reward_medals()
 		_roll_equipment_box(first_win)
 	elif is_endless:
 		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
@@ -1154,6 +1162,14 @@ func _end_game(victory: bool) -> void:
 	Sound.play(&"victory" if victory else &"defeat")
 	game_over.emit(victory)
 	get_tree().paused = true
+
+
+## Victoire dans un mode qui donne des étoiles : des insignes pour monter le niveau des
+## tours (TowerLevels), annoncés à l'écran de fin.
+func _reward_medals() -> void:
+	medals_won = TowerLevels.reward_victory(scene_file_path, difficulty)
+	if medals_won > 0:
+		hud.show_medal_result(medals_won)
 
 
 ## Victoire dans un mode qui donne des étoiles : peut-être un coffret d'équipement

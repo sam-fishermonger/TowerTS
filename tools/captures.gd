@@ -117,8 +117,8 @@ func _prepare_expedition() -> void:
 	Engine.set_meta(Level.EXPEDITION_META, run.to_dict())
 
 
-## Armurerie : des coffrets ouverts (tirage fixe), deux objets posés sur le Canon et
-## quelques coffrets encore fermés. C'est la dernière capture, pour que cet équipement ne
+## Armurerie : des coffrets ouverts (tirage fixe), deux objets posés sur le Canon, monté
+## au niveau 7, et quelques coffrets encore fermés. C'est la dernière capture, pour que cet équipement ne
 ## renforce pas les tours des autres.
 func _prepare_armory() -> void:
 	var rng := RandomNumberGenerator.new()
@@ -131,6 +131,12 @@ func _prepare_armory() -> void:
 	for item in Equipment.get_items():
 		if Equipment.get_equipped_uids(cannon).size() < 2:
 			Equipment.equip(item.uid, cannon)
+	# Le Canon monté au niveau 7 (premier palier débloqué), des insignes pour la suite.
+	TowerLevels.add_medals(TowerLevels.get_total_cost())
+	for i in 7:
+		TowerLevels.level_up(cannon)
+	TowerLevels.level_up("res://resources/towers/sniper.tres")
+	Progress.set_value(TowerLevels.SECTION, "medals", 48)
 
 
 ## Pose une défense le long du chemin, avec toutes les tours du niveau, puis lance les
