@@ -104,6 +104,7 @@ func _run() -> void:
 	await _test_tower_info_panels()
 	await _test_touch_controls()
 	await _test_gamepad()
+	await _test_map_zoom()
 	await _test_accessibility()
 	await _test_sell_tower()
 	await _test_undo_placement()
@@ -1036,6 +1037,93 @@ func _joy_button(index: JoyButton, pressed := true) -> InputEventJoypadButton:
 	event.button_index = index
 	event.pressed = pressed
 	return event
+
+
+func _wheel(at: Vector2, up: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_WHEEL_UP if up else MOUSE_BUTTON_WHEEL_DOWN
+	event.pressed = true
+	event.position = at
+	return event
+
+
+func _test_map_zoom() -> void:
+	print("Zoom sur la carte")
+	var level := await _spawn_level(LEVEL_01)
+	var zoom := level.map_zoom
+	_check(zoom != null and not zoom.is_zoomed(), "la partie commence sur la carte entière")
+	var center := level.hud.get_play_area().get_center()
+	root.push_input(_wheel(center, false), true)
+	_check(zoom.zoom == MapZoom.MIN_ZOOM and root.canvas_transform == Transform2D.IDENTITY,
+		"on ne dézoome pas sous la carte entière")
+	var cell := Vector2i(2, 4)
+	var aim := level.map.cell_to_world(cell)
+	for i in 4:
+		root.push_input(_wheel(aim, true), true)
+	_check(zoom.zoom > 1.5, "la molette rapproche la vue")
+	_check((root.canvas_transform.affine_inverse() * aim).distance_to(aim) < 0.5,
+		"le zoom se fait vers la souris (le point visé ne bouge pas)")
+	# La pose reste juste : un clic là où la case est affichée y pose la tour.
+	level.select_tower(CANNON)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = root.canvas_transform * level.map.cell_to_world(Vector2i(6, 4))
+	root.push_input(press, true)
+	await process_frame
+	_check(level.map.get_occupant(Vector2i(6, 4)) is Tower, "zoomé, la tour se pose sur la case cliquée")
+	# Un glisser sur la carte, sans rien de choisi, la déplace.
+	var empty := root.canvas_transform * level.map.cell_to_world(Vector2i(4, 6))
+	var before := zoom.offset
+	press.position = empty
+	root.push_input(press, true)
+	var motion := InputEventMouseMotion.new()
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	motion.position = empty + Vector2(40, 30)
+	motion.relative = Vector2(40, 30)
+	root.push_input(motion, true)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.position = motion.position
+	root.push_input(release, true)
+	_check(zoom.offset.distance_to(before + Vector2(40, 30)) < 0.5, "glisser sur la carte la fait suivre")
+	_check(level.map.get_occupant(Vector2i(4, 6)) == null, "le glisser ne pose rien")
+	# La vue ne quitte jamais la zone de jeu.
+	zoom.pan(Vector2(5000, 5000))
+	var area := level.hud.get_play_area()
+	_check(zoom.to_world(area.position).x >= area.position.x - 0.5 and zoom.to_world(area.position).y >= area.position.y - 0.5,
+		"la vue s'arrête au bord haut et gauche de la carte")
+	zoom.pan(Vector2(-9000, -9000))
+	_check(zoom.to_world(area.end).x <= area.end.x + 0.5 and zoom.to_world(area.end).y <= area.end.y + 0.5,
+		"et au bord bas et droit")
+	# Au clavier, - dézoome.
+	var key := InputEventKey.new()
+	key.keycode = KEY_KP_SUBTRACT
+	key.pressed = true
+	var zoomed := zoom.zoom
+	root.push_input(key, true)
+	_check(zoom.zoom < zoomed, "la touche - éloigne la vue")
+	# Au tactile, deux doigts qui s'écartent rapprochent la vue.
+	zoom.reset()
+	for index in 2:
+		var touch := InputEventScreenTouch.new()
+		touch.index = index
+		touch.pressed = true
+		touch.position = center + Vector2(-50 if index == 0 else 50, 0)
+		root.push_input(touch, true)
+	var drag := InputEventScreenDrag.new()
+	drag.index = 1
+	drag.position = center + Vector2(150, 0)
+	root.push_input(drag, true)
+	_check(is_equal_approx(zoom.zoom, 2.0), "écarter deux doigts zoome")
+	for index in 2:
+		var touch := InputEventScreenTouch.new()
+		touch.index = index
+		touch.position = center
+		root.push_input(touch, true)
+	GameSettings.set_touch_mode(false)
+	await _free(level)
+	_check(root.canvas_transform == Transform2D.IDENTITY, "quitter la partie remet la vue à plat pour les écrans suivants")
 
 
 func _test_gamepad() -> void:

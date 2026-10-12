@@ -56,10 +56,10 @@ const LEVEL_LABEL_MIN_WIDTH := 80.0
 const LIVES_COLOR := Color(1, 0.5, 0.5)
 const LIVES_HIT_COLOR := Color(1, 0.15, 0.15)
 ## Rappel des commandes à côté de la barre d'achat, à la souris et au tactile.
-const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
-const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
+const MOUSE_HINT := "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse  ·  Molette : zoom  ·  Glisser : déplacer la carte"
+const TOUCH_HINT := "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez  ·  Pincez pour zoomer, glissez pour déplacer la carte"
 ## Mode Conquête : ce qui change, devant le rappel des commandes.
-const GAMEPAD_HINT := "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·  B : annuler  ·  LB / RB : choisir une tour  ·  Y : vague suivante  ·  X : vitesse  ·  Start : pause  ·  Select : options"
+const GAMEPAD_HINT := "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·  B : annuler  ·  LB / RB : choisir une tour  ·  Y : vague suivante  ·  X : vitesse  ·  Start : pause  ·  Select : options  ·  LT / RT : zoom  ·  Stick droit : déplacer la carte"
 const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
@@ -1384,8 +1384,10 @@ func find_enemy_at(mouse: Vector2) -> Enemy:
 		var enemy := node as Enemy
 		if not enemy or not enemy.is_alive or not enemy.is_node_ready():
 			continue
-		var distance := enemy.get_global_transform_with_canvas().origin.distance_to(mouse)
-		if distance <= enemy.data.radius * 1.3 + 4.0 and distance < best_distance:
+		var on_screen := enemy.get_global_transform_with_canvas()
+		var distance := on_screen.origin.distance_to(mouse)
+		# Le zoom de la carte grossit les monstres à l'écran.
+		if distance <= enemy.data.radius * on_screen.get_scale().x * 1.3 + 4.0 and distance < best_distance:
 			best = enemy
 			best_distance = distance
 	return best
