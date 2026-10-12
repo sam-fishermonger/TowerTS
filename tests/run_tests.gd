@@ -162,6 +162,7 @@ func _run() -> void:
 	await _test_elites()
 	await _test_carriers_and_chests()
 	await _test_equipment()
+	await _test_tower_levels()
 	await _test_expedition()
 	await _test_bosses()
 	await _test_necropolis()
@@ -3066,6 +3067,9 @@ func _test_daily_challenge() -> void:
 	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles")
 	_check(Progress.is_daily_won(key) and level.hud.end_message.text.contains("Série : 1 jour") == false,
 		"le jour réussi est enregistré (pas de série annoncée pour un seul jour)")
+	_check(level.medals_won == TowerLevels.DAILY_FIRST_REWARD
+		and level.hud.end_message.text.contains("Premier défi réussi aujourd'hui : +%d insignes" % level.medals_won),
+		"première victoire du jour au défi : beaucoup d'insignes, annoncés")
 	await _free(level)
 	_check(not Engine.has_meta(Perks.DISABLED_META) and Perks.get_bonuses().starting_gold_bonus > 0,
 		"l'arbre compte de nouveau après le défi")
@@ -3640,6 +3644,105 @@ func _test_equipment() -> void:
 		and is_equal_approx(CANNON.get_stats_at_level(1).damage, base.damage), "effacer la progression efface l'équipement")
 	Engine.set_meta(Progress.SAVE_PATH_META, save_path)
 	Progress.clear_cache()
+
+## Niveaux des tours : insignes gagnés en fin de partie, niveaux et paliers achetés dans l'Armurerie.
+func _test_tower_levels() -> void:
+	print("Niveaux des tours")
+	var save_path := Progress.get_save_path()
+	Engine.set_meta(Progress.SAVE_PATH_META, "user://test_tower_levels.cfg")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Progress.get_save_path()))
+	Progress.clear_cache()
+	var tiers_ok := true
+	for path: String in TowerLevels.TIERS:
+		var tiers: Array = TowerLevels.TIERS[path]
+		tiers_ok = tiers_ok and ResourceLoader.exists(path) and tiers.size() == TowerLevels.MAX_LEVEL / TowerLevels.TIER_EVERY
+		for i in tiers.size():
+			tiers_ok = tiers_ok and not TowerLevels.describe_tier(path, i).is_empty()
+	var all_towers := DirAccess.get_files_at("res://resources/towers").size()
+	_check(tiers_ok and TowerLevels.TIERS.size() == all_towers, "chaque tour a ses %d paliers, tous décrits" % [
+		TowerLevels.MAX_LEVEL / TowerLevels.TIER_EVERY])
+	_check(TowerLevels.get_medals() == 0 and TowerLevels.get_level(CANNON.resource_path) == 0, "aucun insigne au départ")
+
+	# Gains : plus en difficulté haute et en fin de monde, rien hors des modes à étoiles.
+	var easy := TowerLevels.get_victory_reward(LEVEL_01.resource_path, Difficulty.FACILE)
+	var hard := TowerLevels.get_victory_reward(LEVEL_01.resource_path, Difficulty.CAUCHEMAR)
+	var last := TowerLevels.get_victory_reward("res://scenes/levels/level_09.tscn", Difficulty.FACILE)
+	_check(easy == TowerLevels.VICTORY_REWARD and hard > easy and last > easy and last < easy * 2,
+		"une victoire : %d insignes, %d en Cauchemar, %d au dernier niveau du monde" % [easy, hard, last])
+	_check(TowerLevels.get_victory_reward(Tutorial.LEVEL_PATH, Difficulty.MOYEN) == 0
+		and TowerLevels.get_victory_reward("res://scenes/levels/level.tscn", Difficulty.MOYEN) == 0
+		and TowerLevels.get_victory_reward(FREE_01.resource_path, Difficulty.FACILE) > 0
+		and TowerLevels.get_victory_reward(CONQUEST_01.resource_path, Difficulty.FACILE) > 0,
+		"rien dans le tutoriel ni l'éditeur, des insignes en niveaux libres et en Conquête")
+
+	var level := await _spawn_level(LEVEL_01)
+	level._end_game(true)
+	_check(level.medals_won == TowerLevels.get_victory_reward(LEVEL_01.resource_path, level.difficulty)
+		and TowerLevels.get_medals() == level.medals_won and TowerLevels.get_earned() == level.medals_won
+		and level.hud.end_message.text.contains("+%d insignes" % level.medals_won), "victoire : des insignes, annoncés à l'écran de fin")
+	level.hud.box_button.pressed.emit()
+	_check(level.hud.end_message.text.contains("+%d insignes" % level.medals_won), "toujours annoncés après l'ouverture du coffret")
+	await _free(level)
+
+	# Monter un niveau.
+	var cannon_path := CANNON.resource_path
+	var base := CANNON.get_stats_at_level(1)
+	var gatling_base := GATLING.get_stats_at_level(1)
+	Progress.set_value(TowerLevels.SECTION, "medals", 0)
+	_check(TowerLevels.get_cost(cannon_path) == TowerLevels.COST_BASE and not TowerLevels.level_up(cannon_path),
+		"sans assez d'insignes, pas de niveau")
+	TowerLevels.add_medals(TowerLevels.get_total_cost() + 7)
+	_check(TowerLevels.level_up(cannon_path) and TowerLevels.get_level(cannon_path) == 1
+		and TowerLevels.get_medals() == TowerLevels.get_total_cost() + 7 - TowerLevels.COST_BASE
+		and TowerLevels.get_cost(cannon_path) == TowerLevels.COST_BASE + TowerLevels.COST_STEP, "un niveau acheté, le suivant coûte plus")
+	var level1 := CANNON.get_stats_at_level(1)
+	_check(is_equal_approx(level1.damage, base.damage * (1.0 + TowerLevels.LEVEL_DAMAGE))
+		and is_equal_approx(level1.attack_range, base.attack_range * (1.0 + TowerLevels.LEVEL_RANGE))
+		and is_equal_approx(level1.fire_rate, base.fire_rate), "niveau 1 : +1 % dégâts, +0,5 % portée")
+	_check(is_equal_approx(GATLING.get_stats_at_level(1).damage, gatling_base.damage)
+		and TowerLevels.get_level(GATLING.resource_path) == 0, "les autres tours ne changent pas")
+	for i in TowerLevels.TIER_EVERY - 1:
+		TowerLevels.level_up(cannon_path)
+	var tier1 := CANNON.get_stats_at_level(1)
+	_check(TowerLevels.get_level(cannon_path) == 5 and TowerLevels.get_unlocked_tier_count(5) == 1
+		and is_equal_approx(tier1.fire_rate, base.fire_rate * 1.06), "niveau 5 : premier palier du Canon, +6 % cadence")
+	Engine.set_meta(Perks.DISABLED_META, true)
+	_check(is_equal_approx(CANNON.get_stats_at_level(1).damage, CANNON.duplicate().damage),
+		"pas de niveau pendant le défi du jour")
+	Engine.remove_meta(Perks.DISABLED_META)
+
+	# Armurerie.
+	var armory := ARMORY_SCREEN.instantiate()
+	root.add_child(armory)
+	await process_frame
+	_check(armory.level_label.text == "Niveau 5 / %d" % TowerLevels.MAX_LEVEL
+		and armory.tier_labels[0].text.begins_with("●") and armory.tier_labels[1].text.begins_with("○")
+		and armory.medal_label.text.contains(TowerLevels.medal_text(TowerLevels.get_medals())),
+		"l'Armurerie montre le niveau du Canon, ses paliers et les insignes")
+	var medals := TowerLevels.get_medals()
+	var cost := TowerLevels.get_cost(cannon_path)
+	armory.level_button.pressed.emit()
+	_check(TowerLevels.get_level(cannon_path) == 6 and TowerLevels.get_medals() == medals - cost
+		and armory.status_label.text.contains("niveau 6") and armory.level_label.text.begins_with("Niveau 6"),
+		"Monter : le Canon passe au niveau 6")
+	while TowerLevels.level_up(cannon_path):
+		pass
+	armory.refresh()
+	_check(TowerLevels.get_level(cannon_path) == TowerLevels.MAX_LEVEL and armory.level_button.disabled
+		and TowerLevels.get_medals() == 7 and armory.tier_labels[3].text.begins_with("●"),
+		"niveau maximal : tous les paliers, le prix total est juste")
+	armory.select_tower(GATLING.resource_path)
+	_check(armory.level_button.disabled and armory.level_button.tooltip_text.contains("Il manque"),
+		"pas assez d'insignes pour la Mitrailleuse : le bouton le dit")
+	armory.queue_free()
+	await process_frame
+
+	Progress.reset_campaign()
+	_check(TowerLevels.get_medals() == 0 and TowerLevels.get_level(cannon_path) == 0
+		and is_equal_approx(CANNON.get_stats_at_level(1).damage, base.damage), "effacer la progression efface les niveaux")
+	Engine.set_meta(Progress.SAVE_PATH_META, save_path)
+	Progress.clear_cache()
+
 
 ## Mode Expédition : cinq niveaux tirés au sort à la suite, vies gardées, coffres au choix.
 func _test_expedition() -> void:

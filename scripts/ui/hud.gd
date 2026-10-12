@@ -119,6 +119,9 @@ var _mutator_result: Array[int] = []
 var _unlocked_features: Array = []
 ## Rareté du coffret d'équipement gagné, dit sur l'écran de fin (-1 = aucun).
 var _box_result := -1
+## Insignes gagnés à la fin de la partie et s'ils sont ceux de la première victoire du jour
+## au défi (vide = aucun).
+var _medal_result: Array = []
 ## Objet sorti du coffret ouvert sur l'écran de fin (vide tant qu'il n'est pas ouvert).
 var _box_item: Dictionary = {}
 ## Écran de fin : bouton qui ouvre le coffret gagné, puis l'objet obtenu (null sans coffret).
@@ -1182,6 +1185,16 @@ func show_unlocked_features(features: Array) -> void:
 	_unlocked_features = features
 
 
+## Insignes gagnés (TowerLevels), à dépenser dans l'Armurerie. `first_daily` : première
+## victoire du jour au défi du jour, qui en donne beaucoup plus.
+func show_medal_result(amount: int, first_daily := false) -> void:
+	_medal_result = [amount, first_daily]
+	if first_daily:
+		end_message.text += "\n" + tr("Premier défi réussi aujourd'hui : +%d insignes ❖ !") % amount
+	else:
+		end_message.text += "\n" + tr("+%d insignes ❖ à dépenser dans l'Armurerie.") % amount
+
+
 ## Coffret d'équipement gagné (Equipment) : sa rareté, et un bouton pour l'ouvrir tout de
 ## suite. Pas ouvert, il attend dans l'Armurerie.
 func show_box_result(rarity: int) -> void:
@@ -1268,6 +1281,8 @@ func _refresh_end_screen() -> void:
 		show_mutator_result(_mutator_result[0], _mutator_result[1])
 	if not _unlocked_features.is_empty():
 		show_unlocked_features(_unlocked_features)
+	if not _medal_result.is_empty():
+		show_medal_result(_medal_result[0], _medal_result[1])
 	if _box_result >= 0:
 		show_box_result(_box_result)
 	if end_stats.visible:

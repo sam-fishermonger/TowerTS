@@ -297,6 +297,9 @@ func _refresh() -> void:
 	armory_button.text = tr("Armurerie")
 	if boxes > 0:
 		armory_button.text += "  ·  " + tr_n("%d coffret", "%d coffrets", LevelStats.plural_count(boxes)) % boxes
+	# Et les insignes à dépenser pour monter le niveau des tours.
+	if TowerLevels.get_medals() > 0:
+		armory_button.text += "  ·  " + TowerLevels.medal_text(TowerLevels.get_medals())
 	reset_button.visible = any_won
 	_refresh_resume(not is_play_menu_open())
 	# Le bouton du tutoriel n'est montré que tant qu'il n'est ni fini ni passé : il est alors conseillé.

@@ -17,7 +17,7 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 | ![Mode Expédition](docs/captures/expedition.webp) | ![Menu Jouer](docs/captures/jouer.webp) |
 | Expédition : cinq niveaux à la suite, un coffre au choix | Menu Jouer : les modes se débloquent avec les niveaux gagnés |
 | ![Pause](docs/captures/pause.webp) | ![Armurerie](docs/captures/armurerie.webp) |
-| En pause : le trajet des monstres revient, Recommencer ou Quitter | Armurerie : l'équipement des tours, les coffrets à ouvrir |
+| En pause : le trajet des monstres revient, Recommencer ou Quitter | Armurerie : l'équipement et le niveau des tours, les coffrets à ouvrir |
 
 ## Prérequis
 
@@ -237,6 +237,36 @@ Les objets ont **4 raretés** : Commun, Rare, Épique et Légendaire. Plus la ra
 Les objets sortent des **coffrets**. Gagner un niveau de la campagne, un niveau libre ou un niveau de la Conquête donne un coffret **à coup sûr la première fois** dans une difficulté, puis avec 30 % (Facile), 40 % (Moyen), 50 % (Difficile) ou 60 % (Cauchemar) de chances ; pas d'éditeur, de tutoriel, de mode infini, de Défi du jour ni d'Expédition. La **rareté** du coffret dépend de la difficulté (pour 60 %) et de la place du niveau dans son monde (pour 40 %) : de 70 % de Commun et 1 % de Légendaire (Facile, premier niveau) à 20 % de Commun et 12 % de Légendaire (Cauchemar, dernier niveau). L'écran de fin l'annonce avec un bouton **Ouvrir le coffret** qui montre tout de suite l'objet obtenu ; pas ouvert, le coffret attend dans l'Armurerie, dont le bouton compte ceux à ouvrir. Ouvrir un coffret en tire un objet de sa rareté (les objets réservés à une tour sont deux fois moins fréquents). **Fondre** trois objets libres d'une même rareté (les plus anciens) donne un coffret de la rareté au-dessus. Ces coffrets n'ont rien à voir avec les coffres lâchés en jeu par les porteurs, dont le bonus ne dure que le niveau.
 
 Tout est dans `scripts/data/equipment.gd` (objets, chances, effets, appliqués par `TowerData.get_stats_at_level()`) et `scripts/ui/armory_screen.gd` ; l'équipement est enregistré dans la section `equipment` de la progression et s'efface avec elle.
+
+### Niveaux des tours et insignes
+
+Chaque victoire rapporte des **insignes** ❖, à dépenser dans l'**Armurerie** pour faire monter de niveau un **type de tour** (le Canon, le Sniper…) : comme l'équipement, le niveau renforce toutes les tours de ce type, dans tous les modes sauf le Défi du jour et le tutoriel. L'Armurerie montre les insignes à dépenser en haut à droite, le niveau de chaque tour dans la liste, et pour la tour choisie son niveau, son bonus, le bouton **Monter** avec son prix et ses paliers ; le bouton de l'Armurerie à l'écran titre compte les insignes, et la fiche d'une tour en jeu donne son niveau d'Armurerie.
+
+- **Gains** : 10 insignes par victoire dans les mêmes modes que les coffrets (campagne, niveaux libres, Conquête), multipliés par la difficulté (x1 Facile, x1,2 Moyen, x1,4 Difficile, x1,7 Cauchemar) et par la place du niveau dans son monde (x1 au premier, x1,5 au dernier) : de 10 à 26 insignes. Le **Défi du jour** en donne **60 à la première victoire du jour**, puis 10. L'écran de fin les annonce.
+- **Niveaux** : de 0 à **20**. Le niveau suivant coûte 10 insignes, puis 5 de plus à chaque niveau (10, 15, 20… 105), soit 1 150 insignes pour une tour au maximum. Chaque niveau donne **+1 % de dégâts et +0,5 % de portée**.
+- **Paliers** : aux niveaux 5, 10, 15 et 20, un bonus plus fort, propre à chaque tour :
+
+| Tour | Niv. 5 | Niv. 10 | Niv. 15 | Niv. 20 |
+|---|---|---|---|---|
+| Canon | +6 % cadence | recul +6 | 1 coup sur 8 double | +15 % dégâts |
+| Mitrailleuse | +6 % portée | +10 % cadence | +25 % aux volants | +15 % cadence |
+| Sniper | +6 % cadence | ignore l'armure, +5 % | +25 % aux boss | 1 coup sur 5 double |
+| Mortier | +5 % portée | +12 % rayon d'explosion | +10 % dégâts | +20 % rayon d'explosion |
+| Givre | +6 % portée | ralentissement +6 pts | +10 % cadence | ralentissement +10 pts |
+| Rayon | +6 % portée | +12 % montée en puissance | +25 % aux volants | +25 % montée en puissance |
+| Lance-flammes | +6 % portée | +15 % brûlure | +8 % cadence | +30 % brûlure |
+| Pesticide | +5 % portée | nuage +1 s | +15 % poison | nuage +2 s |
+| Arc électrique | +5 % portée | +1 rebond | +10 % dégâts | +1 rebond |
+| Bobine | +6 % portée | renfort +3 pts | +8 % portée | renfort +5 pts |
+| Électroaimant | +6 % portée | +15 % recul | +10 % cadence | +25 % recul |
+| Encensoir | +5 % portée | consacre +1 s | +12 % rayon d'explosion | consacre +2 s |
+| Cloche funèbre | +6 % portée | ralentissement +0,3 s | +10 % cadence | ralentissement +0,5 s |
+| Brouilleur IEM | +6 % portée | +25 % aux boucliers | +10 % cadence | brouillage +2 s |
+| Franc-tireur | +6 % cadence | anti-soin +1,5 s | +25 % aux boss | 1 coup sur 6 double |
+| Perforateur | +6 % cadence | +20 % aux boss | +8 % portée | +15 % dégâts |
+| Lacrymogène | +5 % portée | nuage +1 s | ralentissement +6 pts | anti-soin +1 s |
+
+Tout est dans `scripts/data/tower_levels.gd` (gains, prix, paliers, appliqués par `TowerData.get_stats_at_level()` après l'équipement) ; insignes et niveaux sont enregistrés dans la section `tower_levels` de la progression et s'effacent avec elle.
 
 ## Images
 

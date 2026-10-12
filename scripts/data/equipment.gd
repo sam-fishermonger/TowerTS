@@ -508,6 +508,15 @@ static func apply_effect(stats: TowerData, effect: String, value: float) -> void
 			stats.knockback *= 1.0 + value
 		"revive_block":
 			stats.revive_block_duration += value
+		"slow_duration":
+			if stats.slow_factor < 1.0:
+				stats.slow_duration += value
+		"shield_damage":
+			stats.shield_damage_multiplier *= 1.0 + value
+		"shield_jam":
+			stats.shield_jam_duration += value
+		"heal_block":
+			stats.heal_block_duration += value
 
 
 ## Effet sur une ligne courte, traduit : « +15 % dégâts ».
@@ -557,6 +566,14 @@ static func describe_effect(effect: String, value: float) -> String:
 			return TranslationServer.translate("+%d %% recul") % percent
 		"revive_block":
 			return TranslationServer.translate("Consacre %s s de plus") % _format(value)
+		"slow_duration":
+			return TranslationServer.translate("Ralentissement : +%s s") % _format(value)
+		"shield_damage":
+			return TranslationServer.translate("+%d %% dégâts aux boucliers") % percent
+		"shield_jam":
+			return TranslationServer.translate("Brouille les boucliers %s s de plus") % _format(value)
+		"heal_block":
+			return TranslationServer.translate("Empêche les soins %s s de plus") % _format(value)
 	return ""
 
 

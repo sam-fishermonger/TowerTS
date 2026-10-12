@@ -1,8 +1,9 @@
 extends Control
-## Armurerie (depuis l'écran titre) : l'équipement des tours (Equipment). À gauche les
-## types de tour, au milieu les emplacements de celui choisi et les coffrets à ouvrir, à
-## droite l'inventaire. Un clic sur un objet de l'inventaire le pose sur la tour choisie,
-## un clic sur un emplacement (ou sur l'objet déjà posé) le retire.
+## Armurerie (depuis l'écran titre) : l'équipement des tours (Equipment) et leur niveau
+## (TowerLevels). À gauche les types de tour, au milieu le niveau et les emplacements de
+## celui choisi puis les coffrets à ouvrir, à droite l'inventaire. Un clic sur un objet de
+## l'inventaire le pose sur la tour choisie, un clic sur un emplacement (ou sur l'objet
+## déjà posé) le retire. Les insignes à dépenser sont en haut à droite.
 
 const TITLE_SCREEN := "res://scenes/ui/title_screen.tscn"
 const TITLE_COLOR := Color(0.95, 0.85, 0.45)
@@ -23,6 +24,13 @@ var item_buttons := {}
 var open_button: Button
 var merge_buttons: Array[Button] = []
 var back_button: Button
+## Insignes à dépenser, niveau de la tour choisie et bouton pour la monter d'un niveau.
+var medal_label: Label
+var level_label: Label
+var level_bonus_label: Label
+var level_button: Button
+## Paliers de la tour choisie (un Label par palier).
+var tier_labels: Array[Label] = []
 var box_label: Label
 var status_label: Label
 var inventory_label: Label
@@ -98,6 +106,20 @@ func open_box() -> Dictionary:
 	return last_opened
 
 
+## Monte la tour choisie d'un niveau en payant ses insignes.
+func level_up() -> bool:
+	if not TowerLevels.level_up(selected_tower):
+		return false
+	var level := TowerLevels.get_level(selected_tower)
+	Sound.play(&"upgrade")
+	status_label.text = tr("%s passe au niveau %d.") % [_tower_name(selected_tower), level]
+	if level % TowerLevels.TIER_EVERY == 0:
+		status_label.text = tr("%s passe au niveau %d : palier débloqué, %s !") % [_tower_name(selected_tower),
+			level, TowerLevels.describe_tier(selected_tower, level / TowerLevels.TIER_EVERY - 1)]
+	refresh()
+	return true
+
+
 ## Fond trois objets libres de cette rareté en un coffret de la rareté au-dessus.
 func merge(rarity: int) -> void:
 	if Equipment.merge(rarity):
@@ -107,6 +129,7 @@ func merge(rarity: int) -> void:
 
 
 func refresh() -> void:
+	_refresh_medals()
 	_refresh_towers()
 	_refresh_slots()
 	_refresh_boxes()
@@ -127,12 +150,21 @@ func _build() -> void:
 	add_child(title)
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 16.0
-	var subtitle := _label("L'équipement posé sur un type de tour renforce toutes ses tours, dans toutes les parties.",
+	var subtitle := _label("L'équipement et le niveau d'un type de tour renforcent toutes ses tours, dans toutes les parties.",
 		16, MUTED)
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(subtitle)
 	subtitle.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	subtitle.offset_top = 70.0
+	medal_label = _label("", 24, TowerLevels.COLOR)
+	medal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	medal_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(medal_label)
+	medal_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	medal_label.offset_left = -320.0
+	medal_label.offset_right = -24.0
+	medal_label.offset_top = 24.0
+	medal_label.offset_bottom = 56.0
 
 	# Types de tour.
 	var towers_panel := _panel(Rect2(24, 104, 280, 600), UiStyle.ACCENT)
@@ -160,26 +192,58 @@ func _build() -> void:
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name_label)
 		row.add_child(_label("", 16, MUTED))
+		var tower_level_label := _label("", 16, MUTED)
+		tower_level_label.custom_minimum_size.x = 52.0
+		tower_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		row.add_child(tower_level_label)
 		button.pressed.connect(select_tower.bind(path))
 		_tower_list.add_child(button)
 		tower_buttons[path] = button
 
 	# Emplacements de la tour choisie.
-	var slots_panel := _panel(Rect2(320, 104, 440, 330), Equipment.COLOR)
+	var slots_panel := _panel(Rect2(320, 104, 440, 404), Equipment.COLOR)
 	_slot_list = VBoxContainer.new()
-	_slot_list.add_theme_constant_override(&"separation", 8)
+	_slot_list.add_theme_constant_override(&"separation", 6)
 	slots_panel.add_child(_slot_list)
 	_tower_header = HBoxContainer.new()
 	_tower_header.add_theme_constant_override(&"separation", 12)
 	_slot_list.add_child(_tower_header)
+	# Niveau de la tour : niveau, bonus, bouton pour monter, puis les paliers.
+	var level_row := HBoxContainer.new()
+	level_row.add_theme_constant_override(&"separation", 10)
+	_slot_list.add_child(level_row)
+	var level_column := VBoxContainer.new()
+	level_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	level_column.add_theme_constant_override(&"separation", 0)
+	level_row.add_child(level_column)
+	level_label = _label("", 18, TowerLevels.COLOR)
+	level_column.add_child(level_label)
+	level_bonus_label = _label("", 13, MUTED)
+	level_column.add_child(level_bonus_label)
+	level_button = Button.new()
+	level_button.name = "LevelUpButton"
+	level_button.custom_minimum_size = Vector2(150, 40)
+	UiStyle.style_button(level_button, TowerLevels.COLOR, 10.0, 10.0)
+	level_button.pressed.connect(level_up)
+	level_row.add_child(level_button)
+	var tier_list := VBoxContainer.new()
+	tier_list.add_theme_constant_override(&"separation", 0)
+	_slot_list.add_child(tier_list)
+	for i in TowerLevels.MAX_LEVEL / TowerLevels.TIER_EVERY:
+		var tier := _label("", 13, MUTED)
+		tier.custom_minimum_size.y = 19.0
+		tier.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		tier.mouse_filter = Control.MOUSE_FILTER_PASS
+		tier_list.add_child(tier)
+		tier_labels.append(tier)
 	for i in Equipment.SLOTS:
-		var slot := _row_button(72.0)
+		var slot := _row_button(56.0)
 		slot.pressed.connect(_on_slot_pressed.bind(i))
 		_slot_list.add_child(slot)
 		slot_buttons.append(slot)
 
 	# Coffrets.
-	var boxes_panel := _panel(Rect2(320, 450, 440, 254), Equipment.COLOR)
+	var boxes_panel := _panel(Rect2(320, 516, 440, 208), Equipment.COLOR)
 	var boxes_column := VBoxContainer.new()
 	boxes_column.add_theme_constant_override(&"separation", 8)
 	boxes_panel.add_child(boxes_column)
@@ -195,11 +259,11 @@ func _build() -> void:
 	open_button.pressed.connect(open_box)
 	boxes_header.add_child(open_button)
 	_box_row = HBoxContainer.new()
-	_box_row.custom_minimum_size.y = 40.0
+	_box_row.custom_minimum_size.y = 36.0
 	_box_row.add_theme_constant_override(&"separation", 6)
 	boxes_column.add_child(_box_row)
 	_reveal = PanelContainer.new()
-	_reveal.custom_minimum_size.y = 64.0
+	_reveal.custom_minimum_size.y = 52.0
 	boxes_column.add_child(_reveal)
 	var merge_row := HBoxContainer.new()
 	merge_row.add_theme_constant_override(&"separation", 6)
@@ -264,6 +328,10 @@ func _refresh_towers() -> void:
 		var count_label := row.get_child(2) as Label
 		count_label.text = "%d / %d" % [count, Equipment.SLOTS]
 		count_label.add_theme_color_override(&"font_color", Equipment.COLOR if count > 0 else MUTED)
+		var level := TowerLevels.get_level(path)
+		var tower_level_label := row.get_child(3) as Label
+		tower_level_label.text = tr("Niv. %d") % level
+		tower_level_label.add_theme_color_override(&"font_color", TowerLevels.COLOR if level > 0 else MUTED)
 		var accent: Color = (load(path) as TowerData).color.lightened(0.2)
 		UiStyle.style_button(button, accent if path == selected_tower else Color(accent, 0.35), 8.0, 8.0, false)
 		if path == selected_tower:
@@ -288,8 +356,9 @@ func _refresh_slots() -> void:
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	_tower_header.add_child(column)
 	column.add_child(_label(_tower_name(selected_tower), 24, data.color.lightened(0.3)))
+	_refresh_level()
 	var base := data.get_stats_at_level(1)
-	column.add_child(_label(tr("Niv. 1 : %s dégâts, %s tirs/s, portée %s") % [TowerInfoPanel._format(base.damage),
+	column.add_child(_label(tr("Tour posée : %s dégâts, %s tirs/s, portée %s") % [TowerInfoPanel._format(base.damage),
 		TowerInfoPanel._format(base.fire_rate, 2), TowerInfoPanel._format(base.attack_range)], 14, MUTED))
 	var items := Equipment.get_equipped(selected_tower)
 	for i in slot_buttons.size():
@@ -299,7 +368,7 @@ func _refresh_slots() -> void:
 			row.remove_child(child)
 			child.queue_free()
 		if i < items.size():
-			_fill_item_row(row, items[i])
+			_fill_item_row(row, items[i], "", true, false)
 			slot.tooltip_text = tr("Cliquer pour retirer l'objet.")
 			UiStyle.style_button(slot, Equipment.rarity_color(items[i].rarity), 8.0, 8.0, false)
 		else:
@@ -309,6 +378,38 @@ func _refresh_slots() -> void:
 			row.add_child(empty)
 			slot.tooltip_text = ""
 			UiStyle.style_button(slot, Color(UiStyle.ACCENT, 0.3), 8.0, 8.0, false)
+
+
+func _refresh_medals() -> void:
+	medal_label.text = tr("Insignes : %s") % TowerLevels.medal_text(TowerLevels.get_medals())
+	medal_label.tooltip_text = tr("Gagnés à chaque victoire (plus en difficulté haute et vers la fin d'un monde), et beaucoup à la première victoire du jour au défi du jour. Ils font monter le niveau des tours.") \
+		+ "\n" + tr("Gagnés en tout : %d") % TowerLevels.get_earned()
+
+
+## Niveau de la tour choisie, son bonus, le prix du suivant et ses paliers.
+func _refresh_level() -> void:
+	var level := TowerLevels.get_level(selected_tower)
+	var cost := TowerLevels.get_cost(selected_tower)
+	level_label.text = tr("Niveau %d / %d") % [level, TowerLevels.MAX_LEVEL]
+	level_bonus_label.text = tr("Chaque niveau : +1 % dégâts, +0,5 % portée") if level == 0 \
+		else tr("Bonus des niveaux : %s") % TowerLevels.describe_level_bonus(level)
+	if cost < 0:
+		level_button.text = tr("Niveau max")
+		level_button.disabled = true
+		level_button.tooltip_text = ""
+	else:
+		level_button.text = tr("Monter  ·  %s") % TowerLevels.medal_text(cost)
+		level_button.disabled = not TowerLevels.can_level_up(selected_tower)
+		level_button.tooltip_text = tr("Il manque %s.") % TowerLevels.medal_text(cost - TowerLevels.get_medals()) \
+			if level_button.disabled else tr("Passer au niveau %d.") % (level + 1)
+	var unlocked := TowerLevels.get_unlocked_tier_count(level)
+	for i in tier_labels.size():
+		var tier := tier_labels[i]
+		var effect := TowerLevels.describe_tier(selected_tower, i)
+		tier.text = ("● " if i < unlocked else "○ ") + tr("Niv. %d") % TowerLevels.tier_level(i) + "  ·  " + effect
+		tier.tooltip_text = tr("Palier du niveau %d : %s") % [TowerLevels.tier_level(i), effect]
+		tier.add_theme_color_override(&"font_color", TowerLevels.COLOR if i < unlocked else MUTED)
+		tier.visible = not effect.is_empty()
 
 
 func _refresh_boxes() -> void:
@@ -392,8 +493,9 @@ func _refresh_inventory() -> void:
 
 
 ## Ligne d'un objet : badge, nom (couleur de sa rareté), rareté et tour réservée ou
-## portant l'objet, effets. `compact` : texte plus petit (inventaire, deux colonnes).
-func _fill_item_row(row: HBoxContainer, item: Dictionary, prefix := "", compact := false) -> void:
+## portant l'objet, effets. `compact` : texte plus petit (inventaire, emplacements).
+## `show_worn` : dit sur quelle tour l'objet est posé (inventaire).
+func _fill_item_row(row: HBoxContainer, item: Dictionary, prefix := "", compact := false, show_worn := compact) -> void:
 	var definition := Equipment.get_definition(item.kind)
 	var badge := EquipmentIcon.new()
 	badge.icon = definition.get("icon", "box")
@@ -416,7 +518,7 @@ func _fill_item_row(row: HBoxContainer, item: Dictionary, prefix := "", compact 
 	if not reserved.is_empty():
 		info += "  ·  " + tr("Réservé : %s") % _tower_name(reserved)
 	var worn := Equipment.get_tower_of(item.uid)
-	if compact and not worn.is_empty():
+	if show_worn and not worn.is_empty():
 		info += "  ·  " + tr("Sur : %s") % _tower_name(worn)
 	var info_label := _label(info, 12 if compact else 13, Color(color, 0.85))
 	info_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
