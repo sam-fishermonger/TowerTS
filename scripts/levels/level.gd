@@ -266,6 +266,13 @@ func _ready() -> void:
 		_chest_rng.seed = hash("%d/%d/coffres" % [expedition.rng_seed, expedition.index])
 	if not is_endless and not is_demo and not challenge and not is_tutorial:
 		difficulty = resumed.get("difficulty", Difficulty.get_current())
+		# Toute l'expédition se joue dans la difficulté de sa première étape.
+		if expedition:
+			if expedition.difficulty >= 0:
+				difficulty = expedition.difficulty
+			expedition.difficulty = difficulty
+			if expedition.best_before < 0:
+				expedition.best_before = Expedition.get_best()
 		# Pas de mutateurs en Expédition : ses règles à elle suffisent. Une partie reprise
 		# garde les mutateurs avec lesquels elle a commencé.
 		if custom_level.is_empty() and not conquest_mode and not expedition \
@@ -785,7 +792,7 @@ func use_power(power: Power, at := Vector2.ZERO) -> bool:
 			for node in get_tree().get_nodes_in_group(Enemy.GROUP):
 				(node as Enemy).freeze(power.duration, power.vulnerability)
 			var wave := FreezeWave.new()
-			wave.area = hud.get_play_area()
+			wave.area = screen_to_world_rect(hud.get_play_area())
 			wave.color = power.color
 			effects.add_child(wave)
 			Sound.play(&"pulse_frost")
@@ -918,7 +925,7 @@ func start_next_wave() -> void:
 		Sound.play(&"coins")
 		var button_rect := hud.next_wave_button.get_global_rect()
 		_show_floating_text("+%d" % early_bonus, GOLD_TEXT_COLOR,
-			Vector2(button_rect.get_center().x, button_rect.end.y + 24.0), 18)
+			screen_to_world(Vector2(button_rect.get_center().x, button_rect.end.y + 24.0)), 18)
 
 
 ## Prime pour lancer la prochaine vague alors que des ennemis sont encore en jeu (0 sinon).
@@ -1014,7 +1021,7 @@ func _split(enemy: Enemy) -> void:
 	Sound.play(&"enemy_split")
 	for i in data.split_count:
 		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0),
-			enemy.health_multiplier, 1.0, -1, _route_for(enemy, data.split_into))
+			enemy.get_offspring_health_multiplier(), 1.0, -1, _route_for(enemy, data.split_into))
 
 
 ## Un ennemi tombé se relèvera sur place après son délai, avec une partie de sa vie.
@@ -1023,7 +1030,7 @@ func _start_revive(enemy: Enemy) -> void:
 	var effect := RiseEffect.new()
 	effect.radius = enemy.data.radius
 	effect.duration = enemy.data.revive_delay
-	effect.risen.connect(_revive.bind(enemy.data, enemy.path, enemy.progress, enemy.health_multiplier,
+	effect.risen.connect(_revive.bind(enemy.data, enemy.path, enemy.progress, enemy.get_offspring_health_multiplier(),
 		enemy.revives_left - 1, _route_for(enemy, enemy.data)))
 	stains.add_child(effect)
 	effect.global_position = enemy.global_position
@@ -1044,7 +1051,7 @@ func _on_enemy_summoned(enemy: Enemy) -> void:
 	var data := enemy.data
 	for i in data.summon_count:
 		spawner.spawn(data.summon_enemy, enemy.path,
-			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.health_multiplier,
+			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.get_summon_health_multiplier(),
 			1.0, -1, _route_for(enemy, data.summon_enemy))
 
 
@@ -1070,7 +1077,8 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 	if lives <= 0 and _bonuses.last_stand_lives > 0 and not last_stand_used:
 		last_stand_used = true
 		lives = _bonuses.last_stand_lives
-		_show_floating_text(tr("Dernier rempart ! +%d vies") % lives, GOLD_TEXT_COLOR, hud.get_play_area().get_center(), 26)
+		_show_floating_text(tr("Dernier rempart ! +%d vies") % lives, GOLD_TEXT_COLOR,
+			screen_to_world(hud.get_play_area().get_center()), 26)
 	if lives <= 0:
 		_end_game(false)
 	else:
@@ -1090,7 +1098,7 @@ func _check_wave_cleared() -> void:
 	if interest > 0:
 		gold += interest
 		stats.gold_earned += interest
-		_show_floating_text(tr("+%d intérêts") % interest, GOLD_TEXT_COLOR, hud.get_interest_anchor(), 16)
+		_show_floating_text(tr("+%d intérêts") % interest, GOLD_TEXT_COLOR, screen_to_world(hud.get_interest_anchor()), 16)
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
 	while _wave_bonus_paid < spawner.current_wave:
@@ -1155,7 +1163,7 @@ func _end_game(victory: bool) -> void:
 		var stars_won := get_stars()
 		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
-		_announce_achievements(Achievements.on_conquest_victory(stats))
+		_announce_achievements(Achievements.on_conquest_victory(stats, difficulty))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record)
 		_reward_medals()
 		_roll_equipment_box(first_win)
@@ -1213,8 +1221,11 @@ func _end_expedition_step(victory: bool) -> void:
 	expedition.lives = lives
 	expedition.chest_levels = chest_levels.duplicate()
 	var new_record := false
+	# Chaque étape franchie compte tout de suite pour le record : le joueur peut s'arrêter
+	# sur l'écran de l'étape réussie.
+	Expedition.record(cleared)
 	if not victory or expedition.is_last():
-		new_record = Expedition.record(cleared)
+		new_record = cleared > expedition.best_before
 	hud.show_expedition_end_screen(victory, cleared, expedition.levels.size(), lives, new_record)
 
 
@@ -1322,7 +1333,7 @@ func choose_chest_bonus(id: StringName) -> void:
 	if not hud.chest_choice or not hud.chest_choice.choices.has(id):
 		return
 	hud.close_chest_choice()
-	_gain_chest_bonus(id, hud.get_play_area().get_center())
+	_gain_chest_bonus(id, screen_to_world(hud.get_play_area().get_center()))
 	expedition.chest_levels = chest_levels.duplicate()
 	var available := _get_available_chest_bonuses()
 	if _chest_choices_waiting > 0 and not available.is_empty():
@@ -1493,6 +1504,10 @@ func restore_saved_game(data: Dictionary) -> void:
 	# Règles du défi ou des mutateurs : affichées jusqu'à la première vague.
 	if spawner.current_wave >= 0:
 		hud.hide_challenge_rules()
+		# Le tracé des chemins s'estompe comme après le lancement d'une vague.
+		var path_preview := get_node_or_null("PathPreview") as PathPreview
+		if path_preview:
+			path_preview._on_wave_started(spawner.current_wave)
 	if not chest_levels.is_empty():
 		hud.set_interest_rules(get_interest_rate(), get_interest_cap())
 		hud.update_chest_bonuses(chest_levels)
@@ -1608,11 +1623,20 @@ func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int
 	effects.add_child(label)
 
 
+## Point de l'écran (HUD) dans le repère de la carte, qui suit le zoom (MapZoom).
+func screen_to_world(at: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform().affine_inverse() * at
+
+
+func screen_to_world_rect(rect: Rect2) -> Rect2:
+	return get_viewport().get_canvas_transform().affine_inverse() * rect
+
+
 ## Signale la perte de vies : effet sur le HUD et « -N » rouge là où l'ennemi est sorti.
 func _show_lives_lost(amount: int, at: Vector2) -> void:
 	hud.play_damage_effect(amount)
 	# L'ennemi sort par le bord de l'écran : on ramène le texte dans la zone visible.
-	var area := hud.get_play_area().grow(-24.0)
+	var area := screen_to_world_rect(hud.get_play_area()).grow(-24.0)
 	var shown_at := at.clamp(area.position, area.end)
 	_show_floating_text("-%d" % amount, LIVES_LOST_TEXT_COLOR, shown_at, 20)
 

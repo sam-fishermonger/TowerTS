@@ -314,7 +314,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 ## vitesse, Y lance la vague, LB et RB passent d'une tour de la barre à l'autre.
 func _unhandled_input(event: InputEvent) -> void:
 	var button := event as InputEventJoypadButton
-	if button == null or not button.pressed or end_panel.visible or tower_picker or options_menu:
+	if button == null or not button.pressed or end_panel.visible or tower_picker or options_menu \
+			or chest_choice:
 		return
 	match button.button_index:
 		JOY_BUTTON_START:

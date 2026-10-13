@@ -200,11 +200,15 @@ static func on_victory(stats: LevelStats, lives: int, gold: int, difficulty: int
 
 
 ## Succès d'un niveau de Conquête gagné : ceux dont la condition `conquest_win` est
-## remplie, puis ceux de la progression. Renvoie les identifiants débloqués.
-static func on_conquest_victory(stats: LevelStats) -> Array[String]:
+## remplie, ceux de victoire qui valent pour tout niveau (gagner, gagner en Cauchemar),
+## puis ceux de la progression. Renvoie les identifiants débloqués.
+static func on_conquest_victory(stats: LevelStats, difficulty := Difficulty.MOYEN) -> Array[String]:
 	var ids: Array[String] = []
 	for definition in LIST:
-		if definition.get("conquest_win", "") == "any" \
+		if definition.get("win", "") in ["any", "nightmare"] \
+				and _is_win_met(definition.win, stats, 0, 0, difficulty):
+			ids.append(definition.id)
+		elif definition.get("conquest_win", "") == "any" \
 				or (definition.get("conquest_win", "") == "no_worker_lost" and stats.workers_lost == 0):
 			ids.append(definition.id)
 	var result := unlock_all(ids)

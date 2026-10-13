@@ -318,4 +318,4 @@ unique_name_in_owner = true
 title = "Effacer la progression"
 ok_button_text = "Effacer"
 cancel_button_text = "Annuler"
-dialog_text = "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le premier niveau de La Ruche restera débloqué."
+dialog_text = "Les étoiles et les crânes de tous les niveaux, les améliorations achetées, l'équipement, les niveaux des tours et les records seront perdus, et seul le premier niveau de La Ruche restera débloqué. Les succès et les réglages sont gardés."

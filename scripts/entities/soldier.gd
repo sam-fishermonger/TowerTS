@@ -45,7 +45,8 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(target) or not _is_valid_target(target):
 		_release()
 		target = _find_target()
-		if target and not target.data.is_boss:
+		# Un monstre déjà retenu par une Barricade le reste : le soldat le frappe seulement.
+		if target and not target.data.is_boss and not target.is_held():
 			target.holder = self
 	if target == null:
 		queue_redraw()
@@ -72,12 +73,12 @@ func _is_valid_target(enemy: Enemy) -> bool:
 		and global_position.distance_to(enemy.global_position) <= power.radius + enemy.data.radius
 
 
-## L'ennemi le plus avancé à portée qu'aucun autre soldat ne retient ; un boss seulement
-## s'il n'y a personne d'autre.
+## L'ennemi le plus avancé à portée qu'aucun autre soldat ne retient (une Barricade, oui) ;
+## un boss seulement s'il n'y a personne d'autre.
 func _find_target() -> Enemy:
 	var best: Enemy = null
 	for enemy in Enemy.get_alive_in_radius(get_tree(), global_position, power.radius + 24.0):
-		if not _is_valid_target(enemy) or enemy.is_held():
+		if not _is_valid_target(enemy) or (enemy.is_held() and enemy.holder is Soldier):
 			continue
 		if best == null or (best.data.is_boss and not enemy.data.is_boss) \
 				or (best.data.is_boss == enemy.data.is_boss and enemy.distance_to_end() < best.distance_to_end()):
