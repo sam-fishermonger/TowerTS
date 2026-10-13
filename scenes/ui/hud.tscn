@@ -335,14 +335,38 @@ custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "Niveau suivant"
 
-[node name="RestartButton" type="Button" parent="EndPanel/Margin/Row/Column"]
+[node name="ReplayRow" type="HBoxContainer" parent="EndPanel/Margin/Row/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RestartButton" type="Button" parent="EndPanel/Margin/Row/Column/ReplayRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Rejouer"
 
-[node name="MenuButton" type="Button" parent="EndPanel/Margin/Row/Column"]
+[node name="ArmoryButton" type="Button" parent="EndPanel/Margin/Row/Column/ReplayRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_horizontal = 3
+text = "Armurerie"
+
+[node name="LeaveRow" type="HBoxContainer" parent="EndPanel/Margin/Row/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BackButton" type="Button" parent="EndPanel/Margin/Row/Column/LeaveRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Retour"
+
+[node name="MenuButton" type="Button" parent="EndPanel/Margin/Row/Column/LeaveRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
 text = "Menu principal"

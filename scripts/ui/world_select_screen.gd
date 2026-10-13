@@ -69,9 +69,15 @@ func _ready() -> void:
 	lock_bubble.watch(mutators_button, Unlocks.get_hint.bind(Unlocks.Feature.MUTATORS), true)
 	mode_button.toggled.connect(set_endless_mode)
 	mutators_button.pressed.connect(open_mutators)
-	set_endless_mode(false)
+	# Retour depuis un niveau (Level.WORLD_SELECT_META) : son mode, et le focus sur lui.
+	var played: Dictionary = Engine.get_meta(Level.WORLD_SELECT_META, {})
+	if Engine.has_meta(Level.WORLD_SELECT_META):
+		Engine.remove_meta(Level.WORLD_SELECT_META)
+	set_endless_mode(played.get("endless", false))
 	Sound.play_music()
-	var next := get_level_button(Progress.get_next_to_play(CAMPAIGN))
+	var next := get_level_button(played.get("level", ""))
+	if next == null or next.disabled:
+		next = get_level_button(Progress.get_next_to_play(CAMPAIGN))
 	(next if next else back_button).grab_focus()
 
 

@@ -59,8 +59,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		go_back()
 
 
+## Vers l'écran titre, ou celui du mode joué quand l'Armurerie a été ouverte depuis
+## l'écran de fin d'un niveau (Level.ARMORY_RETURN_META).
 func go_back() -> void:
-	get_tree().change_scene_to_file(TITLE_SCREEN)
+	var screen: String = Engine.get_meta(Level.ARMORY_RETURN_META, TITLE_SCREEN)
+	if Engine.has_meta(Level.ARMORY_RETURN_META):
+		Engine.remove_meta(Level.ARMORY_RETURN_META)
+	get_tree().change_scene_to_file(screen)
 
 
 ## Choisit le type de tour dont on montre et change les emplacements.
