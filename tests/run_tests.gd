@@ -334,6 +334,14 @@ func _test_title_screen() -> void:
 	title.get_node("%PlayButton").pressed.emit()
 	title.get_node("%BackButton").pressed.emit()
 	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible, "Retour aussi")
+	_check(not ProjectSettings.get_setting("application/config/quit_on_go_back") and root.get_node("Sortie") is GameExit,
+		"le retour d'Android ne ferme pas le jeu d'un coup, il passe par Sortie")
+	title.get_node("%PlayButton").pressed.emit()
+	_check(not title.go_back(), "l'écran titre laisse le retour d'Android fermer le choix du mode")
+	root.get_node("Sortie").go_back()
+	await process_frame
+	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible,
+		"le retour d'Android revient au menu principal, comme Échap")
 	await _free(title)
 	await _test_title_demo()
 	var screen := await _spawn_world_select()
