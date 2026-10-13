@@ -915,14 +915,14 @@ msgstr "Wave %d"
 msgid "Bonus : +%d or"
 msgstr "Bonus: +%d gold"
 
-msgid "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·  B : annuler  ·  LB / RB : choisir une tour  ·  Y : vague suivante  ·  X : vitesse  ·  Start : pause  ·  Select : options"
-msgstr "Left stick or D-pad: aim  ·  A: place, click  ·  B: cancel  ·  LB / RB: pick a tower  ·  Y: next wave  ·  X: speed  ·  Start: pause  ·  Select: options"
+msgid "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·  B : annuler  ·  LB / RB : choisir une tour  ·  Y : vague suivante  ·  X : vitesse  ·  Start : pause  ·  Select : options  ·  LT / RT : zoom  ·  Stick droit : déplacer la carte"
+msgstr "Left stick or D-pad: aim  ·  A: place, click  ·  B: cancel  ·  LB / RB: pick a tower  ·  Y: next wave  ·  X: speed  ·  Start: pause  ·  Select: options  ·  LT / RT: zoom  ·  Right stick: move the map"
 
-msgid "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse"
-msgstr "Left click: place the tower  ·  Shift + click: place several  ·  Right click / Esc: cancel  ·  Click a placed tower: details, upgrade, sell and target  ·  1 to 0: pick a tower  ·  Space: pause  ·  V: speed"
+msgid "Clic gauche : poser la tour  ·  Maj + clic : en poser plusieurs  ·  Clic droit / Échap : annuler  ·  Clic sur une tour posée : détails, amélioration, vente et cible  ·  1 à 0 : choisir une tour  ·  Espace : pause  ·  V : vitesse  ·  Molette : zoom  ·  Glisser : déplacer la carte"
+msgstr "Left click: place the tower  ·  Shift + click: place several  ·  Right click / Esc: cancel  ·  Click a placed tower: details, upgrade, sell and target  ·  1 to 0: pick a tower  ·  Space: pause  ·  V: speed  ·  Wheel: zoom  ·  Drag: move the map"
 
-msgid "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez"
-msgstr "Tap a tower in the bar, then tap a free tile twice to place it  ·  Tap it again in the bar to cancel  ·  Tap a placed tower for its card, an enemy for its own  ·  An aimed power lands where you tap"
+msgid "Touchez une tour de la barre, puis deux fois une case libre pour la poser  ·  Touchez-la encore dans la barre pour annuler  ·  Touchez une tour posée pour sa fiche, un monstre pour le sien  ·  Un pouvoir visé se lance là où vous touchez  ·  Pincez pour zoomer, glissez pour déplacer la carte"
+msgstr "Tap a tower in the bar, then tap a free tile twice to place it  ·  Tap it again in the bar to cancel  ·  Tap a placed tower for its card, an enemy for its own  ·  An aimed power lands where you tap  ·  Pinch to zoom, drag to move the map"
 
 msgid "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
 msgstr "Conquest: towers also cost stone and workers build them  ·  Click a rock or a vein: send the miners there  ·  Click or drag a box over workers, or O: select them  ·  R: recruit a worker  ·  B: buildings"

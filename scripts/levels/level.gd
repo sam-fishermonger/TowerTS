@@ -140,6 +140,8 @@ var power_cooldowns: Array[float] = []
 var conquest: Conquest
 ## Bulles du tutoriel (null hors du tutoriel).
 var tutorial: Tutorial
+## Zoom et déplacement de la vue sur la carte (null dans la démo de l'écran titre).
+var map_zoom: MapZoom
 ## Bonus des coffres gagnés pendant la partie : nombre d'exemplaires par identifiant
 ## (ChestBonus), dans l'ordre où ils sont tombés.
 var chest_levels := {}
@@ -274,6 +276,13 @@ func _ready() -> void:
 	if is_endless:
 		_endless_record_before = Progress.get_endless_waves(scene_file_path)
 	placer.level = self
+	if not is_demo:
+		map_zoom = MapZoom.new()
+		map_zoom.name = "MapZoom"
+		map_zoom.level = self
+		add_child(map_zoom)
+		# Premier enfant : il voit les clics après le TowerPlacer, qui passe avant lui.
+		move_child(map_zoom, 0)
 	if map.free_layout:
 		map.layout_changed.connect(_reroute_enemies)
 	if map.relief:

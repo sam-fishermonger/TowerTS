@@ -176,7 +176,9 @@ func move_cursor(stick: Vector2, delta: float) -> void:
 ## Un pas de pointeur (la croix, en partie).
 func step_cursor(direction: Vector2) -> void:
 	var from := get_cursor() if has_cursor() else _start_position()
-	set_cursor(from + direction * DPAD_STEP)
+	# Une case de la carte, zoomée ou non.
+	var scale := get_viewport().canvas_transform.get_scale().x if _in_level() else 1.0
+	set_cursor(from + direction * DPAD_STEP * scale)
 
 
 ## Met le pointeur à cette position (pixels de l'écran de jeu) et la souris avec lui.
