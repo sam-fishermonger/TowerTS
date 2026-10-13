@@ -34,7 +34,8 @@ const STONE_PER_GOLD := 0.4
 ## pour le niveau 3, le double pour le 4 (spécialisation)…
 const UPGRADE_ESSENCE := 3
 const UPGRADE_ESSENCE_FROM_LEVEL := 3
-## Part de la pierre et de l'essence rendue à la vente d'une tour ou d'un bâtiment bâti.
+## Part rendue à la vente d'une tour bâtie (sa pierre) ou d'un bâtiment bâti (or, pierre,
+## essence). L'essence des améliorations d'une tour n'est rendue que si la pose est annulée.
 const SELL_RATIO := 0.7
 ## Ouvriers qui bâtissent un même chantier, au plus.
 const BUILDERS_PER_SITE := 2
@@ -547,8 +548,15 @@ func place_building(cell: Vector2i, kind: int) -> Building:
 func get_building_refund(building: Building) -> Dictionary:
 	var definition := Building.get_definition(building.kind)
 	var ratio := 1.0 if not building.is_built() else SELL_RATIO
-	return {gold = roundi(definition.gold * ratio), stone = roundi(building_stone_cost(definition) * ratio),
+	var refund := {gold = roundi(definition.gold * ratio), stone = roundi(building_stone_cost(definition) * ratio),
 		essence = roundi(definition.essence * ratio)}
+	if building.research_id != &"":
+		# Atelier démoli en pleine recherche : elle est rendue en entier.
+		var cost := Research.get_cost(building.research_id, building.research_level)
+		refund.gold += cost.gold
+		refund.stone += cost.stone
+		refund.essence += cost.essence
+	return refund
 
 
 ## Démolit un bâtiment et en rend une part. Renvoie l'or rendu (0 si impossible).
@@ -556,13 +564,7 @@ func sell_building(building: Building) -> int:
 	if not is_instance_valid(building) or not building.is_alive or level.is_over:
 		return 0
 	var refund_amounts := get_building_refund(building)
-	if building.research_id != &"":
-		# Atelier démoli en pleine recherche : elle est rendue en entier.
-		var cost := Research.get_cost(building.research_id, building.research_level)
-		refund_amounts.gold += cost.gold
-		refund_amounts.stone += cost.stone
-		refund_amounts.essence += cost.essence
-		building.research_id = &""
+	building.research_id = &""
 	level.gold += refund_amounts.gold
 	level.stats.gold_earned += refund_amounts.gold
 	stone += refund_amounts.stone
@@ -591,6 +593,7 @@ func _on_building_destroyed(building: Building) -> void:
 
 
 func _remove_building(building: Building) -> void:
+	building.dismiss_soldiers()
 	_sites.erase(building)
 	_buildings.erase(building)
 	if level.map.get_occupant(building.cell) == building:

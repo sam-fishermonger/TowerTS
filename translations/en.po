@@ -71,8 +71,8 @@ msgstr "Erase"
 msgid "Annuler"
 msgstr "Cancel"
 
-msgid "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le premier niveau de La Ruche restera débloqué."
-msgstr "The stars of every level and all purchased upgrades will be lost, and only the first level of The Hive will remain unlocked."
+msgid "Les étoiles et les crânes de tous les niveaux, les améliorations achetées, l'équipement, les niveaux des tours et les records seront perdus, et seul le premier niveau de La Ruche restera débloqué. Les succès et les réglages sont gardés."
+msgstr "The stars and skulls of every level, all purchased upgrades, equipment, tower levels and records will be lost, and only the first level of The Hive will remain unlocked. Achievements and settings are kept."
 
 msgid "Code Konami : tout est débloqué !"
 msgstr "Konami code: everything is unlocked!"
@@ -2316,8 +2316,8 @@ msgstr "Houses to build far from HQ, and fast Marauders to burn them down."
 msgid "Les Catacombes"
 msgstr "The Catacombs"
 
-msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."
-msgstr "Two paths of undead and Grave Robbers from the very first wave."
+msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la deuxième vague."
+msgstr "Two paths of undead and Grave Robbers from the second wave on."
 
 msgid "Le Nid de la Reine"
 msgstr "The Queen's Nest"

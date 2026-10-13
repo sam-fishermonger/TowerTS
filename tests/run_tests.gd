@@ -1675,6 +1675,18 @@ func _test_enemy_slow_and_armor() -> void:
 	while larve.is_slowed() and elapsed < 10.0:
 		elapsed += await _step()
 	_check(is_equal_approx(larve.get_speed(), LARVE.speed), "la vitesse revient à la normale")
+	# Étourdi par la Cloche (facteur 0) puis ralenti sans arrêt par un Givre : il reprend
+	# la vitesse du Givre une fois l'étourdissement fini, au lieu de rester figé.
+	larve.apply_slow(0.0, 0.7)
+	elapsed = 0.0
+	while elapsed < 3.0:
+		larve.apply_slow(0.5, 1.5)
+		elapsed += await _step()
+	_check(is_equal_approx(larve.get_speed(), LARVE.speed * 0.5),
+		"l'étourdissement s'arrête même si un ralentissement le suit sans arrêt")
+	# Une brûlure faible n'entretient pas une forte.
+	larve.apply_dot(20.0, 0.5)
+	_check(not larve.apply_dot(2.0, 3.0), "une brûlure plus faible ne prolonge pas la plus forte")
 	Engine.time_scale = 1.0
 	var scarabee := _add_still_enemy(level, SCARABEE, 1, 100.0)
 	scarabee.take_damage(GATLING.damage)
@@ -2421,6 +2433,22 @@ func _test_healer_enemy() -> void:
 	var heal_shown := level.effects.get_children().any(func(n: Node) -> bool:
 		return n is FloatingText and n.text.begins_with("+") and n.color == Level.HEAL_TEXT_COLOR)
 	_check(heal_shown, "le soin s'affiche en vert")
+	# Le Général soigne et appelle des renforts : soigner ne retarde pas ses renforts.
+	var general := _add_still_enemy(level, GENERAL, 0, 500.0)
+	var wounded := _add_still_enemy(level, SOLDAT, 0, 500.0 + GENERAL.heal_radius * 0.5)
+	wounded.health.max_health = 1.0e6
+	wounded.take_damage(10.0)
+	general.data = GENERAL.duplicate()
+	general.data.speed = 0.0
+	var summons := [0]
+	general.summoned.connect(func(_enemy: Enemy) -> void: summons[0] += 1)
+	general.set_process(true)
+	elapsed = 0.0
+	while elapsed < GENERAL.summon_interval * 2.5:
+		if wounded.health.health >= wounded.health.max_health:
+			wounded.take_damage(10.0)
+		elapsed += await _step()
+	_check(summons[0] >= 2, "le Général appelle ses renforts même quand il soigne (%d appels)" % summons[0])
 	await _free(level)
 
 
@@ -5296,8 +5324,7 @@ func _test_conquest_buildings() -> void:
 	await _step()
 	_check(level.get_soldiers().size() == Building.BARRACKS_SOLDIERS, "la Caserne bâtie envoie ses soldats")
 	conquest.sell_building(barracks)
-	for soldier in level.get_soldiers():
-		soldier.despawn()
+	_check(level.get_soldiers().is_empty(), "les soldats partent avec la Caserne démolie")
 	# Barricade : les monstres au sol s'y arrêtent et la frappent.
 	var barricade := conquest.place_building(path_cell, K.BARRICADE)
 	_finish_building(barricade)
@@ -5610,8 +5637,11 @@ func _test_conquest_workshop() -> void:
 	_check(conquest.research_blocker(workshop, Research.TOWER_FIRE_RATE) == "Niveau maximum", "une amélioration s'arrête à son niveau maximum")
 	gold = level.gold
 	var stone := conquest.stone
-	conquest.start_research(workshop, Research.WORKER_TOOLS)
 	var refund := conquest.get_building_refund(workshop)
+	conquest.start_research(workshop, Research.WORKER_TOOLS)
+	var shown := conquest.get_building_refund(workshop)
+	var research_cost := Research.get_cost(Research.WORKER_TOOLS, workshop.research_level)
+	_check(shown.gold == refund.gold + research_cost.gold, "le bouton Démolir annonce aussi la recherche rendue")
 	conquest.sell_building(workshop)
 	_check(level.gold == gold + refund.gold and conquest.stone == stone + refund.stone, "démoli en pleine recherche, l'Atelier la rend")
 	await _free(level)
