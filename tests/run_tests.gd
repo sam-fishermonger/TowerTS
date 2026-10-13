@@ -3586,6 +3586,13 @@ func _test_carriers_and_chests() -> void:
 	await _step()
 	await process_frame
 	_check(not is_instance_valid(lost), "pas ramassé, il disparaît")
+	# Un porteur tué alors qu'il entre par un bord : son butin tombe dans la zone de jeu.
+	var area := level.hud.get_play_area()
+	for outside in [Vector2(-30, area.get_center().y), Vector2(area.end.x + 20, area.position.y - 10), Vector2(area.get_center().x, area.end.y + 5)]:
+		var edge := level.drop_loot(Loot.Kind.GOLD, outside, LARVE)
+		_check(area.grow(-Loot.TOUCH_PICK_RADIUS * 0.5).has_point(edge.global_position), "butin tombé hors de l'écran ramené sur la carte (%s)" % outside)
+		edge.queue_free()
+	await process_frame
 	# Coffres : sans pouvoirs ni Conquête, six bonus possibles, trois fois chacun.
 	var tower := level.place_tower(Vector2i(2, 4), CANNON)
 	var base_damage := tower.stats.damage
