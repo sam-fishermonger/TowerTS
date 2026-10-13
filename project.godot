@@ -15,12 +15,14 @@ config/description="Jeu 2D de type Tower Defense."
 run/main_scene="res://scenes/ui/title_screen.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+config/quit_on_go_back=false
 
 [autoload]
 
 SoundPlayer="*res://scripts/audio/sound.gd"
 Settings="*res://scripts/save/game_settings.gd"
 Manette="*res://scripts/ui/gamepad.gd"
+Sortie="*res://scripts/ui/game_exit.gd"
 
 [display]
 

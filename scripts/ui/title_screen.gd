@@ -94,7 +94,7 @@ func _ready() -> void:
 	lexicon_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(LEXICON_SCREEN))
 	achievements_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(ACHIEVEMENTS_SCREEN))
 	options_button.pressed.connect(open_options)
-	quit_button.pressed.connect(get_tree().quit)
+	quit_button.pressed.connect(GameExit.quit.bind(get_tree()))
 	# Quitter n'a pas de sens dans un navigateur.
 	quit_button.visible = not OS.has_feature("web")
 	reset_button.pressed.connect(reset_dialog.popup_centered)
@@ -164,6 +164,15 @@ func _notification(what: int) -> void:
 		_refresh()
 		if demo.level:
 			_on_demo_level_started(demo.level)
+
+
+## Retour d'Android (voir GameExit) : depuis le menu principal, sans fenêtre ouverte, il
+## quitte le jeu ; sinon, il fait comme Échap.
+func go_back() -> bool:
+	if is_play_menu_open() or reset_dialog.visible or get_children().any(func(child: Node) -> bool: return child is OptionsMenu):
+		return false
+	GameExit.quit(get_tree())
+	return true
 
 
 func _unhandled_input(event: InputEvent) -> void:
