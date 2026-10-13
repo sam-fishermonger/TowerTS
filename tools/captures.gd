@@ -24,6 +24,7 @@ const SHOTS := {
 	"libre": ["res://scenes/levels/free_02.tscn", 9.0, true],
 	"expedition": ["res://scenes/levels/mecha_02.tscn", 9.0, true],
 	"pause": ["res://scenes/levels/humanoid_02.tscn", 9.0, true],
+	"zoom": ["res://scenes/levels/level_03.tscn", 9.0, true],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
 	"armurerie": ["res://scenes/ui/armory_screen.tscn", 0.5, false],
@@ -53,7 +54,7 @@ func _run() -> void:
 			# Une vague qui montre la spécialité du monde : la troisième de La Ruche (un porteur
 			# de butin et un porteur de coffre), les Tunneliers de la quatrième vague de La
 			# Fonderie, les Saboteurs de la Cité, les Banshees de la troisième de La Nécropole.
-			var waves_before := {"ruche": 1, "fonderie": 2, "cite": 2, "necropole": 1}
+			var waves_before := {"ruche": 1, "zoom": 1, "fonderie": 2, "cite": 2, "necropole": 1}
 			if waves_before.has(shot_name):
 				(node as Level).spawner.current_wave = waves_before[shot_name]
 			_start_battle(node as Level)
@@ -79,6 +80,18 @@ func _run() -> void:
 			# En pause : le trajet des monstres revient et Recommencer / Quitter apparaissent.
 			(node as Level).set_paused(true)
 			await create_timer(1.0).timeout
+		elif shot_name == "zoom":
+			# Zoom x2 à la molette, sur le milieu de la vague (les tours sont le long du chemin).
+			var level := node as Level
+			var enemies := get_nodes_in_group(Enemy.GROUP)
+			var center := level.hud.get_play_area().get_center()
+			var target := center
+			if not enemies.is_empty():
+				target = (enemies[enemies.size() / 2] as Node2D).global_position
+			level.map_zoom.zoom_at(target, 2.0)
+			level.map_zoom.pan(center - target)
+			for i in 3:
+				await process_frame
 		await RenderingServer.frame_post_draw
 		var path := OUT_DIR + shot_name + ".webp"
 		root.get_texture().get_image().save_webp(path, true, 0.9)

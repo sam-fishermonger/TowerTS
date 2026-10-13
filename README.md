@@ -18,6 +18,8 @@ Jeu 2D de type Tower Defense, développé avec [Godot 4.7](https://godotengine.o
 | Expédition : cinq niveaux à la suite, un coffre au choix | Menu Jouer : les modes se débloquent avec les niveaux gagnés |
 | ![Pause](docs/captures/pause.webp) | ![Armurerie](docs/captures/armurerie.webp) |
 | En pause : le trajet des monstres revient, Recommencer ou Quitter | Armurerie : l'équipement et le niveau des tours, les coffrets à ouvrir |
+| ![Zoom sur la carte](docs/captures/zoom.webp) | |
+| Zoom sur la carte : molette, pincement, clavier ou manette | |
 
 ## Prérequis
 
