@@ -16,6 +16,10 @@ const LOOT_MIN_GOLD := 15
 const LOOT_GOLD_PER_REWARD := 3
 const LOOT_STONE := 15
 const LOOT_ESSENCE := 4
+## Écart minimal entre un butin et les bords de la zone de jeu, en pixels (plus en
+## haut : le dessin monte au-dessus de son point de pose).
+const LOOT_EDGE_MARGIN := 28.0
+const LOOT_TOP_MARGIN := 16.0
 ## Méta du moteur posée juste avant d'ouvrir un niveau en mode infini (voir open()) :
 ## le niveau la lit et l'efface à son lancement.
 const ENDLESS_META := &"level_endless"
@@ -1236,9 +1240,18 @@ func drop_loot(kind: int, at: Vector2, data: EnemyData = null, amount := 0) -> L
 		loot.amount = amount
 	effects.add_child(loot)
 	# Sur le chemin, un peu à côté du point de chute : deux butins ne se cachent pas.
-	loot.global_position = at + Vector2(randf_range(-6.0, 6.0), randf_range(2.0, 8.0))
+	loot.global_position = get_loot_spot(at + Vector2(randf_range(-6.0, 6.0), randf_range(2.0, 8.0)))
 	Sound.play(&"coins", -8.0)
 	return loot
+
+
+## Point où poser un butin tombé en `at` : un monstre tué alors qu'il entre (ou
+## sort) par un bord de la carte le lâcherait hors de l'écran, on le ramène dans la
+## zone de jeu (carte entière, sans le zoom), assez loin des bords pour le toucher.
+func get_loot_spot(at: Vector2) -> Vector2:
+	var area := hud.get_play_area().grow_individual(-LOOT_EDGE_MARGIN, -LOOT_EDGE_MARGIN - LOOT_TOP_MARGIN,
+		-LOOT_EDGE_MARGIN, -LOOT_EDGE_MARGIN)
+	return at.clamp(area.position, area.end)
 
 
 ## Butin au sol le plus proche d'un point de la carte, à moins de `radius` (null sinon).
