@@ -141,7 +141,7 @@ func _build_steps() -> void:
 				else _shop_rect(GATLING),
 		},
 		{
-			text = tr("Lancez la vague suivante. Astuce : la lancer avant que la carte soit vide rapporte une prime, affichée sous l'encadré."),
+			text = tr("Lancez la vague suivante. Astuce : la lancer tôt rapporte une prime, affichée sous l'encadré, d'autant plus grande qu'on la lance tôt."),
 			done = func() -> bool: return level.spawner.current_wave >= 1,
 			target = func() -> Rect2: return level.hud.next_wave_button.get_global_rect(),
 		},

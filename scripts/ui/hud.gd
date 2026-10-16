@@ -153,6 +153,8 @@ var _score := 0
 var _worker_cost := 0
 ## Prime pour lancer la prochaine vague en avance (dernier appel de show_next_wave()).
 var _next_wave_early_bonus := 0
+## Les vagues partent seules à la fin d'un compte à rebours (bulle d'aide du bouton de vague).
+var _waves_start_alone := false
 ## Écran de fin affiché (sa fonction et ses arguments), refait au changement de langue.
 var _end_screen := Callable()
 ## … bouton « Bâtiments » à droite de la barre d'achat, barre des bâtiments qu'il ouvre
@@ -545,10 +547,36 @@ func show_next_wave(wave: WaveData, early_bonus := 0, wave_number := 0, wave_bon
 	_wave_preview_text = text
 	wave_preview_label.text = text
 	wave_preview.visible = not text.is_empty()
-	next_wave_button.tooltip_text = tr("Lancer maintenant rapporte %d or") % early_bonus if early_bonus > 0 else ""
+	_refresh_next_wave_tooltip()
 	wave_preview.reset_size()
 	# Le panneau, sous le bouton de vague, reste calé à droite de l'écran.
 	wave_preview.position.x = get_viewport().get_visible_rect().size.x - 8.0 - wave_preview.size.x
+
+
+## Texte du bouton de vague : « Vague dans 12 s » pendant un compte à rebours au bout
+## duquel elle part seule (countdown < 0 : pas de compte à rebours).
+func set_wave_countdown(countdown: float) -> void:
+	var text := "Lancer la vague" if countdown < 0.0 else tr("Vague dans %d s") % ceili(countdown)
+	if next_wave_button.text != text:
+		next_wave_button.text = text
+
+
+## Règles des vagues, en tête de la bulle d'aide du bouton de vague : partent-elles seules
+## à la fin d'un compte à rebours ?
+func set_wave_rules(start_alone: bool) -> void:
+	_waves_start_alone = start_alone
+	_refresh_next_wave_tooltip()
+
+
+func _refresh_next_wave_tooltip() -> void:
+	var lines: Array[String] = []
+	if _waves_start_alone:
+		lines.append(tr("Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte une prime, d'autant plus grande qu'il reste de temps."))
+	else:
+		lines.append(tr("Lancer la vague tôt rapporte une prime, d'autant plus grande qu'on la lance tôt."))
+	if _next_wave_early_bonus > 0:
+		lines.append(tr("Lancer maintenant rapporte %d or") % _next_wave_early_bonus)
+	next_wave_button.tooltip_text = "\n".join(lines)
 
 
 func set_paused(paused: bool) -> void:
@@ -901,8 +929,7 @@ func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callab
 	tower_shop.max_width = TowerShop.MAX_WIDTH - TowerShopButton.SLOT_SIZE.x - 22.0
 	_hint_max_towers = 6
 	tower_details.essence_cost = essence_cost
-	next_wave_button.tooltip_text = "Les vagues partent seules à la fin du compte à rebours. " \
-		+ "Les lancer avant rapporte la prime habituelle."
+	set_wave_rules(true)
 	_setup_buildings()
 
 
@@ -1069,8 +1096,7 @@ func update_conquest(conquest: Conquest) -> void:
 	essence_label.text = tr("Essence : %d") % conquest.essence
 	workers_label.text = tr("Ouvriers : %d / %d") % [conquest.get_workers().size(), conquest.get_max_workers()]
 	recruit_button.disabled = not conquest.can_recruit() or end_panel.visible
-	var countdown := conquest.wave_countdown
-	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else tr("Vague dans %d s") % ceili(countdown)
+	set_wave_countdown(conquest.wave_countdown)
 	tower_shop.set_stone(conquest.stone)
 	tower_details.set_essence(conquest.essence)
 	building_shop.refresh(conquest.level.gold, conquest.stone, conquest.essence)
