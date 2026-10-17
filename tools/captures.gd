@@ -25,6 +25,7 @@ const SHOTS := {
 	"expedition": ["res://scenes/levels/mecha_02.tscn", 9.0, true],
 	"pause": ["res://scenes/levels/humanoid_02.tscn", 9.0, true],
 	"zoom": ["res://scenes/levels/level_03.tscn", 9.0, true],
+	"minuteur": ["res://scenes/levels/level_03.tscn", 14.0, false],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
 	"armurerie": ["res://scenes/ui/armory_screen.tscn", 0.5, false],
@@ -45,6 +46,9 @@ func _run() -> void:
 		var shot: Array = SHOTS[shot_name]
 		if shot_name == "expedition":
 			_prepare_expedition()
+		elif shot_name == "minuteur":
+			# En Difficile, la première vague part seule à la fin du compte à rebours.
+			Difficulty.set_current(Difficulty.DIFFICILE)
 		elif shot_name == "armurerie":
 			_prepare_armory()
 		var node: Node = load(shot[0]).instantiate()
@@ -98,6 +102,7 @@ func _run() -> void:
 		print("Capture : ", path)
 		node.queue_free()
 		Engine.time_scale = 1.0
+		Difficulty.set_current(Difficulty.DEFAULT)
 		await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	Progress.clear_cache()
