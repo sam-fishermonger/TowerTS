@@ -93,7 +93,7 @@ const DEFINITIONS: Array[Dictionary] = [
 	{id = "spores", name = "Spores tenaces", effect = "cloud_duration", icon = "cloud",
 		tower = "res://resources/towers/pesticide.tres", values = [1.0, 1.5, 2.5, 4.0]},
 	{id = "condensateur", name = "Condensateur", effect = "chain", icon = "bolt",
-		tower = "res://resources/towers/arc.tres", values = [1, 1, 2, 3]},
+		tower = "res://resources/towers/arc.tres", values = [1, 2, 2, 3]},
 	{id = "bobinage", name = "Bobinage de cuivre", effect = "boost", icon = "bolt",
 		tower = "res://resources/towers/coil.tres", values = [0.03, 0.05, 0.08, 0.12]},
 	{id = "aimant_neodyme", name = "Aimant au néodyme", effect = "knockback_multiplier", icon = "bolt",
@@ -477,6 +477,9 @@ static func apply_effect(stats: TowerData, effect: String, value: float) -> void
 			stats.dot_damage += stats.damage * value
 			stats.dot_duration = maxf(stats.dot_duration, BURN_DURATION)
 		"chill":
+			# Une tour qui étourdit (Cloche) garde son étourdissement tel quel.
+			if stats.slow_factor <= 0.0:
+				return
 			stats.slow_factor = minf(stats.slow_factor, 1.0 - value)
 			stats.slow_duration = maxf(stats.slow_duration, CHILL_DURATION)
 		"detection":

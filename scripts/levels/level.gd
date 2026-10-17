@@ -16,6 +16,16 @@ const LOOT_MIN_GOLD := 15
 const LOOT_GOLD_PER_REWARD := 3
 const LOOT_STONE := 15
 const LOOT_ESSENCE := 4
+## Écart minimal entre un butin et les bords de la zone de jeu, en pixels (plus en
+## haut : le dessin monte au-dessus de son point de pose).
+const LOOT_EDGE_MARGIN := 28.0
+const LOOT_TOP_MARGIN := 16.0
+## Compte à rebours de la prime d'avance quand la vague attend le joueur (Facile, Moyen) :
+## secondes après la fin de la vague d'avant, et avant la première depuis le début de partie.
+const EARLY_CALL_WINDOW := 30.0
+const FIRST_EARLY_CALL_WINDOW := 60.0
+## Temps laissé au moins avant qu'une vague parte seule, quand on reprend une partie.
+const RESUME_WAVE_TIMER := 10.0
 ## Méta du moteur posée juste avant d'ouvrir un niveau en mode infini (voir open()) :
 ## le niveau la lit et l'efface à son lancement.
 const ENDLESS_META := &"level_endless"
@@ -53,8 +63,10 @@ const ARMORY_RETURN_META := &"armory_return"
 @export var tower_types: Array[TowerData] = []
 ## Campagne dont fait partie le niveau : elle donne le niveau suivant.
 @export var campaign: Campaign
-## Lancer une vague avant d'avoir vidé la carte rapporte cette part de son bonus, en plus.
-@export_range(0.0, 1.0) var early_call_bonus_ratio := 0.5
+## Lancer une vague en avance rapporte au plus cette part de son bonus, en plus : tout de
+## suite après la vague d'avant, puis de moins en moins à mesure que le compte à rebours
+## avance (voir get_early_call_bonus()).
+@export_range(0.0, 2.0) var early_call_bonus_ratio := 1.0
 ## Vitesses de jeu proposées dans le HUD. La première est celle du début de partie.
 @export var game_speeds: Array[float] = [1.0, 2.0, 3.0]
 ## Intérêts : chaque fois que la carte est vidée, l'or gardé rapporte cette part en plus
@@ -154,6 +166,14 @@ var map_zoom: MapZoom
 ## Bonus des coffres gagnés pendant la partie : nombre d'exemplaires par identifiant
 ## (ChestBonus), dans l'ordre où ils sont tombés.
 var chest_levels := {}
+
+## Compte à rebours de la prochaine vague, en secondes de jeu (-1 : pas de compte à
+## rebours, la vague arrive ou il n'y en a plus). Il part à la fin de l'arrivée de la
+## vague d'avant (au début de la partie pour la première) et fait baisser la prime
+## d'avance ; en Difficile et Cauchemar, la vague part seule quand il arrive à 0.
+var wave_timer := -1.0
+## Durée totale du compte à rebours en cours (0 s'il n'y en a pas).
+var wave_timer_total := 0.0
 
 var _wave_bonus_paid := -1
 ## Ennemis tombés qui vont se relever (EnemyData.revive_count) : la vague n'est pas
@@ -266,6 +286,13 @@ func _ready() -> void:
 		_chest_rng.seed = hash("%d/%d/coffres" % [expedition.rng_seed, expedition.index])
 	if not is_endless and not is_demo and not challenge and not is_tutorial:
 		difficulty = resumed.get("difficulty", Difficulty.get_current())
+		# Toute l'expédition se joue dans la difficulté de sa première étape.
+		if expedition:
+			if expedition.difficulty >= 0:
+				difficulty = expedition.difficulty
+			expedition.difficulty = difficulty
+			if expedition.best_before < 0:
+				expedition.best_before = Expedition.get_best()
 		# Pas de mutateurs en Expédition : ses règles à elle suffisent. Une partie reprise
 		# garde les mutateurs avec lesquels elle a commencé.
 		if custom_level.is_empty() and not conquest_mode and not expedition \
@@ -372,7 +399,9 @@ func _ready() -> void:
 	placer.power_selection_changed.connect(hud.set_selected_power)
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
 	spawner.wave_started.connect(func(_index: int) -> void: _on_wave_started())
-	spawner.wave_spawning_finished.connect(func(_index: int) -> void: _check_wave_cleared())
+	spawner.wave_spawning_finished.connect(func(_index: int) -> void:
+		_start_wave_timer()
+		_check_wave_cleared())
 	# Les bonus de l'arbre des améliorations comptent comme des vies de départ : les
 	# étoiles se calculent sur ce total.
 	_bonuses = Perks.get_bonuses()
@@ -409,6 +438,8 @@ func _ready() -> void:
 		tutorial = Tutorial.new()
 		add_child(tutorial)
 		tutorial.setup(self)
+	hud.set_wave_rules(has_wave_timer() or conquest != null)
+	_start_wave_timer()
 	if not resumed.is_empty():
 		restore_saved_game(resumed)
 	Sound.play_music(Sound.level_track(map.tileset, is_demo))
@@ -785,7 +816,7 @@ func use_power(power: Power, at := Vector2.ZERO) -> bool:
 			for node in get_tree().get_nodes_in_group(Enemy.GROUP):
 				(node as Enemy).freeze(power.duration, power.vulnerability)
 			var wave := FreezeWave.new()
-			wave.area = hud.get_play_area()
+			wave.area = screen_to_world_rect(hud.get_play_area())
 			wave.color = power.color
 			effects.add_child(wave)
 			Sound.play(&"pulse_frost")
@@ -906,6 +937,8 @@ func start_next_wave() -> void:
 	if not can_start_next_wave():
 		return
 	var early_bonus := get_early_call_bonus()
+	wave_timer = -1.0
+	wave_timer_total = 0.0
 	spawner.start_next_wave()
 	hud.hide_challenge_rules()
 	Sound.play(&"wave_start")
@@ -918,14 +951,60 @@ func start_next_wave() -> void:
 		Sound.play(&"coins")
 		var button_rect := hud.next_wave_button.get_global_rect()
 		_show_floating_text("+%d" % early_bonus, GOLD_TEXT_COLOR,
-			Vector2(button_rect.get_center().x, button_rect.end.y + 24.0), 18)
+			screen_to_world(Vector2(button_rect.get_center().x, button_rect.end.y + 24.0)), 18)
 
 
-## Prime pour lancer la prochaine vague alors que des ennemis sont encore en jeu (0 sinon).
+## Prime pour lancer la prochaine vague maintenant : `early_call_bonus_ratio` de son
+## bonus tout de suite après la vague d'avant, puis de moins en moins jusqu'à 0 à la fin
+## du compte à rebours (0 si elle ne peut pas partir).
 func get_early_call_bonus() -> int:
-	if not can_start_next_wave() or _alive_enemy_count() == 0:
+	if not can_start_next_wave():
 		return 0
-	return roundi(get_wave_bonus(spawner.current_wave + 1) * early_call_bonus_ratio)
+	return roundi(get_wave_bonus(spawner.current_wave + 1) * early_call_bonus_ratio * get_early_call_fraction())
+
+
+## Part de la prime d'avance encore due, de 1 (à l'instant où la vague peut partir) à 0.
+## En Conquête, le compte à rebours ne part qu'une fois la carte vidée : tant que des
+## ennemis sont en jeu, la prime est entière.
+func get_early_call_fraction() -> float:
+	if conquest:
+		if conquest.wave_countdown < 0.0:
+			return 1.0 if _alive_enemy_count() > 0 else 0.0
+		return clampf(conquest.wave_countdown / conquest.wave_countdown_total, 0.0, 1.0)
+	if wave_timer < 0.0 or wave_timer_total <= 0.0:
+		return 0.0
+	return clampf(wave_timer / wave_timer_total, 0.0, 1.0)
+
+
+## La vague suivante part-elle seule à la fin du compte à rebours (Difficile et plus) ?
+## La Conquête a son propre compte à rebours, dans toutes les difficultés.
+func has_wave_timer() -> bool:
+	return Difficulty.has_wave_timer(difficulty) and not is_demo and not is_tutorial and not conquest
+
+
+## Lance le compte à rebours de la prochaine vague, s'il y en a une.
+func _start_wave_timer() -> void:
+	wave_timer = -1.0
+	wave_timer_total = 0.0
+	if is_demo or conquest or not spawner.has_next_wave():
+		return
+	var first := spawner.current_wave < 0
+	if has_wave_timer():
+		wave_timer_total = Difficulty.FIRST_WAVE_TIMER[difficulty] if first else Difficulty.WAVE_TIMER[difficulty]
+	else:
+		wave_timer_total = FIRST_EARLY_CALL_WINDOW if first else EARLY_CALL_WINDOW
+	wave_timer = wave_timer_total
+
+
+## Fait avancer le compte à rebours (pas pendant le choix des tours, la pause ou le choix
+## d'un coffre) et lance la vague à 0 quand elle part seule.
+func _update_wave_timer(delta: float) -> void:
+	if wave_timer <= 0.0 or is_over or is_paused or is_choosing_towers or hud.chest_choice \
+			or spawner.is_spawning:
+		return
+	wave_timer = maxf(wave_timer - delta, 0.0)
+	if wave_timer == 0.0 and has_wave_timer():
+		start_next_wave()
 
 
 ## Or versé quand la vague donnée est repoussée, bonus de l'arbre des améliorations compris.
@@ -1014,7 +1093,7 @@ func _split(enemy: Enemy) -> void:
 	Sound.play(&"enemy_split")
 	for i in data.split_count:
 		spawner.spawn(data.split_into, enemy.path, maxf(enemy.progress - i * data.split_into.radius * 1.6, 0.0),
-			enemy.health_multiplier, 1.0, -1, _route_for(enemy, data.split_into))
+			enemy.get_offspring_health_multiplier(), 1.0, -1, _route_for(enemy, data.split_into))
 
 
 ## Un ennemi tombé se relèvera sur place après son délai, avec une partie de sa vie.
@@ -1023,7 +1102,7 @@ func _start_revive(enemy: Enemy) -> void:
 	var effect := RiseEffect.new()
 	effect.radius = enemy.data.radius
 	effect.duration = enemy.data.revive_delay
-	effect.risen.connect(_revive.bind(enemy.data, enemy.path, enemy.progress, enemy.health_multiplier,
+	effect.risen.connect(_revive.bind(enemy.data, enemy.path, enemy.progress, enemy.get_offspring_health_multiplier(),
 		enemy.revives_left - 1, _route_for(enemy, enemy.data)))
 	stains.add_child(effect)
 	effect.global_position = enemy.global_position
@@ -1044,7 +1123,7 @@ func _on_enemy_summoned(enemy: Enemy) -> void:
 	var data := enemy.data
 	for i in data.summon_count:
 		spawner.spawn(data.summon_enemy, enemy.path,
-			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.health_multiplier,
+			maxf(enemy.progress - data.radius - (i + 1) * data.summon_enemy.radius * 1.6, 0.0), enemy.get_summon_health_multiplier(),
 			1.0, -1, _route_for(enemy, data.summon_enemy))
 
 
@@ -1070,7 +1149,8 @@ func _on_enemy_reached_end(enemy: Enemy) -> void:
 	if lives <= 0 and _bonuses.last_stand_lives > 0 and not last_stand_used:
 		last_stand_used = true
 		lives = _bonuses.last_stand_lives
-		_show_floating_text(tr("Dernier rempart ! +%d vies") % lives, GOLD_TEXT_COLOR, hud.get_play_area().get_center(), 26)
+		_show_floating_text(tr("Dernier rempart ! +%d vies") % lives, GOLD_TEXT_COLOR,
+			screen_to_world(hud.get_play_area().get_center()), 26)
 	if lives <= 0:
 		_end_game(false)
 	else:
@@ -1090,7 +1170,7 @@ func _check_wave_cleared() -> void:
 	if interest > 0:
 		gold += interest
 		stats.gold_earned += interest
-		_show_floating_text(tr("+%d intérêts") % interest, GOLD_TEXT_COLOR, hud.get_interest_anchor(), 16)
+		_show_floating_text(tr("+%d intérêts") % interest, GOLD_TEXT_COLOR, screen_to_world(hud.get_interest_anchor()), 16)
 	# Si le joueur a lancé une vague avant d'avoir fini la précédente, tous les
 	# bonus en attente sont versés quand la carte est vidée.
 	while _wave_bonus_paid < spawner.current_wave:
@@ -1155,7 +1235,7 @@ func _end_game(victory: bool) -> void:
 		var stars_won := get_stars()
 		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
-		_announce_achievements(Achievements.on_conquest_victory(stats))
+		_announce_achievements(Achievements.on_conquest_victory(stats, difficulty))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record)
 		_reward_medals()
 		_roll_equipment_box(first_win)
@@ -1213,8 +1293,11 @@ func _end_expedition_step(victory: bool) -> void:
 	expedition.lives = lives
 	expedition.chest_levels = chest_levels.duplicate()
 	var new_record := false
+	# Chaque étape franchie compte tout de suite pour le record : le joueur peut s'arrêter
+	# sur l'écran de l'étape réussie.
+	Expedition.record(cleared)
 	if not victory or expedition.is_last():
-		new_record = Expedition.record(cleared)
+		new_record = cleared > expedition.best_before
 	hud.show_expedition_end_screen(victory, cleared, expedition.levels.size(), lives, new_record)
 
 
@@ -1236,9 +1319,18 @@ func drop_loot(kind: int, at: Vector2, data: EnemyData = null, amount := 0) -> L
 		loot.amount = amount
 	effects.add_child(loot)
 	# Sur le chemin, un peu à côté du point de chute : deux butins ne se cachent pas.
-	loot.global_position = at + Vector2(randf_range(-6.0, 6.0), randf_range(2.0, 8.0))
+	loot.global_position = get_loot_spot(at + Vector2(randf_range(-6.0, 6.0), randf_range(2.0, 8.0)))
 	Sound.play(&"coins", -8.0)
 	return loot
+
+
+## Point où poser un butin tombé en `at` : un monstre tué alors qu'il entre (ou
+## sort) par un bord de la carte le lâcherait hors de l'écran, on le ramène dans la
+## zone de jeu (carte entière, sans le zoom), assez loin des bords pour le toucher.
+func get_loot_spot(at: Vector2) -> Vector2:
+	var area := hud.get_play_area().grow_individual(-LOOT_EDGE_MARGIN, -LOOT_EDGE_MARGIN - LOOT_TOP_MARGIN,
+		-LOOT_EDGE_MARGIN, -LOOT_EDGE_MARGIN)
+	return at.clamp(area.position, area.end)
 
 
 ## Butin au sol le plus proche d'un point de la carte, à moins de `radius` (null sinon).
@@ -1322,7 +1414,7 @@ func choose_chest_bonus(id: StringName) -> void:
 	if not hud.chest_choice or not hud.chest_choice.choices.has(id):
 		return
 	hud.close_chest_choice()
-	_gain_chest_bonus(id, hud.get_play_area().get_center())
+	_gain_chest_bonus(id, screen_to_world(hud.get_play_area().get_center()))
 	expedition.chest_levels = chest_levels.duplicate()
 	var available := _get_available_chest_bonuses()
 	if _chest_choices_waiting > 0 and not available.is_empty():
@@ -1432,6 +1524,7 @@ func to_saved_game() -> Dictionary:
 		"difficulty": difficulty,
 		"mutators": mutators,
 		"wave": spawner.current_wave,
+		"wave_timer": wave_timer,
 		"wave_count": -1 if is_endless else spawner.get_wave_count(),
 		"gold": gold,
 		"lives": lives,
@@ -1465,6 +1558,13 @@ func restore_saved_game(data: Dictionary) -> void:
 	chest_levels = data.get("chest_levels", {})
 	spawner.current_wave = data.get("wave", -1)
 	_wave_bonus_paid = spawner.current_wave
+	# Le compte à rebours reprend où il en était, avec un peu de temps pour se remettre
+	# dans la partie quand la vague part seule.
+	_start_wave_timer()
+	if wave_timer_total > 0.0:
+		wave_timer = clampf(data.get("wave_timer", wave_timer_total), 0.0, wave_timer_total)
+		if has_wave_timer():
+			wave_timer = maxf(wave_timer, minf(RESUME_WAVE_TIMER, wave_timer_total))
 	spawner._rng.state = data.get("spawner_rng", spawner._rng.state)
 	_chest_rng.state = data.get("chest_rng", _chest_rng.state)
 	starting_lives = data.get("starting_lives", starting_lives)
@@ -1493,6 +1593,10 @@ func restore_saved_game(data: Dictionary) -> void:
 	# Règles du défi ou des mutateurs : affichées jusqu'à la première vague.
 	if spawner.current_wave >= 0:
 		hud.hide_challenge_rules()
+		# Le tracé des chemins s'estompe comme après le lancement d'une vague.
+		var path_preview := get_node_or_null("PathPreview") as PathPreview
+		if path_preview:
+			path_preview._on_wave_started(spawner.current_wave)
 	if not chest_levels.is_empty():
 		hud.set_interest_rules(get_interest_rate(), get_interest_cap())
 		hud.update_chest_bonuses(chest_levels)
@@ -1608,11 +1712,20 @@ func _show_floating_text(text: String, color: Color, at: Vector2, font_size: int
 	effects.add_child(label)
 
 
+## Point de l'écran (HUD) dans le repère de la carte, qui suit le zoom (MapZoom).
+func screen_to_world(at: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform().affine_inverse() * at
+
+
+func screen_to_world_rect(rect: Rect2) -> Rect2:
+	return get_viewport().get_canvas_transform().affine_inverse() * rect
+
+
 ## Signale la perte de vies : effet sur le HUD et « -N » rouge là où l'ennemi est sorti.
 func _show_lives_lost(amount: int, at: Vector2) -> void:
 	hud.play_damage_effect(amount)
 	# L'ennemi sort par le bord de l'écran : on ramène le texte dans la zone visible.
-	var area := hud.get_play_area().grow(-24.0)
+	var area := screen_to_world_rect(hud.get_play_area()).grow(-24.0)
 	var shown_at := at.clamp(area.position, area.end)
 	_show_floating_text("-%d" % amount, LIVES_LOST_TEXT_COLOR, shown_at, 20)
 
@@ -1629,6 +1742,7 @@ func _refresh_hud() -> void:
 func _process(delta: float) -> void:
 	if not is_over and not is_choosing_towers:
 		stats.duration += delta
+	_update_wave_timer(delta)
 	# Les pouvoirs se rechargent en temps de jeu (pas pendant la pause).
 	if not is_over:
 		for i in power_cooldowns.size():
@@ -1639,6 +1753,8 @@ func _process(delta: float) -> void:
 
 func _refresh_wave_ui() -> void:
 	hud.set_next_wave_available(can_start_next_wave())
+	if not conquest:
+		hud.set_wave_countdown(wave_timer if has_wave_timer() and not spawner.is_spawning else -1.0)
 	if not powers.is_empty():
 		var usable: Array[bool] = []
 		for power in powers:

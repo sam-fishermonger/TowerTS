@@ -71,8 +71,8 @@ msgstr "Erase"
 msgid "Annuler"
 msgstr "Cancel"
 
-msgid "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le premier niveau de La Ruche restera débloqué."
-msgstr "The stars of every level and all purchased upgrades will be lost, and only the first level of The Hive will remain unlocked."
+msgid "Les étoiles et les crânes de tous les niveaux, les améliorations achetées, l'équipement, les niveaux des tours et les records seront perdus, et seul le premier niveau de La Ruche restera débloqué. Les succès et les réglages sont gardés."
+msgstr "The stars and skulls of every level, all purchased upgrades, equipment, tower levels and records will be lost, and only the first level of The Hive will remain unlocked. Achievements and settings are kept."
 
 msgid "Code Konami : tout est débloqué !"
 msgstr "Konami code: everything is unlocked!"
@@ -1034,8 +1034,14 @@ msgstr "Recruit · %d gold (R)"
 msgid "Vague dans %d s"
 msgstr "Wave in %d s"
 
-msgid "Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte la prime habituelle."
-msgstr "Waves start on their own when the countdown ends. Sending them early earns the usual bonus."
+msgid "Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte une prime, d'autant plus grande qu'il reste de temps."
+msgstr "Waves start on their own when the countdown ends. Sending them early earns a bonus, bigger the more time is left."
+
+msgid "Lancer la vague tôt rapporte une prime, d'autant plus grande qu'on la lance tôt."
+msgstr "Sending the wave early earns a bonus: the earlier, the bigger."
+
+msgid "Les vagues partent seules : %d s avant la première, puis %d s après chacune."
+msgstr "Waves start on their own: %d s before the first one, then %d s after each one."
 
 msgid "%s  ·  Mode infini"
 msgstr "%s  ·  Endless mode"
@@ -2185,8 +2191,8 @@ msgstr "The next wave brings [b]Hornets[/b]: these flying monsters fly over the 
 msgid "La prochaine vague amène des [b]Frelons[/b] : ces volants survolent le chemin en coupant les virages, et certaines tours ne tirent pas en l'air. Posez une [b]Mitrailleuse[/b] près de la sortie."
 msgstr "The next wave brings [b]Hornets[/b]: these flying monsters fly over the path, cutting the corners, and some towers can't shoot at the air. Place a [b]Gatling[/b] near the exit."
 
-msgid "Lancez la vague suivante. Astuce : la lancer avant que la carte soit vide rapporte une prime, affichée sous l'encadré."
-msgstr "Send the next wave. Tip: sending it before the map is clear earns a bonus, shown under the box."
+msgid "Lancez la vague suivante. Astuce : la lancer tôt rapporte une prime, affichée sous l'encadré, d'autant plus grande qu'on la lance tôt."
+msgstr "Send the next wave. Tip: sending it early earns a bonus, shown under the box, and the earlier, the bigger."
 
 msgid "Pendant une vague, [b]Pause[/b] (Espace) fige le jeu sans vous empêcher de construire, et [b]x2[/b], [b]x3[/b] (touche V) l'accélèrent."
 msgstr "During a wave, [b]Pause[/b] (Space) freezes the game but still lets you build, and [b]x2[/b], [b]x3[/b] (V key) speed it up."
@@ -2316,8 +2322,8 @@ msgstr "Houses to build far from HQ, and fast Marauders to burn them down."
 msgid "Les Catacombes"
 msgstr "The Catacombs"
 
-msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."
-msgstr "Two paths of undead and Grave Robbers from the very first wave."
+msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la deuxième vague."
+msgstr "Two paths of undead and Grave Robbers from the second wave on."
 
 msgid "Le Nid de la Reine"
 msgstr "The Queen's Nest"

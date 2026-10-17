@@ -96,6 +96,12 @@ var lateral_offset := 0.0
 ## Multiplicateur de la vie et du bouclier (vagues du mode infini). À définir avant
 ## d'ajouter l'ennemi à l'arbre.
 var health_multiplier := 1.0
+## Multiplicateur de vie que gardent les monstres qui naissent de lui (divisé, relevé) :
+## celui de la vague et de son groupe, sans le bonus de porteur de butin (-1 : le sien).
+var offspring_health_multiplier := -1.0
+## Multiplicateur de vie de ses renforts : celui de la vague seule, pas celui d'un groupe
+## de boss plus coriace (-1 : le sien).
+var summon_health_multiplier := -1.0
 ## Multiplicateur de la vitesse (difficulté du niveau).
 var speed_multiplier := 1.0
 ## Fois où l'ennemi peut encore se relever (-1 : celles de sa ressource, lues à l'ajout).
@@ -112,6 +118,9 @@ var _curve: Curve2D
 var _path_length := 0.0
 var _slow_factor := 1.0
 var _slow_time_left := 0.0
+## Ralentissements en cours, chacun avec son temps restant (x : facteur, y : temps) :
+## le plus fort s'applique, et un plus faible reprend quand il s'arrête.
+var _slows: Array[Vector2] = []
 ## Direction de la marche (angle), pour orienter l'image.
 var _heading := 0.0
 var _heal_cooldown := 0.0
@@ -265,11 +274,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if _slow_time_left > 0.0:
-		_slow_time_left -= delta
-		if _slow_time_left <= 0.0:
-			_slow_factor = 1.0
-			queue_redraw()
+	if not _slows.is_empty():
+		_update_slows(delta)
 	if _dot_left > 0.0:
 		_update_dot(delta)
 		if not is_alive:
@@ -280,17 +286,20 @@ func _process(delta: float) -> void:
 		_consecrated_left -= delta
 		if _consecrated_left <= 0.0:
 			queue_redraw()
-	# Gelé : il ne marche plus, ne soigne plus et n'appelle plus de renforts.
+	if _heal_block_left > 0.0:
+		_heal_block_left -= delta
+		if _heal_block_left <= 0.0:
+			queue_redraw()
+	# Gelé : il ne marche plus, ne soigne plus et n'appelle plus de renforts (mais une
+	# tour qui détecte les furtifs le révèle toujours).
 	if _frozen_left > 0.0:
 		_frozen_left -= delta
 		if _frozen_left <= 0.0:
 			_frozen_vulnerability = 0.0
 			queue_redraw()
+		if data.stealthy:
+			_update_detection()
 		return
-	if _heal_block_left > 0.0:
-		_heal_block_left -= delta
-		if _heal_block_left <= 0.0:
-			queue_redraw()
 	if data.heal_amount > 0.0:
 		_update_healing(delta)
 	if data.summon_enemy and data.summon_count > 0:
@@ -434,17 +443,46 @@ func push_back(distance: float) -> float:
 	return moved
 
 
-## Ralentit l'ennemi. Le ralentissement le plus fort et la durée la plus longue l'emportent.
+## Ralentit l'ennemi. Le ralentissement le plus fort l'emporte ; chacun garde sa durée, et
+## un ralentissement plus faible reprend quand le plus fort s'arrête (un étourdissement
+## de la Cloche ne dure donc pas plus longtemps parce qu'un Givre tire en même temps).
 func apply_slow(factor: float, duration: float) -> void:
 	if not is_alive or factor >= 1.0 or duration <= 0.0:
 		return
-	_slow_factor = minf(_slow_factor, factor) if is_slowed() else factor
-	_slow_time_left = maxf(_slow_time_left, duration)
+	var merged := false
+	for i in _slows.size():
+		if is_equal_approx(_slows[i].x, factor):
+			_slows[i].y = maxf(_slows[i].y, duration)
+			merged = true
+			break
+	if not merged:
+		_slows.append(Vector2(factor, duration))
+	_refresh_slow()
 	queue_redraw()
 
 
+func _update_slows(delta: float) -> void:
+	var count := _slows.size()
+	for i in range(count - 1, -1, -1):
+		_slows[i].y -= delta
+		if _slows[i].y <= 0.0:
+			_slows.remove_at(i)
+	_refresh_slow()
+	if _slows.size() != count:
+		queue_redraw()
+
+
+func _refresh_slow() -> void:
+	_slow_factor = 1.0
+	_slow_time_left = 0.0
+	for slow in _slows:
+		_slow_factor = minf(_slow_factor, slow.x)
+		_slow_time_left = maxf(_slow_time_left, slow.y)
+
+
 ## Brûlure ou poison : `damage_per_second` pendant `duration`, en ignorant l'armure.
-## Le plus fort et le plus long l'emportent, comme pour le ralentissement.
+## Le plus fort l'emporte : un effet plus faible ne fait rien tant qu'il dure (il ne le
+## prolonge pas, sinon une forte brûlure entretenue par un faible poison durerait sans fin).
 ## Renvoie true si l'effet a été posé.
 func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE) -> bool:
 	if not is_alive or damage_per_second <= 0.0 or duration <= 0.0:
@@ -452,9 +490,12 @@ func apply_dot(damage_per_second: float, duration: float, color := Color.ORANGE)
 	if _dot_left <= 0.0:
 		_dot_damage = damage_per_second
 		_dot_tick_left = DOT_TICK
+		_dot_left = duration
+	elif damage_per_second < _dot_damage - 0.001:
+		return false
 	else:
-		_dot_damage = maxf(_dot_damage, damage_per_second)
-	_dot_left = maxf(_dot_left, duration)
+		_dot_damage = damage_per_second
+		_dot_left = maxf(_dot_left, duration)
 	_dot_color = color
 	queue_redraw()
 	return true
@@ -527,7 +568,6 @@ func _update_healing(delta: float) -> void:
 		_heal_cooldown = HEAL_RETRY
 		return
 	_heal_cooldown = data.heal_interval
-	_summon_cooldown = data.summon_interval
 	_heal_pulse_left = HEAL_PULSE_DURATION
 	for enemy in patients:
 		var amount := enemy.health.heal(data.heal_amount)
@@ -991,3 +1031,11 @@ func _draw_aura() -> void:
 ## Halo du soin d'un Médecin : vert, bleu ciel en mode daltonien.
 static func _heal_color() -> Color:
 	return COLORBLIND_HEAL_COLOR if UiStyle.is_colorblind() else HEAL_COLOR
+
+
+func get_offspring_health_multiplier() -> float:
+	return offspring_health_multiplier if offspring_health_multiplier >= 0.0 else health_multiplier
+
+
+func get_summon_health_multiplier() -> float:
+	return summon_health_multiplier if summon_health_multiplier >= 0.0 else get_offspring_health_multiplier()

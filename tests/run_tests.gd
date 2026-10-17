@@ -122,6 +122,7 @@ func _run() -> void:
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
 	await _test_wave_preview_and_early_call()
+	await _test_wave_timer()
 	await _test_interest()
 	await _test_powers_in_tree()
 	await _test_meteors()
@@ -334,6 +335,14 @@ func _test_title_screen() -> void:
 	title.get_node("%PlayButton").pressed.emit()
 	title.get_node("%BackButton").pressed.emit()
 	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible, "Retour aussi")
+	_check(not ProjectSettings.get_setting("application/config/quit_on_go_back") and root.get_node("Sortie") is GameExit,
+		"le retour d'Android ne ferme pas le jeu d'un coup, il passe par Sortie")
+	title.get_node("%PlayButton").pressed.emit()
+	_check(not title.go_back(), "l'écran titre laisse le retour d'Android fermer le choix du mode")
+	root.get_node("Sortie").go_back()
+	await process_frame
+	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible,
+		"le retour d'Android revient au menu principal, comme Échap")
 	await _free(title)
 	await _test_title_demo()
 	var screen := await _spawn_world_select()
@@ -1667,6 +1676,18 @@ func _test_enemy_slow_and_armor() -> void:
 	while larve.is_slowed() and elapsed < 10.0:
 		elapsed += await _step()
 	_check(is_equal_approx(larve.get_speed(), LARVE.speed), "la vitesse revient à la normale")
+	# Étourdi par la Cloche (facteur 0) puis ralenti sans arrêt par un Givre : il reprend
+	# la vitesse du Givre une fois l'étourdissement fini, au lieu de rester figé.
+	larve.apply_slow(0.0, 0.7)
+	elapsed = 0.0
+	while elapsed < 3.0:
+		larve.apply_slow(0.5, 1.5)
+		elapsed += await _step()
+	_check(is_equal_approx(larve.get_speed(), LARVE.speed * 0.5),
+		"l'étourdissement s'arrête même si un ralentissement le suit sans arrêt")
+	# Une brûlure faible n'entretient pas une forte.
+	larve.apply_dot(20.0, 0.5)
+	_check(not larve.apply_dot(2.0, 3.0), "une brûlure plus faible ne prolonge pas la plus forte")
 	Engine.time_scale = 1.0
 	var scarabee := _add_still_enemy(level, SCARABEE, 1, 100.0)
 	scarabee.take_damage(GATLING.damage)
@@ -1933,25 +1954,92 @@ func _test_wave_preview_and_early_call() -> void:
 	await process_frame
 	_check(hud.wave_preview.visible and hud.wave_preview_label.get_parsed_text().contains("12 Larve"),
 		"l'aperçu annonce la première vague (%s)" % hud.wave_preview_label.get_parsed_text())
+	_check(not level.has_wave_timer() and level.wave_timer_total == Level.FIRST_EARLY_CALL_WINDOW
+		and level.wave_timer > 0.0, "en Moyen, le compte à rebours de la prime part avec la partie")
+	var first_bonus := roundi(level.get_wave_bonus(0) * level.early_call_bonus_ratio)
+	_check(first_bonus > 0 and absi(level.get_early_call_bonus() - first_bonus) <= 1,
+		"la première vague lancée tout de suite rapporte presque toute sa prime (%d)" % level.get_early_call_bonus())
+	_check(hud.next_wave_button.text == "Lancer la vague", "en Moyen, le bouton ne compte pas les secondes")
+	level.wave_timer = level.wave_timer_total / 2.0
+	_check(level.get_early_call_bonus() == roundi(first_bonus / 2.0), "à mi-chemin, la moitié de la prime")
+	level.wave_timer = 0.0
+	await process_frame
+	await process_frame
 	_check(level.get_early_call_bonus() == 0 and not hud.wave_preview_label.get_parsed_text().contains("maintenant"),
-		"pas de prime quand la carte est vide")
+		"plus de prime à la fin du compte à rebours")
+	_check(level.spawner.current_wave == -1, "en Moyen, la vague attend le joueur")
 	level.start_next_wave()
 	await process_frame
-	_check(level.get_early_call_bonus() == 0, "pas de prime tant que la vague apparaît (le bouton est désactivé)")
+	_check(level.get_early_call_bonus() == 0 and level.wave_timer < 0.0,
+		"pas de prime ni de compte à rebours tant que la vague apparaît (le bouton est désactivé)")
 	Engine.time_scale = GAME_SPEED
 	while level.spawner.is_spawning:
 		await process_frame
+	Engine.time_scale = 1.0
+	_check(level.wave_timer_total == Level.EARLY_CALL_WINDOW, "le compte à rebours repart à la fin de l'arrivée de la vague")
+	var bonus := roundi(level.get_wave_bonus(1) * level.early_call_bonus_ratio * level.get_early_call_fraction())
+	_check(bonus > 0 and level.get_early_call_bonus() == bonus, "prime de %d or juste après la vague" % bonus)
 	await process_frame
-	var bonus := roundi(level.spawner.waves[1].bonus_gold * level.early_call_bonus_ratio)
-	_check(bonus > 0 and level.get_early_call_bonus() == bonus, "prime de %d or si des ennemis sont encore en jeu" % bonus)
-	_check(hud.wave_preview_label.get_parsed_text().contains("Lancer maintenant : +%d or" % bonus),
+	_check(hud.wave_preview_label.get_parsed_text().contains("Lancer maintenant : +%d or" % level.get_early_call_bonus()),
 		"l'aperçu annonce la prime")
+	bonus = level.get_early_call_bonus()
 	var gold_before := level.gold
 	level.start_next_wave()
 	_check(level.gold == gold_before + bonus, "la prime est versée au lancement")
 	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % bonus),
 		"« +%d » s'affiche sous le bouton" % bonus)
 	await _free(level)
+
+
+## Difficile et Cauchemar : la vague part seule à la fin du compte à rebours, la première aussi.
+func _test_wave_timer() -> void:
+	print("Compte à rebours des vagues en Difficile et Cauchemar")
+	Difficulty.set_current(Difficulty.DIFFICILE)
+	var level := await _spawn_level(LEVEL_02)
+	var hud := level.hud
+	await process_frame
+	_check(level.has_wave_timer() and level.wave_timer_total == Difficulty.FIRST_WAVE_TIMER[Difficulty.DIFFICILE],
+		"en Difficile, la première vague a son compte à rebours (%.1f s)" % level.wave_timer_total)
+	_check(hud.next_wave_button.text == "Vague dans %d s" % ceili(level.wave_timer),
+		"le bouton compte les secondes (%s)" % hud.next_wave_button.text)
+	_check(hud.next_wave_button.tooltip_text.contains("partent seules"), "sa bulle d'aide le dit")
+	level.set_paused(true)
+	var before := level.wave_timer
+	for i in 5:
+		await process_frame
+	_check(level.wave_timer == before, "le compte à rebours s'arrête pendant la pause")
+	level.set_paused(false)
+	level.wave_timer = 0.05
+	for i in 10:
+		await process_frame
+	_check(level.spawner.current_wave == 0, "la première vague part seule à 0")
+	_check(level.stats.early_calls == 0, "sans prime ni lancement en avance compté")
+	Engine.time_scale = GAME_SPEED
+	while level.spawner.is_spawning:
+		await process_frame
+	Engine.time_scale = 1.0
+	_check(level.wave_timer_total == Difficulty.WAVE_TIMER[Difficulty.DIFFICILE] and level.wave_timer > 0.0,
+		"puis %d s après l'arrivée de chaque vague" % roundi(Difficulty.WAVE_TIMER[Difficulty.DIFFICILE]))
+	level.wave_timer = 4.0
+	var saved := level.to_saved_game()
+	_check(is_equal_approx(saved.get("wave_timer", -1.0), 4.0), "la partie enregistrée garde le compte à rebours")
+	await _free(level)
+	Difficulty.set_current(Difficulty.CAUCHEMAR)
+	level = await _spawn_level(LEVEL_02)
+	_check(level.wave_timer_total == Difficulty.FIRST_WAVE_TIMER[Difficulty.CAUCHEMAR]
+		and Difficulty.FIRST_WAVE_TIMER[Difficulty.CAUCHEMAR] < Difficulty.FIRST_WAVE_TIMER[Difficulty.DIFFICILE]
+		and Difficulty.WAVE_TIMER[Difficulty.CAUCHEMAR] < Difficulty.WAVE_TIMER[Difficulty.DIFFICILE],
+		"plus court en Cauchemar qu'en Difficile")
+	saved["wave"] = -1
+	level.restore_saved_game(saved)
+	_check(level.wave_timer == Level.RESUME_WAVE_TIMER, "une partie reprise laisse au moins %d s avant la vague"
+		% roundi(Level.RESUME_WAVE_TIMER))
+	await _free(level)
+	Difficulty.set_current(Difficulty.FACILE)
+	level = await _spawn_level(LEVEL_02)
+	_check(not level.has_wave_timer() and level.get_early_call_bonus() > 0, "en Facile, pas de départ seul mais la prime")
+	await _free(level)
+	Difficulty.set_current(Difficulty.MOYEN)
 
 
 func _test_interest() -> void:
@@ -2413,6 +2501,22 @@ func _test_healer_enemy() -> void:
 	var heal_shown := level.effects.get_children().any(func(n: Node) -> bool:
 		return n is FloatingText and n.text.begins_with("+") and n.color == Level.HEAL_TEXT_COLOR)
 	_check(heal_shown, "le soin s'affiche en vert")
+	# Le Général soigne et appelle des renforts : soigner ne retarde pas ses renforts.
+	var general := _add_still_enemy(level, GENERAL, 0, 500.0)
+	var wounded := _add_still_enemy(level, SOLDAT, 0, 500.0 + GENERAL.heal_radius * 0.5)
+	wounded.health.max_health = 1.0e6
+	wounded.take_damage(10.0)
+	general.data = GENERAL.duplicate()
+	general.data.speed = 0.0
+	var summons := [0]
+	general.summoned.connect(func(_enemy: Enemy) -> void: summons[0] += 1)
+	general.set_process(true)
+	elapsed = 0.0
+	while elapsed < GENERAL.summon_interval * 2.5:
+		if wounded.health.health >= wounded.health.max_health:
+			wounded.take_damage(10.0)
+		elapsed += await _step()
+	_check(summons[0] >= 2, "le Général appelle ses renforts même quand il soigne (%d appels)" % summons[0])
 	await _free(level)
 
 
@@ -3578,6 +3682,13 @@ func _test_carriers_and_chests() -> void:
 	await _step()
 	await process_frame
 	_check(not is_instance_valid(lost), "pas ramassé, il disparaît")
+	# Un porteur tué alors qu'il entre par un bord : son butin tombe dans la zone de jeu.
+	var area := level.hud.get_play_area()
+	for outside in [Vector2(-30, area.get_center().y), Vector2(area.end.x + 20, area.position.y - 10), Vector2(area.get_center().x, area.end.y + 5)]:
+		var edge := level.drop_loot(Loot.Kind.GOLD, outside, LARVE)
+		_check(area.grow(-Loot.TOUCH_PICK_RADIUS * 0.5).has_point(edge.global_position), "butin tombé hors de l'écran ramené sur la carte (%s)" % outside)
+		edge.queue_free()
+	await process_frame
 	# Coffres : sans pouvoirs ni Conquête, six bonus possibles, trois fois chacun.
 	var tower := level.place_tower(Vector2i(2, 4), CANNON)
 	var base_damage := tower.stats.damage
@@ -5281,8 +5392,7 @@ func _test_conquest_buildings() -> void:
 	await _step()
 	_check(level.get_soldiers().size() == Building.BARRACKS_SOLDIERS, "la Caserne bâtie envoie ses soldats")
 	conquest.sell_building(barracks)
-	for soldier in level.get_soldiers():
-		soldier.despawn()
+	_check(level.get_soldiers().is_empty(), "les soldats partent avec la Caserne démolie")
 	# Barricade : les monstres au sol s'y arrêtent et la frappent.
 	var barricade := conquest.place_building(path_cell, K.BARRICADE)
 	_finish_building(barricade)
@@ -5595,8 +5705,11 @@ func _test_conquest_workshop() -> void:
 	_check(conquest.research_blocker(workshop, Research.TOWER_FIRE_RATE) == "Niveau maximum", "une amélioration s'arrête à son niveau maximum")
 	gold = level.gold
 	var stone := conquest.stone
-	conquest.start_research(workshop, Research.WORKER_TOOLS)
 	var refund := conquest.get_building_refund(workshop)
+	conquest.start_research(workshop, Research.WORKER_TOOLS)
+	var shown := conquest.get_building_refund(workshop)
+	var research_cost := Research.get_cost(Research.WORKER_TOOLS, workshop.research_level)
+	_check(shown.gold == refund.gold + research_cost.gold, "le bouton Démolir annonce aussi la recherche rendue")
 	conquest.sell_building(workshop)
 	_check(level.gold == gold + refund.gold and conquest.stone == stone + refund.stone, "démoli en pleine recherche, l'Atelier la rend")
 	await _free(level)

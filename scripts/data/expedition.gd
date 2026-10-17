@@ -30,6 +30,11 @@ var lives := -1
 var max_lives := -1
 ## Bonus des coffres gagnés depuis le départ : exemplaires par identifiant (ChestBonus).
 var chest_levels := {}
+## Difficulté de toute l'expédition, prise à la première étape (-1 : pas encore choisie).
+var difficulty := -1
+## Record avant cette expédition (-1 : pas encore lu), pour annoncer un nouveau record à
+## la fin même si les étapes franchies l'ont déjà enregistré en route.
+var best_before := -1
 
 
 ## Nouvelle expédition tirée au sort (graine au hasard si 0).
@@ -48,12 +53,14 @@ static func from_dict(data: Dictionary) -> Expedition:
 	expedition.lives = data.get("lives", -1)
 	expedition.max_lives = data.get("max_lives", -1)
 	expedition.chest_levels = (data.get("chest_levels", {}) as Dictionary).duplicate()
+	expedition.difficulty = data.get("difficulty", -1)
+	expedition.best_before = data.get("best_before", -1)
 	return expedition
 
 
 func to_dict() -> Dictionary:
 	return {rng_seed = rng_seed, levels = levels.duplicate(), index = index, lives = lives, max_lives = max_lives,
-		chest_levels = chest_levels.duplicate()}
+		chest_levels = chest_levels.duplicate(), difficulty = difficulty, best_before = best_before}
 
 
 ## Niveaux qui peuvent tomber : ceux de la campagne déjà débloqués, dans l'ordre.

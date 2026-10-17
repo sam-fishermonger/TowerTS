@@ -233,6 +233,8 @@ func remove_rock(cell: Vector2i) -> void:
 	if is_instance_valid(_rocks_by_cell.get(cell)):
 		_rocks_by_cell[cell].queue_free()
 	_rocks_by_cell.erase(cell)
+	# Niveau libre : l'obstacle était peut-être un arbre ou une maison (voir populate_decor()).
+	_clear_decor(cell)
 	queue_redraw()
 
 

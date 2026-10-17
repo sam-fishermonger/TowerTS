@@ -204,6 +204,15 @@ func scale_health(ratio: float) -> void:
 	queue_redraw()
 
 
+## Caserne démolie ou détruite : ses soldats partent avec elle.
+func dismiss_soldiers() -> void:
+	for soldier in _soldiers:
+		if is_instance_valid(soldier) and soldier.is_alive:
+			soldier._release()
+			soldier.despawn()
+	_soldiers.clear()
+
+
 ## Caserne : un soldat de plus, posté sur le chemin le plus proche.
 func _spawn_soldier() -> void:
 	var soldier := Soldier.new()
