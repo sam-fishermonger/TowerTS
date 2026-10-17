@@ -26,6 +26,11 @@ const SPEED: Array[float] = [0.9, 1.0, 1.1, 1.2]
 ## Nombre de tours différentes qu'on peut prendre dans un niveau : avec plus de tours
 ## débloquées, on choisit lesquelles au lancement du niveau.
 const TOWER_LIMITS: Array[int] = [9, 8, 6, 5]
+## Compte à rebours (secondes) au bout duquel la vague suivante part seule, compté depuis
+## la fin de l'arrivée de la vague d'avant (0 = elle attend le joueur).
+const WAVE_TIMER: Array[float] = [0.0, 0.0, 30.0, 20.0]
+## Le même avant la première vague, compté depuis le début de la partie.
+const FIRST_WAVE_TIMER: Array[float] = [0.0, 0.0, 60.0, 40.0]
 
 
 ## Difficulté choisie par le joueur.
@@ -37,9 +42,23 @@ static func set_current(difficulty: int) -> void:
 	Progress.set_setting(SETTING, clampi(difficulty, 0, COUNT - 1))
 
 
+## Les vagues partent-elles seules à la fin d'un compte à rebours ?
+static func has_wave_timer(difficulty: int) -> bool:
+	return WAVE_TIMER[difficulty] > 0.0
+
+
 ## « 6 tours différentes au plus par niveau. »
 static func describe_tower_limit(difficulty: int) -> String:
 	return TranslationServer.translate("%d tours différentes au plus par niveau.") % TOWER_LIMITS[difficulty]
+
+
+## « Les vagues partent seules : 60 s avant la première, puis 30 s après chacune. »,
+## précédé d'une espace (vide si les vagues attendent le joueur).
+static func describe_wave_timer(difficulty: int) -> String:
+	if not has_wave_timer(difficulty):
+		return ""
+	return " " + TranslationServer.translate("Les vagues partent seules : %d s avant la première, puis %d s après chacune.") \
+		% [roundi(FIRST_WAVE_TIMER[difficulty]), roundi(WAVE_TIMER[difficulty])]
 
 
 ## Effets d'une difficulté, en une phrase : « Monstres 35 % plus résistants, 25 % plus

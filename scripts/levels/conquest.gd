@@ -77,6 +77,8 @@ var preferred_rock := NO_CELL
 var depot_position := Vector2.ZERO
 ## Secondes avant le départ de la prochaine vague (négatif : pas de compte à rebours).
 var wave_countdown := -1.0
+## Durée totale du compte à rebours en cours : la prime d'avance baisse avec lui.
+var wave_countdown_total := FIRST_WAVE_DELAY
 ## Bilan de la partie.
 var stone_mined := 0
 var essence_mined := 0
@@ -847,6 +849,7 @@ func get_extract_interval() -> float:
 func on_wave_cleared() -> void:
 	if level.spawner.has_next_wave() and wave_countdown < 0.0:
 		wave_countdown = WAVE_DELAY
+		wave_countdown_total = WAVE_DELAY
 		changed.emit()
 
 
