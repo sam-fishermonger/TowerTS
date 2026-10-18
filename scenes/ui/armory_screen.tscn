@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/armory_screen.gd" id="1_screen"]
+[ext_resource type="Script" path="res://scripts/ui/ui_backdrop.gd" id="9_backdrop"]
 
 [node name="ArmoryScreen" type="Control"]
 layout_mode = 3
@@ -12,6 +13,7 @@ grow_vertical = 2
 script = ExtResource("1_screen")
 
 [node name="Background" type="ColorRect" parent="."]
+script = ExtResource("9_backdrop")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

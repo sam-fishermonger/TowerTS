@@ -14,6 +14,9 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.35, 0.85, 1, 1)
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_id20u"]
 content_margin_left = 18.0
@@ -27,6 +30,8 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(1, 1, 1, 0.12)
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_offset = Vector2(0, 2)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7kyrn"]
 content_margin_left = 18.0
@@ -41,6 +46,8 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(1, 0.75, 0.2, 1)
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_offset = Vector2(0, 2)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gofuw"]
 content_margin_left = 18.0
@@ -54,6 +61,8 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.35, 0.85, 1, 1)
+shadow_color = Color(0.35, 0.85, 1, 0.35)
+shadow_size = 9
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p5woc"]
 content_margin_left = 18.0
@@ -67,6 +76,8 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.61, 0.91, 1, 1)
+shadow_color = Color(0.35, 0.85, 1, 0.455)
+shadow_size = 9
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b3vpb"]
 content_margin_left = 18.0
@@ -80,6 +91,9 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.35, 0.85, 1, 0.5)
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_size = 4
+shadow_offset = Vector2(0, 2)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gte0t"]
 bg_color = Color(0.35, 0.85, 1, 1)
@@ -108,6 +122,9 @@ border_width_top = 2
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.35, 0.85, 1, 0.7)
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_66vb1"]
 bg_color = Color(0.02, 0.05, 0.07, 0.9)
@@ -171,9 +188,12 @@ ProgressBar/styles/background = SubResource("StyleBoxFlat_66vb1")
 ProgressBar/styles/fill = SubResource("StyleBoxFlat_g7oeu")
 RichTextLabel/colors/default_color = Color(0.86, 0.95, 1, 1)
 TitreEcran/base_type = &"Label"
-TitreEcran/colors/font_shadow_color = Color(0, 0, 0, 0.6)
-TitreEcran/constants/shadow_offset_x = 3
-TitreEcran/constants/shadow_offset_y = 3
+TitreEcran/colors/font_outline_color = Color(0.01, 0.04, 0.06, 1)
+TitreEcran/colors/font_shadow_color = Color(0.35, 0.85, 1, 0.3)
+TitreEcran/constants/outline_size = 6
+TitreEcran/constants/shadow_offset_x = 0
+TitreEcran/constants/shadow_offset_y = 2
+TitreEcran/constants/shadow_outline_size = 14
 TitreEcran/fonts/font = ExtResource("1_626q5")
 TooltipPanel/styles/panel = SubResource("StyleBoxFlat_626q5")
 Window/styles/embedded_border = SubResource("StyleBoxFlat_626q5")

@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 SoundPlayer="*res://scripts/audio/sound.gd"
 Settings="*res://scripts/save/game_settings.gd"
 Manette="*res://scripts/ui/gamepad.gd"
+Animations="*res://scripts/ui/ui_motion.gd"
 
 [display]
 

@@ -291,6 +291,12 @@ godot --headless --path . -s res://tools/generate_theme.gd
 
 Pour donner la police des titres à un Label d'une scène, mettre `TitreEcran` dans sa propriété « Theme Type Variation ».
 
+L'interface bouge, sans effort de la part des écrans :
+- **Fond animé** des menus (`scripts/ui/ui_backdrop.gd` et son shader) : quadrillage qui monte lentement, points qui clignotent, bande de balayage et lueur d'accent. Le mettre comme script du ColorRect de fond d'un écran (ou `UiBackdrop.new()` dans le code).
+- **Halos** : un bouton survolé ou enfoncé s'entoure de la couleur de son accent, les panneaux ont une ombre portée et les titres un contour et une lueur (tout vient de `ui_style.gd`).
+- **Mouvements** (`scripts/ui/ui_motion.gd`, autoload « Animations ») : chaque bouton grossit un peu au survol ou au focus et s'enfonce quand on appuie ; à chaque changement d'écran, un voile se lève et les panneaux apparaissent l'un après l'autre (un écran qui joue sa propre apparition, comme l'écran titre, pose la méta `UiMotion.OWN_INTRO_META`). `UiMotion.pop()` et `UiMotion.appear()` servent ailleurs : l'or qui monte, l'écran de fin et ses étoiles. Tout joue en temps réel, aussi en x3 et en pause.
+- En partie, un **bandeau « Vague N / M »** traverse le milieu de la carte au départ de chaque vague, avec « Dernière vague ! » ou « Boss en approche ! » (en rouge) quand c'est le cas.
+
 ### Vue de trois quarts
 
 Toutes les cartes sont dessinées en vue de trois quarts, façon Kingdom Rush. Le sol est peint (`scripts/map/relief_ground.gdshader`) et le chemin a des bords irréguliers. Chaque monde a son décor debout (`scripts/map/biome_theme.gd`, `scripts/map/decor_item.gd`) : arbres, termitières et œufs à La Ruche ; caisses, tonneaux, ferraille et cheminées sur la terre cendrée de La Fonderie, avec un chemin de plaques rivetées ; maisons, réverbères et barrières à La Cité, avec un chemin pavé ; arbres morts, tombes et croix à La Nécropole. Les tours sont de petits donjons crénelés sur un socle de pierre, avec leur arme vue de biais (`scripts/towers/tower_relief.gd`). Les monstres sont dessinés de profil, avec une ombre juste sous eux (`scripts/enemies/creature.gd`). La base est un petit château. Tout ce qui se tient debout est trié en profondeur : ce qui est plus bas sur l'écran passe devant.

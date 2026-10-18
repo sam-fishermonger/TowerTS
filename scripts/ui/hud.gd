@@ -67,6 +67,12 @@ const GAMEPAD_HINT := "Stick gauche ou croix : viser  ·  A : poser, cliquer  ·
 const CONQUEST_HINT := "Conquête : les tours coûtent aussi de la pierre et les ouvriers les bâtissent  ·  Clic sur un rocher ou un filon : y envoyer les mineurs  ·  Clic ou cadre sur des ouvriers, ou O : les choisir  ·  R : recruter un ouvrier  ·  B : bâtiments"
 ## Durée d'affichage du bandeau d'un succès débloqué, en secondes réelles.
 const ACHIEVEMENT_TOAST_DURATION := 4.0
+## Bandeau « Vague N » au départ de chaque vague, au milieu de la carte (secondes réelles).
+const WAVE_BANNER_HOLD := 1.0
+const WAVE_BANNER_HEIGHT := 84.0
+const WAVE_BANNER_BOSS_COLOR := Color(1.0, 0.4, 0.35)
+## Or gagné : le compteur fait un petit bond doré.
+const GOLD_PULSE_TINT := Color(1.4, 1.3, 0.8)
 ## Touches des pouvoirs, par position sur le clavier : Q, W, E, T en QWERTY (A, Z, E, T en
 ## AZERTY).
 const POWER_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E, KEY_T]
@@ -201,6 +207,8 @@ var _armory_available := true
 @onready var wave_preview_label: RichTextLabel = %WavePreviewLabel
 ## Voile rouge affiché quand le joueur perd des vies.
 @onready var damage_flash: ColorRect = %DamageFlash
+## Bandeau « Vague N » (créé à la première vague).
+var wave_banner: Control
 
 
 func _ready() -> void:
@@ -482,6 +490,8 @@ func _fit_level_label() -> void:
 
 
 func update_stats(gold: int, lives: int, wave: int, wave_count: int, interest := -1) -> void:
+	if not _stats_args.is_empty() and gold > _gold:
+		UiMotion.pop(gold_label, 1.12, 0.3, GOLD_PULSE_TINT)
 	_gold = gold
 	_stats_args = [gold, lives, wave, wave_count, interest]
 	gold_label.text = tr("Or : %d") % gold
@@ -631,7 +641,9 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 	%RestartButton.visible = true
 	%ArmoryButton.visible = _armory_available
 	%BackButton.visible = _back_available
-	end_panel.visible = true
+	if not end_panel.visible:
+		end_panel.visible = true
+		_play_end_panel_intro.call_deferred(victory and stars > 0)
 	set_paused(false)
 	pause_button.disabled = true
 	for button: Button in speed_buttons.get_children():
@@ -649,6 +661,82 @@ func show_end_screen(victory: bool, can_continue := false, stars := 0, new_recor
 	else:
 		%RestartButton.grab_focus()
 	_end_screen = show_end_screen.bind(victory, can_continue, stars, new_record, unlocked_world)
+
+
+## Le panneau de fin grandit en apparaissant, puis les étoiles font un bond.
+func _play_end_panel_intro(with_stars: bool) -> void:
+	UiMotion.appear(end_panel, 0.0, 0.45, 0.85)
+	if with_stars:
+		var tween := end_stars.create_tween().set_ignore_time_scale().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		end_stars.modulate.a = 0.0
+		tween.tween_interval(0.3)
+		tween.tween_callback(func() -> void:
+			end_stars.modulate.a = 1.0
+			UiMotion.pop(end_stars, 1.6, 0.5))
+
+
+## Bandeau « Vague N » au milieu de la carte quand une vague part : il s'ouvre, le texte
+## glisse de la droite, reste un instant puis tout s'efface. « Dernière vague » et
+## « Boss en approche » s'ajoutent quand c'est le cas.
+func announce_wave(number: int, wave_count: int, has_boss: bool) -> void:
+	if is_instance_valid(wave_banner):
+		wave_banner.queue_free()
+	var area := get_play_area()
+	var accent := WAVE_BANNER_BOSS_COLOR if has_boss else UiStyle.ACCENT
+	wave_banner = Control.new()
+	wave_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wave_banner.position = Vector2(area.position.x, area.get_center().y - WAVE_BANNER_HEIGHT / 2.0)
+	wave_banner.size = Vector2(area.size.x, WAVE_BANNER_HEIGHT)
+	wave_banner.pivot_offset = wave_banner.size / 2.0
+	add_child(wave_banner)
+	move_child(wave_banner, end_panel.get_index())
+	var band := Panel.new()
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := UiStyle.panel(Color(accent, 0.8), 0.0, SIDE_TOP, Color(0.02, 0.05, 0.08, 0.78))
+	style.border_width_bottom = 2
+	style.border_width_left = 0
+	style.border_width_right = 0
+	band.add_theme_stylebox_override(&"panel", style)
+	band.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	wave_banner.add_child(band)
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override(&"separation", -4)
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	wave_banner.add_child(column)
+	var title := Label.new()
+	title.theme_type_variation = UiStyle.TITLE_VARIATION
+	title.add_theme_font_size_override(&"font_size", 40)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.text = tr("Vague %d") % number if wave_count < 0 else tr("Vague %d / %d") % [number, wave_count]
+	column.add_child(title)
+	var notes: Array[String] = []
+	if wave_count > 0 and number == wave_count:
+		notes.append(tr("Dernière vague !"))
+	if has_boss:
+		notes.append(tr("Boss en approche !"))
+	if not notes.is_empty():
+		var note := Label.new()
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		note.add_theme_color_override(&"font_color", accent.lightened(0.3))
+		note.add_theme_font_size_override(&"font_size", 17)
+		note.text = "  ·  ".join(notes)
+		column.add_child(note)
+	# Temps réel : le bandeau dure autant en x3.
+	wave_banner.scale = Vector2(1.0, 0.0)
+	column.modulate.a = 0.0
+	column.position.x = 120.0
+	var banner := wave_banner
+	var tween := banner.create_tween().set_ignore_time_scale()
+	tween.tween_property(banner, "scale:y", 1.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(column, "position:x", 0.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(column, "modulate:a", 1.0, 0.25)
+	tween.tween_interval(WAVE_BANNER_HOLD)
+	tween.tween_property(column, "position:x", -120.0, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(banner, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(banner.queue_free)
+	UiMotion.pop(wave_label, 1.2, 0.4, Color(1.3, 1.3, 1.3))
 
 
 ## Écran de fin du mode infini : vagues repoussées, étoiles infinies obtenues sur le
