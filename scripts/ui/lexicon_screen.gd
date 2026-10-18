@@ -161,6 +161,8 @@ func show_tower(data: TowerData) -> void:
 		lines.append(_line(tr("Anti-soin"), "%s s" % _num(data.heal_block_duration)))
 	if data.revive_block_duration > 0.0:
 		lines.append(_line(tr("Consacre"), tr("%s s : un ennemi touché ne peut plus se relever") % _num(data.revive_block_duration)))
+	if data.execute_threshold > 0.0:
+		lines.append(_line(tr("Achève"), tr("un ennemi (hors boss) sous %d %% de sa vie") % roundi(data.execute_threshold * 100.0)))
 	if data.prefers_healers:
 		lines.append(_line(tr("Cible"), tr("les soigneurs en premier")))
 	if not data.upgrades.is_empty():
@@ -170,15 +172,23 @@ func show_tower(data: TowerData) -> void:
 			lines.append(tr("Niveau %d  [color=%s](%d or)[/color] : %s") % [i + 2, EnemyInfo.GOLD_HEX, data.upgrades[i].cost,
 				_describe_upgrade(data.upgrades[i])])
 	for perk in Perks.TREE.perks:
-		if perk.unlocks_tower == data.resource_path:
+		if perk.unlocks_tower == data.resource_path and perk.required_mastery >= 0:
+			lines.append("")
+			lines.append(tr("[color=%s]Tour de maîtrise : finir %s à 100 %% (toutes les étoiles de toutes les difficultés), puis l'acheter dans l'arbre des améliorations (Maîtrise, ★ %d).[/color]")
+				% [STAR_HEX, tr(CAMPAIGN.worlds[perk.required_mastery].display_name), perk.cost])
+		elif perk.unlocks_tower == data.resource_path:
 			lines.append("")
 			var world_name := Perks.get_required_world_name(perk)
 			lines.append(tr("[color=%s]Tour des mondes : à débloquer dans l'arbre des améliorations (%s, ★ %d).[/color]")
 				% [STAR_HEX, tr(world_name) if not world_name.is_empty() else tr("Tours des mondes"), perk.cost])
 		elif perk.specializes_tower == data.resource_path and not perk.is_crossing():
 			lines.append("")
-			lines.append(tr("[color=%s]Spécialisation « %s » (☠ %d) : %s[/color]") % [SKULL_HEX, tr(perk.display_name), perk.cost,
-				tr(perk.description)])
+			if perk.paid_with_endless_stars:
+				lines.append(tr("[color=%s]Spécialisation « %s » (☠ %d) : %s[/color]") % [SKULL_HEX, tr(perk.display_name), perk.cost,
+					tr(perk.description)])
+			else:
+				lines.append(tr("[color=%s]Amélioration « %s » (★ %d) : %s[/color]") % [STAR_HEX, tr(perk.display_name), perk.cost,
+					tr(perk.description)])
 	detail_text.text = "\n".join(lines)
 
 
@@ -279,6 +289,14 @@ func show_world(index: int) -> void:
 		lines.append("")
 		lines.append("[b]%s[/b]" % tr("Tours du monde"))
 		lines.append(tr("%s : à débloquer dans l'arbre des améliorations.") % ", ".join(towers))
+	var mastery: Array[String] = []
+	for tower in Perks.get_mastery_towers(index):
+		mastery.append(tr(tower.display_name))
+	if not mastery.is_empty():
+		lines.append("")
+		lines.append("[b]%s[/b]" % tr("Tour de maîtrise"))
+		lines.append(tr("%s : s'ouvre dans l'arbre des améliorations quand le monde est fini à 100 %%.") % ", ".join(mastery)
+			+ (" " + tr("Monde maîtrisé !") if Progress.is_world_mastered(world) else ""))
 	lines.append("")
 	lines.append(_line(tr("Étoiles"), tr("★ %d / %d (4 difficultés)") % [Progress.get_world_stars(world),
 		world.levels.size() * Progress.MAX_LEVEL_STARS]))
@@ -295,6 +313,12 @@ func _describe_upgrade(upgrade: TowerUpgrade) -> String:
 			parts.append(item[1] % percent)
 	if upgrade.slow_duration_bonus > 0.0:
 		parts.append(tr("+%s s de ralentissement") % _num(upgrade.slow_duration_bonus))
+	if upgrade.chain_count_bonus > 0:
+		parts.append(tr("+%d rebonds") % upgrade.chain_count_bonus if upgrade.chain_count_bonus > 1 else tr("+1 rebond"))
+	if upgrade.shield_jam_bonus > 0.0:
+		parts.append(tr("+%s s de brouillage") % _num(upgrade.shield_jam_bonus))
+	if upgrade.execute_threshold_bonus > 0.0:
+		parts.append(tr("achève sous %+d %% de vie") % roundi(upgrade.execute_threshold_bonus * 100.0))
 	return ", ".join(parts) if not parts.is_empty() else "-"
 
 

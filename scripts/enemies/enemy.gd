@@ -421,6 +421,9 @@ func hit(amount: float, stats: TowerData) -> float:
 	if stats.revive_block_duration > 0.0:
 		consecrate(stats.revive_block_duration)
 	var dealt := take_damage(amount, stats.armor_piercing, stats.shield_damage_multiplier)
+	if stats.execute_threshold > 0.0 and is_alive and not data.is_boss \
+			and health.health <= health.max_health * stats.execute_threshold:
+		dealt += take_damage(health.health, true, 0.0)
 	damage_source_id = 0
 	apply_slow(stats.slow_factor, stats.slow_duration)
 	if apply_dot(stats.dot_damage, stats.dot_duration, stats.color):

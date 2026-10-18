@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Reine-mère : ruche dorée couronnée, d'où part un dard, orientée vers la droite. -->
+  <ellipse cx="28" cy="32" rx="16" ry="14" fill="#4a2c08"/>
+  <ellipse cx="28" cy="32" rx="13.5" ry="11.5" fill="#e0a52a"/>
+  <path d="M16 27 H40 M15 32 H41 M16 37 H40" stroke="#8a5a12" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M42 29 L60 32 L42 35 Z" fill="#4a2c08"/>
+  <path d="M43 30.5 L56 32 L43 33.5 Z" fill="#f6e3a0"/>
+  <path d="M20 18 L23 12 L28 17 L33 12 L36 18 Z" fill="#4a2c08"/>
+  <path d="M21.5 17 L23.5 14 L28 18 L32.5 14 L34.5 17 Z" fill="#ffd94a"/>
+  <circle cx="22" cy="30" r="2.6" fill="#fff4c2" opacity="0.7"/>
+</svg>

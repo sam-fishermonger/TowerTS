@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Baliste royale : arc tendu sur un fût, carreau prêt, orientée vers la droite. -->
+  <rect x="12" y="28" width="38" height="8" rx="2" fill="#1c2a5a"/>
+  <rect x="14" y="30" width="34" height="4" rx="1.5" fill="#5a78e0"/>
+  <path d="M40 10 Q52 32 40 54" fill="none" stroke="#1c2a5a" stroke-width="6" stroke-linecap="round"/>
+  <path d="M40 10 Q52 32 40 54" fill="none" stroke="#c9a24a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M40 10 L22 32 L40 54" fill="none" stroke="#e8e8e8" stroke-width="1.5"/>
+  <path d="M22 32 H58" stroke="#3a2a18" stroke-width="3" stroke-linecap="round"/>
+  <path d="M56 28 L62 32 L56 36 Z" fill="#d8dde6"/>
+  <circle cx="20" cy="32" r="4" fill="#ffd94a"/>
+</svg>

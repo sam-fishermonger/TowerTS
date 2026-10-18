@@ -20,6 +20,9 @@ const ICON_DIR := "res://assets/icons/ameliorations/"
 @export var requires: Array[Resource] = []
 ## Monde à avoir débloqué avant de pouvoir l'acheter (index dans la campagne, -1 = aucun).
 @export var required_world := -1
+## Monde à avoir fini à 100 % (toutes ses étoiles, dans toutes les difficultés) avant de
+## pouvoir l'acheter (index dans la campagne, -1 = aucun) : les tours de maîtrise.
+@export var required_mastery := -1
 ## Place dans l'arbre : colonne (deux par branche, 0.5 pour centrer) et rang (profondeur).
 @export var column := 0.0
 @export var row := 0
@@ -128,6 +131,8 @@ var biome_damage := {}
 @export var knockback_multiplier := 1.0
 ## Secondes ajoutées à la consécration des morts (ils ne se relèvent pas).
 @export var revive_block_bonus := 0.0
+## Ajouté au seuil d'achèvement (part de la vie sous laquelle un coup achève un monstre).
+@export var execute_threshold_bonus := 0.0
 
 @export_group("Croisement")
 ## Croisement de deux tours : `specializes_tower` reçoit les effets de cette amélioration,
@@ -229,6 +234,7 @@ func apply_specialization(stats) -> void:
 		stats.boost_fire_rate += boost_bonus
 	stats.knockback *= knockback_multiplier
 	stats.revive_block_duration += revive_block_bonus
+	stats.execute_threshold += execute_threshold_bonus
 
 
 ## Ajoute les bonus de cette amélioration à `total` (modifié sur place) : les

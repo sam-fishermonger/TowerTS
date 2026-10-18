@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Haut-fourneau : creuset de fonte plein de métal en fusion et sa goulotte, orienté vers la droite. -->
+  <circle cx="26" cy="32" r="16" fill="#2b1a14"/>
+  <circle cx="26" cy="32" r="13" fill="#6b4a3a"/>
+  <circle cx="26" cy="32" r="9" fill="#ff7a1a"/>
+  <circle cx="24" cy="30" r="5" fill="#ffd060"/>
+  <path d="M38 26 L58 29 L58 35 L38 38 Z" fill="#2b1a14"/>
+  <path d="M40 28.5 L56 30.5 L56 33.5 L40 35.5 Z" fill="#8a6a58"/>
+  <path d="M42 31 L58 32 L42 33 Z" fill="#ff9a2a"/>
+  <path d="M12 22 L18 26 M12 42 L18 38" stroke="#2b1a14" stroke-width="3" stroke-linecap="round"/>
+</svg>

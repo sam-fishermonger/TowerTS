@@ -121,6 +121,8 @@ var _pending_rules_panel := Callable()
 var _mutator_result: Array[int] = []
 ## Modes ouverts par la victoire (Unlocks.Feature), dits sur l'écran de fin.
 var _unlocked_features: Array = []
+## Monde fini à 100 % par cette victoire (show_world_mastered()), ou null.
+var _mastered_world: World = null
 ## Rareté du coffret d'équipement gagné, dit sur l'écran de fin (-1 = aucun).
 var _box_result := -1
 ## Insignes gagnés à la fin de la partie et s'ils sont ceux de la première victoire du jour
@@ -1246,6 +1248,17 @@ func show_unlocked_features(features: Array) -> void:
 	_unlocked_features = features
 
 
+## Le monde vient d'être fini à 100 % : sa tour de maîtrise s'ouvre dans l'arbre.
+func show_world_mastered(world: World) -> void:
+	_mastered_world = world
+	var index := Perks.CAMPAIGN.worlds.find(world)
+	var towers := PackedStringArray()
+	for tower in Perks.get_mastery_towers(index):
+		towers.append(tr(tower.display_name))
+	end_message.text += "\n" + tr("%s maîtrisé à 100 %% ! %s s'ouvre dans Améliorations (Maîtrise).") \
+		% [tr(world.display_name), tr(" et ").join(towers)]
+
+
 ## Insignes gagnés (TowerLevels), à dépenser dans l'Armurerie. `first_daily` : première
 ## victoire du jour au défi du jour, qui en donne beaucoup plus.
 func show_medal_result(amount: int, first_daily := false) -> void:
@@ -1356,6 +1369,8 @@ func _refresh_end_screen() -> void:
 		show_mutator_result(_mutator_result[0], _mutator_result[1])
 	if not _unlocked_features.is_empty():
 		show_unlocked_features(_unlocked_features)
+	if _mastered_world:
+		show_world_mastered(_mastered_world)
 	if not _medal_result.is_empty():
 		show_medal_result(_medal_result[0], _medal_result[1])
 	if not _cascade_result.is_empty():
