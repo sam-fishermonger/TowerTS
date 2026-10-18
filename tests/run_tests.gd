@@ -53,6 +53,10 @@ const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
 const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
 const UNDEAD_01 := preload("res://scenes/levels/undead_01.tscn")
 const CENSER := preload("res://resources/towers/censer.tres")
+const QUEEN := preload("res://resources/towers/queen.tres")
+const FURNACE := preload("res://resources/towers/furnace.tres")
+const BALLISTA := preload("res://resources/towers/ballista.tres")
+const REAPER := preload("res://resources/towers/reaper.tres")
 const BELL := preload("res://resources/towers/bell.tres")
 const CHEVALIER := preload("res://resources/enemies/undead/chevalier.tres")
 const SQUELETTE := preload("res://resources/enemies/undead/squelette.tres")
@@ -161,6 +165,7 @@ func _run() -> void:
 	await _test_mutators()
 	await _test_difficulties()
 	await _test_specializations()
+	await _test_mastery_towers()
 	await _test_konami_code()
 	await _test_elites()
 	await _test_carriers_and_chests()
@@ -701,7 +706,8 @@ func _test_biome_towers_in_tree() -> void:
 	print("Arbre des améliorations : tours des mondes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	var tree := Perks.TREE
-	var tower_perks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
+	var tower_perks := tree.perks.filter(func(p: Perk) -> bool:
+		return not p.unlocks_tower.is_empty() and p.required_mastery < 0)
 	var per_world := [0, 0, 0, 0]
 	for perk: Perk in tower_perks:
 		if perk.required_world >= 0:
@@ -715,7 +721,11 @@ func _test_biome_towers_in_tree() -> void:
 	var logistics_cost := 0
 	for perk in tree.get_page_perks(logistics):
 		logistics_cost += perk.cost
-	var main_cost := tree.get_total_cost() - logistics_cost
+	# La page Maîtrise (tours des mondes finis à 100 %) vient en plus.
+	var mastery_cost := 0
+	for perk in tree.get_page_perks(tree.page_names.find("Maîtrise")):
+		mastery_cost += perk.cost
+	var main_cost := tree.get_total_cost() - logistics_cost - mastery_cost
 	# Les niveaux 7 et 8 de chaque monde ont ajouté des étoiles sans nouvelles améliorations :
 	# l'arbre en coûte encore les trois quarts, la marge attend de nouvelles options.
 	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
@@ -3016,14 +3026,77 @@ func _test_crossings_in_tree() -> void:
 	Progress.reset_campaign()
 
 
+func _test_mastery_towers() -> void:
+	print("Tours de maîtrise : un monde fini à 100 %")
+	var tree := Perks.TREE
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	var page := tree.page_names.find("Maîtrise")
+	var perks := tree.get_page_perks(page)
+	var towers := perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
+	_check(page >= 0 and perks.size() == 16 and towers.size() == 4 and perks.all(func(p: Perk) -> bool:
+		return not p.paid_with_endless_stars), "un onglet Maîtrise : 4 tours et leurs améliorations, en étoiles")
+	_check(towers.map(func(p: Perk) -> int: return p.required_mastery) == [0, 1, 2, 3]
+		and towers.map(func(p: Perk) -> Resource: return p.get_unlocked_tower()) == [QUEEN, FURNACE, BALLISTA, REAPER],
+		"une tour par monde")
+	for tower: Perk in towers:
+		var own := perks.filter(func(p: Perk) -> bool: return p.specializes_tower == tower.unlocks_tower)
+		_check(own.size() == 3, "%s a 3 améliorations propres" % tower.display_name)
+	var queen := tree.get_perk("maitrise_queen")
+	# La Ruche gagnée partout en Moyen : pas encore à 100 %.
+	for path in campaign.worlds[0].levels:
+		Progress.record_victory(path, 3)
+	Progress.record_victory(campaign.worlds[0].levels[0], 3, Difficulty.CAUCHEMAR)
+	_check(not Progress.is_world_mastered(campaign.worlds[0]) and not Perks.is_unlocked(queen),
+		"la Reine-mère attend La Ruche à 100 %")
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(page)
+	var branch := tree.get_branch(queen)
+	_check(screen._lock_labels[branch].text.contains("La Ruche") and screen._lock_labels[branch].text.contains("100 %"),
+		"la branche dit quel monde finir à 100 %% (%s)" % screen._lock_labels[branch].text)
+	screen._show_info(queen)
+	_check(screen.info_status.text.contains("100 %"), "la fiche aussi")
+	await _free(screen)
+	_win_in_all_difficulties(campaign.worlds[0].levels)
+	_check(Progress.is_world_mastered(campaign.worlds[0]) and Perks.is_unlocked(queen)
+		and not Perks.is_unlocked(tree.get_perk("maitrise_furnace")), "La Ruche à 100 % ouvre la Reine-mère, pas les autres")
+	_check(Perks.buy(queen) and Perks.get_unlocked_towers().has(QUEEN), "la Reine-mère s'achète et s'ajoute aux tours")
+	var before := QUEEN.get_stats_at_level(1)
+	_grant_perks(["maitrise_queen", "venin_royal", "essaimage", "nuee"])
+	var after := QUEEN.get_stats_at_level(1)
+	_check(after.chain_count == before.chain_count + 2 and after.dot_damage > before.dot_damage
+		and after.fire_rate > before.fire_rate and after.slow_factor < before.slow_factor, "ses améliorations propres comptent")
+	_check(QUEEN.get_stats_at_level(3).chain_count == QUEEN.chain_count + 2 + 3, "et ses améliorations en jeu ajoutent des sauts")
+	_check(FURNACE.get_stats_at_level(3).shield_jam_duration > FURNACE.shield_jam_duration, "le Haut-fourneau brouille plus longtemps")
+	# Faucheuse : achève les ennemis presque morts, pas les boss.
+	_grant_perks([])
+	var level := await _spawn_level(LEVEL_01)
+	var stats := REAPER.get_stats_at_level(1)
+	var larva := level.spawner.spawn(LARVE, level.map.get_enemy_path(0), 100.0)
+	larva.take_damage(larva.health.max_health * 0.9, true)
+	larva.hit(0.5, stats)
+	_check(not larva.is_alive, "la Faucheuse fauche un ennemi sous 12 % de sa vie")
+	var queen_boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 100.0)
+	queen_boss.take_damage(queen_boss.health.max_health * 0.95, true)
+	queen_boss.hit(0.5, stats)
+	_check(queen_boss.is_alive, "mais pas un boss")
+	_check(is_equal_approx(REAPER.get_stats_at_level(3).execute_threshold, 0.2), "ses améliorations montent le seuil à 20 %")
+	level.hud.show_world_mastered(campaign.worlds[0])
+	_check(level.hud.end_message.text.contains("Reine-mère"), "l'écran de fin annonce la tour de maîtrise")
+	await _free(level)
+	_grant_perks([])
+	Progress.reset_campaign()
+
+
 func _test_tower_choice() -> void:
 	print("Nombre de tours différentes par niveau, selon la difficulté")
 	_check(Difficulty.TOWER_LIMITS == [9, 8, 6, 5], "9 en Facile, 8 en Moyen, 6 en Difficile, 5 en Cauchemar")
 	Perks.unlock_everything()
 	Difficulty.set_current(Difficulty.CAUCHEMAR)
 	var level := await _spawn_level(HUMANOID_01)
-	_check(level.available_tower_types.size() == 17 and level.is_choosing_towers and level.hud.tower_picker != null,
-		"avec 17 tours débloquées, le niveau s'ouvre sur le choix des tours")
+	_check(level.available_tower_types.size() == 21 and level.is_choosing_towers and level.hud.tower_picker != null,
+		"avec 21 tours débloquées, le niveau s'ouvre sur le choix des tours")
 	_check(level.tower_types.is_empty() and level.hud.tower_shop.get_child_count() == 0 and not level.can_start_next_wave(),
 		"pas de tour à poser ni de vague avant d'avoir choisi")
 	var picker := level.hud.tower_picker
@@ -3577,8 +3650,9 @@ func _test_specializations() -> void:
 		towers[perk.specializes_tower] = true
 		all_valid = all_valid and perk.paid_with_endless_stars and load(perk.specializes_tower) is TowerData
 	_check(all_valid, "chacune spécialise une tour, payée en étoiles infinies")
-	_check(towers.size() == 17 and towers.size() == Array(ResourceLoader.list_directory("res://resources/towers/")).filter(
-		func(file: String) -> bool: return file.ends_with(".tres")).size(), "une spécialisation par tour, pour toutes les tours")
+	# Les tours de maîtrise ont leurs améliorations sur la page Maîtrise.
+	_check(towers.size() == 17 and towers.size() + 4 == Array(ResourceLoader.list_directory("res://resources/towers/")).filter(
+		func(file: String) -> bool: return file.ends_with(".tres")).size(), "une spécialisation par tour, hors tours de maîtrise")
 	var gatling := tree.get_perk("spe_gatling")
 	var sniper := tree.get_perk("spe_sniper")
 	var marksman := tree.get_perk("spe_marksman")

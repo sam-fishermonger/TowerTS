@@ -62,6 +62,10 @@ const JAMMER := "res://resources/towers/jammer.tres"
 const MARKSMAN := "res://resources/towers/marksman.tres"
 const RAIL := "res://resources/towers/rail.tres"
 const TEARGAS := "res://resources/towers/teargas.tres"
+const QUEEN := "res://resources/towers/queen.tres"
+const FURNACE := "res://resources/towers/furnace.tres"
+const BALLISTA := "res://resources/towers/ballista.tres"
+const REAPER := "res://resources/towers/reaper.tres"
 
 ## Bonus des paliers de chaque tour, [effet, valeur] aux niveaux 5, 10, 15 et 20 (effets
 ## d'Equipment.apply_effect()). Une tour absente n'a que les bonus de niveau.
@@ -83,6 +87,10 @@ const TIERS := {
 	MARKSMAN: [["fire_rate", 0.06], ["heal_block", 1.5], ["boss", 0.25], ["critical", 6]],
 	RAIL: [["fire_rate", 0.06], ["boss", 0.2], ["range", 0.08], ["damage", 0.15]],
 	TEARGAS: [["range", 0.05], ["cloud_duration", 1.0], ["slow_strength", 0.06], ["heal_block", 1.0]],
+	QUEEN: [["range", 0.05], ["dot", 0.15], ["chain", 1], ["dot", 0.3]],
+	FURNACE: [["range", 0.05], ["splash", 0.12], ["shield_jam", 2.0], ["damage", 0.15]],
+	BALLISTA: [["fire_rate", 0.06], ["knockback", 6.0], ["heal_block", 1.5], ["damage", 0.15]],
+	REAPER: [["range", 0.06], ["beam_ramp", 0.12], ["revive_block", 1.0], ["beam_ramp", 0.25]],
 }
 
 

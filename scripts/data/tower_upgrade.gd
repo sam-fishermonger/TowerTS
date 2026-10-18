@@ -18,6 +18,10 @@ extends Resource
 ## Ajouté aux bonus de dégâts et de cadence donnés aux tours voisines (Bobine).
 @export var boost_bonus := 0.0
 @export var knockback_multiplier := 1.0
+## Secondes ajoutées au brouillage des boucliers.
+@export var shield_jam_bonus := 0.0
+## Ajouté au seuil d'achèvement (Faucheuse).
+@export var execute_threshold_bonus := 0.0
 
 
 ## Applique l'amélioration aux statistiques données (modifiées sur place).
@@ -31,3 +35,5 @@ func apply_to(stats: TowerData) -> void:
 	if stats.boost_fire_rate > 0.0:
 		stats.boost_fire_rate += boost_bonus
 	stats.knockback *= knockback_multiplier
+	stats.shield_jam_duration += shield_jam_bonus
+	stats.execute_threshold += execute_threshold_bonus

@@ -3,7 +3,8 @@ extends Control
 ## colonne, et une amélioration se débloque quand celles qui la précèdent sont achetées.
 ## Les branches sont réparties en pages, avec un onglet par page : les bonus, puis les
 ## tours des mondes, dont chaque branche s'ouvre avec son monde, puis les spécialisations
-## des tours, puis les pouvoirs actifs.
+## des tours, puis les pouvoirs actifs, la Logistique de la Conquête, et enfin les tours
+## de maîtrise, chacune ouverte par un monde fini à 100 %.
 ## Les étoiles gagnées sur les niveaux paient les achats, et les étoiles infinies (mode
 ## infini) les spécialisations ; « Réinitialiser » les rend toutes.
 
@@ -286,7 +287,16 @@ func _get_branch_lock_text(branch: int) -> String:
 		# Le premier rang ouvre la branche (Savoirs ouvre ses rangs suivants monde par monde).
 		if Perks.TREE.get_branch(perk) == branch and perk.row == 0 and not Perks.is_world_unlocked(perk):
 			return tr("Finir %s pour l'ouvrir") % tr(Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name)
+		if Perks.TREE.get_branch(perk) == branch and perk.row == 0 and not Perks.is_mastery_reached(perk):
+			return _mastery_text(perk)
 	return ""
+
+
+## « Finir La Ruche à 100 % (★ 80 / 108) » : le monde qu'une tour de maîtrise attend.
+func _mastery_text(perk: Perk) -> String:
+	var world := Perks.CAMPAIGN.worlds[perk.required_mastery]
+	return tr("Finir %s à 100 %% (★ %d / %d)") % [tr(world.display_name), Progress.get_world_stars(world),
+		world.levels.size() * Progress.MAX_LEVEL_STARS]
 
 
 ## Prix d'une amélioration : « ★ 3 », ou « ☠ 3 » en crânes (étoiles infinies).
@@ -382,6 +392,8 @@ func _show_info(perk: Perk) -> void:
 	elif not Perks.is_world_unlocked(perk):
 		info_status.text = tr("Verrouillé : finir %s pour ouvrir %s") % [
 			tr(Perks.CAMPAIGN.worlds[perk.required_world - 1].display_name), tr(Perks.get_required_world_name(perk))]
+	elif not Perks.is_mastery_reached(perk):
+		info_status.text = tr("Verrouillé : %s, toutes les étoiles de toutes les difficultés") % _mastery_text(perk)
 	elif not Perks.is_unlocked(perk):
 		var missing: Array[String] = []
 		for required in perk.requires:
