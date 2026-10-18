@@ -591,7 +591,7 @@ func _test_perk_tree() -> void:
 func _test_perks_in_level() -> void:
 	print("Arbre des améliorations : effets en jeu")
 	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path,
-		LEVEL_04.resource_path])
+		LEVEL_04.resource_path, LEVEL_05.resource_path, LEVEL_06.resource_path])
 	for id in ["tresor", "architecte", "brocanteur", "remparts", "infirmerie", "pillage"]:
 		_check(Perks.buy(Perks.TREE.get_perk(id)), "achat : %s" % Perks.TREE.get_perk(id).display_name)
 	var level := await _spawn_level(LEVEL_01)
@@ -716,15 +716,18 @@ func _test_biome_towers_in_tree() -> void:
 	for perk in tree.get_page_perks(logistics):
 		logistics_cost += perk.cost
 	var main_cost := tree.get_total_cost() - logistics_cost
-	# Les niveaux 7 et 8 de chaque monde ont ajouté des étoiles sans nouvelles améliorations :
-	# l'arbre en coûte encore les trois quarts, la marge attend de nouvelles options.
-	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
-		"l'arbre sans la Logistique (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
-	_check(main_cost > campaign.size() * 3 * 3,
-		"il faut des étoiles de Cauchemar pour tout acheter")
+	_check(main_cost > campaign_stars,
+		"l'arbre sans la Logistique (%d étoiles) coûte plus que toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
 	var conquest_stars := ConquestLevels.size() * Progress.MAX_LEVEL_STARS
-	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.85,
-		"la page Logistique (%d étoiles) coûte presque toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	_check(logistics_cost > conquest_stars,
+		"la page Logistique (%d étoiles) coûte plus que toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	# Tous les niveaux gagnés à 3 étoiles dans les quatre difficultés ne suffisent pas : le
+	# reste vient des défis du jour (en moins de 100 jours réussis).
+	var level_stars := campaign_stars + conquest_stars + FreeLevels.size() * Progress.MAX_LEVEL_STARS
+	var missing := tree.get_total_cost() - level_stars
+	_check(missing > 0 and missing <= 100 * DailyChallenge.STARS_PER_WIN,
+		"tous les niveaux ne paient pas tout l'arbre : il manque %d étoiles, %d défis du jour réussis"
+		% [missing, ceili(float(missing) / DailyChallenge.STARS_PER_WIN)])
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
@@ -3287,13 +3290,17 @@ func _test_daily_challenge() -> void:
 	level.spawner.is_spawning = false
 	level.spawner._queue.clear()
 	await process_frame
+	var tree_stars := Perks.get_earned_stars()
 	level._check_wave_cleared()
 	var expected := LARVE.reward * DailyChallenge.POINTS_PER_GOLD + level.spawner.get_wave_count() * DailyChallenge.POINTS_PER_WAVE \
 		+ level.lives * DailyChallenge.POINTS_PER_LIFE
 	_check(level.is_over and level.score == expected, "victoire : 100 points par vague et 50 par vie gardée (%d)" % level.score)
 	_check(Progress.get_daily_score(key) == expected and level.hud.end_title.text == "Défi réussi !"
 		and level.hud.end_stars.text == "%d points" % expected, "le score est enregistré et affiché")
-	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles")
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles au niveau joué")
+	_check(Perks.get_earned_stars() == tree_stars + DailyChallenge.STARS_PER_WIN
+		and level.hud.end_message.text.contains("+%d ★ à dépenser dans l'arbre" % DailyChallenge.STARS_PER_WIN),
+		"mais des étoiles pour l'arbre des améliorations, annoncées")
 	_check(Progress.is_daily_won(key) and level.hud.end_message.text.contains("Série : 1 jour") == false,
 		"le jour réussi est enregistré (pas de série annoncée pour un seul jour)")
 	_check(level.medals_won == TowerLevels.DAILY_FIRST_REWARD
@@ -3345,6 +3352,9 @@ func _test_daily_history() -> void:
 	_check(Progress.get_daily_streak("2026-10-08") == 4 and Progress.get_daily_streak("2026-10-10") == 0,
 		"la série compte jusqu'à aujourd'hui, et s'arrête au premier jour manqué")
 	_check(Progress.get_best_daily_streak() == 4, "meilleure série")
+	_check(DailyChallenge.get_total_stars() == 7 * DailyChallenge.STARS_PER_WIN
+		and Perks.get_earned_stars() == 7 * DailyChallenge.STARS_PER_WIN,
+		"chaque jour réussi donne ses étoiles à l'arbre, pas les jours perdus")
 	var screen: Control = load("res://scenes/ui/daily_challenge_screen.tscn").instantiate()
 	root.add_child(screen)
 	await process_frame
@@ -3593,11 +3603,11 @@ func _test_specializations() -> void:
 		"l'onglet compte les étoiles infinies")
 	_check(screen.stars_label.tooltip_text.contains("mode infini 3"), "la bulle d'aide dit d'où viennent les crânes")
 	screen.get_button(gatling).pressed.emit()
-	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 6,
-		"Balles perforantes coûte 2 étoiles infinies, et aucune étoile des niveaux")
+	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 3 - gatling.cost and Perks.get_available_stars() == 6,
+		"Balles perforantes coûte %d étoiles infinies, et aucune étoile des niveaux" % gatling.cost)
 	_check(GATLING.get_stats_at_level(1).armor_piercing and GATLING.get_stats_at_level(3).armor_piercing
 		and not CANNON.get_stats_at_level(1).armor_piercing, "les balles de la Mitrailleuse, et d'elle seule, ignorent l'armure")
-	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("☠ 3"), "la suivante est trop chère")
+	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("☠ %d" % sniper.cost), "la suivante est trop chère")
 	Progress.record_endless(LEVEL_02.resource_path, 40, 5)
 	screen.buy(sniper)
 	_check(is_equal_approx(SNIPER.get_stats_at_level(1).damage, 80.0 * 1.4) and is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0),
@@ -5889,7 +5899,9 @@ func _test_logistics() -> void:
 	var page := tree.page_names.find("Logistique")
 	_check(page >= 0 and tree.get_page_perks(page).all(func(p: Perk) -> bool: return not p.paid_with_endless_stars),
 		"la page Logistique se paie en étoiles")
+	# La page coûte plus que les étoiles de la Conquête : les niveaux libres complètent.
 	_win_in_all_difficulties(ConquestLevels.LEVELS)
+	_win_in_all_difficulties(FreeLevels.LEVELS)
 	for perk in tree.get_page_perks(page):
 		_check(Perks.buy(perk), "achat : %s" % perk.display_name)
 	var level := await _spawn_level(CONQUEST_01)

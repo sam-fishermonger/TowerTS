@@ -4,7 +4,8 @@ extends RefCounted
 ## rapides, or serré…) et un score. Tout est tiré au sort à partir de la date : le défi
 ## change chaque jour, et il est le même toute la journée (et pour tout le monde). L'arbre
 ## des améliorations ne compte pas : chacun joue avec les mêmes tours et les mêmes prix.
-## Le meilleur score de chaque jour est enregistré (Progress, section « daily »).
+## Le meilleur score de chaque jour est enregistré (Progress, section « daily »). Chaque
+## jour réussi (section « daily_won ») donne des étoiles pour l'arbre des améliorations.
 
 ## Règles qui peuvent s'ajouter aux tours imposées.
 enum { RAPIDES, CORIACES, NOMBREUX, OR_SERRE, VIES_COMPTEES, SANS_AMELIORATION, DEUX_TOURS }
@@ -44,6 +45,8 @@ const COUNTED_LIVES := 5
 const POINTS_PER_GOLD := 10
 const POINTS_PER_WAVE := 100
 const POINTS_PER_LIFE := 50
+## Étoiles de l'arbre des améliorations données par chaque défi réussi (un seul par jour).
+const STARS_PER_WIN := 5
 const MONTHS: Array[String] = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
 	"septembre", "octobre", "novembre", "décembre"]
 const WEEKDAYS: Array[String] = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
@@ -59,6 +62,11 @@ var rules: Array[int] = []
 
 
 ## Défi d'aujourd'hui (date de l'ordinateur).
+## Étoiles de l'arbre gagnées avec les défis du jour : STARS_PER_WIN par jour réussi.
+static func get_total_stars() -> int:
+	return Progress.get_daily_wins().size() * STARS_PER_WIN
+
+
 static func today() -> DailyChallenge:
 	return for_date(today_key())
 

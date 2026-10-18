@@ -89,6 +89,8 @@ func _build() -> void:
 		var text := tr(DailyChallenge.RULE_TEXTS[rule])
 		lines.append(tr("•  [b]%s[/b] : %s") % [tr(DailyChallenge.RULE_NAMES[rule]), text.left(1).to_lower() + text.substr(1)])
 	lines.append(tr("•  [b]Sans l'arbre des améliorations[/b] : tout le monde joue avec les mêmes tours et les mêmes prix."))
+	lines.append(tr("•  [b]Récompense[/b] : le défi réussi donne %s pour l'arbre des améliorations (une fois par jour).")
+		% ("★ %d" % DailyChallenge.STARS_PER_WIN))
 	rules.text = "\n".join(lines)
 	column.add_child(rules)
 	var score_rule := _add_label(column, DailyChallenge.describe_score(), 15, MUTED_COLOR, false)

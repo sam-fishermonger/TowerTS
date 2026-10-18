@@ -270,8 +270,8 @@ func get_origin_text(endless: bool) -> String:
 	var campaign := 0
 	for path in Perks.CAMPAIGN.levels:
 		campaign += Progress.get_total_stars(path)
-	return tr("Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d") % [campaign,
-		ConquestLevels.get_total_stars(), FreeLevels.get_total_stars()]
+	return tr("Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d  ·  défis du jour %d") % [campaign,
+		ConquestLevels.get_total_stars(), FreeLevels.get_total_stars(), DailyChallenge.get_total_stars()]
 
 
 ## Les cases d'une tour (débloquée ou spécialisée) sont plus larges : elles montrent son image.
