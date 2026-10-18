@@ -206,7 +206,8 @@ func _on_scene_changed() -> void:
 
 ## Les panneaux de l'écran apparaissent l'un après l'autre, de haut en bas puis de gauche
 ## à droite. Le fond reste en place ; un conteneur aussi large que l'écran laisse
-## apparaître ses enfants un par un.
+## apparaître ses enfants un par un. Les fenêtres flottantes (détail, bulle) ont leur
+## propre apparition : l'entrée ne les touche pas (elle figerait leur opacité).
 func _play_entrance(screen: Control) -> void:
 	var parts: Array[Control] = []
 	_collect_parts(screen, screen.size.x * 0.98, 3, parts)
@@ -221,7 +222,8 @@ func _play_entrance(screen: Control) -> void:
 static func _collect_parts(parent: Node, full_width: float, depth: int, parts: Array[Control]) -> void:
 	for child in parent.get_children():
 		var control := child as Control
-		if control == null or not control.visible or control is UiBackdrop or control is SubViewportContainer:
+		if control == null or not control.visible or control is UiBackdrop or control is SubViewportContainer \
+				or control is DetailPopup or control is LockBubble:
 			continue
 		if control.size.x < full_width:
 			parts.append(control)
