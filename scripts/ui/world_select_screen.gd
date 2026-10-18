@@ -79,6 +79,9 @@ func _ready() -> void:
 	if next == null or next.disabled:
 		next = get_level_button(Progress.get_next_to_play(CAMPAIGN))
 	(next if next else back_button).grab_focus()
+	# Le focus d'arrivée n'ouvre pas la fenêtre de détail : les boutons ne sont pas encore
+	# placés (elle s'ouvrirait dans le coin de l'écran, par-dessus les cartes).
+	level_details.close()
 
 
 func _unhandled_input(event: InputEvent) -> void:
