@@ -126,6 +126,9 @@ var _box_result := -1
 ## Insignes gagnés à la fin de la partie et s'ils sont ceux de la première victoire du jour
 ## au défi (vide = aucun).
 var _medal_result: Array = []
+## Difficultés plus faciles passées à 3 étoiles par la victoire et coffrets qu'elles ont
+## donnés, [difficultés, coffrets] (vide = aucune).
+var _cascade_result: Array = []
 ## Objet sorti du coffret ouvert sur l'écran de fin (vide tant qu'il n'est pas ouvert).
 var _box_item: Dictionary = {}
 ## Écran de fin : bouton qui ouvre le coffret gagné, puis l'objet obtenu (null sans coffret).
@@ -1253,6 +1256,20 @@ func show_medal_result(amount: int, first_daily := false) -> void:
 		end_message.text += "\n" + tr("+%d insignes ❖ à dépenser dans l'Armurerie.") % amount
 
 
+## Victoire à 3 étoiles : les difficultés plus faciles comptent aussi à 3 étoiles, et
+## celles gagnées pour la première fois donnent leur coffret (`boxes`, dans l'Armurerie).
+func show_cascade_result(difficulties: Array, boxes: int) -> void:
+	_cascade_result = [difficulties, boxes]
+	var names := PackedStringArray()
+	for d: int in difficulties:
+		names.append(tr(Difficulty.NAMES[d]))
+	end_message.text += "\n" + tr("Aussi gagné à ★★★ en %s.") % ", ".join(names)
+	if boxes > 1:
+		end_message.text += "\n" + tr("+%d coffrets en plus dans l'Armurerie.") % boxes
+	elif boxes == 1:
+		end_message.text += "\n" + tr("+1 coffret en plus dans l'Armurerie.")
+
+
 ## Coffret d'équipement gagné (Equipment) : sa rareté, et un bouton pour l'ouvrir tout de
 ## suite. Pas ouvert, il attend dans l'Armurerie.
 func show_box_result(rarity: int) -> void:
@@ -1341,6 +1358,8 @@ func _refresh_end_screen() -> void:
 		show_unlocked_features(_unlocked_features)
 	if not _medal_result.is_empty():
 		show_medal_result(_medal_result[0], _medal_result[1])
+	if not _cascade_result.is_empty():
+		show_cascade_result(_cascade_result[0], _cascade_result[1])
 	if _box_result >= 0:
 		show_box_result(_box_result)
 	if end_stats.visible:
