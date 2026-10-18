@@ -291,6 +291,12 @@ static func get_world_stars(world: World) -> int:
 	return total
 
 
+## Un monde est maîtrisé (fini à 100 %) quand chacun de ses niveaux a ses 3 étoiles dans
+## toutes les difficultés : il ouvre sa tour de maîtrise (Perk.required_mastery).
+static func is_world_mastered(world: World) -> bool:
+	return get_world_stars(world) >= world.levels.size() * MAX_LEVEL_STARS
+
+
 ## Premier niveau débloqué pas encore gagné (ou le dernier si tout est gagné).
 static func get_next_to_play(campaign: Campaign) -> String:
 	var levels := campaign.levels

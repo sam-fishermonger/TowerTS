@@ -1038,10 +1038,207 @@ column = 30.5
 row = 3
 conquest_building_stone_multiplier = 0.75
 
+[sub_resource type="Resource" id="Perk_maitrise_queen"]
+script = ExtResource("2_perk")
+id = "maitrise_queen"
+display_name = "Reine-mère"
+description = "Nouvelle tour de maîtrise : un essaim de dards qui saute 5 fois d'ennemi en ennemi, empoisonne et ralentit."
+cost = 15
+column = 38.5
+row = 0
+required_mastery = 0
+unlocks_tower = "res://resources/towers/queen.tres"
+
+[sub_resource type="Resource" id="Perk_venin_royal"]
+script = ExtResource("2_perk")
+id = "venin_royal"
+display_name = "Venin royal"
+description = "Le poison de la Reine-mère fait 8 dégâts de plus par seconde et dure 1 s de plus."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_queen")])
+column = 38.0
+row = 1
+dot_damage_bonus = 8.0
+dot_duration_bonus = 1.0
+dot_is_poison = true
+specializes_tower = "res://resources/towers/queen.tres"
+
+[sub_resource type="Resource" id="Perk_essaimage"]
+script = ExtResource("2_perk")
+id = "essaimage"
+display_name = "Essaimage"
+description = "Les dards de la Reine-mère sautent sur 2 ennemis de plus."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_queen")])
+column = 39.0
+row = 1
+chain_count_bonus = 2
+specializes_tower = "res://resources/towers/queen.tres"
+
+[sub_resource type="Resource" id="Perk_nuee"]
+script = ExtResource("2_perk")
+id = "nuee"
+display_name = "Nuée"
+description = "La Reine-mère pique 25 % plus vite, et ses piqûres ralentissent davantage."
+cost = 20
+requires = Array[Resource]([SubResource("Perk_venin_royal"), SubResource("Perk_essaimage")])
+column = 38.5
+row = 2
+fire_rate_multiplier = 1.25
+slow_factor_multiplier = 0.8
+specializes_tower = "res://resources/towers/queen.tres"
+
+[sub_resource type="Resource" id="Perk_maitrise_furnace"]
+script = ExtResource("2_perk")
+id = "maitrise_furnace"
+display_name = "Haut-fourneau"
+description = "Nouvelle tour de maîtrise : une coulée de métal en fusion qui fond l'armure et les boucliers d'énergie, et brûle."
+cost = 15
+column = 40.5
+row = 0
+required_mastery = 1
+unlocks_tower = "res://resources/towers/furnace.tres"
+
+[sub_resource type="Resource" id="Perk_creuset"]
+script = ExtResource("2_perk")
+id = "creuset"
+display_name = "Creuset"
+description = "Les coulées du Haut-fourneau éclaboussent 30 % plus large."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_furnace")])
+column = 40.0
+row = 1
+splash_radius_multiplier = 1.3
+specializes_tower = "res://resources/towers/furnace.tres"
+
+[sub_resource type="Resource" id="Perk_scories"]
+script = ExtResource("2_perk")
+id = "scories"
+display_name = "Scories"
+description = "Les boucliers touchés par le Haut-fourneau restent brouillés 3 s de plus."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_furnace")])
+column = 41.0
+row = 1
+shield_jam_bonus = 3.0
+specializes_tower = "res://resources/towers/furnace.tres"
+
+[sub_resource type="Resource" id="Perk_fonte_vive"]
+script = ExtResource("2_perk")
+id = "fonte_vive"
+display_name = "Fonte vive"
+description = "Le Haut-fourneau fait 30 % de dégâts en plus, et sa brûlure 10 de plus par seconde."
+cost = 20
+requires = Array[Resource]([SubResource("Perk_creuset"), SubResource("Perk_scories")])
+column = 40.5
+row = 2
+damage_multiplier = 1.3
+dot_damage_bonus = 10.0
+dot_duration_bonus = 0.0
+specializes_tower = "res://resources/towers/furnace.tres"
+
+[sub_resource type="Resource" id="Perk_maitrise_ballista"]
+script = ExtResource("2_perk")
+id = "maitrise_ballista"
+display_name = "Baliste royale"
+description = "Nouvelle tour de maîtrise : un carreau qui traverse toute la file, repousse et empêche les soins. Elle vise les soigneurs en premier."
+cost = 15
+column = 42.5
+row = 0
+required_mastery = 2
+unlocks_tower = "res://resources/towers/ballista.tres"
+
+[sub_resource type="Resource" id="Perk_carreaux_lestes"]
+script = ExtResource("2_perk")
+id = "carreaux_lestes"
+display_name = "Carreaux lestés"
+description = "Les carreaux de la Baliste royale repoussent 60 % plus loin."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_ballista")])
+column = 42.0
+row = 1
+knockback_multiplier = 1.6
+specializes_tower = "res://resources/towers/ballista.tres"
+
+[sub_resource type="Resource" id="Perk_pointes_barbelees"]
+script = ExtResource("2_perk")
+id = "pointes_barbelees"
+display_name = "Pointes barbelées"
+description = "Un ennemi touché par la Baliste royale ne peut plus être soigné pendant 3 s de plus."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_ballista")])
+column = 43.0
+row = 1
+heal_block_bonus = 3.0
+specializes_tower = "res://resources/towers/ballista.tres"
+
+[sub_resource type="Resource" id="Perk_tir_royal"]
+script = ExtResource("2_perk")
+id = "tir_royal"
+display_name = "Tir royal"
+description = "La Baliste royale fait 30 % de dégâts en plus et tire 15 % plus loin."
+cost = 20
+requires = Array[Resource]([SubResource("Perk_carreaux_lestes"), SubResource("Perk_pointes_barbelees")])
+column = 42.5
+row = 2
+damage_multiplier = 1.3
+range_multiplier = 1.15
+specializes_tower = "res://resources/towers/ballista.tres"
+
+[sub_resource type="Resource" id="Perk_maitrise_reaper"]
+script = ExtResource("2_perk")
+id = "maitrise_reaper"
+display_name = "Faucheuse"
+description = "Nouvelle tour de maîtrise : un rayon d'âmes qui consacre sa cible, et fauche sur le coup les ennemis (hors boss) sous 12 % de leur vie."
+cost = 15
+column = 44.5
+row = 0
+required_mastery = 3
+unlocks_tower = "res://resources/towers/reaper.tres"
+
+[sub_resource type="Resource" id="Perk_moisson"]
+script = ExtResource("2_perk")
+id = "moisson"
+display_name = "Moisson"
+description = "La Faucheuse fauche les ennemis sous 6 % de vie de plus."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_reaper")])
+column = 44.0
+row = 1
+execute_threshold_bonus = 0.06
+specializes_tower = "res://resources/towers/reaper.tres"
+
+[sub_resource type="Resource" id="Perk_linceul"]
+script = ExtResource("2_perk")
+id = "linceul"
+display_name = "Linceul"
+description = "La Faucheuse consacre 4 s de plus, et son rayon ralentit de 30 %."
+cost = 12
+requires = Array[Resource]([SubResource("Perk_maitrise_reaper")])
+column = 45.0
+row = 1
+revive_block_bonus = 4.0
+added_slow_factor = 0.7
+added_slow_duration = 0.5
+specializes_tower = "res://resources/towers/reaper.tres"
+
+[sub_resource type="Resource" id="Perk_ange_de_la_mort"]
+script = ExtResource("2_perk")
+id = "ange_de_la_mort"
+display_name = "Ange de la mort"
+description = "Le rayon de la Faucheuse chauffe 40 % plus fort et porte 10 % plus loin."
+cost = 20
+requires = Array[Resource]([SubResource("Perk_moisson"), SubResource("Perk_linceul")])
+column = 44.5
+row = 2
+beam_ramp_multiplier = 1.4
+range_multiplier = 1.1
+specializes_tower = "res://resources/towers/reaper.tres"
+
 [resource]
 script = ExtResource("1_tree")
-branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts", "La Nécropole", "Ouvriers", "Dépôt", "Bâtiments", "Savoirs", "Foudre", "Au-delà"])
-branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1), Color(0.72, 0.55, 0.95, 1), Color(1, 0.72, 0.25, 1), Color(0.85, 0.65, 0.35, 1), Color(0.4, 0.88, 0.78, 1), Color(0.8, 0.75, 0.55, 1), Color(0.55, 0.68, 1, 1), Color(0.95, 0.75, 0.3, 1)])
-branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 4, 4, 4, 0, 2, 2])
-page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations", "Pouvoirs", "Logistique"])
-perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_censer"), SubResource("Perk_bell"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade"), SubResource("Perk_equipe"), SubResource("Perk_dortoirs"), SubResource("Perk_grande_equipe"), SubResource("Perk_pouvoir_corvee"), SubResource("Perk_reserves"), SubResource("Perk_grand_depot"), SubResource("Perk_relais"), SubResource("Perk_chambre_forte"), SubResource("Perk_murs_epais"), SubResource("Perk_charpentiers"), SubResource("Perk_tailleurs"), SubResource("Perk_pierre_de_taille"), SubResource("Perk_critique"), SubResource("Perk_ingenieurs"), SubResource("Perk_placements"), SubResource("Perk_chasseur_primes"), SubResource("Perk_dernier_rempart"), SubResource("Perk_barbacane"), SubResource("Perk_savoir_ruche"), SubResource("Perk_savoir_fonderie"), SubResource("Perk_savoir_cite"), SubResource("Perk_savoir_necropole"), SubResource("Perk_bestiaire"), SubResource("Perk_cross_censer_bell"), SubResource("Perk_spe_arc"), SubResource("Perk_spe_coil"), SubResource("Perk_spe_magnet"), SubResource("Perk_spe_censer"), SubResource("Perk_spe_bell"), SubResource("Perk_meteores_deluge"), SubResource("Perk_gel_hiver"), SubResource("Perk_renforts_garnison"), SubResource("Perk_outils_trempes"), SubResource("Perk_fioles"), SubResource("Perk_maitres_oeuvre")])
+branch_names = Array[String](["Tours", "Or", "Vies", "La Ruche", "La Fonderie", "La Cité", "Précision", "Zone", "Contrôle", "Météores", "Gel", "Renforts", "La Nécropole", "Ouvriers", "Dépôt", "Bâtiments", "Savoirs", "Foudre", "Au-delà", "La Ruche", "La Fonderie", "La Cité", "La Nécropole"])
+branch_colors = Array[Color]([Color(0.55, 0.75, 1, 1), Color(1, 0.82, 0.35, 1), Color(1, 0.5, 0.5, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.45, 0.85, 1, 1), Color(0.55, 0.7, 1, 1), Color(0.5, 0.95, 0.85, 1), Color(1, 0.6, 0.3, 1), Color(0.6, 0.88, 1, 1), Color(0.6, 0.75, 1, 1), Color(0.72, 0.55, 0.95, 1), Color(1, 0.72, 0.25, 1), Color(0.85, 0.65, 0.35, 1), Color(0.4, 0.88, 0.78, 1), Color(0.8, 0.75, 0.55, 1), Color(0.55, 0.68, 1, 1), Color(0.95, 0.75, 0.3, 1), Color(0.62, 0.42, 0.75, 1), Color(0.45, 0.78, 0.95, 1), Color(0.95, 0.7, 0.35, 1), Color(0.72, 0.55, 0.95, 1)])
+branch_pages = Array[int]([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 4, 4, 4, 0, 2, 2, 5, 5, 5, 5])
+page_names = Array[String](["Bonus", "Tours des mondes", "Spécialisations", "Pouvoirs", "Logistique", "Maîtrise"])
+perks = Array[ExtResource("2_perk")]([SubResource("Perk_poudre"), SubResource("Perk_longue_vue"), SubResource("Perk_givre"), SubResource("Perk_rouages"), SubResource("Perk_artilleur"), SubResource("Perk_tresor"), SubResource("Perk_pillage"), SubResource("Perk_architecte"), SubResource("Perk_tresorier"), SubResource("Perk_brocanteur"), SubResource("Perk_coffres"), SubResource("Perk_remparts"), SubResource("Perk_infirmerie"), SubResource("Perk_douves"), SubResource("Perk_citadelle"), SubResource("Perk_flame"), SubResource("Perk_pesticide"), SubResource("Perk_jammer"), SubResource("Perk_rail"), SubResource("Perk_marksman"), SubResource("Perk_teargas"), SubResource("Perk_arc"), SubResource("Perk_coil"), SubResource("Perk_magnet"), SubResource("Perk_cross_pesticide_arc"), SubResource("Perk_cross_teargas_coil"), SubResource("Perk_censer"), SubResource("Perk_bell"), SubResource("Perk_spe_gatling"), SubResource("Perk_spe_sniper"), SubResource("Perk_spe_marksman"), SubResource("Perk_spe_rail"), SubResource("Perk_spe_cannon"), SubResource("Perk_spe_mortar"), SubResource("Perk_spe_flame"), SubResource("Perk_spe_pesticide"), SubResource("Perk_spe_frost"), SubResource("Perk_spe_beam"), SubResource("Perk_spe_jammer"), SubResource("Perk_spe_teargas"), SubResource("Perk_pouvoir_meteores"), SubResource("Perk_meteores_battante"), SubResource("Perk_meteores_cometes"), SubResource("Perk_pouvoir_gel"), SubResource("Perk_gel_blizzard"), SubResource("Perk_gel_engelures"), SubResource("Perk_pouvoir_renforts"), SubResource("Perk_renforts_veterans"), SubResource("Perk_renforts_escouade"), SubResource("Perk_equipe"), SubResource("Perk_dortoirs"), SubResource("Perk_grande_equipe"), SubResource("Perk_pouvoir_corvee"), SubResource("Perk_reserves"), SubResource("Perk_grand_depot"), SubResource("Perk_relais"), SubResource("Perk_chambre_forte"), SubResource("Perk_murs_epais"), SubResource("Perk_charpentiers"), SubResource("Perk_tailleurs"), SubResource("Perk_pierre_de_taille"), SubResource("Perk_critique"), SubResource("Perk_ingenieurs"), SubResource("Perk_placements"), SubResource("Perk_chasseur_primes"), SubResource("Perk_dernier_rempart"), SubResource("Perk_barbacane"), SubResource("Perk_savoir_ruche"), SubResource("Perk_savoir_fonderie"), SubResource("Perk_savoir_cite"), SubResource("Perk_savoir_necropole"), SubResource("Perk_bestiaire"), SubResource("Perk_cross_censer_bell"), SubResource("Perk_spe_arc"), SubResource("Perk_spe_coil"), SubResource("Perk_spe_magnet"), SubResource("Perk_spe_censer"), SubResource("Perk_spe_bell"), SubResource("Perk_meteores_deluge"), SubResource("Perk_gel_hiver"), SubResource("Perk_renforts_garnison"), SubResource("Perk_outils_trempes"), SubResource("Perk_fioles"), SubResource("Perk_maitres_oeuvre"), SubResource("Perk_maitrise_queen"), SubResource("Perk_venin_royal"), SubResource("Perk_essaimage"), SubResource("Perk_nuee"), SubResource("Perk_maitrise_furnace"), SubResource("Perk_creuset"), SubResource("Perk_scories"), SubResource("Perk_fonte_vive"), SubResource("Perk_maitrise_ballista"), SubResource("Perk_carreaux_lestes"), SubResource("Perk_pointes_barbelees"), SubResource("Perk_tir_royal"), SubResource("Perk_maitrise_reaper"), SubResource("Perk_moisson"), SubResource("Perk_linceul"), SubResource("Perk_ange_de_la_mort")])

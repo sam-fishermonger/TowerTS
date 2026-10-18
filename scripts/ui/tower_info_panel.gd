@@ -292,6 +292,9 @@ func _fill_stats(stats: TowerData, next: TowerData) -> void:
 	if stats.revive_block_duration > 0.0:
 		_add_stat("Consacre", "%s s" % _format(stats.revive_block_duration),
 			"%s s" % _format(next.revive_block_duration) if next else "")
+	if stats.execute_threshold > 0.0:
+		_add_stat("Achève", "< %d %%" % roundi(stats.execute_threshold * 100.0),
+			"< %d %%" % roundi(next.execute_threshold * 100.0) if next else "")
 	if stats.slow_factor <= 0.0:
 		_add_stat("Étourdit", "%s s" % _format(stats.slow_duration),
 			"%s s" % _format(next.slow_duration) if next else "")

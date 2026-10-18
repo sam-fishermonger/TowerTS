@@ -547,6 +547,12 @@ func get_next_world_name() -> String:
 	return campaign.worlds[next_world].display_name if next_world != world else ""
 
 
+## Le monde de la campagne de ce niveau est fini à 100 % (Progress.is_world_mastered()).
+func is_world_mastered() -> bool:
+	var world := campaign.world_index_of(scene_file_path) if campaign else -1
+	return world >= 0 and Progress.is_world_mastered(campaign.worlds[world])
+
+
 ## Vagues repoussées jusqu'ici (toutes celles dont le bonus a été versé).
 func get_waves_cleared() -> int:
 	return _wave_bonus_paid + 1
@@ -1248,6 +1254,7 @@ func _end_game(victory: bool) -> void:
 		var cascaded := Progress.get_cascaded_difficulties(scene_file_path, stars_won, difficulty)
 		var first_wins := cascaded.filter(func(d: int) -> bool: return Progress.get_stars(scene_file_path, d) == 0)
 		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
+		var mastered_before := is_world_mastered()
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		var unlocked := Unlocks.unlocked_between(won_before, Unlocks.get_levels_won())
 		_announce_achievements(Achievements.on_victory(stats, lives, gold, difficulty))
@@ -1258,6 +1265,8 @@ func _end_game(victory: bool) -> void:
 			hud.show_mutator_result(Mutators.stars_for(mutators), before)
 		if not unlocked.is_empty():
 			hud.show_unlocked_features(unlocked)
+		if not mastered_before and is_world_mastered():
+			hud.show_world_mastered(campaign.worlds[campaign.world_index_of(scene_file_path)])
 		_reward_medals(first_wins)
 		_reward_cascade(cascaded, first_wins)
 		_roll_equipment_box(first_win)
