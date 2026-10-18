@@ -70,7 +70,6 @@ func _hook_button(button: BaseButton) -> void:
 	button.mouse_exited.connect(_on_button_hovered.bind(button, false))
 	button.focus_exited.connect(_on_button_hovered.bind(button, false))
 	button.button_down.connect(_on_button_down.bind(button))
-	button.button_up.connect(_on_button_up.bind(button))
 
 
 static func _rest_scale(button: BaseButton) -> float:
@@ -86,12 +85,14 @@ func _on_button_hovered(button: BaseButton, entered: bool) -> void:
 		HOVER_DURATION, Tween.TRANS_QUAD)
 
 
+## L'appui enfonce le bouton puis le relâche tout seul : sans attendre button_up, qu'un
+## glissé dans une liste qui défile (Armurerie au doigt) n'émet pas.
 func _on_button_down(button: BaseButton) -> void:
 	_scale_to(button, PRESS_SCALE, PRESS_DURATION, Tween.TRANS_QUAD)
-
-
-func _on_button_up(button: BaseButton) -> void:
-	_scale_to(button, _rest_scale(button), RELEASE_DURATION, Tween.TRANS_BACK)
+	if button.is_inside_tree():
+		var tween: Tween = button.get_meta(&"_ui_scale_tween")
+		tween.tween_property(button, "scale", Vector2.ONE * _rest_scale(button), RELEASE_DURATION) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 static func _scale_to(control: Control, target: float, duration: float, transition: Tween.TransitionType) -> void:
