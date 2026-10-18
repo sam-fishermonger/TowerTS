@@ -80,15 +80,55 @@ static func get_total_stars(level_path: String) -> int:
 
 
 ## Enregistre une victoire dans une difficulté. Seul le meilleur résultat de chaque
-## difficulté est gardé ; renvoie true s'il est battu.
+## difficulté est gardé ; renvoie true s'il est battu. Une victoire à 3 étoiles compte
+## aussi à 3 étoiles dans les difficultés plus faciles (voir get_cascaded_difficulties()).
 static func record_victory(level_path: String, stars: int, difficulty := Difficulty.MOYEN) -> bool:
 	var config := _load()
 	var section := stars_section(difficulty)
-	if stars <= config.get_value(section, level_path, 0):
-		return false
-	config.set_value(section, level_path, stars)
-	_save(config)
-	return true
+	var new_record: bool = stars > config.get_value(section, level_path, 0)
+	if new_record:
+		config.set_value(section, level_path, stars)
+	var cascaded := stars >= 3 and _cascade_full_stars(config, level_path, difficulty)
+	if new_record or cascaded:
+		_save(config)
+	return new_record
+
+
+## Difficultés plus faciles que `difficulty` qui passeraient à 3 étoiles si le niveau y
+## était gagné avec `stars` étoiles (aucune sous 3 étoiles), de la plus facile à la plus dure.
+static func get_cascaded_difficulties(level_path: String, stars: int, difficulty: int) -> Array[int]:
+	var lower: Array[int] = []
+	if stars < 3:
+		return lower
+	for d in clampi(difficulty, 0, Difficulty.COUNT):
+		if get_stars(level_path, d) < 3:
+			lower.append(d)
+	return lower
+
+
+## Met 3 étoiles dans les difficultés sous `difficulty` qui en ont moins ; renvoie true si
+## quelque chose a changé (rien n'est enregistré ici).
+static func _cascade_full_stars(config: ConfigFile, level_path: String, difficulty: int) -> bool:
+	var changed := false
+	for d in clampi(difficulty, 0, Difficulty.COUNT):
+		if config.get_value(stars_section(d), level_path, 0) < 3:
+			config.set_value(stars_section(d), level_path, 3)
+			changed = true
+	return changed
+
+
+## Anciennes sauvegardes : un niveau déjà gagné à 3 étoiles dans une difficulté reçoit les
+## 3 étoiles des difficultés plus faciles. Renvoie true si quelque chose a changé.
+static func _cascade_saved_stars(config: ConfigFile) -> bool:
+	var changed := false
+	for d in range(Difficulty.COUNT - 1, 0, -1):
+		var section := stars_section(d)
+		if not config.has_section(section):
+			continue
+		for level_path in config.get_section_keys(section):
+			if config.get_value(section, level_path, 0) >= 3:
+				changed = _cascade_full_stars(config, level_path, d) or changed
+	return changed
 
 
 ## Étoiles infinies méritées en repoussant `extra_waves` vagues de plus que celles du niveau.
@@ -251,6 +291,12 @@ static func get_world_stars(world: World) -> int:
 	return total
 
 
+## Un monde est maîtrisé (fini à 100 %) quand chacun de ses niveaux a ses 3 étoiles dans
+## toutes les difficultés : il ouvre sa tour de maîtrise (Perk.required_mastery).
+static func is_world_mastered(world: World) -> bool:
+	return get_world_stars(world) >= world.levels.size() * MAX_LEVEL_STARS
+
+
 ## Premier niveau débloqué pas encore gagné (ou le dernier si tout est gagné).
 static func get_next_to_play(campaign: Campaign) -> String:
 	var levels := campaign.levels
@@ -313,7 +359,10 @@ static func _get_data() -> Dictionary:
 	var path := get_save_path()
 	var cache: Dictionary = Engine.get_meta(CACHE_META, {})
 	if cache.get("path") != path:
-		cache = _cache_of(_load())
+		var config := _load()
+		if _cascade_saved_stars(config):
+			config.save(path)
+		cache = _cache_of(config)
 		Engine.set_meta(CACHE_META, cache)
 	return cache.data
 

@@ -24,7 +24,7 @@ const INFO: Array[Dictionary] = [
 	{name = "Les Faubourgs", world = 2,
 		description = "Des maisons à bâtir loin du QG, et des Maraudeurs rapides pour les incendier."},
 	{name = "Les Catacombes", world = 3,
-		description = "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."},
+		description = "Deux chemins de morts-vivants et des Pilleurs de tombes dès la deuxième vague."},
 	{name = "Le Nid de la Reine", world = 0,
 		description = "Dix vagues, un long chemin en spirale autour du QG, et la Reine au bout."},
 	{name = "Le Dédale", world = 0,

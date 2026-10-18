@@ -127,11 +127,16 @@ var _pending_rules_panel := Callable()
 var _mutator_result: Array[int] = []
 ## Modes ouverts par la victoire (Unlocks.Feature), dits sur l'écran de fin.
 var _unlocked_features: Array = []
+## Monde fini à 100 % par cette victoire (show_world_mastered()), ou null.
+var _mastered_world: World = null
 ## Rareté du coffret d'équipement gagné, dit sur l'écran de fin (-1 = aucun).
 var _box_result := -1
 ## Insignes gagnés à la fin de la partie et s'ils sont ceux de la première victoire du jour
 ## au défi (vide = aucun).
 var _medal_result: Array = []
+## Difficultés plus faciles passées à 3 étoiles par la victoire et coffrets qu'elles ont
+## donnés, [difficultés, coffrets] (vide = aucune).
+var _cascade_result: Array = []
 ## Objet sorti du coffret ouvert sur l'écran de fin (vide tant qu'il n'est pas ouvert).
 var _box_item: Dictionary = {}
 ## Écran de fin : bouton qui ouvre le coffret gagné, puis l'objet obtenu (null sans coffret).
@@ -159,6 +164,8 @@ var _score := 0
 var _worker_cost := 0
 ## Prime pour lancer la prochaine vague en avance (dernier appel de show_next_wave()).
 var _next_wave_early_bonus := 0
+## Les vagues partent seules à la fin d'un compte à rebours (bulle d'aide du bouton de vague).
+var _waves_start_alone := false
 ## Écran de fin affiché (sa fonction et ses arguments), refait au changement de langue.
 var _end_screen := Callable()
 ## … bouton « Bâtiments » à droite de la barre d'achat, barre des bâtiments qu'il ouvre
@@ -322,7 +329,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 ## vitesse, Y lance la vague, LB et RB passent d'une tour de la barre à l'autre.
 func _unhandled_input(event: InputEvent) -> void:
 	var button := event as InputEventJoypadButton
-	if button == null or not button.pressed or end_panel.visible or tower_picker or options_menu:
+	if button == null or not button.pressed or end_panel.visible or tower_picker or options_menu \
+			or chest_choice:
 		return
 	match button.button_index:
 		JOY_BUTTON_START:
@@ -556,10 +564,36 @@ func show_next_wave(wave: WaveData, early_bonus := 0, wave_number := 0, wave_bon
 	_wave_preview_text = text
 	wave_preview_label.text = text
 	wave_preview.visible = not text.is_empty()
-	next_wave_button.tooltip_text = tr("Lancer maintenant rapporte %d or") % early_bonus if early_bonus > 0 else ""
+	_refresh_next_wave_tooltip()
 	wave_preview.reset_size()
 	# Le panneau, sous le bouton de vague, reste calé à droite de l'écran.
 	wave_preview.position.x = get_viewport().get_visible_rect().size.x - 8.0 - wave_preview.size.x
+
+
+## Texte du bouton de vague : « Vague dans 12 s » pendant un compte à rebours au bout
+## duquel elle part seule (countdown < 0 : pas de compte à rebours).
+func set_wave_countdown(countdown: float) -> void:
+	var text := "Lancer la vague" if countdown < 0.0 else tr("Vague dans %d s") % ceili(countdown)
+	if next_wave_button.text != text:
+		next_wave_button.text = text
+
+
+## Règles des vagues, en tête de la bulle d'aide du bouton de vague : partent-elles seules
+## à la fin d'un compte à rebours ?
+func set_wave_rules(start_alone: bool) -> void:
+	_waves_start_alone = start_alone
+	_refresh_next_wave_tooltip()
+
+
+func _refresh_next_wave_tooltip() -> void:
+	var lines: Array[String] = []
+	if _waves_start_alone:
+		lines.append(tr("Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte une prime, d'autant plus grande qu'il reste de temps."))
+	else:
+		lines.append(tr("Lancer la vague tôt rapporte une prime, d'autant plus grande qu'on la lance tôt."))
+	if _next_wave_early_bonus > 0:
+		lines.append(tr("Lancer maintenant rapporte %d or") % _next_wave_early_bonus)
+	next_wave_button.tooltip_text = "\n".join(lines)
 
 
 func set_paused(paused: bool) -> void:
@@ -993,8 +1027,7 @@ func setup_conquest(worker_cost: int, stone_cost: Callable, essence_cost: Callab
 	tower_shop.max_width = TowerShop.MAX_WIDTH - TowerShopButton.SLOT_SIZE.x - 22.0
 	_hint_max_towers = 6
 	tower_details.essence_cost = essence_cost
-	next_wave_button.tooltip_text = "Les vagues partent seules à la fin du compte à rebours. " \
-		+ "Les lancer avant rapporte la prime habituelle."
+	set_wave_rules(true)
 	_setup_buildings()
 
 
@@ -1161,8 +1194,7 @@ func update_conquest(conquest: Conquest) -> void:
 	essence_label.text = tr("Essence : %d") % conquest.essence
 	workers_label.text = tr("Ouvriers : %d / %d") % [conquest.get_workers().size(), conquest.get_max_workers()]
 	recruit_button.disabled = not conquest.can_recruit() or end_panel.visible
-	var countdown := conquest.wave_countdown
-	next_wave_button.text = "Lancer la vague" if countdown < 0.0 else tr("Vague dans %d s") % ceili(countdown)
+	set_wave_countdown(conquest.wave_countdown)
 	tower_shop.set_stone(conquest.stone)
 	tower_details.set_essence(conquest.essence)
 	building_shop.refresh(conquest.level.gold, conquest.stone, conquest.essence)
@@ -1309,14 +1341,40 @@ func show_unlocked_features(features: Array) -> void:
 	_unlocked_features = features
 
 
+## Le monde vient d'être fini à 100 % : sa tour de maîtrise s'ouvre dans l'arbre.
+func show_world_mastered(world: World) -> void:
+	_mastered_world = world
+	var index := Perks.CAMPAIGN.worlds.find(world)
+	var towers := PackedStringArray()
+	for tower in Perks.get_mastery_towers(index):
+		towers.append(tr(tower.display_name))
+	end_message.text += "\n" + tr("%s maîtrisé à 100 %% ! %s s'ouvre dans Améliorations (Maîtrise).") \
+		% [tr(world.display_name), tr(" et ").join(towers)]
+
+
 ## Insignes gagnés (TowerLevels), à dépenser dans l'Armurerie. `first_daily` : première
 ## victoire du jour au défi du jour, qui en donne beaucoup plus.
 func show_medal_result(amount: int, first_daily := false) -> void:
 	_medal_result = [amount, first_daily]
 	if first_daily:
 		end_message.text += "\n" + tr("Premier défi réussi aujourd'hui : +%d insignes ❖ !") % amount
+		end_message.text += "\n" + tr("+%d ★ à dépenser dans l'arbre des améliorations.") % DailyChallenge.STARS_PER_WIN
 	else:
 		end_message.text += "\n" + tr("+%d insignes ❖ à dépenser dans l'Armurerie.") % amount
+
+
+## Victoire à 3 étoiles : les difficultés plus faciles comptent aussi à 3 étoiles, et
+## celles gagnées pour la première fois donnent leur coffret (`boxes`, dans l'Armurerie).
+func show_cascade_result(difficulties: Array, boxes: int) -> void:
+	_cascade_result = [difficulties, boxes]
+	var names := PackedStringArray()
+	for d: int in difficulties:
+		names.append(tr(Difficulty.NAMES[d]))
+	end_message.text += "\n" + tr("Aussi gagné à ★★★ en %s.") % ", ".join(names)
+	if boxes > 1:
+		end_message.text += "\n" + tr("+%d coffrets en plus dans l'Armurerie.") % boxes
+	elif boxes == 1:
+		end_message.text += "\n" + tr("+1 coffret en plus dans l'Armurerie.")
 
 
 ## Coffret d'équipement gagné (Equipment) : sa rareté, et un bouton pour l'ouvrir tout de
@@ -1405,8 +1463,12 @@ func _refresh_end_screen() -> void:
 		show_mutator_result(_mutator_result[0], _mutator_result[1])
 	if not _unlocked_features.is_empty():
 		show_unlocked_features(_unlocked_features)
+	if _mastered_world:
+		show_world_mastered(_mastered_world)
 	if not _medal_result.is_empty():
 		show_medal_result(_medal_result[0], _medal_result[1])
+	if not _cascade_result.is_empty():
+		show_cascade_result(_cascade_result[0], _cascade_result[1])
 	if _box_result >= 0:
 		show_box_result(_box_result)
 	if end_stats.visible:

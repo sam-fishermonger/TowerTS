@@ -30,7 +30,7 @@ static func is_owned(perk: Perk) -> bool:
 
 ## Son monde est débloqué, et toutes les améliorations demandées par celle-ci sont achetées.
 static func is_unlocked(perk: Perk) -> bool:
-	if not is_world_unlocked(perk):
+	if not is_world_unlocked(perk) or not is_mastery_reached(perk):
 		return false
 	var owned := get_owned_ids()
 	for required in perk.requires:
@@ -42,6 +42,22 @@ static func is_unlocked(perk: Perk) -> bool:
 ## Le monde demandé par l'amélioration (s'il y en a un) est débloqué.
 static func is_world_unlocked(perk: Perk) -> bool:
 	return perk.required_world < 0 or Progress.is_world_unlocked(CAMPAIGN, perk.required_world)
+
+
+## Le monde à finir à 100 % pour l'amélioration (s'il y en a un, voir Perk.required_mastery)
+## est maîtrisé.
+static func is_mastery_reached(perk: Perk) -> bool:
+	return perk.required_mastery < 0 or Progress.is_world_mastered(CAMPAIGN.worlds[perk.required_mastery])
+
+
+## Tours de maîtrise (TowerData) ouvertes par la maîtrise d'un monde (index dans la
+## campagne), à acheter dans l'arbre.
+static func get_mastery_towers(world_index: int) -> Array[Resource]:
+	var result: Array[Resource] = []
+	for perk in TREE.perks:
+		if perk.required_mastery == world_index and not perk.unlocks_tower.is_empty():
+			result.append(perk.get_unlocked_tower())
+	return result
 
 
 ## Nom du monde demandé par l'amélioration, ou "".
@@ -94,15 +110,15 @@ static func get_specializations(tower_path: String) -> Array[Perk]:
 
 
 ## Étoiles gagnées sur tous les niveaux de la campagne, de la Conquête et libres (meilleur
-## résultat de chacun dans chaque difficulté), ou avec `endless`, étoiles infinies
-## gagnées en mode infini et avec les mutateurs.
+## résultat de chacun dans chaque difficulté) et avec les défis du jour réussis, ou avec
+## `endless`, étoiles infinies gagnées en mode infini et avec les mutateurs.
 static func get_earned_stars(endless := false) -> int:
 	var total := 0
 	for path in CAMPAIGN.levels:
 		total += Progress.get_endless_stars(path) + Progress.get_mutator_stars(path) if endless \
 			else Progress.get_total_stars(path)
 	if not endless:
-		total += ConquestLevels.get_total_stars() + FreeLevels.get_total_stars()
+		total += ConquestLevels.get_total_stars() + FreeLevels.get_total_stars() + DailyChallenge.get_total_stars()
 	return total
 
 

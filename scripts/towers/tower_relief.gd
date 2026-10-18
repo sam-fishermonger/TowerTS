@@ -235,6 +235,67 @@ static func _draw_weapon(canvas: CanvasItem, data: TowerData, at: Vector2, aim: 
 			_orb(canvas, at + Vector2(0, -10), 6.0, GOLD.darkened(0.1), tint)
 			for puff in 3:
 				canvas.draw_circle(at + Vector2(5 + puff * 3, -18 - puff * 5), 2.5 + puff, Color(color.lightened(0.5), 0.5) * tint, true, -1.0, true)
+		"queen":
+			# Ruche dorée rayée, couronnée, et son dard tourné vers la cible.
+			if behind:
+				_barrel(canvas, head, head + dir * 20.0, 3.0, color.lightened(0.5), tint, false)
+			var hive := Relief.ellipse(head + Vector2(0, -2), 10.0, 11.0, 0.0, TAU, 20)
+			canvas.draw_colored_polygon(hive, color * tint)
+			for band in [-6.0, -1.0, 4.0]:
+				var half := 10.0 * sqrt(maxf(1.0 - pow((band + 2.0) / 11.0, 2.0), 0.0))
+				canvas.draw_line(head + Vector2(-half, band), head + Vector2(half, band), color.darkened(0.45) * tint, 2.0, true)
+			canvas.draw_colored_polygon(Relief.ellipse(head + Vector2(-4, -6), 3.0, 2.2), Color(1, 1, 1, 0.5) * tint)
+			hive.append(hive[0])
+			canvas.draw_polyline(hive, Relief.OUTLINE * tint, 2.0, true)
+			var crown := PackedVector2Array([head + Vector2(-6, -11), head + Vector2(-6, -17), head + Vector2(-3, -14),
+				head + Vector2(0, -18), head + Vector2(3, -14), head + Vector2(6, -17), head + Vector2(6, -11)])
+			canvas.draw_colored_polygon(crown, GOLD * tint)
+			crown.append(crown[0])
+			canvas.draw_polyline(crown, Relief.OUTLINE * tint, 1.5, true)
+			if not behind:
+				_barrel(canvas, head + dir * 6.0, head + dir * 20.0, 3.0, color.lightened(0.5), tint, false)
+		"furnace":
+			# Creuset de fonte plein de métal en fusion, et sa goulotte vers la cible.
+			if behind:
+				_barrel(canvas, head + Vector2(0, -4), head + Vector2(0, -4) + dir * 20.0, 6.0, METAL.darkened(0.3), tint, false)
+			var crucible := Relief.draw_cylinder(canvas, head + Vector2(0, 6), 11.0, 5.0, 12.0, Color(0.35, 0.25, 0.2), tint)
+			canvas.draw_colored_polygon(Relief.ellipse(crucible, 8.5, 3.6), Color(1.0, 0.5, 0.12) * tint)
+			canvas.draw_colored_polygon(Relief.ellipse(crucible + Vector2(-1.5, -0.5), 4.5, 1.8), Color(1.0, 0.85, 0.4) * tint)
+			if not behind:
+				_barrel(canvas, head + Vector2(0, -4), head + Vector2(0, -4) + dir * 20.0, 6.0, METAL.darkened(0.3), tint, false)
+				canvas.draw_circle(head + Vector2(0, -4) + dir * 20.0, 2.5, Color(1.0, 0.6, 0.15) * tint, true, -1.0, true)
+		"ballista":
+			# Fût de bois, arc doré tendu en travers et carreau vers la cible.
+			_turret(canvas, head + Vector2(0, 3), 9.0, color, tint, behind, func() -> void:
+				var side := Vector2(-dir.y, dir.x * 2.5).normalized() * 13.0
+				var bow := head + dir * 12.0
+				canvas.draw_line(bow - side, bow + side, Relief.OUTLINE * tint, 5.0, true)
+				canvas.draw_line(bow - side, bow + side, GOLD.darkened(0.1) * tint, 3.0, true)
+				canvas.draw_line(bow - side, head + dir * 2.0, Color(0.9, 0.9, 0.9) * tint, 1.0, true)
+				canvas.draw_line(bow + side, head + dir * 2.0, Color(0.9, 0.9, 0.9) * tint, 1.0, true)
+				_barrel(canvas, head - dir * 4.0, head + dir * 24.0, 3.5, Color(0.5, 0.33, 0.18), tint, false)
+				canvas.draw_circle(head + dir * 25.0, 2.2, Color(0.85, 0.87, 0.9) * tint, true, -1.0, true))
+		"reaper":
+			# Crâne spectral sur une hampe, et la lame de la faux tournée vers la cible.
+			_rod(canvas, at, at + Vector2(0, -16), tint)
+			var skull := at + Vector2(0, -20)
+			var blade_base := skull + dir * 12.0
+			var blade := PackedVector2Array([blade_base + Vector2(0, -2), blade_base + Vector2(dir.x * 6.0, -14),
+				blade_base + Vector2(-dir.x * 4.0, -12), blade_base + Vector2(0, 2)])
+			if behind:
+				canvas.draw_line(skull, blade_base, Relief.OUTLINE * tint, 3.0)
+				canvas.draw_colored_polygon(blade, color * tint)
+			canvas.draw_circle(skull, 8.5, Relief.OUTLINE * tint, true, -1.0, true)
+			canvas.draw_circle(skull, 7.0, Color(0.88, 0.93, 0.9) * tint, true, -1.0, true)
+			for eye in [-1.0, 1.0]:
+				canvas.draw_circle(skull + Vector2(eye * 2.8, -0.5), 2.0, Relief.OUTLINE * tint, true, -1.0, true)
+				canvas.draw_circle(skull + Vector2(eye * 2.8, -0.5), 0.9, color.lightened(0.3) * tint, true, -1.0, true)
+			canvas.draw_line(skull + Vector2(-2, 4), skull + Vector2(2, 4), Relief.OUTLINE * tint, 1.5)
+			if not behind:
+				canvas.draw_line(skull, blade_base, Relief.OUTLINE * tint, 3.0)
+				canvas.draw_colored_polygon(blade, color * tint)
+				blade.append(blade[0])
+				canvas.draw_polyline(blade, Relief.OUTLINE * tint, 1.5, true)
 		_:
 			if data.turret_texture:
 				var size := Tower.SIZE * Tower.TURRET_SCALE

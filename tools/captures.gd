@@ -24,8 +24,12 @@ const SHOTS := {
 	"libre": ["res://scenes/levels/free_02.tscn", 9.0, true],
 	"expedition": ["res://scenes/levels/mecha_02.tscn", 9.0, true],
 	"pause": ["res://scenes/levels/humanoid_02.tscn", 9.0, true],
+	"zoom": ["res://scenes/levels/level_03.tscn", 9.0, true],
+	"minuteur": ["res://scenes/levels/level_03.tscn", 14.0, false],
 	"ameliorations": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
 	"editeur": ["res://scenes/ui/level_editor.tscn", 0.5, false],
+	"maitrise": ["res://scenes/ui/perk_tree_screen.tscn", 0.5, false],
+	"tours_maitrise": ["res://scenes/levels/undead_04.tscn", 16.0, true],
 	"armurerie": ["res://scenes/ui/armory_screen.tscn", 0.5, false],
 }
 
@@ -44,8 +48,15 @@ func _run() -> void:
 		var shot: Array = SHOTS[shot_name]
 		if shot_name == "expedition":
 			_prepare_expedition()
+		elif shot_name == "minuteur":
+			# En Difficile, la première vague part seule à la fin du compte à rebours.
+			Difficulty.set_current(Difficulty.DIFFICILE)
 		elif shot_name == "armurerie":
 			_prepare_armory()
+		elif shot_name == "maitrise":
+			_prepare_mastery()
+		elif shot_name == "tours_maitrise":
+			_prepare_mastery_battle()
 		var node: Node = load(shot[0]).instantiate()
 		root.add_child(node)
 		await process_frame
@@ -53,12 +64,20 @@ func _run() -> void:
 			# Une vague qui montre la spécialité du monde : la troisième de La Ruche (un porteur
 			# de butin et un porteur de coffre), les Tunneliers de la quatrième vague de La
 			# Fonderie, les Saboteurs de la Cité, les Banshees de la troisième de La Nécropole.
-			var waves_before := {"ruche": 1, "fonderie": 2, "cite": 2, "necropole": 1}
+			var waves_before := {"ruche": 1, "zoom": 1, "fonderie": 2, "cite": 2, "necropole": 1, "tours_maitrise": 2}
 			if waves_before.has(shot_name):
 				(node as Level).spawner.current_wave = waves_before[shot_name]
-			_start_battle(node as Level)
+			if shot_name == "tours_maitrise":
+				_choose_mastery_towers(node as Level)
+				_place_along_path(node as Level)
+			else:
+				_start_battle(node as Level)
 		elif shot_name == "conquete":
 			_stage_conquest(node as Level)
+		elif shot_name == "maitrise":
+			# L'onglet Maîtrise : La Ruche et La Fonderie finies à 100 %, les autres pas encore.
+			node.show_page(Perks.TREE.page_names.find("Maîtrise"))
+			root.gui_release_focus()
 		elif shot_name == "jouer":
 			# Le choix du mode : les modes pas encore débloqués sont grisés.
 			node.show_play_menu(true)
@@ -79,12 +98,41 @@ func _run() -> void:
 			# En pause : le trajet des monstres revient et Recommencer / Quitter apparaissent.
 			(node as Level).set_paused(true)
 			await create_timer(1.0).timeout
+		elif shot_name == "tours_maitrise":
+			# De près, sur les tours de maîtrise (les quatre premières posées) au travail.
+			var level := node as Level
+			var center := level.hud.get_play_area().get_center()
+			var target := Vector2.ZERO
+			var towers := level.towers.get_children().slice(0, 4)
+			for tower: Node2D in towers:
+				target += tower.global_position / towers.size()
+			level.map_zoom.zoom_at(target, 1.6)
+			level.map_zoom.pan(center - target)
+			for i in 3:
+				await process_frame
+		elif shot_name == "zoom":
+			# Zoom x2 à la molette, sur le milieu de la vague (les tours sont le long du chemin).
+			var level := node as Level
+			var enemies := get_nodes_in_group(Enemy.GROUP)
+			var center := level.hud.get_play_area().get_center()
+			var target := center
+			if not enemies.is_empty():
+				target = (enemies[enemies.size() / 2] as Node2D).global_position
+			level.map_zoom.zoom_at(target, 2.0)
+			level.map_zoom.pan(center - target)
+			for i in 3:
+				await process_frame
 		await RenderingServer.frame_post_draw
 		var path := OUT_DIR + shot_name + ".webp"
 		root.get_texture().get_image().save_webp(path, true, 0.9)
 		print("Capture : ", path)
 		node.queue_free()
+		if shot_name == "tours_maitrise":
+			# L'Armurerie, juste après, garde les tours de la campagne.
+			Progress.set_value("perks", "owned", PackedStringArray())
+			Perks.clear_cache()
 		Engine.time_scale = 1.0
+		Difficulty.set_current(Difficulty.DEFAULT)
 		await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	Progress.clear_cache()
@@ -101,6 +149,69 @@ func _prepare_progress() -> void:
 	var stars := [3, 3, 3, 3, 3, 3, 3, 2, 3, 3, 3, 2]
 	for i in stars.size():
 		Progress.record_victory(CAMPAIGN.levels[i], stars[i])
+
+
+## Tours de maîtrise : La Ruche et La Fonderie finies à 100 % (toutes les étoiles de toutes
+## les difficultés), la Reine-mère achetée avec une amélioration, le Haut-fourneau acheté, et
+## La Cité presque finie.
+func _prepare_mastery() -> void:
+	for world_index in 3:
+		var levels: Array[String] = CAMPAIGN.worlds[world_index].levels
+		for i in levels.size():
+			Progress.record_victory(levels[i], 3, Difficulty.CAUCHEMAR if world_index < 2 or i > 0 else Difficulty.DIFFICILE)
+	Progress.set_value("perks", "owned", PackedStringArray(["maitrise_queen", "venin_royal", "maitrise_furnace"]))
+	Perks.clear_cache()
+
+
+## Les quatre tours de maîtrise achetées, avec quelques-unes de leurs améliorations.
+func _prepare_mastery_battle() -> void:
+	Progress.set_value("perks", "owned", PackedStringArray(["maitrise_queen", "venin_royal", "maitrise_furnace",
+		"maitrise_ballista", "maitrise_reaper", "essaimage", "linceul"]))
+	Perks.clear_cache()
+
+
+## Les quatre tours de maîtrise en premier dans la barre d'achat (elles sont posées en
+## premier), puis les tours du niveau, jusqu'à la limite.
+func _choose_mastery_towers(level: Level) -> void:
+	var types: Array[TowerData] = []
+	for data in level.available_tower_types:
+		if data.description.begins_with("Tour de maîtrise"):
+			types.append(data)
+	for data in level.available_tower_types:
+		if types.size() < level.tower_limit and not types.has(data):
+			types.append(data)
+	if level.is_choosing_towers:
+		level.choose_towers(types)
+	else:
+		level.tower_types = types
+		level.hud.set_tower_types(types)
+
+
+## Pose les tours de la barre d'achat dans l'ordre, une case sur deux le long du début du
+## chemin, là où la vague arrive en premier, puis lance les vagues en accéléré.
+func _place_along_path(level: Level) -> void:
+	var map := level.map
+	var path := map.get_enemy_path(0)
+	var cells: Array[Vector2i] = []
+	for y in map.rows:
+		for x in map.columns:
+			var cell := Vector2i(x, y)
+			if map.is_cell_buildable(cell) and _touches_path(map, cell):
+				cells.append(cell)
+	var offset_of := func(cell: Vector2i) -> float:
+		return path.curve.get_closest_offset(path.to_local(map.cell_to_world(cell)))
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return offset_of.call(a) < offset_of.call(b))
+	var gold := level.gold
+	level.gold = 100000
+	var placed := 0
+	for i in range(2, cells.size(), 2):
+		if placed >= level.tower_types.size():
+			break
+		if level.place_tower(cells[i], level.tower_types[placed]):
+			placed += 1
+	level.gold = gold
+	level.set_game_speed(2.0)
+	level.start_next_wave()
 
 
 ## Mode Expédition : troisième étape, avec deux bonus de coffre déjà gagnés et des vies

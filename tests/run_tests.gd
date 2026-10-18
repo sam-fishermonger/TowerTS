@@ -53,6 +53,10 @@ const ACHIEVEMENTS_SCREEN := preload("res://scenes/ui/achievements_screen.tscn")
 const BEHEMOTH := preload("res://resources/enemies/mecha/behemoth.tres")
 const UNDEAD_01 := preload("res://scenes/levels/undead_01.tscn")
 const CENSER := preload("res://resources/towers/censer.tres")
+const QUEEN := preload("res://resources/towers/queen.tres")
+const FURNACE := preload("res://resources/towers/furnace.tres")
+const BALLISTA := preload("res://resources/towers/ballista.tres")
+const REAPER := preload("res://resources/towers/reaper.tres")
 const BELL := preload("res://resources/towers/bell.tres")
 const CHEVALIER := preload("res://resources/enemies/undead/chevalier.tres")
 const SQUELETTE := preload("res://resources/enemies/undead/squelette.tres")
@@ -122,6 +126,7 @@ func _run() -> void:
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
 	await _test_wave_preview_and_early_call()
+	await _test_wave_timer()
 	await _test_interest()
 	await _test_powers_in_tree()
 	await _test_meteors()
@@ -160,6 +165,7 @@ func _run() -> void:
 	await _test_mutators()
 	await _test_difficulties()
 	await _test_specializations()
+	await _test_mastery_towers()
 	await _test_konami_code()
 	await _test_elites()
 	await _test_carriers_and_chests()
@@ -334,6 +340,14 @@ func _test_title_screen() -> void:
 	title.get_node("%PlayButton").pressed.emit()
 	title.get_node("%BackButton").pressed.emit()
 	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible, "Retour aussi")
+	_check(not ProjectSettings.get_setting("application/config/quit_on_go_back") and root.get_node("Sortie") is GameExit,
+		"le retour d'Android ne ferme pas le jeu d'un coup, il passe par Sortie")
+	title.get_node("%PlayButton").pressed.emit()
+	_check(not title.go_back(), "l'écran titre laisse le retour d'Android fermer le choix du mode")
+	root.get_node("Sortie").go_back()
+	await process_frame
+	_check(not title.is_play_menu_open() and title.get_node("%PerksButton").visible,
+		"le retour d'Android revient au menu principal, comme Échap")
 	await _free(title)
 	await _test_title_demo()
 	var screen := await _spawn_world_select()
@@ -582,7 +596,7 @@ func _test_perk_tree() -> void:
 func _test_perks_in_level() -> void:
 	print("Arbre des améliorations : effets en jeu")
 	_win_in_all_difficulties([LEVEL_01.resource_path, LEVEL_02.resource_path, LEVEL_03.resource_path,
-		LEVEL_04.resource_path])
+		LEVEL_04.resource_path, LEVEL_05.resource_path, LEVEL_06.resource_path])
 	for id in ["tresor", "architecte", "brocanteur", "remparts", "infirmerie", "pillage"]:
 		_check(Perks.buy(Perks.TREE.get_perk(id)), "achat : %s" % Perks.TREE.get_perk(id).display_name)
 	var level := await _spawn_level(LEVEL_01)
@@ -692,7 +706,8 @@ func _test_biome_towers_in_tree() -> void:
 	print("Arbre des améliorations : tours des mondes")
 	var campaign: Campaign = load("res://resources/campaign.tres")
 	var tree := Perks.TREE
-	var tower_perks := tree.perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
+	var tower_perks := tree.perks.filter(func(p: Perk) -> bool:
+		return not p.unlocks_tower.is_empty() and p.required_mastery < 0)
 	var per_world := [0, 0, 0, 0]
 	for perk: Perk in tower_perks:
 		if perk.required_world >= 0:
@@ -706,16 +721,23 @@ func _test_biome_towers_in_tree() -> void:
 	var logistics_cost := 0
 	for perk in tree.get_page_perks(logistics):
 		logistics_cost += perk.cost
-	var main_cost := tree.get_total_cost() - logistics_cost
-	# Les niveaux 7 et 8 de chaque monde ont ajouté des étoiles sans nouvelles améliorations :
-	# l'arbre en coûte encore les trois quarts, la marge attend de nouvelles options.
-	_check(main_cost <= campaign_stars and main_cost >= campaign_stars * 0.9,
-		"l'arbre sans la Logistique (%d étoiles) coûte presque toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
-	_check(main_cost > campaign.size() * 3 * 3,
-		"il faut des étoiles de Cauchemar pour tout acheter")
+	# La page Maîtrise (tours des mondes finis à 100 %) vient en plus.
+	var mastery_cost := 0
+	for perk in tree.get_page_perks(tree.page_names.find("Maîtrise")):
+		mastery_cost += perk.cost
+	var main_cost := tree.get_total_cost() - logistics_cost - mastery_cost
+	_check(main_cost > campaign_stars,
+		"l'arbre sans la Logistique (%d étoiles) coûte plus que toutes les étoiles de la campagne (%d)" % [main_cost, campaign_stars])
 	var conquest_stars := ConquestLevels.size() * Progress.MAX_LEVEL_STARS
-	_check(logistics_cost <= conquest_stars and logistics_cost >= conquest_stars * 0.85,
-		"la page Logistique (%d étoiles) coûte presque toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	_check(logistics_cost > conquest_stars,
+		"la page Logistique (%d étoiles) coûte plus que toutes les étoiles de la Conquête (%d)" % [logistics_cost, conquest_stars])
+	# Tous les niveaux gagnés à 3 étoiles dans les quatre difficultés ne suffisent pas : le
+	# reste vient des défis du jour (en moins de 100 jours réussis).
+	var level_stars := campaign_stars + conquest_stars + FreeLevels.size() * Progress.MAX_LEVEL_STARS
+	var missing := tree.get_total_cost() - level_stars
+	_check(missing > 0 and missing <= 100 * DailyChallenge.STARS_PER_WIN,
+		"tous les niveaux ne paient pas tout l'arbre : il manque %d étoiles, %d défis du jour réussis"
+		% [missing, ceili(float(missing) / DailyChallenge.STARS_PER_WIN)])
 
 	var flame := tree.get_perk("flame")
 	var jammer := tree.get_perk("jammer")
@@ -1667,6 +1689,18 @@ func _test_enemy_slow_and_armor() -> void:
 	while larve.is_slowed() and elapsed < 10.0:
 		elapsed += await _step()
 	_check(is_equal_approx(larve.get_speed(), LARVE.speed), "la vitesse revient à la normale")
+	# Étourdi par la Cloche (facteur 0) puis ralenti sans arrêt par un Givre : il reprend
+	# la vitesse du Givre une fois l'étourdissement fini, au lieu de rester figé.
+	larve.apply_slow(0.0, 0.7)
+	elapsed = 0.0
+	while elapsed < 3.0:
+		larve.apply_slow(0.5, 1.5)
+		elapsed += await _step()
+	_check(is_equal_approx(larve.get_speed(), LARVE.speed * 0.5),
+		"l'étourdissement s'arrête même si un ralentissement le suit sans arrêt")
+	# Une brûlure faible n'entretient pas une forte.
+	larve.apply_dot(20.0, 0.5)
+	_check(not larve.apply_dot(2.0, 3.0), "une brûlure plus faible ne prolonge pas la plus forte")
 	Engine.time_scale = 1.0
 	var scarabee := _add_still_enemy(level, SCARABEE, 1, 100.0)
 	scarabee.take_damage(GATLING.damage)
@@ -1933,25 +1967,92 @@ func _test_wave_preview_and_early_call() -> void:
 	await process_frame
 	_check(hud.wave_preview.visible and hud.wave_preview_label.get_parsed_text().contains("12 Larve"),
 		"l'aperçu annonce la première vague (%s)" % hud.wave_preview_label.get_parsed_text())
+	_check(not level.has_wave_timer() and level.wave_timer_total == Level.FIRST_EARLY_CALL_WINDOW
+		and level.wave_timer > 0.0, "en Moyen, le compte à rebours de la prime part avec la partie")
+	var first_bonus := roundi(level.get_wave_bonus(0) * level.early_call_bonus_ratio)
+	_check(first_bonus > 0 and absi(level.get_early_call_bonus() - first_bonus) <= 1,
+		"la première vague lancée tout de suite rapporte presque toute sa prime (%d)" % level.get_early_call_bonus())
+	_check(hud.next_wave_button.text == "Lancer la vague", "en Moyen, le bouton ne compte pas les secondes")
+	level.wave_timer = level.wave_timer_total / 2.0
+	_check(level.get_early_call_bonus() == roundi(first_bonus / 2.0), "à mi-chemin, la moitié de la prime")
+	level.wave_timer = 0.0
+	await process_frame
+	await process_frame
 	_check(level.get_early_call_bonus() == 0 and not hud.wave_preview_label.get_parsed_text().contains("maintenant"),
-		"pas de prime quand la carte est vide")
+		"plus de prime à la fin du compte à rebours")
+	_check(level.spawner.current_wave == -1, "en Moyen, la vague attend le joueur")
 	level.start_next_wave()
 	await process_frame
-	_check(level.get_early_call_bonus() == 0, "pas de prime tant que la vague apparaît (le bouton est désactivé)")
+	_check(level.get_early_call_bonus() == 0 and level.wave_timer < 0.0,
+		"pas de prime ni de compte à rebours tant que la vague apparaît (le bouton est désactivé)")
 	Engine.time_scale = GAME_SPEED
 	while level.spawner.is_spawning:
 		await process_frame
+	Engine.time_scale = 1.0
+	_check(level.wave_timer_total == Level.EARLY_CALL_WINDOW, "le compte à rebours repart à la fin de l'arrivée de la vague")
+	var bonus := roundi(level.get_wave_bonus(1) * level.early_call_bonus_ratio * level.get_early_call_fraction())
+	_check(bonus > 0 and level.get_early_call_bonus() == bonus, "prime de %d or juste après la vague" % bonus)
 	await process_frame
-	var bonus := roundi(level.spawner.waves[1].bonus_gold * level.early_call_bonus_ratio)
-	_check(bonus > 0 and level.get_early_call_bonus() == bonus, "prime de %d or si des ennemis sont encore en jeu" % bonus)
-	_check(hud.wave_preview_label.get_parsed_text().contains("Lancer maintenant : +%d or" % bonus),
+	_check(hud.wave_preview_label.get_parsed_text().contains("Lancer maintenant : +%d or" % level.get_early_call_bonus()),
 		"l'aperçu annonce la prime")
+	bonus = level.get_early_call_bonus()
 	var gold_before := level.gold
 	level.start_next_wave()
 	_check(level.gold == gold_before + bonus, "la prime est versée au lancement")
 	_check(level.effects.get_children().any(func(n: Node) -> bool: return n is FloatingText and n.text == "+%d" % bonus),
 		"« +%d » s'affiche sous le bouton" % bonus)
 	await _free(level)
+
+
+## Difficile et Cauchemar : la vague part seule à la fin du compte à rebours, la première aussi.
+func _test_wave_timer() -> void:
+	print("Compte à rebours des vagues en Difficile et Cauchemar")
+	Difficulty.set_current(Difficulty.DIFFICILE)
+	var level := await _spawn_level(LEVEL_02)
+	var hud := level.hud
+	await process_frame
+	_check(level.has_wave_timer() and level.wave_timer_total == Difficulty.FIRST_WAVE_TIMER[Difficulty.DIFFICILE],
+		"en Difficile, la première vague a son compte à rebours (%.1f s)" % level.wave_timer_total)
+	_check(hud.next_wave_button.text == "Vague dans %d s" % ceili(level.wave_timer),
+		"le bouton compte les secondes (%s)" % hud.next_wave_button.text)
+	_check(hud.next_wave_button.tooltip_text.contains("partent seules"), "sa bulle d'aide le dit")
+	level.set_paused(true)
+	var before := level.wave_timer
+	for i in 5:
+		await process_frame
+	_check(level.wave_timer == before, "le compte à rebours s'arrête pendant la pause")
+	level.set_paused(false)
+	level.wave_timer = 0.05
+	for i in 10:
+		await process_frame
+	_check(level.spawner.current_wave == 0, "la première vague part seule à 0")
+	_check(level.stats.early_calls == 0, "sans prime ni lancement en avance compté")
+	Engine.time_scale = GAME_SPEED
+	while level.spawner.is_spawning:
+		await process_frame
+	Engine.time_scale = 1.0
+	_check(level.wave_timer_total == Difficulty.WAVE_TIMER[Difficulty.DIFFICILE] and level.wave_timer > 0.0,
+		"puis %d s après l'arrivée de chaque vague" % roundi(Difficulty.WAVE_TIMER[Difficulty.DIFFICILE]))
+	level.wave_timer = 4.0
+	var saved := level.to_saved_game()
+	_check(is_equal_approx(saved.get("wave_timer", -1.0), 4.0), "la partie enregistrée garde le compte à rebours")
+	await _free(level)
+	Difficulty.set_current(Difficulty.CAUCHEMAR)
+	level = await _spawn_level(LEVEL_02)
+	_check(level.wave_timer_total == Difficulty.FIRST_WAVE_TIMER[Difficulty.CAUCHEMAR]
+		and Difficulty.FIRST_WAVE_TIMER[Difficulty.CAUCHEMAR] < Difficulty.FIRST_WAVE_TIMER[Difficulty.DIFFICILE]
+		and Difficulty.WAVE_TIMER[Difficulty.CAUCHEMAR] < Difficulty.WAVE_TIMER[Difficulty.DIFFICILE],
+		"plus court en Cauchemar qu'en Difficile")
+	saved["wave"] = -1
+	level.restore_saved_game(saved)
+	_check(level.wave_timer == Level.RESUME_WAVE_TIMER, "une partie reprise laisse au moins %d s avant la vague"
+		% roundi(Level.RESUME_WAVE_TIMER))
+	await _free(level)
+	Difficulty.set_current(Difficulty.FACILE)
+	level = await _spawn_level(LEVEL_02)
+	_check(not level.has_wave_timer() and level.get_early_call_bonus() > 0, "en Facile, pas de départ seul mais la prime")
+	await _free(level)
+	Difficulty.set_current(Difficulty.MOYEN)
 
 
 func _test_interest() -> void:
@@ -2413,6 +2514,22 @@ func _test_healer_enemy() -> void:
 	var heal_shown := level.effects.get_children().any(func(n: Node) -> bool:
 		return n is FloatingText and n.text.begins_with("+") and n.color == Level.HEAL_TEXT_COLOR)
 	_check(heal_shown, "le soin s'affiche en vert")
+	# Le Général soigne et appelle des renforts : soigner ne retarde pas ses renforts.
+	var general := _add_still_enemy(level, GENERAL, 0, 500.0)
+	var wounded := _add_still_enemy(level, SOLDAT, 0, 500.0 + GENERAL.heal_radius * 0.5)
+	wounded.health.max_health = 1.0e6
+	wounded.take_damage(10.0)
+	general.data = GENERAL.duplicate()
+	general.data.speed = 0.0
+	var summons := [0]
+	general.summoned.connect(func(_enemy: Enemy) -> void: summons[0] += 1)
+	general.set_process(true)
+	elapsed = 0.0
+	while elapsed < GENERAL.summon_interval * 2.5:
+		if wounded.health.health >= wounded.health.max_health:
+			wounded.take_damage(10.0)
+		elapsed += await _step()
+	_check(summons[0] >= 2, "le Général appelle ses renforts même quand il soigne (%d appels)" % summons[0])
 	await _free(level)
 
 
@@ -2912,14 +3029,77 @@ func _test_crossings_in_tree() -> void:
 	Progress.reset_campaign()
 
 
+func _test_mastery_towers() -> void:
+	print("Tours de maîtrise : un monde fini à 100 %")
+	var tree := Perks.TREE
+	var campaign: Campaign = load("res://resources/campaign.tres")
+	var page := tree.page_names.find("Maîtrise")
+	var perks := tree.get_page_perks(page)
+	var towers := perks.filter(func(p: Perk) -> bool: return not p.unlocks_tower.is_empty())
+	_check(page >= 0 and perks.size() == 16 and towers.size() == 4 and perks.all(func(p: Perk) -> bool:
+		return not p.paid_with_endless_stars), "un onglet Maîtrise : 4 tours et leurs améliorations, en étoiles")
+	_check(towers.map(func(p: Perk) -> int: return p.required_mastery) == [0, 1, 2, 3]
+		and towers.map(func(p: Perk) -> Resource: return p.get_unlocked_tower()) == [QUEEN, FURNACE, BALLISTA, REAPER],
+		"une tour par monde")
+	for tower: Perk in towers:
+		var own := perks.filter(func(p: Perk) -> bool: return p.specializes_tower == tower.unlocks_tower)
+		_check(own.size() == 3, "%s a 3 améliorations propres" % tower.display_name)
+	var queen := tree.get_perk("maitrise_queen")
+	# La Ruche gagnée partout en Moyen : pas encore à 100 %.
+	for path in campaign.worlds[0].levels:
+		Progress.record_victory(path, 3)
+	Progress.record_victory(campaign.worlds[0].levels[0], 3, Difficulty.CAUCHEMAR)
+	_check(not Progress.is_world_mastered(campaign.worlds[0]) and not Perks.is_unlocked(queen),
+		"la Reine-mère attend La Ruche à 100 %")
+	var screen := PERK_TREE_SCREEN.instantiate()
+	root.add_child(screen)
+	await process_frame
+	screen.show_page(page)
+	var branch := tree.get_branch(queen)
+	_check(screen._lock_labels[branch].text.contains("La Ruche") and screen._lock_labels[branch].text.contains("100 %"),
+		"la branche dit quel monde finir à 100 %% (%s)" % screen._lock_labels[branch].text)
+	screen._show_info(queen)
+	_check(screen.info_status.text.contains("100 %"), "la fiche aussi")
+	await _free(screen)
+	_win_in_all_difficulties(campaign.worlds[0].levels)
+	_check(Progress.is_world_mastered(campaign.worlds[0]) and Perks.is_unlocked(queen)
+		and not Perks.is_unlocked(tree.get_perk("maitrise_furnace")), "La Ruche à 100 % ouvre la Reine-mère, pas les autres")
+	_check(Perks.buy(queen) and Perks.get_unlocked_towers().has(QUEEN), "la Reine-mère s'achète et s'ajoute aux tours")
+	var before := QUEEN.get_stats_at_level(1)
+	_grant_perks(["maitrise_queen", "venin_royal", "essaimage", "nuee"])
+	var after := QUEEN.get_stats_at_level(1)
+	_check(after.chain_count == before.chain_count + 2 and after.dot_damage > before.dot_damage
+		and after.fire_rate > before.fire_rate and after.slow_factor < before.slow_factor, "ses améliorations propres comptent")
+	_check(QUEEN.get_stats_at_level(3).chain_count == QUEEN.chain_count + 2 + 3, "et ses améliorations en jeu ajoutent des sauts")
+	_check(FURNACE.get_stats_at_level(3).shield_jam_duration > FURNACE.shield_jam_duration, "le Haut-fourneau brouille plus longtemps")
+	# Faucheuse : achève les ennemis presque morts, pas les boss.
+	_grant_perks([])
+	var level := await _spawn_level(LEVEL_01)
+	var stats := REAPER.get_stats_at_level(1)
+	var larva := level.spawner.spawn(LARVE, level.map.get_enemy_path(0), 100.0)
+	larva.take_damage(larva.health.max_health * 0.9, true)
+	larva.hit(0.5, stats)
+	_check(not larva.is_alive, "la Faucheuse fauche un ennemi sous 12 % de sa vie")
+	var queen_boss := level.spawner.spawn(REINE, level.map.get_enemy_path(0), 100.0)
+	queen_boss.take_damage(queen_boss.health.max_health * 0.95, true)
+	queen_boss.hit(0.5, stats)
+	_check(queen_boss.is_alive, "mais pas un boss")
+	_check(is_equal_approx(REAPER.get_stats_at_level(3).execute_threshold, 0.2), "ses améliorations montent le seuil à 20 %")
+	level.hud.show_world_mastered(campaign.worlds[0])
+	_check(level.hud.end_message.text.contains("Reine-mère"), "l'écran de fin annonce la tour de maîtrise")
+	await _free(level)
+	_grant_perks([])
+	Progress.reset_campaign()
+
+
 func _test_tower_choice() -> void:
 	print("Nombre de tours différentes par niveau, selon la difficulté")
 	_check(Difficulty.TOWER_LIMITS == [9, 8, 6, 5], "9 en Facile, 8 en Moyen, 6 en Difficile, 5 en Cauchemar")
 	Perks.unlock_everything()
 	Difficulty.set_current(Difficulty.CAUCHEMAR)
 	var level := await _spawn_level(HUMANOID_01)
-	_check(level.available_tower_types.size() == 17 and level.is_choosing_towers and level.hud.tower_picker != null,
-		"avec 17 tours débloquées, le niveau s'ouvre sur le choix des tours")
+	_check(level.available_tower_types.size() == 21 and level.is_choosing_towers and level.hud.tower_picker != null,
+		"avec 21 tours débloquées, le niveau s'ouvre sur le choix des tours")
 	_check(level.tower_types.is_empty() and level.hud.tower_shop.get_child_count() == 0 and not level.can_start_next_wave(),
 		"pas de tour à poser ni de vague avant d'avoir choisi")
 	var picker := level.hud.tower_picker
@@ -3094,7 +3274,8 @@ func _test_endless_mode() -> void:
 	_check(level.get_waves_cleared() == count + 5 and not level.is_over, "la partie continue après les vagues du niveau")
 	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == count + 5
 		and Progress.get_endless_stars(LEVEL_01.resource_path) == 1, "chaque vague repoussée compte pour le record et les étoiles")
-	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == unlock_stars + 3, "les étoiles infinies sont une monnaie à part")
+	# 3 étoiles en Moyen : 3 de plus en Facile.
+	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == unlock_stars + 6, "les étoiles infinies sont une monnaie à part")
 	level.lives = 1
 	level._on_enemy_reached_end(_add_still_enemy(level, LARVE, 0, 0.0))
 	_check(level.is_over and level.hud.end_title.text == "Fin de la partie"
@@ -3182,13 +3363,17 @@ func _test_daily_challenge() -> void:
 	level.spawner.is_spawning = false
 	level.spawner._queue.clear()
 	await process_frame
+	var tree_stars := Perks.get_earned_stars()
 	level._check_wave_cleared()
 	var expected := LARVE.reward * DailyChallenge.POINTS_PER_GOLD + level.spawner.get_wave_count() * DailyChallenge.POINTS_PER_WAVE \
 		+ level.lives * DailyChallenge.POINTS_PER_LIFE
 	_check(level.is_over and level.score == expected, "victoire : 100 points par vague et 50 par vie gardée (%d)" % level.score)
 	_check(Progress.get_daily_score(key) == expected and level.hud.end_title.text == "Défi réussi !"
 		and level.hud.end_stars.text == "%d points" % expected, "le score est enregistré et affiché")
-	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles")
+	_check(Progress.get_stars(LEVEL_01.resource_path) == 0, "le défi ne donne pas d'étoiles au niveau joué")
+	_check(Perks.get_earned_stars() == tree_stars + DailyChallenge.STARS_PER_WIN
+		and level.hud.end_message.text.contains("+%d ★ à dépenser dans l'arbre" % DailyChallenge.STARS_PER_WIN),
+		"mais des étoiles pour l'arbre des améliorations, annoncées")
 	_check(Progress.is_daily_won(key) and level.hud.end_message.text.contains("Série : 1 jour") == false,
 		"le jour réussi est enregistré (pas de série annoncée pour un seul jour)")
 	_check(level.medals_won == TowerLevels.DAILY_FIRST_REWARD
@@ -3240,6 +3425,9 @@ func _test_daily_history() -> void:
 	_check(Progress.get_daily_streak("2026-10-08") == 4 and Progress.get_daily_streak("2026-10-10") == 0,
 		"la série compte jusqu'à aujourd'hui, et s'arrête au premier jour manqué")
 	_check(Progress.get_best_daily_streak() == 4, "meilleure série")
+	_check(DailyChallenge.get_total_stars() == 7 * DailyChallenge.STARS_PER_WIN
+		and Perks.get_earned_stars() == 7 * DailyChallenge.STARS_PER_WIN,
+		"chaque jour réussi donne ses étoiles à l'arbre, pas les jours perdus")
 	var screen: Control = load("res://scenes/ui/daily_challenge_screen.tscn").instantiate()
 	root.add_child(screen)
 	await process_frame
@@ -3375,13 +3563,40 @@ func _test_difficulties() -> void:
 	fresh.free()
 	level._end_game(true)
 	_check(Progress.get_stars(LEVEL_03.resource_path, Difficulty.DIFFICILE) == 3
-		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.MOYEN) == 0, "la victoire compte en Difficile seulement")
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.MOYEN) == 3
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.FACILE) == 3
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.CAUCHEMAR) == 0,
+		"3 étoiles en Difficile comptent aussi à 3 étoiles en Moyen et en Facile, pas en Cauchemar")
+	_check("Aussi gagné à ★★★ en Facile, Moyen." in level.hud.end_message.text,
+		"l'écran de fin dit les difficultés gagnées en plus")
 	_check(Progress.is_unlocked(campaign, 3) and Progress.is_endless_unlocked(LEVEL_03.resource_path),
 		"elle débloque le niveau suivant et le mode infini")
 	await _free(level)
-	Progress.record_victory(LEVEL_03.resource_path, 2, Difficulty.FACILE)
-	_check(Progress.get_stars(LEVEL_03.resource_path) == 3 and Progress.get_total_stars(LEVEL_03.resource_path) == 5
-		and Perks.get_earned_stars() == 5, "les étoiles des difficultés s'additionnent")
+	Progress.record_victory(LEVEL_03.resource_path, 2, Difficulty.CAUCHEMAR)
+	_check(Progress.get_stars(LEVEL_03.resource_path) == 3 and Progress.get_total_stars(LEVEL_03.resource_path) == 11
+		and Perks.get_earned_stars() == 11, "les étoiles des difficultés s'additionnent")
+	var other := LEVEL_04.resource_path
+	Progress.record_victory(other, 2, Difficulty.FACILE)
+	Progress.record_victory(other, 2, Difficulty.DIFFICILE)
+	_check(Progress.get_stars(other, Difficulty.FACILE) == 2 and Progress.get_stars(other, Difficulty.MOYEN) == 0,
+		"une victoire à moins de 3 étoiles ne compte que dans sa difficulté")
+	_check(Progress.get_cascaded_difficulties(other, 3, Difficulty.CAUCHEMAR) == [Difficulty.FACILE, Difficulty.MOYEN,
+		Difficulty.DIFFICILE] and Progress.get_cascaded_difficulties(other, 2, Difficulty.CAUCHEMAR).is_empty(),
+		"seules les difficultés plus faciles sous 3 étoiles changent, et seulement à 3 étoiles")
+	Progress.record_victory(other, 3, Difficulty.CAUCHEMAR)
+	_check(Progress.get_total_stars(other) == 12, "3 étoiles en Cauchemar donnent les 3 étoiles des autres difficultés")
+	# Ancienne sauvegarde : 3 étoiles en Cauchemar seulement, corrigées à la lecture.
+	var saved := ConfigFile.new()
+	saved.load(Progress.get_save_path())
+	saved.set_value("stars_cauchemar", LEVEL_05.resource_path, 3)
+	saved.save(Progress.get_save_path())
+	Progress.clear_cache()
+	_check(Progress.get_total_stars(LEVEL_05.resource_path) == 12, "une ancienne sauvegarde reçoit les étoiles des difficultés plus faciles")
+	saved.load(Progress.get_save_path())
+	_check(saved.get_value("stars_facile", LEVEL_05.resource_path, 0) == 3, "et la correction est enregistrée")
+	for d in Difficulty.COUNT:
+		Progress.set_value(Progress.stars_section(d), other, null)
+		Progress.set_value(Progress.stars_section(d), LEVEL_05.resource_path, null)
 
 	Engine.set_meta(Level.ENDLESS_META, true)
 	level = await _spawn_level(LEVEL_03)
@@ -3400,14 +3615,14 @@ func _test_difficulties() -> void:
 	var screen := await _spawn_world_select()
 	_check(screen.difficulty_bar.visible and screen.get_difficulty_button(Difficulty.FACILE).button_pressed,
 		"la sélection des mondes montre la difficulté choisie")
-	_check(screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★☆"), "et les étoiles du niveau dans celle-ci")
+	_check(screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★★"), "et les étoiles du niveau dans celle-ci")
 	_check(screen.mode_hint.text.begins_with("Facile : Monstres"), "avec ses effets")
 	screen.get_difficulty_button(Difficulty.CAUCHEMAR).pressed.emit()
-	_check(Difficulty.get_current() == Difficulty.CAUCHEMAR and screen.get_level_button(LEVEL_03.resource_path).text.ends_with("☆☆☆"),
+	_check(Difficulty.get_current() == Difficulty.CAUCHEMAR and screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★☆"),
 		"choisir Cauchemar l'enregistre et met les boutons à jour")
 	_check(screen.get_level_button(LEVEL_03.resource_path).tooltip_text.contains("★★★  Difficile"),
 		"la bulle d'aide du niveau donne les étoiles de chaque difficulté")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 108", "la carte compte les étoiles des 4 difficultés")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 12 / 108", "la carte compte les étoiles des 4 difficultés")
 	screen.set_endless_mode(true)
 	_check(not screen.difficulty_bar.visible, "pas de difficulté en mode infini")
 	await _free(screen)
@@ -3445,8 +3660,9 @@ func _test_specializations() -> void:
 		towers[perk.specializes_tower] = true
 		all_valid = all_valid and perk.paid_with_endless_stars and load(perk.specializes_tower) is TowerData
 	_check(all_valid, "chacune spécialise une tour, payée en étoiles infinies")
-	_check(towers.size() == 17 and towers.size() == Array(ResourceLoader.list_directory("res://resources/towers/")).filter(
-		func(file: String) -> bool: return file.ends_with(".tres")).size(), "une spécialisation par tour, pour toutes les tours")
+	# Les tours de maîtrise ont leurs améliorations sur la page Maîtrise.
+	_check(towers.size() == 17 and towers.size() + 4 == Array(ResourceLoader.list_directory("res://resources/towers/")).filter(
+		func(file: String) -> bool: return file.ends_with(".tres")).size(), "une spécialisation par tour, hors tours de maîtrise")
 	var gatling := tree.get_perk("spe_gatling")
 	var sniper := tree.get_perk("spe_sniper")
 	var marksman := tree.get_perk("spe_marksman")
@@ -3461,11 +3677,11 @@ func _test_specializations() -> void:
 		"l'onglet compte les étoiles infinies")
 	_check(screen.stars_label.tooltip_text.contains("mode infini 3"), "la bulle d'aide dit d'où viennent les crânes")
 	screen.get_button(gatling).pressed.emit()
-	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 3,
-		"Balles perforantes coûte 2 étoiles infinies, et aucune étoile des niveaux")
+	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 3 - gatling.cost and Perks.get_available_stars() == 6,
+		"Balles perforantes coûte %d étoiles infinies, et aucune étoile des niveaux" % gatling.cost)
 	_check(GATLING.get_stats_at_level(1).armor_piercing and GATLING.get_stats_at_level(3).armor_piercing
 		and not CANNON.get_stats_at_level(1).armor_piercing, "les balles de la Mitrailleuse, et d'elle seule, ignorent l'armure")
-	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("☠ 3"), "la suivante est trop chère")
+	_check(not Perks.can_buy(sniper) and screen.get_button(sniper).text.ends_with("☠ %d" % sniper.cost), "la suivante est trop chère")
 	Progress.record_endless(LEVEL_02.resource_path, 40, 5)
 	screen.buy(sniper)
 	_check(is_equal_approx(SNIPER.get_stats_at_level(1).damage, 80.0 * 1.4) and is_equal_approx(CANNON.get_stats_at_level(1).damage, 25.0),
@@ -3578,6 +3794,13 @@ func _test_carriers_and_chests() -> void:
 	await _step()
 	await process_frame
 	_check(not is_instance_valid(lost), "pas ramassé, il disparaît")
+	# Un porteur tué alors qu'il entre par un bord : son butin tombe dans la zone de jeu.
+	var area := level.hud.get_play_area()
+	for outside in [Vector2(-30, area.get_center().y), Vector2(area.end.x + 20, area.position.y - 10), Vector2(area.get_center().x, area.end.y + 5)]:
+		var edge := level.drop_loot(Loot.Kind.GOLD, outside, LARVE)
+		_check(area.grow(-Loot.TOUCH_PICK_RADIUS * 0.5).has_point(edge.global_position), "butin tombé hors de l'écran ramené sur la carte (%s)" % outside)
+		edge.queue_free()
+	await process_frame
 	# Coffres : sans pouvoirs ni Conquête, six bonus possibles, trois fois chacun.
 	var tower := level.place_tower(Vector2i(2, 4), CANNON)
 	var base_damage := tower.stats.damage
@@ -3749,6 +3972,35 @@ func _test_equipment() -> void:
 	var item: Dictionary = armory.open_box()
 	_check(not item.is_empty() and armory.open_button.disabled and armory.item_buttons.has(item.uid),
 		"Ouvrir : l'objet rejoint l'inventaire")
+	# Sur mobile, un doigt posé sur un objet doit atteindre la liste pour la faire défiler,
+	# et un simple appui doit encore poser l'objet.
+	var first_button: Button = armory._inventory_grid.get_child(0)
+	var first_uid: int = armory.item_buttons.find_key(first_button)
+	var inventory_scroll := first_button.get_parent().get_parent() as ScrollContainer
+	var scroll_presses := [0]
+	var count_press := func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			scroll_presses[0] += 1
+	inventory_scroll.gui_input.connect(count_press)
+	var tap_at := first_button.get_global_rect().get_center()
+	var tap := InputEventMouseButton.new()
+	tap.button_index = MOUSE_BUTTON_LEFT
+	tap.position = tap_at
+	tap.global_position = tap_at
+	tap.pressed = true
+	root.push_input(tap, true)
+	var untap := tap.duplicate() as InputEventMouseButton
+	untap.pressed = false
+	root.push_input(untap, true)
+	await process_frame
+	_check(scroll_presses[0] == 1 and inventory_scroll.scroll_deadzone > 0,
+		"un appui sur un objet de l'inventaire atteint la liste (défilement au doigt)")
+	_check(not Equipment.get_tower_of(first_uid).is_empty() or not armory.status_label.text.is_empty(),
+		"un simple appui sur un objet de l'inventaire le pose (ou dit pourquoi)")
+	if Equipment.get_tower_of(first_uid) == cannon_path:
+		Equipment.unequip(first_uid)
+	armory.status_label.text = ""
+	armory.refresh()
 	armory.slot_buttons[0].pressed.emit()
 	_check(Equipment.get_equipped_uids(cannon_path).size() == 1, "un clic sur un emplacement retire son objet")
 	armory.toggle_item(reserved.uid)
@@ -3763,13 +4015,15 @@ func _test_equipment() -> void:
 	# Victoire : un coffret assuré la première fois dans une difficulté, annoncé à l'écran de fin.
 	level = await _spawn_level(LEVEL_01)
 	level._end_game(true)
-	_check(level.box_won >= 0 and Equipment.get_boxes().size() == 1
+	# (3 étoiles en Moyen : la première victoire en Facile donne aussi son coffret.)
+	_check(level.box_won >= 0 and Equipment.get_boxes().size() == 2
+		and level.hud.end_message.text.contains("+1 coffret en plus dans l'Armurerie.")
 		and level.hud.end_message.text.contains("obtenu ! À ouvrir ici ou dans l'Armurerie.")
 		and level.hud.box_button.visible, "première victoire : un coffret, annoncé à l'écran de fin")
 	var items_before := Equipment.get_items().size()
 	level.hud.box_button.pressed.emit()
 	var won: Dictionary = level.hud._box_item
-	_check(not won.is_empty() and won.rarity == level.box_won and Equipment.get_boxes().is_empty()
+	_check(not won.is_empty() and won.rarity == level.box_won and Equipment.get_boxes().size() == 1
 		and Equipment.get_items().size() == items_before + 1 and not level.hud.box_button.visible
 		and level.hud.box_reveal.visible and level.hud.end_message.text.contains("ouvert :"),
 		"le coffret s'ouvre sur l'écran de victoire : l'objet rejoint l'inventaire et s'affiche")
@@ -3815,7 +4069,9 @@ func _test_tower_levels() -> void:
 
 	var level := await _spawn_level(LEVEL_01)
 	level._end_game(true)
+	# 3 étoiles en Moyen : les insignes de la victoire en Facile s'ajoutent.
 	_check(level.medals_won == TowerLevels.get_victory_reward(LEVEL_01.resource_path, level.difficulty)
+			+ TowerLevels.get_victory_reward(LEVEL_01.resource_path, Difficulty.FACILE)
 		and TowerLevels.get_medals() == level.medals_won and TowerLevels.get_earned() == level.medals_won
 		and level.hud.end_message.text.contains("+%d insignes" % level.medals_won), "victoire : des insignes, annoncés à l'écran de fin")
 	level.hud.box_button.pressed.emit()
@@ -4830,8 +5086,10 @@ func _test_world_levels_balance() -> void:
 func _grant_campaign_perks(path: String) -> void:
 	Progress.reset_campaign()
 	var campaign: Campaign = load("res://resources/campaign.tres")
+	# 3 étoiles en Moyen seulement (sans celles qu'elles donnent en Facile) : le budget
+	# d'étoiles sur lequel l'équilibrage a été réglé.
 	for i in campaign.levels.find(path):
-		Progress.record_victory(campaign.levels[i], 3)
+		Progress.set_value(Progress.stars_section(Difficulty.MOYEN), campaign.levels[i], 3)
 	# Un joueur de la campagne laisse de côté la page Logistique (bonus de la Conquête).
 	var logistics := Perks.TREE.page_names.find("Logistique")
 	while true:
@@ -5281,8 +5539,7 @@ func _test_conquest_buildings() -> void:
 	await _step()
 	_check(level.get_soldiers().size() == Building.BARRACKS_SOLDIERS, "la Caserne bâtie envoie ses soldats")
 	conquest.sell_building(barracks)
-	for soldier in level.get_soldiers():
-		soldier.despawn()
+	_check(level.get_soldiers().is_empty(), "les soldats partent avec la Caserne démolie")
 	# Barricade : les monstres au sol s'y arrêtent et la frappent.
 	var barricade := conquest.place_building(path_cell, K.BARRICADE)
 	_finish_building(barricade)
@@ -5595,8 +5852,11 @@ func _test_conquest_workshop() -> void:
 	_check(conquest.research_blocker(workshop, Research.TOWER_FIRE_RATE) == "Niveau maximum", "une amélioration s'arrête à son niveau maximum")
 	gold = level.gold
 	var stone := conquest.stone
-	conquest.start_research(workshop, Research.WORKER_TOOLS)
 	var refund := conquest.get_building_refund(workshop)
+	conquest.start_research(workshop, Research.WORKER_TOOLS)
+	var shown := conquest.get_building_refund(workshop)
+	var research_cost := Research.get_cost(Research.WORKER_TOOLS, workshop.research_level)
+	_check(shown.gold == refund.gold + research_cost.gold, "le bouton Démolir annonce aussi la recherche rendue")
 	conquest.sell_building(workshop)
 	_check(level.gold == gold + refund.gold and conquest.stone == stone + refund.stone, "démoli en pleine recherche, l'Atelier la rend")
 	await _free(level)
@@ -5742,7 +6002,9 @@ func _test_logistics() -> void:
 	var page := tree.page_names.find("Logistique")
 	_check(page >= 0 and tree.get_page_perks(page).all(func(p: Perk) -> bool: return not p.paid_with_endless_stars),
 		"la page Logistique se paie en étoiles")
+	# La page coûte plus que les étoiles de la Conquête : les niveaux libres complètent.
 	_win_in_all_difficulties(ConquestLevels.LEVELS)
+	_win_in_all_difficulties(FreeLevels.LEVELS)
 	for perk in tree.get_page_perks(page):
 		_check(Perks.buy(perk), "achat : %s" % perk.display_name)
 	var level := await _spawn_level(CONQUEST_01)
@@ -5814,7 +6076,7 @@ func _test_conquest_progress() -> void:
 	level.stats.stone_mined = 2000
 	level._end_game(true)
 	_check(Progress.get_stars(ConquestLevels.LEVELS[0]) == 3 and ConquestLevels.is_unlocked(1)
-		and Perks.get_earned_stars() == stars_before + 3, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
+		and Perks.get_earned_stars() == stars_before + 6, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
 	_check(Achievements.is_unlocked("premiere_pierre") and Achievements.is_unlocked("securite")
 		and Achievements.is_unlocked("carrier") and not Achievements.is_unlocked("conquerant"),
 		"succès de la Conquête débloqués")
@@ -6209,6 +6471,6 @@ func _test_free_levels_progress() -> void:
 	_check(level.get_next_level() == FreeLevels.LEVELS[1], "le niveau suivant est le deuxième niveau libre")
 	level._end_game(true)
 	_check(Progress.get_stars(FreeLevels.LEVELS[0]) == 3 and FreeLevels.is_unlocked(1)
-		and Perks.get_earned_stars() == stars_before + 3, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
+		and Perks.get_earned_stars() == stars_before + 6, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
 	await _free(level)
 	Progress.reset_campaign()

@@ -26,14 +26,14 @@ point_count = 10
 [sub_resource type="Resource" id="Group_w1_1"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_soldat")
-count = 30
+count = 18
 interval = 0.7
 start_delay = 0.0
 
 [sub_resource type="Resource" id="Group_w1_2"]
 script = ExtResource("4_spawn_group")
 enemy = ExtResource("e_eclaireur")
-count = 20
+count = 12
 interval = 0.35
 start_delay = 4.0
 

@@ -71,8 +71,8 @@ msgstr "Erase"
 msgid "Annuler"
 msgstr "Cancel"
 
-msgid "Les étoiles de tous les niveaux et les améliorations achetées seront perdues, et seul le premier niveau de La Ruche restera débloqué."
-msgstr "The stars of every level and all purchased upgrades will be lost, and only the first level of The Hive will remain unlocked."
+msgid "Les étoiles et les crânes de tous les niveaux, les améliorations achetées, l'équipement, les niveaux des tours et les records seront perdus, et seul le premier niveau de La Ruche restera débloqué. Les succès et les réglages sont gardés."
+msgstr "The stars and skulls of every level, all purchased upgrades, equipment, tower levels and records will be lost, and only the first level of The Hive will remain unlocked. Achievements and settings are kept."
 
 msgid "Code Konami : tout est débloqué !"
 msgstr "Konami code: everything is unlocked!"
@@ -1043,8 +1043,14 @@ msgstr "Recruit · %d gold (R)"
 msgid "Vague dans %d s"
 msgstr "Wave in %d s"
 
-msgid "Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte la prime habituelle."
-msgstr "Waves start on their own when the countdown ends. Sending them early earns the usual bonus."
+msgid "Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte une prime, d'autant plus grande qu'il reste de temps."
+msgstr "Waves start on their own when the countdown ends. Sending them early earns a bonus, bigger the more time is left."
+
+msgid "Lancer la vague tôt rapporte une prime, d'autant plus grande qu'on la lance tôt."
+msgstr "Sending the wave early earns a bonus: the earlier, the bigger."
+
+msgid "Les vagues partent seules : %d s avant la première, puis %d s après chacune."
+msgstr "Waves start on their own: %d s before the first one, then %d s after each one."
 
 msgid "%s  ·  Mode infini"
 msgstr "%s  ·  Endless mode"
@@ -1963,6 +1969,9 @@ msgstr "•  [b]%s[/b]: %s"
 msgid "•  [b]Sans l'arbre des améliorations[/b] : tout le monde joue avec les mêmes tours et les mêmes prix."
 msgstr "•  [b]No upgrade tree[/b]: everyone plays with the same towers and the same prices."
 
+msgid "•  [b]Récompense[/b] : le défi réussi donne %s pour l'arbre des améliorations (une fois par jour)."
+msgstr "•  [b]Reward[/b]: winning the challenge gives %s for the upgrade tree (once a day)."
+
 msgid "Meilleur score aujourd'hui : %d"
 msgstr "Today's best score: %d"
 
@@ -2194,8 +2203,8 @@ msgstr "The next wave brings [b]Hornets[/b]: these flying monsters fly over the 
 msgid "La prochaine vague amène des [b]Frelons[/b] : ces volants survolent le chemin en coupant les virages, et certaines tours ne tirent pas en l'air. Posez une [b]Mitrailleuse[/b] près de la sortie."
 msgstr "The next wave brings [b]Hornets[/b]: these flying monsters fly over the path, cutting the corners, and some towers can't shoot at the air. Place a [b]Gatling[/b] near the exit."
 
-msgid "Lancez la vague suivante. Astuce : la lancer avant que la carte soit vide rapporte une prime, affichée sous l'encadré."
-msgstr "Send the next wave. Tip: sending it before the map is clear earns a bonus, shown under the box."
+msgid "Lancez la vague suivante. Astuce : la lancer tôt rapporte une prime, affichée sous l'encadré, d'autant plus grande qu'on la lance tôt."
+msgstr "Send the next wave. Tip: sending it early earns a bonus, shown under the box, and the earlier, the bigger."
 
 msgid "Pendant une vague, [b]Pause[/b] (Espace) fige le jeu sans vous empêcher de construire, et [b]x2[/b], [b]x3[/b] (touche V) l'accélèrent."
 msgstr "During a wave, [b]Pause[/b] (Space) freezes the game but still lets you build, and [b]x2[/b], [b]x3[/b] (V key) speed it up."
@@ -2325,8 +2334,8 @@ msgstr "Houses to build far from HQ, and fast Marauders to burn them down."
 msgid "Les Catacombes"
 msgstr "The Catacombs"
 
-msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la première vague."
-msgstr "Two paths of undead and Grave Robbers from the very first wave."
+msgid "Deux chemins de morts-vivants et des Pilleurs de tombes dès la deuxième vague."
+msgstr "Two paths of undead and Grave Robbers from the second wave on."
 
 msgid "Le Nid de la Reine"
 msgstr "The Queen's Nest"
@@ -3136,8 +3145,8 @@ msgstr "%d spent"
 msgid "Crânes gagnés : mode infini %d  ·  mutateurs %d"
 msgstr "Skulls earned: endless mode %d  ·  mutators %d"
 
-msgid "Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d"
-msgstr "Stars earned: campaign %d  ·  Conquest %d  ·  free levels %d"
+msgid "Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d  ·  défis du jour %d"
+msgstr "Stars earned: campaign %d  ·  Conquest %d  ·  free levels %d  ·  daily challenges %d"
 
 msgid "Niveau 1-8"
 msgstr "Level 1-8"
@@ -3613,6 +3622,9 @@ msgstr "Level %d milestone: %s"
 msgid "Premier défi réussi aujourd'hui : +%d insignes ❖ !"
 msgstr "First challenge won today: +%d insignia ❖!"
 
+msgid "+%d ★ à dépenser dans l'arbre des améliorations."
+msgstr "+%d ★ to spend in the upgrade tree."
+
 msgid "+%d insignes ❖ à dépenser dans l'Armurerie."
 msgstr "+%d insignia ❖ to spend in the Armory."
 
@@ -3639,3 +3651,162 @@ msgstr "Already won"
 
 msgid "Déjà gagné aujourd'hui, revenez demain pour un nouveau défi."
 msgstr "Already won today, come back tomorrow for a new challenge."
+
+msgid "Aussi gagné à ★★★ en %s."
+msgstr "Also won with ★★★ on %s."
+
+msgid "+%d coffrets en plus dans l'Armurerie."
+msgstr "+%d extra crates in the Armory."
+
+msgid "+1 coffret en plus dans l'Armurerie."
+msgstr "+1 extra crate in the Armory."
+
+msgid "%s maîtrisé à 100 %% ! %s s'ouvre dans Améliorations (Maîtrise)."
+msgstr "%s mastered at 100%%! %s is now available in Upgrades (Mastery)."
+
+msgid "Achève"
+msgstr "Executes"
+
+msgid "un ennemi (hors boss) sous %d %% de sa vie"
+msgstr "an enemy (not a boss) under %d%% of its health"
+
+msgid "[color=%s]Tour de maîtrise : finir %s à 100 %% (toutes les étoiles de toutes les difficultés), puis l'acheter dans l'arbre des améliorations (Maîtrise, ★ %d).[/color]"
+msgstr "[color=%s]Mastery tower: finish %s at 100%% (every star in every difficulty), then buy it in the upgrade tree (Mastery, ★ %d).[/color]"
+
+msgid "[color=%s]Amélioration « %s » (★ %d) : %s[/color]"
+msgstr "[color=%s]Upgrade \"%s\" (★ %d): %s[/color]"
+
+msgid "Tour de maîtrise"
+msgstr "Mastery tower"
+
+msgid "%s : s'ouvre dans l'arbre des améliorations quand le monde est fini à 100 %%."
+msgstr "%s: opens in the upgrade tree once the world is finished at 100%%."
+
+msgid "Monde maîtrisé !"
+msgstr "World mastered!"
+
+msgid "+1 rebond"
+msgstr "+1 bounce"
+
+msgid "+%s s de brouillage"
+msgstr "+%s s of jamming"
+
+msgid "achève sous %+d %% de vie"
+msgstr "executes under %+d%% health"
+
+msgid "Finir %s à 100 %% (★ %d / %d)"
+msgstr "Finish %s at 100%% (★ %d / %d)"
+
+msgid "Verrouillé : %s, toutes les étoiles de toutes les difficultés"
+msgstr "Locked: %s, every star in every difficulty"
+
+msgid "Maîtrise"
+msgstr "Mastery"
+
+msgid "Reine-mère"
+msgstr "Queen Mother"
+
+msgid "Haut-fourneau"
+msgstr "Blast Furnace"
+
+msgid "Baliste royale"
+msgstr "Royal Ballista"
+
+msgid "Faucheuse"
+msgstr "Reaper"
+
+msgid "Tour de maîtrise de La Ruche. Lâche un essaim de dards qui saute d'ennemi en ennemi (5 sauts, presque sans perdre de force) : chaque piqûre empoisonne et ralentit."
+msgstr "Mastery tower of The Hive. Releases a swarm of stingers that jumps from enemy to enemy (5 jumps, losing almost no strength): every sting poisons and slows."
+
+msgid "Tour de maîtrise de La Fonderie. Projette une coulée de métal en fusion qui éclabousse le chemin : elle fond l'armure et les boucliers d'énergie, qu'elle empêche de se recharger, et brûle tout ce qu'elle touche."
+msgstr "Mastery tower of The Foundry. Hurls a stream of molten metal that splashes the path: it melts armor and energy shields, stops them from recharging, and burns everything it hits."
+
+msgid "Tour de maîtrise de La Cité. Son carreau traverse toute la file jusqu'au bout de sa portée, repousse les ennemis touchés et les empêche d'être soignés ou de soigner. Elle vise les soigneurs en premier."
+msgstr "Mastery tower of The City. Its bolt goes through the whole line up to the end of its range, pushes back the enemies it hits and stops them from being healed or healing. It targets healers first."
+
+msgid "Tour de maîtrise de La Nécropole. Un rayon d'âmes qui chauffe sur sa cible et la consacre : elle ne peut plus se relever ni être soignée. Un ennemi qui n'est pas un boss et tombe sous 12 % de sa vie est fauché sur le coup."
+msgstr "Mastery tower of The Necropolis. A beam of souls that heats up on its target and consecrates it: it can no longer rise again or be healed. An enemy that is not a boss and drops under 12% of its health is reaped on the spot."
+
+msgid "Nouvelle tour de maîtrise : un essaim de dards qui saute 5 fois d'ennemi en ennemi, empoisonne et ralentit."
+msgstr "New mastery tower: a swarm of stingers that jumps 5 times from enemy to enemy, poisons and slows."
+
+msgid "Nouvelle tour de maîtrise : une coulée de métal en fusion qui fond l'armure et les boucliers d'énergie, et brûle."
+msgstr "New mastery tower: a stream of molten metal that melts armor and energy shields, and burns."
+
+msgid "Nouvelle tour de maîtrise : un carreau qui traverse toute la file, repousse et empêche les soins. Elle vise les soigneurs en premier."
+msgstr "New mastery tower: a bolt that goes through the whole line, pushes back and blocks healing. It targets healers first."
+
+msgid "Nouvelle tour de maîtrise : un rayon d'âmes qui consacre sa cible, et fauche sur le coup les ennemis (hors boss) sous 12 % de leur vie."
+msgstr "New mastery tower: a beam of souls that consecrates its target, and reaps enemies (not bosses) under 12% of their health on the spot."
+
+msgid "Venin royal"
+msgstr "Royal Venom"
+
+msgid "Le poison de la Reine-mère fait 8 dégâts de plus par seconde et dure 1 s de plus."
+msgstr "The Queen Mother's poison deals 8 more damage per second and lasts 1 s longer."
+
+msgid "Essaimage"
+msgstr "Swarming"
+
+msgid "Les dards de la Reine-mère sautent sur 2 ennemis de plus."
+msgstr "The Queen Mother's stingers jump to 2 more enemies."
+
+msgid "Nuée"
+msgstr "Cloud of Wings"
+
+msgid "La Reine-mère pique 25 % plus vite, et ses piqûres ralentissent davantage."
+msgstr "The Queen Mother stings 25% faster, and her stings slow more."
+
+msgid "Creuset"
+msgstr "Crucible"
+
+msgid "Les coulées du Haut-fourneau éclaboussent 30 % plus large."
+msgstr "The Blast Furnace's streams splash 30% wider."
+
+msgid "Scories"
+msgstr "Slag"
+
+msgid "Les boucliers touchés par le Haut-fourneau restent brouillés 3 s de plus."
+msgstr "Shields hit by the Blast Furnace stay jammed 3 s longer."
+
+msgid "Fonte vive"
+msgstr "Live Cast"
+
+msgid "Le Haut-fourneau fait 30 % de dégâts en plus, et sa brûlure 10 de plus par seconde."
+msgstr "The Blast Furnace deals 30% more damage, and its burn 10 more per second."
+
+msgid "Carreaux lestés"
+msgstr "Weighted Bolts"
+
+msgid "Les carreaux de la Baliste royale repoussent 60 % plus loin."
+msgstr "The Royal Ballista's bolts push back 60% further."
+
+msgid "Pointes barbelées"
+msgstr "Barbed Tips"
+
+msgid "Un ennemi touché par la Baliste royale ne peut plus être soigné pendant 3 s de plus."
+msgstr "An enemy hit by the Royal Ballista can't be healed for 3 s longer."
+
+msgid "Tir royal"
+msgstr "Royal Shot"
+
+msgid "La Baliste royale fait 30 % de dégâts en plus et tire 15 % plus loin."
+msgstr "The Royal Ballista deals 30% more damage and shoots 15% further."
+
+msgid "Moisson"
+msgstr "Harvest"
+
+msgid "La Faucheuse fauche les ennemis sous 6 % de vie de plus."
+msgstr "The Reaper reaps enemies under 6% more health."
+
+msgid "Linceul"
+msgstr "Shroud"
+
+msgid "La Faucheuse consacre 4 s de plus, et son rayon ralentit de 30 %."
+msgstr "The Reaper consecrates 4 s longer, and its beam slows by 30%."
+
+msgid "Ange de la mort"
+msgstr "Angel of Death"
+
+msgid "Le rayon de la Faucheuse chauffe 40 % plus fort et porte 10 % plus loin."
+msgstr "The Reaper's beam heats up 40% more and reaches 10% further."

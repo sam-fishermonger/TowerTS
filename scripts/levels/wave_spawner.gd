@@ -116,7 +116,7 @@ func start_next_wave() -> void:
 	for group in wave.groups:
 		for i in group.count:
 			_queue.append({"time": group.start_delay + i * group.interval, "group": group,
-				"health": wave.health_multiplier * group.health_multiplier})
+				"health": wave.health_multiplier * group.health_multiplier, "wave_health": wave.health_multiplier})
 	_queue.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.time < b.time)
 	if carriers:
 		_pick_carriers(current_wave)
@@ -130,8 +130,10 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 	while not _queue.is_empty() and _queue[0].time <= _elapsed:
 		var entry: Dictionary = _queue.pop_front()
-		spawn(entry.group.get_enemy(), map.get_enemy_path(entry.group.path_index), 0.0,
+		var enemy := spawn(entry.group.get_enemy(), map.get_enemy_path(entry.group.path_index), 0.0,
 			entry.health * (Enemy.CARRIER_HEALTH if entry.has("carried") else 1.0), 1.0, -1, null, entry.get("carried", -1))
+		enemy.offspring_health_multiplier = entry.health
+		enemy.summon_health_multiplier = entry.wave_health
 	if _queue.is_empty():
 		is_spawning = false
 		wave_spawning_finished.emit(current_wave)

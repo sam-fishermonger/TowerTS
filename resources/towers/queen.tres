@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="TowerData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tower_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/towers/arc_tower.tscn" id="2_scene"]
+[ext_resource type="Script" path="res://scripts/data/tower_upgrade.gd" id="4_upgrade"]
+[ext_resource type="AudioStream" path="res://assets/audio/arc_zap.ogg" id="9_sound"]
+[ext_resource type="Texture2D" path="res://assets/sprites/towers/queen.svg" id="10_turret"]
+
+[sub_resource type="Resource" id="Upgrade_1"]
+script = ExtResource("4_upgrade")
+cost = 130
+damage_multiplier = 1.3
+chain_count_bonus = 1
+
+[sub_resource type="Resource" id="Upgrade_2"]
+script = ExtResource("4_upgrade")
+cost = 190
+damage_multiplier = 1.3
+range_multiplier = 1.1
+fire_rate_multiplier = 1.2
+chain_count_bonus = 2
+
+[resource]
+script = ExtResource("1_data")
+display_name = "Reine-mère"
+description = "Tour de maîtrise de La Ruche. Lâche un essaim de dards qui saute d'ennemi en ennemi (5 sauts, presque sans perdre de force) : chaque piqûre empoisonne et ralentit."
+cost = 200
+scene = ExtResource("2_scene")
+attack_range = 160.0
+damage = 26.0
+fire_rate = 0.9
+color = Color(0.95, 0.7, 0.2, 1)
+turret_texture = ExtResource("10_turret")
+attack_sound = ExtResource("9_sound")
+slow_factor = 0.75
+slow_duration = 1.0
+dot_damage = 8.0
+dot_duration = 3.0
+dot_is_poison = true
+chain_count = 5
+chain_range = 120.0
+chain_falloff = 0.9
+upgrades = Array[ExtResource("4_upgrade")]([SubResource("Upgrade_1"), SubResource("Upgrade_2")])

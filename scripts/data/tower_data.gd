@@ -75,6 +75,9 @@ var _hits := 0
 ## Consécration : un ennemi touché ne peut plus se relever (EnemyData.revive_count)
 ## pendant ce nombre de secondes.
 @export var revive_block_duration := 0.0
+## Achèvement : un monstre qui n'est pas un boss et dont la vie tombe sous cette part de
+## sa vie maximale après un coup meurt sur le coup (0.12 = 12 % ; 0 = jamais).
+@export_range(0.0, 0.5) var execute_threshold := 0.0
 
 @export_group("Nuage")
 ## Rayon du nuage laissé à l'impact (tours à projectile de nuage).
@@ -189,7 +192,8 @@ func scale_stats(damage_multiplier: float, range_multiplier: float, fire_rate_mu
 	attack_range *= range_multiplier
 	detection_range *= range_multiplier
 	fire_rate *= fire_rate_multiplier
-	if slow_factor < 1.0:
+	# Un étourdissement (Cloche : facteur 0) n'est pas un ralentissement : il ne s'allonge pas.
+	if slow_factor < 1.0 and slow_factor > 0.0:
 		slow_duration += slow_duration_bonus
 
 

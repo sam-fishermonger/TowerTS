@@ -12,6 +12,9 @@ const MUTED := Color(1, 1, 1, 0.6)
 const MAX_BOXES_SHOWN := 8
 ## Boutons de fusion, par rareté (Légendaire ne se fond pas).
 const MERGE_TEXTS: Array[String] = ["Fondre 3 communs", "Fondre 3 rares", "Fondre 3 épiques"]
+## Glissé (en pixels) avant qu'un doigt posé sur une liste la fasse défiler : en dessous,
+## c'est un appui sur le bouton touché.
+const SCROLL_DEADZONE := 16
 
 ## Type de tour choisi (chemin de sa TowerData).
 var selected_tower := ""
@@ -178,9 +181,7 @@ func _build() -> void:
 	var towers_column := VBoxContainer.new()
 	towers_panel.add_child(towers_column)
 	towers_column.add_child(_label("Tours", 20, UiStyle.ACCENT))
-	var towers_scroll := ScrollContainer.new()
-	towers_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	towers_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var towers_scroll := _scroll()
 	towers_column.add_child(towers_scroll)
 	_tower_list = VBoxContainer.new()
 	_tower_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -291,9 +292,7 @@ func _build() -> void:
 	inventory_panel.add_child(inventory_column)
 	inventory_label = _label("", 20, UiStyle.ACCENT)
 	inventory_column.add_child(inventory_label)
-	var inventory_scroll := ScrollContainer.new()
-	inventory_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	inventory_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var inventory_scroll := _scroll()
 	inventory_column.add_child(inventory_scroll)
 	_inventory_grid = GridContainer.new()
 	_inventory_grid.columns = 2
@@ -562,11 +561,24 @@ func _panel(rect: Rect2, accent: Color) -> PanelContainer:
 	return panel
 
 
-## Bouton qui contient une rangée (badge, textes…) à remplir.
+## Liste verticale qui défile à la molette et, sur écran tactile, au doigt.
+func _scroll() -> ScrollContainer:
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.scroll_deadzone = SCROLL_DEADZONE
+	return scroll
+
+
+## Bouton qui contient une rangée (badge, textes…) à remplir. Il laisse passer l'appui à
+## la liste qui le contient (MOUSE_FILTER_PASS) : sans ça, un doigt posé sur un bouton ne
+## fait pas défiler la liste. Le bouton reste pressé par un simple appui, et un glissé
+## qui fait défiler la liste annule l'appui (NOTIFICATION_SCROLL_BEGIN).
 func _row_button(height: float) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size.y = height
 	button.clip_contents = true
+	button.mouse_filter = Control.MOUSE_FILTER_PASS
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE

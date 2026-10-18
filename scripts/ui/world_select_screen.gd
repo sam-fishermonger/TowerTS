@@ -136,7 +136,8 @@ func _build_difficulty_buttons() -> void:
 		button.add_theme_font_size_override(&"font_size", 18)
 		for color_name in [&"font_pressed_color", &"font_hover_pressed_color"]:
 			button.add_theme_color_override(color_name, Difficulty.COLORS[d])
-		button.tooltip_text = "%s %s" % [Difficulty.describe(d), Difficulty.describe_tower_limit(d)]
+		button.tooltip_text = "%s %s" % [Difficulty.describe(d), Difficulty.describe_tower_limit(d)
+			+ Difficulty.describe_wave_timer(d)]
 		button.pressed.connect(set_difficulty.bind(d))
 		difficulty_bar.add_child(button)
 
@@ -149,7 +150,8 @@ func _refresh() -> void:
 			% [Progress.ENDLESS_STAR_STEP, Progress.ENDLESS_MAX_STARS]
 	else:
 		mode_hint.text = tr("%s : %s %s Chaque difficulté a ses propres étoiles (3 par niveau). Gagner un niveau avec 3 étoiles ouvre son mode infini.") \
-			% [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty), Difficulty.describe_tower_limit(difficulty)]
+			% [tr(Difficulty.NAMES[difficulty]), Difficulty.describe(difficulty), Difficulty.describe_tower_limit(difficulty)
+				+ Difficulty.describe_wave_timer(difficulty)]
 		var mutators := Mutators.get_active()
 		if not mutators.is_empty():
 			mode_hint.text += "\n" + tr("✦ Mutateurs sur les niveaux déjà gagnés : %s (☠ %d par victoire).") \
