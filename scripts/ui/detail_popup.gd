@@ -51,6 +51,8 @@ func show_text(bbcode: String, anchor_rect: Rect2, border_color := Color(0.5, 0.
 		_label.text = bbcode
 		reset_size()
 		reset_size.call_deferred()
+	if not visible:
+		UiMotion.fade_in(self, 0.12)
 	visible = true
 	_reposition()
 

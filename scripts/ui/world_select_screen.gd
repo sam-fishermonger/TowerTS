@@ -196,6 +196,8 @@ func _make_card(world_index: int) -> Control:
 	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var style := UiStyle.panel(world.color if unlocked else world.color.darkened(0.6), 16.0, SIDE_TOP)
 	card.add_theme_stylebox_override(&"panel", style)
+	if unlocked:
+		UiMotion.glow_on_hover(card, style, world.color)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 8)

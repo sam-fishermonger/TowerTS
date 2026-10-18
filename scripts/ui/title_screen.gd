@@ -16,9 +16,8 @@ const LEVEL_EDITOR := "res://scenes/ui/level_editor.tscn"
 const ACHIEVEMENTS_SCREEN := "res://scenes/ui/achievements_screen.tscn"
 
 const CAMPAIGN: Campaign = preload("res://resources/campaign.tres")
-## Agrandissement d'un bouton survolé ou qui a le focus.
+## Agrandissement d'un bouton survolé ou qui a le focus (plus que l'effet commun, UiMotion).
 const BUTTON_HOVER_SCALE := 1.06
-const BUTTON_HOVER_DURATION := 0.12
 ## Apparition du menu : le panneau, puis les boutons l'un après l'autre.
 const INTRO_DURATION := 0.5
 const INTRO_STAGGER := 0.06
@@ -106,7 +105,9 @@ func _ready() -> void:
 		_on_demo_level_started(demo.level)
 	for button in [resume_button, play_button, campaign_button, tutorial_button, worlds_button, daily_button, conquest_button, free_button,
 			expedition_button, editor_button, back_button, perks_button, armory_button, lexicon_button, achievements_button, options_button, quit_button]:
-		_add_hover_effect(button)
+		button.set_meta(UiMotion.HOVER_SCALE_META, BUTTON_HOVER_SCALE)
+	# L'écran joue sa propre apparition (_play_intro) : UiMotion ne fait que lever le voile.
+	set_meta(UiMotion.OWN_INTRO_META, true)
 	_play_intro()
 	(resume_button if resume_button.visible else play_button).grab_focus()
 
@@ -263,6 +264,7 @@ func open_options() -> OptionsMenu:
 	var options := OptionsMenu.new()
 	options.closed.connect(options_button.grab_focus)
 	add_child(options)
+	UiMotion.open_overlay(options)
 	return options
 
 
@@ -365,18 +367,6 @@ func _play_intro() -> void:
 		row.modulate.a = 0.0
 		tween.tween_property(row, "modulate:a", 1.0, INTRO_DURATION * 0.6) \
 			.set_delay(INTRO_DURATION * 0.3 + i * INTRO_STAGGER)
-
-
-## Le bouton grossit un peu quand la souris le survole ou qu'il a le focus (clavier, manette).
-func _add_hover_effect(button: Button) -> void:
-	var grow := func(target_scale: float) -> void:
-		button.pivot_offset = button.size / 2.0
-		button.create_tween().tween_property(button, "scale", Vector2.ONE * target_scale,
-			BUTTON_HOVER_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	button.mouse_entered.connect(grow.bind(BUTTON_HOVER_SCALE))
-	button.focus_entered.connect(grow.bind(BUTTON_HOVER_SCALE))
-	button.mouse_exited.connect(func() -> void: grow.call(BUTTON_HOVER_SCALE if button.has_focus() else 1.0))
-	button.focus_exited.connect(grow.bind(1.0))
 
 
 func _on_demo_level_started(level: Level) -> void:

@@ -27,6 +27,12 @@ const FOCUS_COLOR := Color(1.0, 0.75, 0.2)
 const BUTTON_SKEW := 0.18
 ## Épaisseur du liseré d'accent, à gauche des boutons et sur un bord des panneaux.
 const EDGE_WIDTH := 4
+## Ombre portée des panneaux : elle les détache de la carte et du fond.
+const PANEL_SHADOW := Color(0, 0, 0, 0.35)
+const PANEL_SHADOW_SIZE := 8
+## Halo des boutons survolés et enfoncés, de la couleur de leur accent (opacité, taille).
+const GLOW_ALPHA := 0.35
+const GLOW_SIZE := 9
 
 const TEXT_FONT: Font = preload("res://assets/fonts/police_interface.tres")
 const TITLE_FONT: Font = preload("res://assets/fonts/police_titres.tres")
@@ -68,6 +74,9 @@ static func panel(accent := Color(ACCENT, 0.6), margin := 14.0, edge := SIDE_LEF
 	style.set_border_width_all(1)
 	style.set_border_width(edge, EDGE_WIDTH)
 	style.set_content_margin_all(margin)
+	style.shadow_color = PANEL_SHADOW
+	style.shadow_size = PANEL_SHADOW_SIZE
+	style.shadow_offset = Vector2(0, 3)
 	return style
 
 
@@ -88,18 +97,29 @@ static func button_styles(accent := ACCENT, margin_left := 18.0, margin_right :=
 	normal.content_margin_top = 4
 	normal.content_margin_bottom = 4
 	normal.anti_aliasing = true
+	normal.shadow_color = Color(0, 0, 0, 0.3)
+	normal.shadow_size = 4
+	normal.shadow_offset = Vector2(0, 2)
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = BUTTON_HOVER_COLOR
 	hover.border_color = accent
+	hover.shadow_color = Color(accent, GLOW_ALPHA)
+	hover.shadow_size = GLOW_SIZE
+	hover.shadow_offset = Vector2.ZERO
 	var pressed := normal.duplicate() as StyleBoxFlat
 	# Fond teinté mais sombre : les textes colorés (tours, difficultés) restent lisibles.
 	pressed.bg_color = accent.darkened(0.5)
 	pressed.border_color = accent.lightened(0.4)
+	pressed.shadow_color = Color(accent, GLOW_ALPHA * 1.3)
+	pressed.shadow_size = GLOW_SIZE
+	pressed.shadow_offset = Vector2.ZERO
 	var disabled := normal.duplicate() as StyleBoxFlat
 	disabled.bg_color = BUTTON_DISABLED_COLOR
 	disabled.border_color = Color(1, 1, 1, 0.12)
+	disabled.shadow_size = 0
 	var focus := normal.duplicate() as StyleBoxFlat
 	focus.draw_center = false
+	focus.shadow_size = 0
 	focus.border_color = FOCUS_COLOR
 	focus.set_border_width_all(2)
 	return {
@@ -188,9 +208,13 @@ static func build_theme() -> Theme:
 	theme.set_color(&"font_color", &"Label", TEXT_COLOR)
 	theme.set_type_variation(TITLE_VARIATION, &"Label")
 	theme.set_font(&"font", TITLE_VARIATION, TITLE_FONT)
-	theme.set_color(&"font_shadow_color", TITLE_VARIATION, Color(0, 0, 0, 0.6))
-	theme.set_constant(&"shadow_offset_x", TITLE_VARIATION, 3)
-	theme.set_constant(&"shadow_offset_y", TITLE_VARIATION, 3)
+	# Contour sombre et halo d'accent derrière les lettres (l'ombre, sans décalage, élargie).
+	theme.set_color(&"font_outline_color", TITLE_VARIATION, Color(0.01, 0.04, 0.06))
+	theme.set_constant(&"outline_size", TITLE_VARIATION, 6)
+	theme.set_color(&"font_shadow_color", TITLE_VARIATION, Color(ACCENT, 0.3))
+	theme.set_constant(&"shadow_offset_x", TITLE_VARIATION, 0)
+	theme.set_constant(&"shadow_offset_y", TITLE_VARIATION, 2)
+	theme.set_constant(&"shadow_outline_size", TITLE_VARIATION, 14)
 	theme.set_color(&"default_color", &"RichTextLabel", TEXT_COLOR)
 	theme.set_stylebox(&"background", &"ProgressBar", bar_background())
 	theme.set_stylebox(&"fill", &"ProgressBar", bar_fill())

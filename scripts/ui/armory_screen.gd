@@ -111,6 +111,7 @@ func open_box() -> Dictionary:
 		_reveal.modulate = Equipment.rarity_color(last_opened.rarity) * 2.0
 		_reveal.modulate.a = 0.0
 		create_tween().tween_property(_reveal, ^"modulate", Color.WHITE, 0.4)
+		UiMotion.pop(_reveal, 1.15, 0.45)
 	return last_opened
 
 
@@ -125,6 +126,7 @@ func level_up() -> bool:
 		status_label.text = tr("%s passe au niveau %d : palier débloqué, %s !") % [_tower_name(selected_tower),
 			level, TowerLevels.describe_tier(selected_tower, level / TowerLevels.TIER_EVERY - 1)]
 	refresh()
+	UiMotion.pop(level_label, 1.3, 0.4, Color(1.4, 1.6, 1.4))
 	return true
 
 

@@ -932,6 +932,9 @@ func _on_wave_started() -> void:
 	for tower in get_towers():
 		tower.refundable = false
 	_refresh_hud()
+	if not is_demo:
+		var has_boss := spawner.get_wave(spawner.current_wave).get_summary().any(func(entry: Dictionary) -> bool: return entry.enemy.is_boss)
+		hud.announce_wave(spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count(), has_boss)
 
 
 func can_start_next_wave() -> bool:

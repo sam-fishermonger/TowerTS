@@ -912,6 +912,15 @@ msgstr "Sending it now earns %d gold"
 msgid "Vague %d"
 msgstr "Wave %d"
 
+msgid "Vague %d / %d"
+msgstr "Wave %d / %d"
+
+msgid "Dernière vague !"
+msgstr "Final wave!"
+
+msgid "Boss en approche !"
+msgstr "Boss incoming!"
+
 msgid "Bonus : +%d or"
 msgstr "Bonus: +%d gold"
 

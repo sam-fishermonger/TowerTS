@@ -110,6 +110,7 @@ func _card(definition: Dictionary) -> PanelContainer:
 	var style := UiStyle.panel(Color(color, 0.9 if unlocked else 0.35), 10.0)
 	if unlocked:
 		style.bg_color = Color(0.1, 0.1, 0.07, 0.95)
+		UiMotion.glow_on_hover(card, style, color)
 	card.add_theme_stylebox_override(&"panel", style)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 12)
