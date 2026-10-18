@@ -1233,15 +1233,20 @@ func _end_game(victory: bool) -> void:
 		hud.show_end_screen(victory, victory and has_next_level(), get_stars() if victory else 0)
 	elif conquest and victory:
 		var stars_won := get_stars()
+		var cascaded := Progress.get_cascaded_difficulties(scene_file_path, stars_won, difficulty)
+		var first_wins := cascaded.filter(func(d: int) -> bool: return Progress.get_stars(scene_file_path, d) == 0)
 		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		_announce_achievements(Achievements.on_conquest_victory(stats, difficulty))
 		hud.show_end_screen(true, has_next_level(), stars_won, new_record)
-		_reward_medals()
+		_reward_medals(first_wins)
+		_reward_cascade(cascaded, first_wins)
 		_roll_equipment_box(first_win)
 	elif victory and not is_endless:
 		var stars_won := get_stars()
 		var won_before := Unlocks.get_levels_won()
+		var cascaded := Progress.get_cascaded_difficulties(scene_file_path, stars_won, difficulty)
+		var first_wins := cascaded.filter(func(d: int) -> bool: return Progress.get_stars(scene_file_path, d) == 0)
 		var first_win := Progress.get_stars(scene_file_path, difficulty) == 0
 		var new_record := Progress.record_victory(scene_file_path, stars_won, difficulty)
 		var unlocked := Unlocks.unlocked_between(won_before, Unlocks.get_levels_won())
@@ -1253,7 +1258,8 @@ func _end_game(victory: bool) -> void:
 			hud.show_mutator_result(Mutators.stars_for(mutators), before)
 		if not unlocked.is_empty():
 			hud.show_unlocked_features(unlocked)
-		_reward_medals()
+		_reward_medals(first_wins)
+		_reward_cascade(cascaded, first_wins)
 		_roll_equipment_box(first_win)
 	elif is_endless:
 		# Le record est enregistré à chaque vague : on le compare à celui d'avant la partie.
@@ -1271,8 +1277,12 @@ func _end_game(victory: bool) -> void:
 
 ## Victoire dans un mode qui donne des étoiles : des insignes pour monter le niveau des
 ## tours (TowerLevels), annoncés à l'écran de fin.
-func _reward_medals() -> void:
+## `lower_wins` : difficultés plus faciles gagnées pour la première fois par cette victoire
+## à 3 étoiles, qui donnent aussi leurs insignes.
+func _reward_medals(lower_wins: Array = []) -> void:
 	medals_won = TowerLevels.reward_victory(scene_file_path, difficulty)
+	for lower: int in lower_wins:
+		medals_won += TowerLevels.reward_victory(scene_file_path, lower)
 	if medals_won > 0:
 		hud.show_medal_result(medals_won)
 
@@ -1284,6 +1294,19 @@ func _roll_equipment_box(first_win: bool) -> void:
 	if rarity >= 0:
 		box_won = rarity
 		hud.show_box_result(rarity)
+
+
+## Victoire à 3 étoiles : les difficultés plus faciles (`cascaded`) passent aussi à 3 étoiles
+## (Progress.record_victory). Celles qui n'avaient jamais été gagnées (`first_wins`) donnent
+## aussi leur coffret de première victoire, qui attend dans l'Armurerie. Dit à l'écran de fin.
+func _reward_cascade(cascaded: Array, first_wins: Array) -> void:
+	if cascaded.is_empty():
+		return
+	var boxes := 0
+	for lower: int in first_wins:
+		if Equipment.roll_victory_box(scene_file_path, lower, true) >= 0:
+			boxes += 1
+	hud.show_cascade_result(cascaded, boxes)
 
 
 ## Fin d'une étape de l'expédition : on garde les vies pour la suivante, ou l'expédition

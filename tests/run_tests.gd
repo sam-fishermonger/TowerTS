@@ -3198,7 +3198,8 @@ func _test_endless_mode() -> void:
 	_check(level.get_waves_cleared() == count + 5 and not level.is_over, "la partie continue après les vagues du niveau")
 	_check(Progress.get_endless_waves(LEVEL_01.resource_path) == count + 5
 		and Progress.get_endless_stars(LEVEL_01.resource_path) == 1, "chaque vague repoussée compte pour le record et les étoiles")
-	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == unlock_stars + 3, "les étoiles infinies sont une monnaie à part")
+	# 3 étoiles en Moyen : 3 de plus en Facile.
+	_check(Perks.get_earned_stars(true) == 1 and Perks.get_earned_stars() == unlock_stars + 6, "les étoiles infinies sont une monnaie à part")
 	level.lives = 1
 	level._on_enemy_reached_end(_add_still_enemy(level, LARVE, 0, 0.0))
 	_check(level.is_over and level.hud.end_title.text == "Fin de la partie"
@@ -3479,13 +3480,40 @@ func _test_difficulties() -> void:
 	fresh.free()
 	level._end_game(true)
 	_check(Progress.get_stars(LEVEL_03.resource_path, Difficulty.DIFFICILE) == 3
-		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.MOYEN) == 0, "la victoire compte en Difficile seulement")
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.MOYEN) == 3
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.FACILE) == 3
+		and Progress.get_stars(LEVEL_03.resource_path, Difficulty.CAUCHEMAR) == 0,
+		"3 étoiles en Difficile comptent aussi à 3 étoiles en Moyen et en Facile, pas en Cauchemar")
+	_check("Aussi gagné à ★★★ en Facile, Moyen." in level.hud.end_message.text,
+		"l'écran de fin dit les difficultés gagnées en plus")
 	_check(Progress.is_unlocked(campaign, 3) and Progress.is_endless_unlocked(LEVEL_03.resource_path),
 		"elle débloque le niveau suivant et le mode infini")
 	await _free(level)
-	Progress.record_victory(LEVEL_03.resource_path, 2, Difficulty.FACILE)
-	_check(Progress.get_stars(LEVEL_03.resource_path) == 3 and Progress.get_total_stars(LEVEL_03.resource_path) == 5
-		and Perks.get_earned_stars() == 5, "les étoiles des difficultés s'additionnent")
+	Progress.record_victory(LEVEL_03.resource_path, 2, Difficulty.CAUCHEMAR)
+	_check(Progress.get_stars(LEVEL_03.resource_path) == 3 and Progress.get_total_stars(LEVEL_03.resource_path) == 11
+		and Perks.get_earned_stars() == 11, "les étoiles des difficultés s'additionnent")
+	var other := LEVEL_04.resource_path
+	Progress.record_victory(other, 2, Difficulty.FACILE)
+	Progress.record_victory(other, 2, Difficulty.DIFFICILE)
+	_check(Progress.get_stars(other, Difficulty.FACILE) == 2 and Progress.get_stars(other, Difficulty.MOYEN) == 0,
+		"une victoire à moins de 3 étoiles ne compte que dans sa difficulté")
+	_check(Progress.get_cascaded_difficulties(other, 3, Difficulty.CAUCHEMAR) == [Difficulty.FACILE, Difficulty.MOYEN,
+		Difficulty.DIFFICILE] and Progress.get_cascaded_difficulties(other, 2, Difficulty.CAUCHEMAR).is_empty(),
+		"seules les difficultés plus faciles sous 3 étoiles changent, et seulement à 3 étoiles")
+	Progress.record_victory(other, 3, Difficulty.CAUCHEMAR)
+	_check(Progress.get_total_stars(other) == 12, "3 étoiles en Cauchemar donnent les 3 étoiles des autres difficultés")
+	# Ancienne sauvegarde : 3 étoiles en Cauchemar seulement, corrigées à la lecture.
+	var saved := ConfigFile.new()
+	saved.load(Progress.get_save_path())
+	saved.set_value("stars_cauchemar", LEVEL_05.resource_path, 3)
+	saved.save(Progress.get_save_path())
+	Progress.clear_cache()
+	_check(Progress.get_total_stars(LEVEL_05.resource_path) == 12, "une ancienne sauvegarde reçoit les étoiles des difficultés plus faciles")
+	saved.load(Progress.get_save_path())
+	_check(saved.get_value("stars_facile", LEVEL_05.resource_path, 0) == 3, "et la correction est enregistrée")
+	for d in Difficulty.COUNT:
+		Progress.set_value(Progress.stars_section(d), other, null)
+		Progress.set_value(Progress.stars_section(d), LEVEL_05.resource_path, null)
 
 	Engine.set_meta(Level.ENDLESS_META, true)
 	level = await _spawn_level(LEVEL_03)
@@ -3504,14 +3532,14 @@ func _test_difficulties() -> void:
 	var screen := await _spawn_world_select()
 	_check(screen.difficulty_bar.visible and screen.get_difficulty_button(Difficulty.FACILE).button_pressed,
 		"la sélection des mondes montre la difficulté choisie")
-	_check(screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★☆"), "et les étoiles du niveau dans celle-ci")
+	_check(screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★★"), "et les étoiles du niveau dans celle-ci")
 	_check(screen.mode_hint.text.begins_with("Facile : Monstres"), "avec ses effets")
 	screen.get_difficulty_button(Difficulty.CAUCHEMAR).pressed.emit()
-	_check(Difficulty.get_current() == Difficulty.CAUCHEMAR and screen.get_level_button(LEVEL_03.resource_path).text.ends_with("☆☆☆"),
+	_check(Difficulty.get_current() == Difficulty.CAUCHEMAR and screen.get_level_button(LEVEL_03.resource_path).text.ends_with("★★☆"),
 		"choisir Cauchemar l'enregistre et met les boutons à jour")
 	_check(screen.get_level_button(LEVEL_03.resource_path).tooltip_text.contains("★★★  Difficile"),
 		"la bulle d'aide du niveau donne les étoiles de chaque difficulté")
-	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 6 / 108", "la carte compte les étoiles des 4 difficultés")
+	_check(screen.get_card(0).find_child("Stars", true, false).text == "★ 12 / 108", "la carte compte les étoiles des 4 difficultés")
 	screen.set_endless_mode(true)
 	_check(not screen.difficulty_bar.visible, "pas de difficulté en mode infini")
 	await _free(screen)
@@ -3565,7 +3593,7 @@ func _test_specializations() -> void:
 		"l'onglet compte les étoiles infinies")
 	_check(screen.stars_label.tooltip_text.contains("mode infini 3"), "la bulle d'aide dit d'où viennent les crânes")
 	screen.get_button(gatling).pressed.emit()
-	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 3,
+	_check(Perks.is_owned(gatling) and Perks.get_available_stars(true) == 1 and Perks.get_available_stars() == 6,
 		"Balles perforantes coûte 2 étoiles infinies, et aucune étoile des niveaux")
 	_check(GATLING.get_stats_at_level(1).armor_piercing and GATLING.get_stats_at_level(3).armor_piercing
 		and not CANNON.get_stats_at_level(1).armor_piercing, "les balles de la Mitrailleuse, et d'elle seule, ignorent l'armure")
@@ -3874,13 +3902,15 @@ func _test_equipment() -> void:
 	# Victoire : un coffret assuré la première fois dans une difficulté, annoncé à l'écran de fin.
 	level = await _spawn_level(LEVEL_01)
 	level._end_game(true)
-	_check(level.box_won >= 0 and Equipment.get_boxes().size() == 1
+	# (3 étoiles en Moyen : la première victoire en Facile donne aussi son coffret.)
+	_check(level.box_won >= 0 and Equipment.get_boxes().size() == 2
+		and level.hud.end_message.text.contains("+1 coffret en plus dans l'Armurerie.")
 		and level.hud.end_message.text.contains("obtenu ! À ouvrir ici ou dans l'Armurerie.")
 		and level.hud.box_button.visible, "première victoire : un coffret, annoncé à l'écran de fin")
 	var items_before := Equipment.get_items().size()
 	level.hud.box_button.pressed.emit()
 	var won: Dictionary = level.hud._box_item
-	_check(not won.is_empty() and won.rarity == level.box_won and Equipment.get_boxes().is_empty()
+	_check(not won.is_empty() and won.rarity == level.box_won and Equipment.get_boxes().size() == 1
 		and Equipment.get_items().size() == items_before + 1 and not level.hud.box_button.visible
 		and level.hud.box_reveal.visible and level.hud.end_message.text.contains("ouvert :"),
 		"le coffret s'ouvre sur l'écran de victoire : l'objet rejoint l'inventaire et s'affiche")
@@ -3926,7 +3956,9 @@ func _test_tower_levels() -> void:
 
 	var level := await _spawn_level(LEVEL_01)
 	level._end_game(true)
+	# 3 étoiles en Moyen : les insignes de la victoire en Facile s'ajoutent.
 	_check(level.medals_won == TowerLevels.get_victory_reward(LEVEL_01.resource_path, level.difficulty)
+			+ TowerLevels.get_victory_reward(LEVEL_01.resource_path, Difficulty.FACILE)
 		and TowerLevels.get_medals() == level.medals_won and TowerLevels.get_earned() == level.medals_won
 		and level.hud.end_message.text.contains("+%d insignes" % level.medals_won), "victoire : des insignes, annoncés à l'écran de fin")
 	level.hud.box_button.pressed.emit()
@@ -4941,8 +4973,10 @@ func _test_world_levels_balance() -> void:
 func _grant_campaign_perks(path: String) -> void:
 	Progress.reset_campaign()
 	var campaign: Campaign = load("res://resources/campaign.tres")
+	# 3 étoiles en Moyen seulement (sans celles qu'elles donnent en Facile) : le budget
+	# d'étoiles sur lequel l'équilibrage a été réglé.
 	for i in campaign.levels.find(path):
-		Progress.record_victory(campaign.levels[i], 3)
+		Progress.set_value(Progress.stars_section(Difficulty.MOYEN), campaign.levels[i], 3)
 	# Un joueur de la campagne laisse de côté la page Logistique (bonus de la Conquête).
 	var logistics := Perks.TREE.page_names.find("Logistique")
 	while true:
@@ -5927,7 +5961,7 @@ func _test_conquest_progress() -> void:
 	level.stats.stone_mined = 2000
 	level._end_game(true)
 	_check(Progress.get_stars(ConquestLevels.LEVELS[0]) == 3 and ConquestLevels.is_unlocked(1)
-		and Perks.get_earned_stars() == stars_before + 3, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
+		and Perks.get_earned_stars() == stars_before + 6, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
 	_check(Achievements.is_unlocked("premiere_pierre") and Achievements.is_unlocked("securite")
 		and Achievements.is_unlocked("carrier") and not Achievements.is_unlocked("conquerant"),
 		"succès de la Conquête débloqués")
@@ -6322,6 +6356,6 @@ func _test_free_levels_progress() -> void:
 	_check(level.get_next_level() == FreeLevels.LEVELS[1], "le niveau suivant est le deuxième niveau libre")
 	level._end_game(true)
 	_check(Progress.get_stars(FreeLevels.LEVELS[0]) == 3 and FreeLevels.is_unlocked(1)
-		and Perks.get_earned_stars() == stars_before + 3, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
+		and Perks.get_earned_stars() == stars_before + 6, "la victoire donne des étoiles, qui comptent pour l'arbre, et ouvre le niveau suivant")
 	await _free(level)
 	Progress.reset_campaign()

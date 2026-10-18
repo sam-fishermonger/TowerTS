@@ -3636,3 +3636,12 @@ msgstr "Already won"
 
 msgid "Déjà gagné aujourd'hui, revenez demain pour un nouveau défi."
 msgstr "Already won today, come back tomorrow for a new challenge."
+
+msgid "Aussi gagné à ★★★ en %s."
+msgstr "Also won with ★★★ on %s."
+
+msgid "+%d coffrets en plus dans l'Armurerie."
+msgstr "+%d extra crates in the Armory."
+
+msgid "+1 coffret en plus dans l'Armurerie."
+msgstr "+1 extra crate in the Armory."
