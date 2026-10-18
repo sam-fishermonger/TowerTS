@@ -3888,6 +3888,35 @@ func _test_equipment() -> void:
 	var item: Dictionary = armory.open_box()
 	_check(not item.is_empty() and armory.open_button.disabled and armory.item_buttons.has(item.uid),
 		"Ouvrir : l'objet rejoint l'inventaire")
+	# Sur mobile, un doigt posé sur un objet doit atteindre la liste pour la faire défiler,
+	# et un simple appui doit encore poser l'objet.
+	var first_button: Button = armory._inventory_grid.get_child(0)
+	var first_uid: int = armory.item_buttons.find_key(first_button)
+	var inventory_scroll := first_button.get_parent().get_parent() as ScrollContainer
+	var scroll_presses := [0]
+	var count_press := func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			scroll_presses[0] += 1
+	inventory_scroll.gui_input.connect(count_press)
+	var tap_at := first_button.get_global_rect().get_center()
+	var tap := InputEventMouseButton.new()
+	tap.button_index = MOUSE_BUTTON_LEFT
+	tap.position = tap_at
+	tap.global_position = tap_at
+	tap.pressed = true
+	root.push_input(tap, true)
+	var untap := tap.duplicate() as InputEventMouseButton
+	untap.pressed = false
+	root.push_input(untap, true)
+	await process_frame
+	_check(scroll_presses[0] == 1 and inventory_scroll.scroll_deadzone > 0,
+		"un appui sur un objet de l'inventaire atteint la liste (défilement au doigt)")
+	_check(not Equipment.get_tower_of(first_uid).is_empty() or not armory.status_label.text.is_empty(),
+		"un simple appui sur un objet de l'inventaire le pose (ou dit pourquoi)")
+	if Equipment.get_tower_of(first_uid) == cannon_path:
+		Equipment.unequip(first_uid)
+	armory.status_label.text = ""
+	armory.refresh()
 	armory.slot_buttons[0].pressed.emit()
 	_check(Equipment.get_equipped_uids(cannon_path).size() == 1, "un clic sur un emplacement retire son objet")
 	armory.toggle_item(reserved.uid)
