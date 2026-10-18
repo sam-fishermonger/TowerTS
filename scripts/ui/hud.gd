@@ -1265,6 +1265,7 @@ func show_medal_result(amount: int, first_daily := false) -> void:
 	_medal_result = [amount, first_daily]
 	if first_daily:
 		end_message.text += "\n" + tr("Premier défi réussi aujourd'hui : +%d insignes ❖ !") % amount
+		end_message.text += "\n" + tr("+%d ★ à dépenser dans l'arbre des améliorations.") % DailyChallenge.STARS_PER_WIN
 	else:
 		end_message.text += "\n" + tr("+%d insignes ❖ à dépenser dans l'Armurerie.") % amount
 

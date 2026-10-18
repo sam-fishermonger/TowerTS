@@ -1960,6 +1960,9 @@ msgstr "•  [b]%s[/b]: %s"
 msgid "•  [b]Sans l'arbre des améliorations[/b] : tout le monde joue avec les mêmes tours et les mêmes prix."
 msgstr "•  [b]No upgrade tree[/b]: everyone plays with the same towers and the same prices."
 
+msgid "•  [b]Récompense[/b] : le défi réussi donne %s pour l'arbre des améliorations (une fois par jour)."
+msgstr "•  [b]Reward[/b]: winning the challenge gives %s for the upgrade tree (once a day)."
+
 msgid "Meilleur score aujourd'hui : %d"
 msgstr "Today's best score: %d"
 
@@ -3133,8 +3136,8 @@ msgstr "%d spent"
 msgid "Crânes gagnés : mode infini %d  ·  mutateurs %d"
 msgstr "Skulls earned: endless mode %d  ·  mutators %d"
 
-msgid "Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d"
-msgstr "Stars earned: campaign %d  ·  Conquest %d  ·  free levels %d"
+msgid "Étoiles gagnées : campagne %d  ·  Conquête %d  ·  niveaux libres %d  ·  défis du jour %d"
+msgstr "Stars earned: campaign %d  ·  Conquest %d  ·  free levels %d  ·  daily challenges %d"
 
 msgid "Niveau 1-8"
 msgstr "Level 1-8"
@@ -3609,6 +3612,9 @@ msgstr "Level %d milestone: %s"
 
 msgid "Premier défi réussi aujourd'hui : +%d insignes ❖ !"
 msgstr "First challenge won today: +%d insignia ❖!"
+
+msgid "+%d ★ à dépenser dans l'arbre des améliorations."
+msgstr "+%d ★ to spend in the upgrade tree."
 
 msgid "+%d insignes ❖ à dépenser dans l'Armurerie."
 msgstr "+%d insignia ❖ to spend in the Armory."
