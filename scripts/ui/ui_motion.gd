@@ -5,7 +5,9 @@ extends Node
 ##   quand on appuie dessus.
 ## - À chaque changement d'écran, un voile sombre se lève et les panneaux de l'écran
 ##   apparaissent l'un après l'autre (sauf si l'écran a sa propre apparition, OWN_INTRO_META).
-## - Des effets à appeler : pop() (une valeur qui change, un panneau qui s'ouvre).
+## - Des effets à appeler : pop() (une valeur qui change), appear() (un panneau qui
+##   s'ouvre), open_overlay() (une fenêtre par-dessus l'écran), glow_on_hover() (une
+##   carte qui s'illumine au survol).
 ##
 ## Le nœud est chargé au démarrage (autoload « Animations »). Les effets jouent en temps
 ## réel : ils gardent la même durée en x3 et pendant la pause.
@@ -29,6 +31,13 @@ const CURTAIN_DURATION := 0.3
 const ENTRANCE_DURATION := 0.38
 const ENTRANCE_STAGGER := 0.06
 const ENTRANCE_SCALE := 0.96
+## Fenêtre ouverte par-dessus l'écran : le voile s'assombrit, le panneau grandit.
+const OVERLAY_DURATION := 0.22
+const OVERLAY_SCALE := 0.9
+## Halo d'une carte survolée : opacité, taille et durée.
+const CARD_GLOW_ALPHA := 0.4
+const CARD_GLOW_SIZE := 16
+const CARD_GLOW_DURATION := 0.18
 
 var _curtain: ColorRect
 
@@ -124,13 +133,58 @@ static func pop(control: Control, strength := 1.2, duration := 0.35, tint := Col
 static func appear(control: Control, delay := 0.0, duration := ENTRANCE_DURATION, from_scale := ENTRANCE_SCALE) -> void:
 	if not control.is_inside_tree():
 		return
+	# Opacité d'arrivée : celle du panneau (une carte verrouillée reste pâle), gardée en
+	# méta tant que l'apparition dure, au cas où elle serait relancée en route.
+	var alpha: float = control.get_meta(&"_ui_alpha", control.modulate.a)
+	control.set_meta(&"_ui_alpha", alpha)
 	control.pivot_offset = control.size / 2.0
 	control.scale = Vector2.ONE * from_scale
 	control.modulate.a = 0.0
 	var tween := _real_time_tween(control, &"_ui_appear_tween").set_parallel()
 	tween.tween_property(control, "scale", Vector2.ONE, duration).set_delay(delay) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(control, "modulate:a", 1.0, duration * 0.7).set_delay(delay)
+	tween.tween_property(control, "modulate:a", alpha, duration * 0.7).set_delay(delay)
+	tween.chain().tween_callback(control.remove_meta.bind(&"_ui_alpha"))
+
+
+## Le nœud passe de transparent à opaque (fenêtre de détail, voile de la pause).
+static func fade_in(control: Control, duration := 0.2) -> void:
+	if not control.is_inside_tree():
+		return
+	control.modulate.a = 0.0
+	_real_time_tween(control, &"_ui_fade_tween").tween_property(control, "modulate:a", 1.0, duration)
+
+
+## Fenêtre posée par-dessus l'écran (Options, choix des tours, coffre) : elle devient
+## opaque et son premier panneau grandit, une image après son ajout (taille connue).
+static func open_overlay(overlay: Control) -> void:
+	overlay.modulate.a = 0.0
+	await overlay.get_tree().process_frame
+	if not is_instance_valid(overlay):
+		return
+	var tween := _real_time_tween(overlay, &"_ui_overlay_tween")
+	tween.tween_property(overlay, "modulate:a", 1.0, OVERLAY_DURATION)
+	var panel := overlay.find_children("*", "PanelContainer", true, false)
+	if not panel.is_empty():
+		appear(panel[0], 0.0, OVERLAY_DURATION * 1.4, OVERLAY_SCALE)
+
+
+## Carte qui s'illumine au survol : l'ombre de son style devient un halo de la couleur
+## donnée. Le style doit être propre à la carte (UiStyle.panel en donne un neuf).
+static func glow_on_hover(card: Control, style: StyleBoxFlat, color: Color) -> void:
+	var rest_color := style.shadow_color
+	var rest_size := style.shadow_size
+	var rest_offset := style.shadow_offset
+	var set_glow := func(amount: float) -> void:
+		card.set_meta(&"_ui_glow", amount)
+		style.shadow_color = rest_color.lerp(Color(color, CARD_GLOW_ALPHA), amount)
+		style.shadow_size = roundi(lerpf(rest_size, CARD_GLOW_SIZE, amount))
+		style.shadow_offset = rest_offset.lerp(Vector2.ZERO, amount)
+	var fade := func(target: float) -> void:
+		var tween := _real_time_tween(card, &"_ui_glow_tween")
+		tween.tween_method(set_glow, float(card.get_meta(&"_ui_glow", 0.0)), target, CARD_GLOW_DURATION)
+	card.mouse_entered.connect(fade.bind(1.0))
+	card.mouse_exited.connect(fade.bind(0.0))
 
 
 func _on_scene_changed() -> void:

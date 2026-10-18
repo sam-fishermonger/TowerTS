@@ -210,8 +210,11 @@ func _make_card(index: int, difficulty: int) -> PanelContainer:
 	var count := get_levels().size()
 	card.custom_minimum_size.x = clampf((get_viewport_rect().size.x - 32.0 - 16.0 * (count - 1)) / count,
 		MIN_CARD_WIDTH, CARD_WIDTH)
-	card.add_theme_stylebox_override(&"panel", UiStyle.panel(world.color, 16.0, SIDE_TOP))
+	var style := UiStyle.panel(world.color, 16.0, SIDE_TOP)
+	card.add_theme_stylebox_override(&"panel", style)
 	card.modulate.a = 1.0 if unlocked else LOCKED_ALPHA
+	if unlocked:
+		UiMotion.glow_on_hover(card, style, world.color)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 8)
 	card.add_child(column)

@@ -432,6 +432,7 @@ func show_tower_picker(available: Array[TowerData], limit: int, selected: Array[
 	tower_picker = TowerPicker.new()
 	add_child(tower_picker)
 	tower_picker.setup(available, limit, selected, difficulty_name)
+	UiMotion.open_overlay(tower_picker)
 	tower_picker.confirmed.connect(_on_towers_chosen)
 	tower_picker.menu_requested.connect(menu_requested.emit)
 
@@ -445,6 +446,7 @@ func open_options() -> void:
 		options_menu = null
 		options_toggled.emit(false))
 	add_child(options_menu)
+	UiMotion.open_overlay(options_menu)
 	options_toggled.emit(true)
 
 
@@ -563,6 +565,8 @@ func show_next_wave(wave: WaveData, early_bonus := 0, wave_number := 0, wave_bon
 func set_paused(paused: bool) -> void:
 	pause_button.set_pressed_no_signal(paused)
 	pause_button.text = "Reprendre" if paused else "Pause"
+	if paused and not pause_overlay.visible:
+		UiMotion.fade_in(pause_overlay)
 	pause_overlay.visible = paused
 	for button in [pause_restart_button, pause_quit_button]:
 		button.text = button.get_meta(&"text")
@@ -857,6 +861,7 @@ func show_chest_choice(choices: Array[StringName], levels: Dictionary) -> void:
 	chest_choice = ChestChoice.new()
 	add_child(chest_choice)
 	chest_choice.setup(choices, levels)
+	UiMotion.open_overlay(chest_choice)
 	chest_choice.chosen.connect(chest_bonus_chosen.emit)
 	Sound.play(&"upgrade")
 

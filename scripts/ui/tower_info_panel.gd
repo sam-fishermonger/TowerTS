@@ -194,7 +194,9 @@ func _refresh() -> void:
 		target_button.visible = false
 
 	_refresh_prices()
-	visible = true
+	if not visible:
+		visible = true
+		UiMotion.appear(self, 0.0, 0.18, 0.94)
 	# La taille dépend du contenu : on la recalcule (aussi à l'image suivante, une fois
 	# la mise en page des nouvelles lignes faite), puis on replace la fiche.
 	reset_size()

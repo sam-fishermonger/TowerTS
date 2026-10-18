@@ -8,6 +8,8 @@ const SLOT_SIZE := Vector2(92, 80)
 const ICON_SIZE := 40.0
 ## Transparence d'une case dont la tour est trop chère.
 const UNAFFORDABLE_ALPHA := 0.45
+## Éclair de la case quand la tour devient abordable.
+const AFFORDABLE_FLASH := Color(1.6, 1.6, 1.6)
 
 var data: TowerData
 ## Touche qui choisit la case ("" = aucune).
@@ -18,6 +20,9 @@ var _price_label: Label
 ## Prix affiché, en or et en pierre (négatif : pas de pierre), refait au changement de langue.
 var _cost := 0
 var _stone := -1
+## Dernier état affiché : 1 abordable, 0 trop chère, -1 avant le premier prix (pas
+## d'éclair à l'ouverture du niveau).
+var _affordable := -1
 
 
 func _init(tower_data: TowerData = null) -> void:
@@ -73,6 +78,10 @@ func set_price(cost: int, affordable: bool, stone := -1) -> void:
 		return
 	_refresh_price_text()
 	_price_label.add_theme_color_override("font_color", TowerInfoPanel.PRICE_COLOR if affordable else TowerInfoPanel.TOO_EXPENSIVE_COLOR)
+	# La tour devient abordable : la case s'éclaire d'un coup.
+	if affordable and _affordable == 0:
+		UiMotion.pop(self, 1.08, 0.35, AFFORDABLE_FLASH)
+	_affordable = int(affordable)
 	modulate.a = 1.0 if affordable or button_pressed else UNAFFORDABLE_ALPHA
 
 

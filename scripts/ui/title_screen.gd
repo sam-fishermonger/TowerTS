@@ -255,6 +255,7 @@ func open_options() -> OptionsMenu:
 	var options := OptionsMenu.new()
 	options.closed.connect(options_button.grab_focus)
 	add_child(options)
+	UiMotion.open_overlay(options)
 	return options
 
 

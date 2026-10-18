@@ -84,6 +84,10 @@ func buy(perk: Perk) -> bool:
 	if bought:
 		Sound.play(&"upgrade")
 	_refresh()
+	if bought:
+		# L'amélioration achetée fait un bond, et le compteur d'étoiles avec elle.
+		UiMotion.pop(get_button(perk), 1.25, 0.45, Color(1.5, 1.5, 1.2))
+		UiMotion.pop(stars_label, 1.12, 0.3)
 	return bought
 
 
