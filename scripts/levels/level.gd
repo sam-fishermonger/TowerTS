@@ -26,6 +26,9 @@ const EARLY_CALL_WINDOW := 30.0
 const FIRST_EARLY_CALL_WINDOW := 60.0
 ## Temps laissé au moins avant qu'une vague parte seule, quand on reprend une partie.
 const RESUME_WAVE_TIMER := 10.0
+## Après chaque vague lancée par le joueur, le bouton de vague attend ce délai, en
+## secondes réelles, avant de pouvoir en lancer une autre (contre les doubles clics).
+const WAVE_CALL_COOLDOWN := 2.0
 ## Méta du moteur posée juste avant d'ouvrir un niveau en mode infini (voir open()) :
 ## le niveau la lit et l'efface à son lancement.
 const ENDLESS_META := &"level_endless"
@@ -174,6 +177,9 @@ var chest_levels := {}
 var wave_timer := -1.0
 ## Durée totale du compte à rebours en cours (0 s'il n'y en a pas).
 var wave_timer_total := 0.0
+## Temps réel qui reste avant que le joueur puisse lancer une autre vague (voir
+## WAVE_CALL_COOLDOWN).
+var wave_call_cooldown := 0.0
 
 var _wave_bonus_paid := -1
 ## Ennemis tombés qui vont se relever (EnemyData.revive_count) : la vague n'est pas
@@ -381,7 +387,7 @@ func _ready() -> void:
 	hud.game_speed_selected.connect(set_game_speed)
 	hud.options_toggled.connect(_on_options_toggled)
 	hud.tower_selected.connect(select_tower)
-	hud.next_wave_requested.connect(start_next_wave)
+	hud.next_wave_requested.connect(call_next_wave)
 	hud.upgrade_requested.connect(upgrade_tower)
 	hud.sell_requested.connect(sell_tower)
 	hud.undo_requested.connect(undo_last_placement)
@@ -937,9 +943,24 @@ func _on_wave_started() -> void:
 		hud.announce_wave(spawner.current_wave + 1, -1 if is_endless else spawner.get_wave_count(), has_boss)
 
 
+## La vague suivante peut-elle partir ? Même pendant l'arrivée de la vague en cours :
+## ses ennemis s'ajoutent à ceux qui arrivent encore.
 func can_start_next_wave() -> bool:
-	return not is_over and not is_paused and not is_choosing_towers and not spawner.is_spawning \
-		and spawner.has_next_wave()
+	return not is_over and not is_paused and not is_choosing_towers and spawner.has_next_wave()
+
+
+## Le joueur peut-il lancer la vague suivante (bouton de vague) ? Comme
+## can_start_next_wave(), une fois passé le délai depuis sa dernière vague lancée.
+func can_call_next_wave() -> bool:
+	return can_start_next_wave() and wave_call_cooldown <= 0.0
+
+
+## Le joueur lance la vague suivante (bouton ou raccourci), s'il le peut.
+func call_next_wave() -> void:
+	if not can_call_next_wave():
+		return
+	start_next_wave()
+	wave_call_cooldown = WAVE_CALL_COOLDOWN
 
 
 func start_next_wave() -> void:
@@ -972,14 +993,16 @@ func get_early_call_bonus() -> int:
 	return roundi(get_wave_bonus(spawner.current_wave + 1) * early_call_bonus_ratio * get_early_call_fraction())
 
 
-## Part de la prime d'avance encore due, de 1 (à l'instant où la vague peut partir) à 0.
-## En Conquête, le compte à rebours ne part qu'une fois la carte vidée : tant que des
+## Part de la prime d'avance encore due, de 1 (vague d'avant encore en route, ou qui vient
+## de finir d'arriver) à 0 à la fin du compte à rebours. En Conquête, le compte à rebours ne part qu'une fois la carte vidée : tant que des
 ## ennemis sont en jeu, la prime est entière.
 func get_early_call_fraction() -> float:
 	if conquest:
 		if conquest.wave_countdown < 0.0:
 			return 1.0 if _alive_enemy_count() > 0 else 0.0
 		return clampf(conquest.wave_countdown / conquest.wave_countdown_total, 0.0, 1.0)
+	if spawner.is_spawning:
+		return 1.0
 	if wave_timer < 0.0 or wave_timer_total <= 0.0:
 		return 0.0
 	return clampf(wave_timer / wave_timer_total, 0.0, 1.0)
@@ -1778,6 +1801,8 @@ func _process(delta: float) -> void:
 	if not is_over and not is_choosing_towers:
 		stats.duration += delta
 	_update_wave_timer(delta)
+	# Le délai entre deux vagues lancées est en temps réel : x2 et x3 ne le raccourcissent pas.
+	wave_call_cooldown = maxf(wave_call_cooldown - delta / maxf(Engine.time_scale, 0.001), 0.0)
 	# Les pouvoirs se rechargent en temps de jeu (pas pendant la pause).
 	if not is_over:
 		for i in power_cooldowns.size():
@@ -1787,9 +1812,13 @@ func _process(delta: float) -> void:
 
 
 func _refresh_wave_ui() -> void:
-	hud.set_next_wave_available(can_start_next_wave())
-	if not conquest:
+	hud.set_next_wave_available(can_call_next_wave())
+	if wave_call_cooldown > 0.0 and can_start_next_wave():
+		hud.set_wave_call_cooldown(wave_call_cooldown)
+	elif not conquest:
 		hud.set_wave_countdown(wave_timer if has_wave_timer() and not spawner.is_spawning else -1.0)
+	else:
+		hud.set_wave_countdown(conquest.wave_countdown)
 	if not powers.is_empty():
 		var usable: Array[bool] = []
 		for power in powers:
