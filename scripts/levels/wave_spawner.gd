@@ -106,20 +106,26 @@ func get_wave(index: int) -> WaveData:
 	return _endless_waves[index - waves.size()]
 
 
+## Lance la vague suivante. Si la vague en cours arrive encore, les ennemis de la nouvelle
+## s'ajoutent à ceux qui restent à venir, à partir de maintenant.
 func start_next_wave() -> void:
-	if is_spawning or not has_next_wave():
+	if not has_next_wave():
 		return
 	current_wave += 1
-	_elapsed = 0.0
-	_queue.clear()
+	if not is_spawning:
+		_elapsed = 0.0
+		_queue.clear()
+	var entries: Array[Dictionary] = []
 	var wave := get_wave(current_wave)
 	for group in wave.groups:
 		for i in group.count:
-			_queue.append({"time": group.start_delay + i * group.interval, "group": group,
+			entries.append({"time": _elapsed + group.start_delay + i * group.interval, "group": group,
 				"health": wave.health_multiplier * group.health_multiplier, "wave_health": wave.health_multiplier})
-	_queue.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.time < b.time)
+	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.time < b.time)
 	if carriers:
-		_pick_carriers(current_wave)
+		_pick_carriers(entries, current_wave)
+	_queue.append_array(entries)
+	_queue.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.time < b.time)
 	is_spawning = true
 	wave_started.emit(current_wave)
 
@@ -166,12 +172,12 @@ func spawn(data: EnemyData, path: Path2D, progress := 0.0, health_multiplier := 
 ## Choisit les porteurs de la vague parmi les ennemis à venir (pas les boss), vers le
 ## milieu de la vague. Le tirage dépend du niveau et de la vague, pas du reste de la
 ## partie : une vague rejouée a les mêmes porteurs.
-func _pick_carriers(wave_index: int) -> void:
+func _pick_carriers(queue: Array[Dictionary], wave_index: int) -> void:
 	if wave_index < LOOT_CARRIERS_FROM_WAVE:
 		return
 	var candidates: Array[int] = []
-	for i in _queue.size():
-		if not _queue[i].group.enemy.is_boss:
+	for i in queue.size():
+		if not queue[i].group.enemy.is_boss:
 			candidates.append(i)
 	if candidates.is_empty():
 		return
@@ -185,14 +191,14 @@ func _pick_carriers(wave_index: int) -> void:
 	var to := maxi(candidates.size() * 3 / 4, from + 1)
 	for kind in picks:
 		var index := candidates[rng.randi_range(from, to - 1)]
-		if _queue[index].has("carried"):
+		if queue[index].has("carried"):
 			# Déjà porteur : on prend le suivant libre.
 			for candidate in candidates:
-				if not _queue[candidate].has("carried"):
+				if not queue[candidate].has("carried"):
 					index = candidate
 					break
-		if not _queue[index].has("carried"):
-			_queue[index].carried = kind
+		if not queue[index].has("carried"):
+			queue[index].carried = kind
 
 
 ## Décalage maximal sur le côté du chemin pour un ennemi, en pixels.

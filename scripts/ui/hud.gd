@@ -578,6 +578,14 @@ func set_wave_countdown(countdown: float) -> void:
 		next_wave_button.text = text
 
 
+## Texte du bouton de vague juste après en avoir lancé une : « Lancer la vague (2) »,
+## grisé, le temps du délai entre deux vagues lancées (Level.WAVE_CALL_COOLDOWN).
+func set_wave_call_cooldown(cooldown: float) -> void:
+	var text := tr("Lancer la vague (%d)") % ceili(cooldown)
+	if next_wave_button.text != text:
+		next_wave_button.text = text
+
+
 ## Règles des vagues, en tête de la bulle d'aide du bouton de vague : partent-elles seules
 ## à la fin d'un compte à rebours ?
 func set_wave_rules(start_alone: bool) -> void:
@@ -591,6 +599,7 @@ func _refresh_next_wave_tooltip() -> void:
 		lines.append(tr("Les vagues partent seules à la fin du compte à rebours. Les lancer avant rapporte une prime, d'autant plus grande qu'il reste de temps."))
 	else:
 		lines.append(tr("Lancer la vague tôt rapporte une prime, d'autant plus grande qu'on la lance tôt."))
+	lines.append(tr("Une vague peut partir pendant l'arrivée de la précédente, %d s au moins après la dernière lancée.") % roundi(Level.WAVE_CALL_COOLDOWN))
 	if _next_wave_early_bonus > 0:
 		lines.append(tr("Lancer maintenant rapporte %d or") % _next_wave_early_bonus)
 	next_wave_button.tooltip_text = "\n".join(lines)

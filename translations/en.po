@@ -1049,6 +1049,12 @@ msgstr "Waves start on their own when the countdown ends. Sending them early ear
 msgid "Lancer la vague tôt rapporte une prime, d'autant plus grande qu'on la lance tôt."
 msgstr "Sending the wave early earns a bonus: the earlier, the bigger."
 
+msgid "Une vague peut partir pendant l'arrivée de la précédente, %d s au moins après la dernière lancée."
+msgstr "A wave can be sent while the previous one is still arriving, at least %d s after the last one sent."
+
+msgid "Lancer la vague (%d)"
+msgstr "Send wave (%d)"
+
 msgid "Les vagues partent seules : %d s avant la première, puis %d s après chacune."
 msgstr "Waves start on their own: %d s before the first one, then %d s after each one."
 

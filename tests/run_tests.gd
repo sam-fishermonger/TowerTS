@@ -125,6 +125,7 @@ func _run() -> void:
 	await _test_shop_hotkeys()
 	await _test_fire_rate_independent_of_speed()
 	await _test_wave_bonus_when_waves_overlap()
+	await _test_wave_call_during_spawn()
 	await _test_wave_preview_and_early_call()
 	await _test_wave_timer()
 	await _test_interest()
@@ -1960,6 +1961,46 @@ func _test_wave_bonus_when_waves_overlap() -> void:
 	await _free(level)
 
 
+## Le joueur peut lancer une vague pendant l'arrivée de la précédente, avec un délai de
+## WAVE_CALL_COOLDOWN entre deux vagues lancées.
+func _test_wave_call_during_spawn() -> void:
+	print("Vague lancée pendant l'arrivée de la précédente")
+	var level := await _spawn_level(LEVEL_02)
+	var hud := level.hud
+	await process_frame
+	hud.next_wave_requested.emit()
+	await process_frame
+	_check(level.spawner.current_wave == 0 and level.spawner.is_spawning, "le bouton lance la vague 1")
+	_check(hud.next_wave_button.disabled and hud.next_wave_button.text == "Lancer la vague (2)"
+		and level.wave_call_cooldown > 0.0, "puis il est grisé, avec le délai restant (%s)" % hud.next_wave_button.text)
+	hud.next_wave_requested.emit()
+	_check(level.spawner.current_wave == 0, "un double clic ne lance pas une deuxième vague")
+	level.wave_call_cooldown = 0.01
+	await process_frame
+	await process_frame
+	_check(not hud.next_wave_button.disabled and hud.next_wave_button.text == "Lancer la vague",
+		"le délai passé, le bouton revient")
+	var bonus := level.get_early_call_bonus()
+	_check(bonus == roundi(level.get_wave_bonus(1) * level.early_call_bonus_ratio),
+		"pendant l'arrivée de la vague, la prime est entière (%d)" % bonus)
+	var gold_before := level.gold
+	var queued := level.spawner._queue.size()
+	hud.next_wave_requested.emit()
+	_check(level.spawner.current_wave == 1 and level.gold == gold_before + bonus,
+		"la vague 2 part pendant l'arrivée de la 1, avec sa prime")
+	var wave_2 := 0
+	for group in level.spawner.get_wave(1).groups:
+		wave_2 += group.count
+	_check(level.spawner._queue.size() == queued + wave_2, "ses ennemis s'ajoutent à ceux qui restent à venir")
+	Engine.time_scale = GAME_SPEED
+	while level.spawner.is_spawning:
+		await process_frame
+	Engine.time_scale = 1.0
+	_check(level.spawner._queue.is_empty() and level.wave_timer_total == Level.EARLY_CALL_WINDOW,
+		"les deux vagues arrivées, le compte à rebours de la vague 3 part")
+	await _free(level)
+
+
 func _test_wave_preview_and_early_call() -> void:
 	print("Aperçu de la prochaine vague et prime d'avance")
 	var level := await _spawn_level(LEVEL_02)
@@ -1983,8 +2024,8 @@ func _test_wave_preview_and_early_call() -> void:
 	_check(level.spawner.current_wave == -1, "en Moyen, la vague attend le joueur")
 	level.start_next_wave()
 	await process_frame
-	_check(level.get_early_call_bonus() == 0 and level.wave_timer < 0.0,
-		"pas de prime ni de compte à rebours tant que la vague apparaît (le bouton est désactivé)")
+	_check(level.get_early_call_bonus() == roundi(level.get_wave_bonus(1) * level.early_call_bonus_ratio)
+		and level.wave_timer < 0.0, "tant que la vague apparaît, pas de compte à rebours et la prime entière")
 	Engine.time_scale = GAME_SPEED
 	while level.spawner.is_spawning:
 		await process_frame
